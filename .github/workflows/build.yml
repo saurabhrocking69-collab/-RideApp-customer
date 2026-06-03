@@ -34,7 +34,7 @@ jobs:
       - name: Prebuild Android
         run: npx expo prebuild --platform android --no-install
 
-    - name: Bundle JS
+      - name: Bundle JS
         run: |
           mkdir -p android/app/src/main/assets
           npx expo export:embed --platform android --entry-file index.ts --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
