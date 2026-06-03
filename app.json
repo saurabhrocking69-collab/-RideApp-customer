@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "rideapp-mobile3",
+    "newArchEnabled": false,
+    "slug": "rideapp-mobile3",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "package": "com.saurabhspero.rideappmobile3",
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
+    },
+    "config": {
+  "googleMaps": {
+    "apiKey": "AIzaSyAD-A9qcLSXbgrz4CI4PYLFOZ"
+  }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "8f1a5733-b0fe-466b-ab3e-862983570572"
+      }
+    }
+  }
+}
