@@ -36,10 +36,19 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          cd ..
+npx expo export --platform android
+cd android
+./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: RideApp-Customer
           path: android/app/build/outputs/apk/debug/*.apk
+
+ jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true   
