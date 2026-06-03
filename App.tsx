@@ -7,9 +7,8 @@ import {
 } from 'react-native';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import MapView, { Marker, Polyline } from 'react-native-maps';
+import { WebView } from 'react-native-webview';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MAPS_KEY = 'AIzaSyAD-A9qcLSXbgrz4CI4PYLFOZ';
 const API = 'https://rideapp-backend-production-5e1c.up.railway.app';
 
@@ -38,7 +37,11 @@ const FadeIn = ({ children, style, delay = 0 }: any) => {
 };
 
 const RadarView = () => {
-  const rings = [useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current];
+  const rings = [
+    useRef(new Animated.Value(0)).current,
+    useRef(new Animated.Value(0)).current,
+    useRef(new Animated.Value(0)).current,
+  ];
   useEffect(() => {
     rings.forEach((r, i) => {
       Animated.loop(
@@ -51,20 +54,79 @@ const RadarView = () => {
     });
   }, []);
   return (
-    <View style={{ width: 120, height: 120, alignItems: 'center', justifyContent: 'center' }}>
+    <View style={{ width: 130, height: 130, alignItems: 'center', justifyContent: 'center' }}>
       {rings.map((r, i) => (
         <Animated.View key={i} style={{
-          position: 'absolute', width: 120, height: 120, borderRadius: 60,
+          position: 'absolute', width: 130, height: 130, borderRadius: 65,
           borderWidth: 2, borderColor: '#e94560',
           opacity: r.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.8, 0.4, 0] }),
-          transform: [{ scale: r.interpolate({ inputRange: [0, 1], outputRange: [0.5, 2] }) }],
+          transform: [{ scale: r.interpolate({ inputRange: [0, 1], outputRange: [0.4, 2.2] }) }],
         }} />
       ))}
-      <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: '#e94560',
-        alignItems: 'center', justifyContent: 'center', elevation: 6 }}>
-        <Text style={{ fontSize: 28 }}>🚖</Text>
+      <View style={{ width: 65, height: 65, borderRadius: 32, backgroundColor: '#e94560',
+        alignItems: 'center', justifyContent: 'center', elevation: 8 }}>
+        <Text style={{ fontSize: 30 }}>🚖</Text>
       </View>
     </View>
+  );
+};
+
+// ── Google Maps WebView ─────────────────────────────
+const MapWebView = ({ pickup, drop, driverLat, driverLng, height = 200 }: any) => {
+  const hasDriver = driverLat && driverLng;
+  const hasRoute  = pickup && drop;
+
+  let mapUrl = '';
+  if (hasDriver && hasRoute) {
+    mapUrl = `https://www.google.com/maps/embed/v1/directions?key=${MAPS_KEY}&origin=${encodeURIComponent(pickup)}&destination=${encodeURIComponent(drop)}&mode=driving`;
+  } else if (hasRoute) {
+    mapUrl = `https://www.google.com/maps/embed/v1/directions?key=${MAPS_KEY}&origin=${encodeURIComponent(pickup)}&destination=${encodeURIComponent(drop)}&mode=driving`;
+  } else if (pickup) {
+    mapUrl = `https://www.google.com/maps/embed/v1/place?key=${MAPS_KEY}&q=${encodeURIComponent(pickup)}`;
+  } else {
+    mapUrl = `https://www.google.com/maps/embed/v1/place?key=${MAPS_KEY}&q=Lucknow,India`;
+  }
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>* { margin: 0; padding: 0; } body { background: #dbeafe; }</style>
+    </head>
+    <body>
+      <iframe
+        width="100%"
+        height="${height}"
+        frameborder="0"
+        style="border:0"
+        src="${mapUrl}"
+        allowfullscreen>
+      </iframe>
+      ${hasDriver ? `
+      <div style="position:absolute;top:10px;right:10px;background:#1a1a2e;color:white;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:bold;">
+        🚗 Driver Live
+      </div>` : ''}
+    </body>
+    </html>
+  `;
+
+  if (Platform.OS === 'web') {
+    return (
+      <View style={{ height, backgroundColor: '#dbeafe', alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ fontSize: 36 }}>🗺️</Text>
+        <Text style={{ color: '#1e40af', fontWeight: 'bold', marginTop: 8 }}>{pickup || 'Map'}</Text>
+      </View>
+    );
+  }
+
+  return (
+    <WebView
+      source={{ html }}
+      style={{ height, width: '100%' }}
+      scrollEnabled={false}
+      javaScriptEnabled={true}
+    />
   );
 };
 
@@ -95,10 +157,10 @@ export default function App() {
   const [showWallet, setShowWallet] = useState(false);
   const [scratchCard, setScratchCard] = useState<any>(null);
   const [scratched, setScratched]   = useState(false);
-  const [userCoords, setUserCoords] = useState<any>(null);
-  const [routeCoords, setRouteCoords] = useState<any[]>([]);
   const [eta, setEta]               = useState('');
   const [fareCount, setFareCount]   = useState(0);
+  const [pickupSuggestions, setPickupSuggestions] = useState<any[]>([]);
+  const [dropSuggestions, setDropSuggestions]     = useState<any[]>([]);
   const scratchAnim = useRef(new Animated.Value(1)).current;
   const starAnims   = useRef([1,2,3,4,5].map(() => new Animated.Value(1))).current;
 
@@ -128,8 +190,8 @@ export default function App() {
         const data = await res.json();
         const st   = data.ride?.status;
         try {
-          const lr   = await fetch(`${API}/api/rides/driver-location/${rideData.ride_id}`);
-          const ld   = await lr.json();
+          const lr  = await fetch(`${API}/api/rides/driver-location/${rideData.ride_id}`);
+          const ld  = await lr.json();
           if (ld.location) setDriverLoc(ld.location);
         } catch (_e) {}
         if (st === 'matched' || st === 'arrived') {
@@ -163,9 +225,9 @@ export default function App() {
   useEffect(() => {
     if (screen !== 'payment' || !rideData?.fare) return;
     const target = parseInt(String(rideData.fare).replace(/[^0-9]/g, '')) || 0;
-    let current = 0;
-    const step  = Math.ceil(target / 30);
-    const timer = setInterval(() => {
+    let current  = 0;
+    const step   = Math.ceil(target / 30);
+    const timer  = setInterval(() => {
       current = Math.min(current + step, target);
       setFareCount(current);
       if (current >= target) clearInterval(timer);
@@ -173,7 +235,7 @@ export default function App() {
     return () => clearInterval(timer);
   }, [screen]);
 
-  // ── Helpers ─────────────────────────────────────
+  // ── API Helpers ─────────────────────────────────
   const loadHistoryFn = async (ph: string) => {
     try {
       const res  = await fetch(`${API}/api/rides/history?phone=${ph}`);
@@ -190,31 +252,39 @@ export default function App() {
     } catch (_e) {}
   };
 
-  const decodePolyline = (encoded: string) => {
-    const poly: { latitude: number; longitude: number }[] = [];
-    let index = 0, lat = 0, lng = 0;
-    while (index < encoded.length) {
-      let b, shift = 0, result = 0;
-      do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
-      lat += (result & 1) ? ~(result >> 1) : result >> 1;
-      shift = 0; result = 0;
-      do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
-      lng += (result & 1) ? ~(result >> 1) : result >> 1;
-      poly.push({ latitude: lat / 1e5, longitude: lng / 1e5 });
+  // ── Places Autocomplete ─────────────────────────
+  const searchPlaces = async (text: string, type: 'pickup' | 'drop') => {
+    if (text.length < 3) {
+      type === 'pickup' ? setPickupSuggestions([]) : setDropSuggestions([]);
+      return;
     }
-    return poly;
+    try {
+      const res  = await fetch(
+        `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${MAPS_KEY}&components=country:in&location=26.8467,80.9462&radius=50000`
+      );
+      const data = await res.json();
+      const suggestions = data.predictions?.map((p: any) => ({
+        id: p.place_id,
+        text: p.description
+      })) || [];
+      type === 'pickup' ? setPickupSuggestions(suggestions) : setDropSuggestions(suggestions);
+    } catch (_e) {}
   };
 
-  const getRoute = async (origin: string, dest: string) => {
+  // ── ETA fetch ───────────────────────────────────
+  const fetchEta = async (origin: string, dest: string) => {
     try {
-      const res  = await fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&key=${MAPS_KEY}`);
+      const res  = await fetch(
+        `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(dest)}&key=${MAPS_KEY}`
+      );
       const data = await res.json();
-      if (data.routes?.[0]) {
-        setRouteCoords(decodePolyline(data.routes[0].overview_polyline.points));
-        const leg = data.routes[0].legs[0];
-        setEta(leg.duration.text + ' · ' + leg.distance.text);
+      const el   = data.rows?.[0]?.elements?.[0];
+      if (el?.status === 'OK') {
+        setEta(el.duration.text + ' · ' + el.distance.text);
+        return el.distance.value / 1000;
       }
     } catch (_e) {}
+    return 5;
   };
 
   const createScratchCard = async () => {
@@ -295,11 +365,11 @@ export default function App() {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') { setResult('❌ Location permission do'); return; }
       const loc = await Location.getCurrentPositionAsync({});
-      setUserCoords({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
       const geo = await Location.reverseGeocodeAsync({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
       if (geo[0]) {
-        const a = geo[0];
-        setPickup([a.name, a.street, a.city].filter(Boolean).join(', '));
+        const a   = geo[0];
+        const addr = [a.name, a.street, a.city].filter(Boolean).join(', ');
+        setPickup(addr);
         setResult('✅ Location mil gayi!');
       }
     } catch (_e) { setResult('❌ Location error'); }
@@ -309,14 +379,7 @@ export default function App() {
     if (!pickup || !drop) { setResult('❌ Pickup aur Drop likho!'); return; }
     setLoading(true); setPaymentDone(false);
     try {
-      let distanceKm = 5;
-      try {
-        const dr  = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(pickup)}&destinations=${encodeURIComponent(drop)}&key=${MAPS_KEY}`);
-        const dd  = await dr.json();
-        const m   = dd?.rows?.[0]?.elements?.[0]?.distance?.value;
-        if (m) distanceKm = Math.round(m / 1000 * 10) / 10;
-      } catch (_e) {}
-      await getRoute(pickup, drop);
+      const distanceKm = await fetchEta(pickup, drop);
       const res  = await fetch(`${API}/api/rides/book`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ passenger_phone: phone || '9999999999', pickup, drop_location: drop, ride_type: rideType, distance: distanceKm })
@@ -366,6 +429,8 @@ export default function App() {
     ]).start();
   };
 
+  const rideIcon = (type: string) => type === 'auto' ? '🛺' : (type === 'bike' || type === 'moto') ? '🏍️' : '🚕';
+
   const RIDES = [
     { id: 'auto',    icon: '🛺', label: 'Auto',    base: 25, rate: 12, eta: '3 min' },
     { id: 'moto',    icon: '🏍️', label: 'Moto',    base: 20, rate: 8,  eta: '2 min' },
@@ -374,12 +439,6 @@ export default function App() {
     { id: 'xl',      icon: '🚙', label: 'XL',      base: 90, rate: 25, eta: '8 min' },
     { id: 'ev',      icon: '⚡', label: 'EV',      base: 35, rate: 14, eta: '6 min' },
   ];
-
-  const rideIcon = (type: string) => type === 'auto' ? '🛺' : (type === 'bike' || type === 'moto') ? '🏍️' : '🚕';
-
-  // ── Map region ──────────────────────────────────
-  const defaultRegion = { latitude: 26.8467, longitude: 80.9462, latitudeDelta: 0.05, longitudeDelta: 0.05 };
-  const mapRegion = userCoords ? { ...userCoords, latitudeDelta: 0.02, longitudeDelta: 0.02 } : defaultRegion;
 
   // ══════════════════════════════════════════════
   //  LOGIN
@@ -449,11 +508,7 @@ export default function App() {
           <Text style={s.avatarTxt}>{(userName || 'R')[0].toUpperCase()}</Text>
         </TouchableOpacity>
       </View>
-      <View style={{ height: 180 }}>
-        <MapView style={{ flex: 1 }} region={mapRegion} showsUserLocation showsMyLocationButton>
-          {userCoords && <Marker coordinate={userCoords} title="Aap" />}
-        </MapView>
-      </View>
+      <MapWebView pickup="Lucknow,India" drop="" height={180} />
       <ScrollView style={{ flex: 1, padding: 16 }} showsVerticalScrollIndicator={false}>
         <FadeIn>
           <TouchableOpacity style={s.searchBox} onPress={() => setScreen('booking')}>
@@ -625,7 +680,7 @@ export default function App() {
   );
 
   // ══════════════════════════════════════════════
-  //  BOOKING
+  //  BOOKING — with autocomplete suggestions
   // ══════════════════════════════════════════════
   if (screen === 'booking') return (
     <View style={s.screen}>
@@ -636,26 +691,42 @@ export default function App() {
         <Text style={s.topTitle}>Ride Book Karo</Text>
         <View style={{ width: 40 }} />
       </View>
-      <View style={{ height: 180 }}>
-        <MapView style={{ flex: 1 }} region={mapRegion} showsUserLocation>
-          {routeCoords.length > 0 && <Polyline coordinates={routeCoords} strokeColor="#e94560" strokeWidth={4} />}
-        </MapView>
-      </View>
-      <ScrollView style={{ flex: 1, padding: 16 }} showsVerticalScrollIndicator={false}>
+      <MapWebView pickup={pickup} drop={drop} height={180} />
+      <ScrollView style={{ flex: 1, padding: 16 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={s.locBox}>
           <View style={s.row}>
             <View style={s.dotGreen} />
             <TextInput style={[s.input, { flex: 1, marginBottom: 0 }]} placeholder="📍 Pickup location..."
-              value={pickup} onChangeText={setPickup}
-              onEndEditing={() => pickup && drop && getRoute(pickup, drop)} />
+              value={pickup} onChangeText={(t) => { setPickup(t); searchPlaces(t, 'pickup'); }} />
           </View>
+          {pickupSuggestions.length > 0 && (
+            <View style={s.suggBox}>
+              {pickupSuggestions.slice(0,4).map((s2, i) => (
+                <TouchableOpacity key={i} style={s.suggItem}
+                  onPress={() => { setPickup(s2.text); setPickupSuggestions([]); if(drop) fetchEta(s2.text, drop); }}>
+                  <Text style={{ fontSize: 13 }}>📍 </Text>
+                  <Text style={{ fontSize: 13, color: '#333', flex: 1 }} numberOfLines={1}>{s2.text}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
           <View style={s.locDivider} />
           <View style={s.row}>
             <View style={s.dotRed} />
             <TextInput style={[s.input, { flex: 1, marginBottom: 0 }]} placeholder="🎯 Drop location..."
-              value={drop} onChangeText={setDrop}
-              onEndEditing={() => pickup && drop && getRoute(pickup, drop)} />
+              value={drop} onChangeText={(t) => { setDrop(t); searchPlaces(t, 'drop'); }} />
           </View>
+          {dropSuggestions.length > 0 && (
+            <View style={s.suggBox}>
+              {dropSuggestions.slice(0,4).map((s2, i) => (
+                <TouchableOpacity key={i} style={s.suggItem}
+                  onPress={() => { setDrop(s2.text); setDropSuggestions([]); if(pickup) fetchEta(pickup, s2.text); }}>
+                  <Text style={{ fontSize: 13 }}>🎯 </Text>
+                  <Text style={{ fontSize: 13, color: '#333', flex: 1 }} numberOfLines={1}>{s2.text}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
         {eta ? (
           <View style={{ backgroundColor: '#e8f5e9', borderRadius: 10, padding: 10, marginBottom: 12, alignItems: 'center' }}>
@@ -709,18 +780,8 @@ export default function App() {
   // ══════════════════════════════════════════════
   if (screen === 'matching') return (
     <View style={s.screen}>
-      <View style={{ height: 200 }}>
-        <MapView style={{ flex: 1 }} region={mapRegion} showsUserLocation>
-          {driverLoc && (
-            <Marker coordinate={{ latitude: driverLoc.lat, longitude: driverLoc.lng }} title={rideData?.driver?.name || 'Driver'}>
-              <View style={{ backgroundColor: '#1a1a2e', borderRadius: 20, padding: 6, borderWidth: 2, borderColor: '#e94560' }}>
-                <Text style={{ fontSize: 16 }}>🚗</Text>
-              </View>
-            </Marker>
-          )}
-          {routeCoords.length > 0 && <Polyline coordinates={routeCoords} strokeColor="#e94560" strokeWidth={3} />}
-        </MapView>
-      </View>
+      <MapWebView pickup={pickup} drop={drop}
+        driverLat={driverLoc?.lat} driverLng={driverLoc?.lng} height={200} />
       <ScrollView style={{ flex: 1, padding: 16 }} showsVerticalScrollIndicator={false}>
         {rideData?.driver ? (
           <FadeIn>
@@ -798,18 +859,8 @@ export default function App() {
   // ══════════════════════════════════════════════
   if (screen === 'inride') return (
     <View style={s.screen}>
-      <View style={{ height: 240 }}>
-        <MapView style={{ flex: 1 }} region={mapRegion} showsUserLocation>
-          {driverLoc && (
-            <Marker coordinate={{ latitude: driverLoc.lat, longitude: driverLoc.lng }} title="Driver">
-              <View style={{ backgroundColor: '#1a1a2e', borderRadius: 20, padding: 6, borderWidth: 2, borderColor: '#4CAF50' }}>
-                <Text style={{ fontSize: 16 }}>🚗</Text>
-              </View>
-            </Marker>
-          )}
-          {routeCoords.length > 0 && <Polyline coordinates={routeCoords} strokeColor="#4CAF50" strokeWidth={4} />}
-        </MapView>
-      </View>
+      <MapWebView pickup={pickup} drop={drop}
+        driverLat={driverLoc?.lat} driverLng={driverLoc?.lng} height={240} />
       <ScrollView style={{ flex: 1, padding: 16 }} showsVerticalScrollIndicator={false}>
         <View style={{ backgroundColor: '#1a1a2e', borderRadius: 16, padding: 18, alignItems: 'center', marginBottom: 12 }}>
           <PulseView><Text style={{ color: '#4CAF50', fontSize: 16, fontWeight: 'bold' }}>🚗 Ride Chal Rahi Hai</Text></PulseView>
@@ -943,10 +994,19 @@ export default function App() {
             </TouchableOpacity>
           ))}
         </View>
-        <TouchableOpacity style={s.btn} onPress={() => {
+        <TouchableOpacity style={s.btn} onPress={async () => {
+          // Save rating
+          if (rating > 0 && rideData?.ride_id) {
+            try {
+              await fetch(`${API}/api/rides/rate`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ride_id: rideData.ride_id, rating, review, tip })
+              });
+            } catch (_e) {}
+          }
           setScreen('home'); setPickup(''); setDrop(''); setRating(0); setTab('home');
           setRideData(null); setPaymentDone(false); setResult('');
-          setScratchCard(null); setScratched(false); setRouteCoords([]); setEta('');
+          setScratchCard(null); setScratched(false); setEta('');
           loadHistoryFn(phone); loadWalletFn(phone);
         }}>
           <Text style={s.btnTxt}>Done 🏠 Home Jao</Text>
@@ -1016,11 +1076,13 @@ const s = StyleSheet.create({
   menuItem:      { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 8, elevation: 1 },
   menuIconBox:   { width: 40, height: 40, borderRadius: 12, backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   logoutBtn:     { borderWidth: 1.5, borderColor: '#e94560', borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 8, marginBottom: 30 },
-  locBox:        { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 3 },
+  locBox:        { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 4, elevation: 3 },
   dotGreen:      { width: 12, height: 12, borderRadius: 6, backgroundColor: '#4CAF50', marginRight: 12 },
   dotRed:        { width: 12, height: 12, borderRadius: 6, backgroundColor: '#e94560', marginRight: 12 },
   locDivider:    { height: 1, backgroundColor: '#f0f0f0', marginVertical: 10, marginLeft: 24 },
-  locationBtn:   { backgroundColor: '#e8f5e9', borderRadius: 12, padding: 14, marginBottom: 14, alignItems: 'center', borderWidth: 1, borderColor: '#c8e6c9' },
+  locationBtn:   { backgroundColor: '#e8f5e9', borderRadius: 12, padding: 14, marginBottom: 14, alignItems: 'center', borderWidth: 1, borderColor: '#c8e6c9', marginTop: 8 },
+  suggBox:       { backgroundColor: '#fff', borderRadius: 12, marginTop: 4, marginBottom: 4, elevation: 6, borderWidth: 1, borderColor: '#f0f0f0' },
+  suggItem:      { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: '#f5f5f5' },
   rideCard:      { backgroundColor: '#fff', borderRadius: 14, padding: 14, marginRight: 10, alignItems: 'center', minWidth: 90, elevation: 2, borderWidth: 2, borderColor: 'transparent' },
   rideCardActive:{ backgroundColor: '#1a1a2e', borderColor: '#e94560' },
   applyBtn:      { padding: 14, borderWidth: 1.5, borderColor: '#e94560', borderRadius: 12, justifyContent: 'center', marginLeft: 8 },
