@@ -691,7 +691,7 @@ export default function App() {
         <Text style={s.topTitle}>Ride Book Karo</Text>
         <View style={{ width: 40 }} />
       </View>
-      <MapWebView pickup={pickup} drop={drop} height={180} />
+      <MapWebView pickup={pickup} drop={drop} height={160}/>
       <ScrollView style={{ flex: 1, padding: 16 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={s.locBox}>
           <View style={s.row}>
