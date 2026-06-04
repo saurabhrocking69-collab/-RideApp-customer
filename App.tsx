@@ -8,7 +8,8 @@ import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WebView } from 'react-native-webview';
 
-const MAPS_KEY = 'AIzaSyAD-A9qcLSXbgrz4CI4PYLFOZ';
+
+const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 const API = 'https://rideapp-backend-production-5e1c.up.railway.app';
 
 type Screen = 'login' | 'otp' | 'home' | 'booking' | 'matching' | 'inride' | 'payment' | 'postride';
@@ -307,12 +308,10 @@ export default function App() {
   const rideIcon = (type: string) => type === 'auto' ? '🛺' : (type === 'bike' || type === 'moto') ? '🏍️' : '🚕';
 
   const RIDES = [
-    { id: 'auto', icon: '🛺', label: 'Auto', base: 25, eta: '3 min' },
-    { id: 'moto', icon: '🏍️', label: 'Moto', base: 20, eta: '2 min' },
-    { id: 'economy', icon: '🚕', label: 'Economy', base: 40, eta: '5 min' },
-    { id: 'premium', icon: '🚗', label: 'Premium', base: 80, eta: '7 min' },
-    { id: 'xl', icon: '🚙', label: 'XL', base: 90, eta: '8 min' },
-    { id: 'ev', icon: '⚡', label: 'EV', base: 35, eta: '6 min' },
+    { id: 'auto',    icon: '🛺', label: 'Auto',    base: 25, rate: 12, eta: '3-5 min' },
+    { id: 'bike',    icon: '🏍️', label: 'Bike',    base: 15, rate: 8,  eta: '2-3 min', tag: 'FASTER' },
+    { id: 'car',     icon: '🚕', label: 'Car',      base: 40, rate: 15, eta: '5-7 min' },
+    { id: 'eriksha', icon: '🛵', label: 'E-Riksha', base: 20, rate: 10, eta: '4-6 min' },
   ];
 
   // ══════════════════════════════════════════════
@@ -562,7 +561,6 @@ export default function App() {
       </View>
       <MapWebView pickup={pickup} drop={drop} height={155} />
       <ScrollView style={{ flex: 1, padding: 14 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        {/* Location inputs */}
         <View style={s.locBox}>
           <View style={s.row}>
             <View style={s.dotGreen} />
@@ -614,7 +612,8 @@ export default function App() {
               <Text style={{ fontSize: 24 }}>{r.icon}</Text>
               <Text style={[{ fontSize: 12, fontWeight: '700', marginTop: 4 }, rideType===r.id ? { color: '#fff' } : { color: '#333' }]}>{r.label}</Text>
               <Text style={[{ fontSize: 10 }, rideType===r.id ? { color: '#ddd' } : { color: '#999' }]}>{r.eta}</Text>
-              <Text style={[{ fontSize: 12, fontWeight: 'bold', marginTop: 2 }, rideType===r.id ? { color: '#fff' } : { color: '#e94560' }]}>₹{r.base}+</Text>
+              {r.tag ? <View style={{ backgroundColor: '#4CAF50', borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1, marginTop: 2 }}><Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>{r.tag}</Text></View> : null}
+              <Text style={[{ fontSize: 12, fontWeight: 'bold', marginTop: 2 }, rideType===r.id ? { color: '#fff' } : { color: '#e94560' }]}>₹{r.base}-{r.base + r.rate * 5}+</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -651,6 +650,10 @@ export default function App() {
                 <PulseView><Text style={{ fontSize: 16, fontWeight: 'bold', color: '#e94560' }}>{eta ? eta.split('·')[0].trim() : '3 min'}</Text></PulseView>
                 <Text style={{ fontSize: 10, color: '#666' }}>arriving</Text>
               </View>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 10 }}>
+              <Text style={{ fontSize: 12, color: '#666' }}>Ride ID: {rideData.ride_id}</Text>
+              <Text style={{ fontSize: 12, color: '#1a73e8' }}>📞 {rideData.driver.phone || 'N/A'}</Text>
             </View>
             {driverLoc && (
               <View style={s.liveLocCard}>
