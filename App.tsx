@@ -803,7 +803,16 @@ export default function App() {
               {eta ? <Text style={{ fontSize: 13, color: '#4CAF50', marginTop: 4 }}>🕐 {eta}</Text> : null}
               <View style={{ flexDirection: 'row', gap: 12, marginTop: 20, width: '100%' }}>
                 <TouchableOpacity style={{ flex: 1, backgroundColor: '#f5f5f5', borderRadius: 12, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}
-                  onPress={async () => { if (rideData?.ride_id) { try { await fetch(`${API}/api/rides/cancel`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, reason: 'Customer cancelled' }) }); } catch (_e) {} } setScreen('home'); setRideData(null); setPickup(''); setDrop(''); setEta(''); }}>
+                  onPress={async () => {
+                    if (rideData?.ride_id) {
+                      try {
+                        const cr = await fetch(`${API}/api/rides/cancel-smart`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, cancelled_by: 'customer', reason: 'Customer cancelled', phone: phone || '9999999999' }) });
+                        const cd = await cr.json();
+                        if (cd.penalty > 0) setResult(`⚠️ ${cd.message}`);
+                      } catch (_e) {}
+                    }
+                    setScreen('home'); setRideData(null); setPickup(''); setDrop(''); setEta('');
+                  }}>
                   <Text style={{ color: '#e94560', fontWeight: 'bold', fontSize: 14 }}>← Wapas Jao</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={{ flex: 1, backgroundColor: '#1a1a2e', borderRadius: 12, padding: 14, alignItems: 'center' }} onPress={() => { setRideData(null); bookRide(); }}>
