@@ -107,6 +107,8 @@ export default function App() {
   const [dropSugg, setDropSugg]       = useState<any[]>([]);
   const [chatMsgs, setChatMsgs]       = useState<any[]>([]);
   const [chatInput, setChatInput]     = useState('');
+  const [unreadChat, setUnreadChat]   = useState(0);
+  const lastChatCount = useRef(0);
   const [referralData, setReferralData] = useState<any>(null);
   const [referralInput, setReferralInput] = useState('');
   const [savedPlaces, setSavedPlaces] = useState<any[]>([]);
@@ -148,10 +150,24 @@ export default function App() {
   useEffect(() => {
     if (screen !== 'chat' || !rideData?.ride_id) return;
     const load = async () => {
-      try { const r = await fetch(`${API}/api/chat/${rideData.ride_id}`); const d = await r.json(); setChatMsgs(d.messages || []); } catch (_e) {}
+      try { const r = await fetch(`${API}/api/chat/${rideData.ride_id}`); const d = await r.json(); setChatMsgs(d.messages || []); lastChatCount.current = (d.messages || []).length; setUnreadChat(0); } catch (_e) {}
     };
     load();
     const iv = setInterval(load, 2500);
+    return () => clearInterval(iv);
+  }, [screen, rideData?.ride_id]);
+
+  // Background chat — unread badge during ride
+  useEffect(() => {
+    if (!['matching','inride'].includes(screen) || !rideData?.ride_id) return;
+    const iv = setInterval(async () => {
+      try {
+        const r = await fetch(`${API}/api/chat/${rideData.ride_id}`);
+        const d = await r.json();
+        const msgs = d.messages || [];
+        if (msgs.length > lastChatCount.current) setUnreadChat(msgs.length - lastChatCount.current);
+      } catch (_e) {}
+    }, 3000);
     return () => clearInterval(iv);
   }, [screen, rideData?.ride_id]);
 
@@ -351,16 +367,6 @@ export default function App() {
     { id: 'eriksha', icon: '🛵', label: 'E-Riksha', base: 20, rate: 10, eta: '4-6 min' },
   ];
 
-  const NavBar = () => (
-    <View style={s.nav}>
-      {[['home','🏠','Home'],['history','🕐','Trips'],['profile','👤','Profile']].map(([t,icon,lbl]) => (
-        <TouchableOpacity key={t} style={s.navItem} onPress={() => { setScreen('home'); setTab(t); if(t==='history') loadHistory(phone); }}>
-          <Text style={s.navIcon}>{icon}</Text>
-          <Text style={[s.navLbl, tab===t && screen==='home' && s.navActive]}>{lbl}</Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
 
   // ═══ LOGIN ═══
   if (screen === 'login') return (
@@ -412,27 +418,33 @@ export default function App() {
     </KeyboardAvoidingView>
   );
 
-  // ═══ HOME ═══
+  // ═══ HOME — Map full background, content bottom sheet ═══
   if (screen === 'home' && tab === 'home') return (
     <View style={s.screen}>
-      <View style={s.topBar}>
-        <View>
-          <Text style={s.greeting}>Namaste 👋 {userName || 'Rider'}</Text>
-          <Text style={s.subTxt}>📍 Lucknow, UP</Text>
-        </View>
-        <TouchableOpacity style={s.avatar} onPress={() => { setTab('profile'); loadWallet(phone); }}>
-          <Text style={s.avatarTxt}>{(userName || 'R')[0].toUpperCase()}</Text>
-        </TouchableOpacity>
+      {/* Full screen map background */}
+      <View style={s.mapFull}>
+        <MapWebView pickup={pickup || 'Lucknow,India'} drop="" userLat={userCoords?.latitude} userLng={userCoords?.longitude} height={900} />
       </View>
-      <MapWebView pickup={pickup || 'Lucknow,India'} drop="" userLat={userCoords?.latitude} userLng={userCoords?.longitude} height={200} />
-      <ScrollView style={{ flex: 1, padding: 14 }} showsVerticalScrollIndicator={false}>
-        <FadeIn>
+      {/* Top transparent bar */}
+      <View style={s.topOverlay}>
+        <View style={s.topGlass}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.greetingDark}>Namaste 👋 {userName || 'Rider'}</Text>
+            <Text style={s.subTxtDark}>📍 Lucknow, UP</Text>
+          </View>
+          <TouchableOpacity style={s.avatar} onPress={() => { setTab('profile'); loadWallet(phone); }}>
+            <Text style={s.avatarTxt}>{(userName || 'R')[0].toUpperCase()}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      {/* Bottom sheet */}
+      <View style={s.bottomSheet}>
+        <View style={s.sheetHandle} />
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 90 }}>
           <TouchableOpacity style={s.searchBox} onPress={() => setScreen('booking')}>
             <Text style={s.searchIcon}>🔍</Text>
             <Text style={s.searchPh}>Kahan jaana hai?</Text>
           </TouchableOpacity>
-        </FadeIn>
-        <FadeIn delay={80}>
           <View style={s.quickRow}>
             {[['🏠','Home'],['💼','Office'],['🎁','Refer'],['📍','Saved']].map(([icon,label],i) => (
               <TouchableOpacity key={i} style={s.quickBtn} onPress={() => {
@@ -445,30 +457,27 @@ export default function App() {
               </TouchableOpacity>
             ))}
           </View>
-        </FadeIn>
-        <FadeIn delay={160}>
           <TouchableOpacity style={s.promoBanner} onPress={() => { loadReferral(); setScreen('referral'); }}>
             <Text style={s.promoTxt}>🎁 Dost ko refer karo, dono ko ₹50 milega!</Text>
           </TouchableOpacity>
-        </FadeIn>
-        <Text style={s.secTitle}>🕐 Recent Trips</Text>
-        {historyRides.length === 0
-          ? <Text style={{ color: '#999', fontSize: 13, marginBottom: 12 }}>Abhi koi trip nahi — pehli ride book karo!</Text>
-          : historyRides.slice(0, 3).map((h, i) => (
-            <FadeIn key={i} delay={i * 80}>
-              <TouchableOpacity style={s.recentItem} onPress={() => { setPickup(h.pickup); setDrop(h.drop_location); setScreen('booking'); }}>
-                <Text style={{ fontSize: 24, marginRight: 10 }}>{rideIcon(h.ride_type)}</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.recentRoute} numberOfLines={1}>{h.pickup} → {h.drop_location}</Text>
-                  <Text style={s.recentDate}>{new Date(h.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</Text>
-                </View>
-                <Text style={s.recentFare}>₹{h.fare}</Text>
-              </TouchableOpacity>
-            </FadeIn>
-          ))
-        }
-      </ScrollView>
-      <NavBar />
+          {historyRides.length > 0 && (
+            <>
+              <Text style={s.secTitle}>🕐 Recent Trips</Text>
+              {historyRides.slice(0, 3).map((h, i) => (
+                <TouchableOpacity key={i} style={s.recentItem} onPress={() => { setPickup(h.pickup); setDrop(h.drop_location); setScreen('booking'); }}>
+                  <Text style={{ fontSize: 22, marginRight: 10 }}>{rideIcon(h.ride_type)}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.recentRoute} numberOfLines={1}>{h.pickup} → {h.drop_location}</Text>
+                    <Text style={s.recentDate}>{new Date(h.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</Text>
+                  </View>
+                  <Text style={s.recentFare}>₹{h.fare}</Text>
+                </TouchableOpacity>
+              ))}
+            </>
+          )}
+        </ScrollView>
+      </View>
+      <View style={s.navFloat}><NavBarInner /></View>
     </View>
   );
 
@@ -476,26 +485,24 @@ export default function App() {
   if (screen === 'home' && tab === 'history') return (
     <View style={s.screen}>
       <View style={s.topBar}><Text style={s.topTitle}>🕐 My Trips</Text></View>
-      <ScrollView style={{ flex: 1, padding: 14 }} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1, padding: 14 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
         {historyRides.length === 0
           ? <View style={{ alignItems: 'center', marginTop: 60 }}><Text style={{ fontSize: 56 }}>🚗</Text><Text style={{ fontSize: 17, color: '#333', marginTop: 14, fontWeight: '600' }}>Abhi koi trip nahi</Text></View>
           : historyRides.map((h, i) => (
-            <FadeIn key={i} delay={i * 60}>
-              <View style={s.histCard}>
-                <View style={s.row}>
-                  <View style={s.histIcon}><Text style={{ fontSize: 20 }}>{rideIcon(h.ride_type)}</Text></View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.recentRoute} numberOfLines={1}>{h.pickup} → {h.drop_location}</Text>
-                    <Text style={s.recentDate}>{new Date(h.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · <Text style={{ color: h.status === 'completed' ? '#4CAF50' : h.status === 'cancelled' ? '#e94560' : '#f0a500' }}>{h.status}</Text></Text>
-                  </View>
-                  <Text style={s.recentFare}>₹{h.fare}</Text>
+            <View key={i} style={s.histCard}>
+              <View style={s.row}>
+                <View style={s.histIcon}><Text style={{ fontSize: 20 }}>{rideIcon(h.ride_type)}</Text></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.recentRoute} numberOfLines={1}>{h.pickup} → {h.drop_location}</Text>
+                  <Text style={s.recentDate}>{new Date(h.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · <Text style={{ color: h.status === 'completed' ? '#4CAF50' : h.status === 'cancelled' ? '#e94560' : '#f0a500' }}>{h.status}</Text></Text>
                 </View>
+                <Text style={s.recentFare}>₹{h.fare}</Text>
               </View>
-            </FadeIn>
+            </View>
           ))
         }
       </ScrollView>
-      <NavBar />
+      <View style={s.navFloat}><NavBarInner /></View>
     </View>
   );
 
@@ -503,15 +510,13 @@ export default function App() {
   if (screen === 'home' && tab === 'profile') return (
     <View style={s.screen}>
       <View style={s.topBar}><Text style={s.topTitle}>👤 Profile</Text></View>
-      <ScrollView style={{ flex: 1, padding: 14 }} showsVerticalScrollIndicator={false}>
-        <FadeIn>
-          <View style={s.profileHero}>
-            <View style={s.profileAvatar}><Text style={{ color: '#fff', fontSize: 34, fontWeight: 'bold' }}>{(userName||'R')[0].toUpperCase()}</Text></View>
-            <Text style={s.profileName}>{userName || 'Rider'}</Text>
-            <Text style={s.profilePhone}>+91 {phone}</Text>
-            <View style={s.badge}><Text style={{ color: '#fff', fontWeight: 'bold' }}>⭐ 4.9 Rating</Text></View>
-          </View>
-        </FadeIn>
+      <ScrollView style={{ flex: 1, padding: 14 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
+        <View style={s.profileHero}>
+          <View style={s.profileAvatar}><Text style={{ color: '#fff', fontSize: 34, fontWeight: 'bold' }}>{(userName||'R')[0].toUpperCase()}</Text></View>
+          <Text style={s.profileName}>{userName || 'Rider'}</Text>
+          <Text style={s.profilePhone}>+91 {phone}</Text>
+          <View style={s.badge}><Text style={{ color: '#fff', fontWeight: 'bold' }}>⭐ 4.9 Rating</Text></View>
+        </View>
         <TouchableOpacity style={s.walletCard} onPress={() => { setShowWallet(!showWallet); loadWallet(phone); }}>
           <View style={s.row}>
             <View style={{ flex: 1 }}>
@@ -522,17 +527,15 @@ export default function App() {
           </View>
         </TouchableOpacity>
         {showWallet && (
-          <FadeIn>
-            <View style={s.walletBox}>
-              <Text style={s.secTitle}>💰 Paisa Add Karo</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-                {[100, 200, 500, 1000].map(amt => (
-                  <TouchableOpacity key={amt} style={s.amtBtn} onPress={() => addMoney(amt)}><Text style={{ color: '#1a1a2e', fontWeight: 'bold', fontSize: 15 }}>₹{amt}</Text></TouchableOpacity>
-                ))}
-              </View>
-              {result ? <Text style={{ color: '#4CAF50', textAlign: 'center', fontWeight: '600', marginTop: 8 }}>{result}</Text> : null}
+          <View style={s.walletBox}>
+            <Text style={s.secTitle}>💰 Paisa Add Karo</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+              {[100, 200, 500, 1000].map(amt => (
+                <TouchableOpacity key={amt} style={s.amtBtn} onPress={() => addMoney(amt)}><Text style={{ color: '#1a1a2e', fontWeight: 'bold', fontSize: 15 }}>₹{amt}</Text></TouchableOpacity>
+              ))}
             </View>
-          </FadeIn>
+            {result ? <Text style={{ color: '#4CAF50', textAlign: 'center', fontWeight: '600', marginTop: 8 }}>{result}</Text> : null}
+          </View>
         )}
         <TouchableOpacity style={s.menuItem} onPress={() => { loadReferral(); setScreen('referral'); }}>
           <View style={s.menuIconBox}><Text style={{ fontSize: 18 }}>🎁</Text></View>
@@ -555,7 +558,7 @@ export default function App() {
           <Text style={{ color: '#e94560', fontWeight: 'bold', fontSize: 14 }}>🚪 Logout</Text>
         </TouchableOpacity>
       </ScrollView>
-      <NavBar />
+      <View style={s.navFloat}><NavBarInner /></View>
     </View>
   );
 
@@ -567,7 +570,7 @@ export default function App() {
         <Text style={s.topTitle}>🎁 Refer & Earn</Text>
         <View style={{ width: 36 }} />
       </View>
-      <ScrollView style={{ flex: 1, padding: 16 }}>
+      <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 30 }}>
         <View style={{ backgroundColor: '#1a1a2e', borderRadius: 18, padding: 24, alignItems: 'center', marginBottom: 16 }}>
           <Text style={{ fontSize: 50 }}>🎁</Text>
           <Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold', marginTop: 8 }}>Dono ko ₹50 milega!</Text>
@@ -604,7 +607,7 @@ export default function App() {
         <Text style={s.topTitle}>📍 Saved Places</Text>
         <View style={{ width: 36 }} />
       </View>
-      <ScrollView style={{ flex: 1, padding: 16 }}>
+      <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 30 }}>
         <View style={{ backgroundColor: '#e3f2fd', borderRadius: 12, padding: 14, marginBottom: 16 }}>
           <Text style={{ fontSize: 13, color: '#1565c0' }}>💡 Booking screen se pickup set karke yahan aao, phir save karo.</Text>
         </View>
@@ -641,13 +644,13 @@ export default function App() {
 
   // ═══ CHAT ═══
   if (screen === 'chat') return (
-    <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
       <View style={s.topBar}>
         <TouchableOpacity onPress={() => setScreen('matching')} style={s.backBtn}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
         <Text style={s.topTitle}>💬 {rideData?.driver?.name || 'Driver'}</Text>
         <TouchableOpacity onPress={callDriver} style={{ width: 36, alignItems: 'flex-end' }}><Text style={{ fontSize: 20 }}>📞</Text></TouchableOpacity>
       </View>
-      <ScrollView style={{ flex: 1, padding: 14 }}>
+      <ScrollView style={{ flex: 1, padding: 14 }} contentContainerStyle={{ paddingBottom: 10 }}>
         {chatMsgs.length === 0 ? (
           <Text style={{ textAlign: 'center', color: '#999', marginTop: 20, fontSize: 13 }}>Koi message nahi — pehla message bhejo!</Text>
         ) : chatMsgs.map((m, i) => (
@@ -657,163 +660,200 @@ export default function App() {
         ))}
       </ScrollView>
       <View style={s.chatInputRow}>
-        <TextInput style={s.chatInput} placeholder="Message likho..." value={chatInput} onChangeText={setChatInput} />
+        <TextInput style={s.chatInput} placeholder="Message likho..." value={chatInput} onChangeText={setChatInput} onSubmitEditing={sendChat} />
         <TouchableOpacity style={s.chatSend} onPress={sendChat}><Text style={{ color: '#fff', fontWeight: 'bold' }}>➤</Text></TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
 
-  // ═══ BOOKING ═══
+  // ═══ BOOKING — Map full bg + bottom sheet ═══
   if (screen === 'booking') return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <View style={s.topBar}>
-        <TouchableOpacity onPress={() => setScreen('home')} style={s.backBtn}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
-        <Text style={s.topTitle}>Ride Book Karo</Text>
-        <View style={{ width: 36 }} />
+      <View style={s.mapFull}>
+        <MapWebView pickup={pickup} drop={drop} height={900} />
       </View>
-      <MapWebView pickup={pickup} drop={drop} height={170} />
-      <ScrollView style={{ flex: 1, padding: 14 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <View style={s.locBox}>
-          <View style={s.row}>
-            <View style={s.dotGreen} />
-            <TextInput style={[s.input, { flex: 1, marginBottom: 0 }]} placeholder="📍 Pickup location..." value={pickup} onChangeText={(t) => { setPickup(t); searchPlaces(t, 'pickup'); }} />
-          </View>
-          {pickupSugg.length > 0 && (
-            <View style={s.suggBox}>
-              {pickupSugg.slice(0, 4).map((sg, i) => (
-                <TouchableOpacity key={i} style={s.suggItem} onPress={() => { setPickup(sg.text); setPickupSugg([]); geocodePlace(sg.text, 'pickup'); if(drop) fetchEta(sg.text, drop); }}>
-                  <Text style={{ fontSize: 12 }}>📍 </Text><Text style={{ fontSize: 12, color: '#333', flex: 1 }} numberOfLines={1}>{sg.text}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-          <View style={s.locDivider} />
-          <View style={s.row}>
-            <View style={s.dotRed} />
-            <TextInput style={[s.input, { flex: 1, marginBottom: 0 }]} placeholder="🎯 Drop location..." value={drop} onChangeText={(t) => { setDrop(t); searchPlaces(t, 'drop'); }} />
-          </View>
-          {dropSugg.length > 0 && (
-            <View style={s.suggBox}>
-              {dropSugg.slice(0, 4).map((sg, i) => (
-                <TouchableOpacity key={i} style={s.suggItem} onPress={() => { setDrop(sg.text); setDropSugg([]); geocodePlace(sg.text, 'drop'); if(pickup) fetchEta(pickup, sg.text); }}>
-                  <Text style={{ fontSize: 12 }}>🎯 </Text><Text style={{ fontSize: 12, color: '#333', flex: 1 }} numberOfLines={1}>{sg.text}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
+      <View style={s.topOverlay}>
+        <View style={s.topGlass}>
+          <TouchableOpacity onPress={() => setScreen('home')} style={s.backCircle}><Text style={{ color: '#1a1a2e', fontSize: 20 }}>←</Text></TouchableOpacity>
+          <Text style={[s.topTitle, { color: '#1a1a2e', marginLeft: 12 }]}>Ride Book Karo</Text>
         </View>
-        {eta ? <View style={{ backgroundColor: '#e8f5e9', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center' }}><Text style={{ color: '#2e7d32', fontWeight: '600', fontSize: 13 }}>🕐 {eta}</Text></View> : null}
-        <TouchableOpacity style={s.locationBtn} onPress={useMyLocation}><Text style={{ color: '#2e7d32', fontWeight: '600', fontSize: 13 }}>📍 Meri Current Location Use Karo</Text></TouchableOpacity>
-        <Text style={s.secTitle}>Ride Type</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
-          {RIDES.map(r => (
-            <TouchableOpacity key={r.id} style={[s.rideCard, rideType===r.id && s.rideCardActive]} onPress={() => setRideType(r.id)}>
-              <Text style={{ fontSize: 24 }}>{r.icon}</Text>
-              <Text style={[{ fontSize: 12, fontWeight: '700', marginTop: 4 }, rideType===r.id ? { color: '#fff' } : { color: '#333' }]}>{r.label}</Text>
-              <Text style={[{ fontSize: 10 }, rideType===r.id ? { color: '#ddd' } : { color: '#999' }]}>{r.eta}</Text>
-              {r.tag ? <View style={{ backgroundColor: '#4CAF50', borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1, marginTop: 2 }}><Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>{r.tag}</Text></View> : null}
-              <Text style={[{ fontSize: 12, fontWeight: 'bold', marginTop: 2 }, rideType===r.id ? { color: '#fff' } : { color: '#e94560' }]}>₹{r.base}-{r.base + r.rate * 5}+</Text>
-            </TouchableOpacity>
-          ))}
+      </View>
+      <View style={[s.bottomSheet, { maxHeight: '72%' }]}>
+        <View style={s.sheetHandle} />
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 20 }}>
+          <View style={s.locBox}>
+            <View style={s.row}>
+              <View style={s.dotGreen} />
+              <TextInput style={[s.input, { flex: 1, marginBottom: 0 }]} placeholder="📍 Pickup location..." value={pickup} onChangeText={(t) => { setPickup(t); searchPlaces(t, 'pickup'); }} />
+            </View>
+            {pickupSugg.length > 0 && (
+              <View style={s.suggBox}>
+                {pickupSugg.slice(0, 4).map((sg, i) => (
+                  <TouchableOpacity key={i} style={s.suggItem} onPress={() => { setPickup(sg.text); setPickupSugg([]); geocodePlace(sg.text, 'pickup'); if(drop) fetchEta(sg.text, drop); }}>
+                    <Text style={{ fontSize: 12 }}>📍 </Text><Text style={{ fontSize: 12, color: '#333', flex: 1 }} numberOfLines={1}>{sg.text}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+            <View style={s.locDivider} />
+            <View style={s.row}>
+              <View style={s.dotRed} />
+              <TextInput style={[s.input, { flex: 1, marginBottom: 0 }]} placeholder="🎯 Drop location..." value={drop} onChangeText={(t) => { setDrop(t); searchPlaces(t, 'drop'); }} />
+            </View>
+            {dropSugg.length > 0 && (
+              <View style={s.suggBox}>
+                {dropSugg.slice(0, 4).map((sg, i) => (
+                  <TouchableOpacity key={i} style={s.suggItem} onPress={() => { setDrop(sg.text); setDropSugg([]); geocodePlace(sg.text, 'drop'); if(pickup) fetchEta(pickup, sg.text); }}>
+                    <Text style={{ fontSize: 12 }}>🎯 </Text><Text style={{ fontSize: 12, color: '#333', flex: 1 }} numberOfLines={1}>{sg.text}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+          {eta ? <View style={{ backgroundColor: '#e8f5e9', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center' }}><Text style={{ color: '#2e7d32', fontWeight: '600', fontSize: 13 }}>🕐 {eta}</Text></View> : null}
+          <TouchableOpacity style={s.locationBtn} onPress={useMyLocation}><Text style={{ color: '#2e7d32', fontWeight: '600', fontSize: 13 }}>📍 Meri Current Location Use Karo</Text></TouchableOpacity>
+          <Text style={s.secTitle}>Ride Type</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+            {RIDES.map(r => (
+              <TouchableOpacity key={r.id} style={[s.rideCard, rideType===r.id && s.rideCardActive]} onPress={() => setRideType(r.id)}>
+                <Text style={{ fontSize: 24 }}>{r.icon}</Text>
+                <Text style={[{ fontSize: 12, fontWeight: '700', marginTop: 4 }, rideType===r.id ? { color: '#fff' } : { color: '#333' }]}>{r.label}</Text>
+                <Text style={[{ fontSize: 10 }, rideType===r.id ? { color: '#ddd' } : { color: '#999' }]}>{r.eta}</Text>
+                {r.tag ? <View style={{ backgroundColor: '#4CAF50', borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1, marginTop: 2 }}><Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>{r.tag}</Text></View> : null}
+                <Text style={[{ fontSize: 12, fontWeight: 'bold', marginTop: 2 }, rideType===r.id ? { color: '#fff' } : { color: '#e94560' }]}>₹{r.base}-{r.base + r.rate * 5}+</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          <View style={[s.row, { marginBottom: 12 }]}>
+            <TextInput style={[s.input, { flex: 1, marginBottom: 0 }]} placeholder="🎫 Promo code (RIDE50)" autoCapitalize="characters" value={promoCode} onChangeText={setPromoCode} />
+            <TouchableOpacity style={s.applyBtn} onPress={applyPromo}><Text style={{ color: '#e94560', fontWeight: 'bold' }}>Apply</Text></TouchableOpacity>
+          </View>
+          {promoDiscount > 0 ? <View style={{ backgroundColor: '#e8f5e9', borderRadius: 10, padding: 10, marginBottom: 10 }}><Text style={{ color: '#2e7d32', fontWeight: '600', fontSize: 13, textAlign: 'center' }}>✅ ₹{promoDiscount} discount applied!</Text></View> : null}
+          {result ? <Text style={s.err}>{result}</Text> : null}
+          <TouchableOpacity style={[s.btn, loading && { opacity: 0.7 }]} onPress={bookRide} disabled={loading}>
+            <Text style={s.btnTxt}>{loading ? '🔍 Driver dhundh raha hai...' : 'Ride Book Karo 🚀'}</Text>
+          </TouchableOpacity>
         </ScrollView>
-        <View style={[s.row, { marginBottom: 12 }]}>
-          <TextInput style={[s.input, { flex: 1, marginBottom: 0 }]} placeholder="🎫 Promo code (RIDE50)" autoCapitalize="characters" value={promoCode} onChangeText={setPromoCode} />
-          <TouchableOpacity style={s.applyBtn} onPress={applyPromo}><Text style={{ color: '#e94560', fontWeight: 'bold' }}>Apply</Text></TouchableOpacity>
-        </View>
-        {promoDiscount > 0 ? <View style={{ backgroundColor: '#e8f5e9', borderRadius: 10, padding: 10, marginBottom: 10 }}><Text style={{ color: '#2e7d32', fontWeight: '600', fontSize: 13, textAlign: 'center' }}>✅ ₹{promoDiscount} discount applied!</Text></View> : null}
-        {result ? <Text style={s.err}>{result}</Text> : null}
-        <TouchableOpacity style={[s.btn, loading && { opacity: 0.7 }]} onPress={bookRide} disabled={loading}>
-          <Text style={s.btnTxt}>{loading ? '🔍 Driver dhundh raha hai...' : 'Ride Book Karo 🚀'}</Text>
-        </TouchableOpacity>
-        <View style={{ height: 16 }} />
-      </ScrollView>
+      </View>
     </KeyboardAvoidingView>
   );
 
-  // ═══ MATCHING ═══
+  // ═══ MATCHING — Map full bg + bottom sheet ═══
   if (screen === 'matching') return (
     <View style={s.screen}>
-      <MapWebView pickup={pickup} drop={drop} height={200} />
-      <ScrollView style={{ flex: 1, padding: 14 }} showsVerticalScrollIndicator={false}>
-        {rideData?.driver ? (
-          <FadeIn>
-            <View style={s.driverCard}>
-              <View style={s.driverAvatar}><Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>{(rideData.driver.name||'D')[0].toUpperCase()}</Text></View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.driverName}>{rideData.driver.name}</Text>
-                <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>🚗 {rideData.driver.vehicle_no}</Text>
-                <Text style={{ fontSize: 12, color: '#f0a500', marginTop: 2 }}>⭐ 4.8</Text>
-              </View>
-              <View style={{ alignItems: 'center' }}>
-                <PulseView><Text style={{ fontSize: 16, fontWeight: 'bold', color: '#e94560' }}>{eta ? eta.split('·')[0].trim() : '3 min'}</Text></PulseView>
-                <Text style={{ fontSize: 10, color: '#666' }}>arriving</Text>
-              </View>
-            </View>
-            {rideData?.startOtp && (
-              <View style={s.otpCard}>
-                <Text style={{ color: '#aaa', fontSize: 12, marginBottom: 6 }}>🔐 Driver ko yeh OTP batao</Text>
-                <Text style={{ color: '#fff', fontSize: 34, fontWeight: 'bold', letterSpacing: 10 }}>{rideData.startOtp}</Text>
-              </View>
-            )}
-            <View style={s.fareCard}>
-              {[['Base fare','₹25'],['Distance',rideData.distance],['Total',rideData.fare]].map(([lbl,val],i) => (
-                <View key={i} style={[s.row, { justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: i<2 ? 1 : 0, borderBottomColor: '#f5f5f5' }]}>
-                  <Text style={{ fontSize: 13, color: '#666' }}>{lbl}</Text>
-                  <Text style={[{ fontSize: 13 }, i===2 && { fontWeight: 'bold', color: '#1a1a2e', fontSize: 15 }]}>{val}</Text>
+      <View style={s.mapFull}>
+        <MapWebView pickup={pickup} drop={drop} height={900} />
+      </View>
+      <View style={[s.bottomSheet, { maxHeight: '70%' }]}>
+        <View style={s.sheetHandle} />
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+          {rideData?.driver ? (
+            <>
+              <View style={s.driverCard}>
+                <View style={s.driverAvatar}><Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>{(rideData.driver.name||'D')[0].toUpperCase()}</Text></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.driverName}>{rideData.driver.name}</Text>
+                  <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>🚗 {rideData.driver.vehicle_no}</Text>
+                  <Text style={{ fontSize: 12, color: '#f0a500', marginTop: 2 }}>⭐ 4.8</Text>
                 </View>
-              ))}
+                <View style={{ alignItems: 'center' }}>
+                  <PulseView><Text style={{ fontSize: 16, fontWeight: 'bold', color: '#e94560' }}>{eta ? eta.split('·')[0].trim() : '3 min'}</Text></PulseView>
+                  <Text style={{ fontSize: 10, color: '#666' }}>arriving</Text>
+                </View>
+              </View>
+              {rideData?.startOtp && (
+                <View style={s.otpCard}>
+                  <Text style={{ color: '#aaa', fontSize: 12, marginBottom: 6 }}>🔐 Driver ko yeh OTP batao</Text>
+                  <Text style={{ color: '#fff', fontSize: 34, fontWeight: 'bold', letterSpacing: 10 }}>{rideData.startOtp}</Text>
+                </View>
+              )}
+              <View style={s.actionRow}>
+                <TouchableOpacity style={s.actionBtn} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
+                  <View>
+                    <Text style={{ fontSize: 22 }}>💬</Text>
+                    {unreadChat > 0 && <View style={s.chatBadge}><Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>{unreadChat}</Text></View>}
+                  </View>
+                  <Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>Chat</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={s.actionBtn} onPress={callDriver}><Text style={{ fontSize: 22 }}>📞</Text><Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>Call</Text></TouchableOpacity>
+                <TouchableOpacity style={s.actionBtn} onPress={triggerSOS}><Text style={{ fontSize: 22 }}>🆘</Text><Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>SOS</Text></TouchableOpacity>
+              </View>
+              {unreadChat > 0 && (
+                <TouchableOpacity style={s.chatAlert} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>💬 Driver ne {unreadChat} message bheja — dekho</Text>
+                </TouchableOpacity>
+              )}
+              {sosActive && <View style={[s.infoBox, { backgroundColor: '#ffeeee' }]}><Text style={{ fontSize: 13, color: '#c62828', fontWeight: 'bold' }}>🆘 Alert bheja! Police: 100 · Ambulance: 108</Text></View>}
+              <View style={s.fareCard}>
+                {[['Distance',rideData.distance],['Total Fare',rideData.fare]].map(([lbl,val],i) => (
+                  <View key={i} style={[s.row, { justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: i<1 ? 1 : 0, borderBottomColor: '#f5f5f5' }]}>
+                    <Text style={{ fontSize: 13, color: '#666' }}>{lbl}</Text>
+                    <Text style={[{ fontSize: 13 }, i===1 && { fontWeight: 'bold', color: '#1a1a2e', fontSize: 15 }]}>{val}</Text>
+                  </View>
+                ))}
+              </View>
+              <Text style={{ textAlign: 'center', color: '#bbb', fontSize: 12, marginTop: 8 }}>⏳ Driver OTP daalkar trip shuru karega...</Text>
+            </>
+          ) : (
+            <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+              <RadarView />
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1a1a2e', marginTop: 16 }}>Driver dhundh rahe hain...</Text>
+              <Text style={{ fontSize: 13, color: '#999', marginTop: 6, textAlign: 'center' }}>{pickup} → {drop}</Text>
+              <Text style={{ fontSize: 26, fontWeight: 'bold', color: '#e94560', marginTop: 10 }}>{rideData?.fare}</Text>
+              {eta ? <Text style={{ fontSize: 13, color: '#4CAF50', marginTop: 4 }}>🕐 {eta}</Text> : null}
+              <View style={{ flexDirection: 'row', gap: 12, marginTop: 20, width: '100%' }}>
+                <TouchableOpacity style={{ flex: 1, backgroundColor: '#f5f5f5', borderRadius: 12, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}
+                  onPress={async () => { if (rideData?.ride_id) { try { await fetch(`${API}/api/rides/cancel`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, reason: 'Customer cancelled' }) }); } catch (_e) {} } setScreen('home'); setRideData(null); setPickup(''); setDrop(''); setEta(''); }}>
+                  <Text style={{ color: '#e94560', fontWeight: 'bold', fontSize: 14 }}>← Wapas Jao</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={{ flex: 1, backgroundColor: '#1a1a2e', borderRadius: 12, padding: 14, alignItems: 'center' }} onPress={() => { setRideData(null); bookRide(); }}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>🔄 Retry</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-            <View style={s.actionRow}>
-              <TouchableOpacity style={s.actionBtn} onPress={() => setScreen('chat')}><Text style={{ fontSize: 22 }}>💬</Text><Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>Chat</Text></TouchableOpacity>
-              <TouchableOpacity style={s.actionBtn} onPress={callDriver}><Text style={{ fontSize: 22 }}>📞</Text><Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>Call</Text></TouchableOpacity>
-              <TouchableOpacity style={s.actionBtn} onPress={triggerSOS}><Text style={{ fontSize: 22 }}>🆘</Text><Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>SOS</Text></TouchableOpacity>
-            </View>
-            {sosActive && <View style={[s.infoBox, { backgroundColor: '#ffeeee' }]}><Text style={{ fontSize: 13, color: '#c62828', fontWeight: 'bold' }}>🆘 Alert bheja! Police: 100 · Ambulance: 108</Text></View>}
-            <Text style={{ textAlign: 'center', color: '#bbb', fontSize: 12, marginBottom: 16 }}>⏳ Driver OTP daalkar trip shuru karega...</Text>
-          </FadeIn>
-        ) : (
-          <View style={{ alignItems: 'center', paddingVertical: 24 }}>
-            <RadarView />
-            <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1a1a2e', marginTop: 20 }}>Driver dhundh rahe hain...</Text>
-            <Text style={{ fontSize: 13, color: '#999', marginTop: 6, textAlign: 'center' }}>{pickup} → {drop}</Text>
-            <Text style={{ fontSize: 26, fontWeight: 'bold', color: '#e94560', marginTop: 10 }}>{rideData?.fare}</Text>
-            {eta ? <Text style={{ fontSize: 13, color: '#4CAF50', marginTop: 4 }}>🕐 {eta}</Text> : null}
-            <View style={{ flexDirection: 'row', gap: 12, marginTop: 20, width: '100%', paddingHorizontal: 16 }}>
-              <TouchableOpacity style={{ flex: 1, backgroundColor: '#f5f5f5', borderRadius: 12, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}
-                onPress={async () => { if (rideData?.ride_id) { try { await fetch(`${API}/api/rides/cancel`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, reason: 'Customer cancelled' }) }); } catch (_e) {} } setScreen('home'); setRideData(null); setPickup(''); setDrop(''); setEta(''); }}>
-                <Text style={{ color: '#e94560', fontWeight: 'bold', fontSize: 14 }}>← Wapas Jao</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={{ flex: 1, backgroundColor: '#1a1a2e', borderRadius: 12, padding: 14, alignItems: 'center' }} onPress={() => { setRideData(null); bookRide(); }}>
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>🔄 Retry</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-      </ScrollView>
+          )}
+        </ScrollView>
+      </View>
     </View>
   );
 
-  // ═══ IN-RIDE ═══
+  // ═══ IN-RIDE — Map full bg + bottom sheet ═══
   if (screen === 'inride') return (
     <View style={s.screen}>
-      <MapWebView pickup={pickup} drop={drop} height={220} />
-      <ScrollView style={{ flex: 1, padding: 14 }} showsVerticalScrollIndicator={false}>
-        <View style={{ backgroundColor: '#1a1a2e', borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 10 }}>
-          <PulseView><Text style={{ color: '#4CAF50', fontSize: 15, fontWeight: 'bold' }}>🚗 Ride Chal Rahi Hai</Text></PulseView>
-          <Text style={{ color: '#aaa', fontSize: 12, marginTop: 4 }}>{rideData?.distance} · {rideData?.fare}</Text>
-        </View>
-        <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 10, elevation: 2 }}>
-          <Text style={{ fontSize: 13, color: '#4CAF50', fontWeight: '600' }}>📍 {pickup}</Text>
-          <Text style={{ fontSize: 16, textAlign: 'center', color: '#ddd', marginVertical: 6 }}>↓</Text>
-          <Text style={{ fontSize: 13, color: '#e94560', fontWeight: '600' }}>🎯 {drop}</Text>
-        </View>
-        <View style={s.actionRow}>
-          <TouchableOpacity style={s.actionBtn} onPress={() => setScreen('chat')}><Text style={{ fontSize: 22 }}>💬</Text><Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>Chat</Text></TouchableOpacity>
-          <TouchableOpacity style={s.actionBtn} onPress={callDriver}><Text style={{ fontSize: 22 }}>📞</Text><Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>Call</Text></TouchableOpacity>
-          <TouchableOpacity style={s.actionBtn} onPress={triggerSOS}><Text style={{ fontSize: 22 }}>🆘</Text><Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>SOS</Text></TouchableOpacity>
-        </View>
-        {sosActive && <View style={[s.infoBox, { backgroundColor: '#ffeeee' }]}><Text style={{ fontSize: 13, color: '#c62828', fontWeight: 'bold' }}>🆘 Alert bheja! Police: 100</Text></View>}
-      </ScrollView>
+      <View style={s.mapFull}>
+        <MapWebView pickup={pickup} drop={drop} height={900} />
+      </View>
+      <View style={[s.bottomSheet, { maxHeight: '55%' }]}>
+        <View style={s.sheetHandle} />
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+          <View style={{ backgroundColor: '#1a1a2e', borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 10 }}>
+            <PulseView><Text style={{ color: '#4CAF50', fontSize: 15, fontWeight: 'bold' }}>🚗 Ride Chal Rahi Hai</Text></PulseView>
+            <Text style={{ color: '#aaa', fontSize: 12, marginTop: 4 }}>{rideData?.distance} · {rideData?.fare}</Text>
+          </View>
+          <View style={{ backgroundColor: '#f9f9f9', borderRadius: 14, padding: 14, marginBottom: 10 }}>
+            <Text style={{ fontSize: 13, color: '#4CAF50', fontWeight: '600' }}>📍 {pickup}</Text>
+            <Text style={{ fontSize: 16, textAlign: 'center', color: '#ddd', marginVertical: 6 }}>↓</Text>
+            <Text style={{ fontSize: 13, color: '#e94560', fontWeight: '600' }}>🎯 {drop}</Text>
+          </View>
+          <View style={s.actionRow}>
+            <TouchableOpacity style={s.actionBtn} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
+              <View>
+                <Text style={{ fontSize: 22 }}>💬</Text>
+                {unreadChat > 0 && <View style={s.chatBadge}><Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>{unreadChat}</Text></View>}
+              </View>
+              <Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>Chat</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.actionBtn} onPress={callDriver}><Text style={{ fontSize: 22 }}>📞</Text><Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>Call</Text></TouchableOpacity>
+            <TouchableOpacity style={s.actionBtn} onPress={triggerSOS}><Text style={{ fontSize: 22 }}>🆘</Text><Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>SOS</Text></TouchableOpacity>
+          </View>
+          {unreadChat > 0 && (
+            <TouchableOpacity style={s.chatAlert} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
+              <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>💬 Driver ne {unreadChat} message bheja — dekho</Text>
+            </TouchableOpacity>
+          )}
+          {sosActive && <View style={[s.infoBox, { backgroundColor: '#ffeeee' }]}><Text style={{ fontSize: 13, color: '#c62828', fontWeight: 'bold' }}>🆘 Alert bheja! Police: 100</Text></View>}
+        </ScrollView>
+      </View>
     </View>
   );
 
@@ -898,7 +938,7 @@ export default function App() {
             try { await fetch(`${API}/api/rides/rate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, rating, review, tip }) }); } catch (_e) {}
           }
           setScreen('home'); setPickup(''); setDrop(''); setRating(0); setTab('home');
-          setRideData(null); setPaymentDone(false); setResult(''); setScratchCard(null); setScratched(false); setEta(''); setPromoDiscount(0); setPromoCode('');
+          setRideData(null); setPaymentDone(false); setResult(''); setScratchCard(null); setScratched(false); setEta(''); setPromoDiscount(0); setPromoCode(''); setUnreadChat(0);
           loadHistory(phone); loadWallet(phone);
         }}>
           <Text style={s.btnTxt}>Done 🏠 Home Jao</Text>
@@ -909,10 +949,32 @@ export default function App() {
   );
 
   return <View />;
+
+  function NavBarInner() {
+    return (
+      <View style={s.nav}>
+        {[['home','🏠','Home'],['history','🕐','Trips'],['profile','👤','Profile']].map(([t,icon,lbl]) => (
+          <TouchableOpacity key={t} style={s.navItem} onPress={() => { setScreen('home'); setTab(t); if(t==='history') loadHistory(phone); }}>
+            <Text style={s.navIcon}>{icon}</Text>
+            <Text style={[s.navLbl, tab===t && screen==='home' && s.navActive]}>{lbl}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+  }
 }
 
 const s = StyleSheet.create({
   screen:        { flex: 1, backgroundColor: '#f5f5f5' },
+  mapFull:       { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  topOverlay:    { position: 'absolute', top: 0, left: 0, right: 0, paddingTop: 44, paddingHorizontal: 14 },
+  topGlass:      { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.95)', borderRadius: 16, padding: 12, elevation: 6, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8 },
+  greetingDark:  { color: '#1a1a2e', fontSize: 15, fontWeight: 'bold' },
+  subTxtDark:    { color: '#666', fontSize: 11, marginTop: 2 },
+  backCircle:    { width: 38, height: 38, borderRadius: 19, backgroundColor: '#f0f0f0', alignItems: 'center', justifyContent: 'center' },
+  bottomSheet:   { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 16, paddingTop: 8, elevation: 12, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 12, maxHeight: '60%' },
+  sheetHandle:   { width: 40, height: 4, borderRadius: 2, backgroundColor: '#ddd', alignSelf: 'center', marginBottom: 12 },
+  navFloat:      { position: 'absolute', bottom: 0, left: 0, right: 0 },
   hero:          { backgroundColor: '#1a1a2e', alignItems: 'center', paddingVertical: 40, paddingHorizontal: 20 },
   heroIcon:      { fontSize: 52 },
   heroTitle:     { color: '#fff', fontSize: 24, fontWeight: 'bold', marginTop: 8 },
@@ -920,7 +982,7 @@ const s = StyleSheet.create({
   card:          { margin: 14, backgroundColor: '#fff', borderRadius: 18, padding: 20, elevation: 4 },
   input:         { borderWidth: 1.5, borderColor: '#efefef', borderRadius: 12, padding: 12, fontSize: 14, backgroundColor: '#fafafa', marginBottom: 10 },
   label:         { fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 6 },
-  btn:           { backgroundColor: '#e94560', borderRadius: 13, padding: 16, alignItems: 'center', marginTop: 6, marginBottom: 10, elevation: 3 },
+  btn:           { backgroundColor: '#e94560', borderRadius: 13, padding: 16, alignItems: 'center', marginTop: 6, marginBottom: 6, elevation: 3 },
   btnTxt:        { color: '#fff', fontSize: 15, fontWeight: 'bold' },
   err:           { textAlign: 'center', color: '#e94560', fontWeight: '600', marginBottom: 8 },
   hint:          { color: '#888', fontSize: 12, textAlign: 'center', marginBottom: 10 },
@@ -932,25 +994,23 @@ const s = StyleSheet.create({
   topBar:        { backgroundColor: '#1a1a2e', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, paddingTop: 46 },
   topTitle:      { color: '#fff', fontSize: 17, fontWeight: 'bold' },
   backBtn:       { width: 36, alignItems: 'flex-start' },
-  greeting:      { color: '#fff', fontSize: 15, fontWeight: 'bold' },
-  subTxt:        { color: '#aaa', fontSize: 11, marginTop: 2 },
   avatar:        { width: 40, height: 40, borderRadius: 20, backgroundColor: '#e94560', alignItems: 'center', justifyContent: 'center' },
   avatarTxt:     { color: '#fff', fontWeight: 'bold', fontSize: 17 },
-  searchBox:     { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 14, padding: 14, elevation: 4, marginBottom: 12, borderWidth: 1, borderColor: '#f0f0f0' },
+  searchBox:     { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f5f5f5', borderRadius: 14, padding: 14, marginBottom: 12 },
   searchIcon:    { fontSize: 16, marginRight: 8 },
-  searchPh:      { color: '#bbb', fontSize: 14 },
+  searchPh:      { color: '#999', fontSize: 14 },
   quickRow:      { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  quickBtn:      { flex: 1, backgroundColor: '#fff', borderRadius: 12, padding: 12, alignItems: 'center', elevation: 2 },
+  quickBtn:      { flex: 1, backgroundColor: '#f9f9f9', borderRadius: 12, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: '#f0f0f0' },
   quickIcon:     { fontSize: 22 },
   quickLbl:      { fontSize: 10, color: '#666', marginTop: 3, fontWeight: '500' },
   secTitle:      { fontSize: 14, fontWeight: 'bold', color: '#1a1a2e', marginBottom: 10, marginTop: 4 },
-  recentItem:    { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, elevation: 2 },
+  recentItem:    { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f9f9f9', borderRadius: 12, padding: 12, marginBottom: 8 },
   recentRoute:   { fontSize: 13, fontWeight: '600', color: '#1a1a2e' },
   recentDate:    { fontSize: 11, color: '#999', marginTop: 2 },
   recentFare:    { fontSize: 14, fontWeight: 'bold', color: '#e94560' },
   promoBanner:   { backgroundColor: '#1a1a2e', borderRadius: 12, padding: 12, marginBottom: 14 },
   promoTxt:      { color: '#fff', fontSize: 12, textAlign: 'center' },
-  nav:           { flexDirection: 'row', backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f0f0f0', paddingBottom: 10, paddingTop: 4 },
+  nav:           { flexDirection: 'row', backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f0f0f0', paddingBottom: 10, paddingTop: 4, elevation: 8 },
   navItem:       { flex: 1, alignItems: 'center', paddingTop: 7 },
   navIcon:       { fontSize: 20 },
   navLbl:        { fontSize: 10, color: '#bbb', marginTop: 2 },
@@ -963,28 +1023,30 @@ const s = StyleSheet.create({
   profilePhone:  { color: '#aaa', fontSize: 13, marginTop: 3 },
   badge:         { backgroundColor: '#f0a500', borderRadius: 10, paddingVertical: 4, paddingHorizontal: 12, marginTop: 8 },
   walletCard:    { backgroundColor: '#e94560', borderRadius: 16, padding: 20, marginBottom: 12, elevation: 4 },
-  walletBox:     { backgroundColor: '#fff', borderRadius: 14, padding: 18, marginBottom: 12, elevation: 2 },
+  walletBox:     { backgroundColor: '#fff', borderRadius: 14, padding: 18, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#f0f0f0' },
   amtBtn:        { flex: 1, minWidth: 68, padding: 12, borderRadius: 10, borderWidth: 1.5, borderColor: '#e94560', alignItems: 'center', backgroundColor: '#fff8f8' },
   menuItem:      { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 7, elevation: 1 },
   menuIconBox:   { width: 36, height: 36, borderRadius: 10, backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
   logoutBtn:     { borderWidth: 1.5, borderColor: '#e94560', borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 6, marginBottom: 24 },
-  locBox:        { backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 4, elevation: 3 },
+  locBox:        { backgroundColor: '#f9f9f9', borderRadius: 14, padding: 14, marginBottom: 10 },
   dotGreen:      { width: 10, height: 10, borderRadius: 5, backgroundColor: '#4CAF50', marginRight: 10 },
   dotRed:        { width: 10, height: 10, borderRadius: 5, backgroundColor: '#e94560', marginRight: 10 },
-  locDivider:    { height: 1, backgroundColor: '#f0f0f0', marginVertical: 8, marginLeft: 20 },
-  locationBtn:   { backgroundColor: '#e8f5e9', borderRadius: 10, padding: 12, marginBottom: 12, alignItems: 'center', borderWidth: 1, borderColor: '#c8e6c9', marginTop: 6 },
-  suggBox:       { backgroundColor: '#fff', borderRadius: 10, marginTop: 4, elevation: 8, borderWidth: 1, borderColor: '#f0f0f0', zIndex: 999 },
+  locDivider:    { height: 1, backgroundColor: '#e8e8e8', marginVertical: 8, marginLeft: 20 },
+  locationBtn:   { backgroundColor: '#e8f5e9', borderRadius: 10, padding: 12, marginBottom: 12, alignItems: 'center', borderWidth: 1, borderColor: '#c8e6c9' },
+  suggBox:       { backgroundColor: '#fff', borderRadius: 10, marginTop: 4, elevation: 8, borderWidth: 1, borderColor: '#f0f0f0' },
   suggItem:      { flexDirection: 'row', alignItems: 'center', padding: 10, borderBottomWidth: 1, borderBottomColor: '#f5f5f5' },
-  rideCard:      { backgroundColor: '#fff', borderRadius: 12, padding: 12, marginRight: 8, alignItems: 'center', minWidth: 82, elevation: 2, borderWidth: 2, borderColor: 'transparent' },
+  rideCard:      { backgroundColor: '#f9f9f9', borderRadius: 12, padding: 12, marginRight: 8, alignItems: 'center', minWidth: 82, borderWidth: 2, borderColor: 'transparent' },
   rideCardActive:{ backgroundColor: '#1a1a2e', borderColor: '#e94560' },
   applyBtn:      { padding: 12, borderWidth: 1.5, borderColor: '#e94560', borderRadius: 10, justifyContent: 'center', marginLeft: 8 },
-  driverCard:    { backgroundColor: '#fff', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', marginBottom: 10, elevation: 4 },
+  driverCard:    { backgroundColor: '#f9f9f9', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   driverAvatar:  { width: 50, height: 50, borderRadius: 25, backgroundColor: '#1a1a2e', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   driverName:    { fontSize: 15, fontWeight: 'bold', color: '#1a1a2e' },
   otpCard:       { backgroundColor: '#1a1a2e', borderRadius: 16, padding: 20, alignItems: 'center', marginBottom: 12 },
-  fareCard:      { backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 10, elevation: 2 },
-  actionRow:     { flexDirection: 'row', justifyContent: 'space-around', backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 10, elevation: 2 },
+  fareCard:      { backgroundColor: '#f9f9f9', borderRadius: 14, padding: 16, marginBottom: 10 },
+  actionRow:     { flexDirection: 'row', justifyContent: 'space-around', backgroundColor: '#f9f9f9', borderRadius: 14, padding: 14, marginBottom: 10 },
   actionBtn:     { alignItems: 'center', padding: 4, flex: 1 },
+  chatBadge:     { position: 'absolute', top: -6, right: -10, backgroundColor: '#e94560', borderRadius: 9, minWidth: 18, height: 18, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  chatAlert:     { backgroundColor: '#e94560', borderRadius: 10, padding: 12, marginBottom: 10, alignItems: 'center' },
   infoBox:       { backgroundColor: '#e8f5e9', borderRadius: 10, padding: 12, marginBottom: 10 },
   payBtn:        { flexDirection: 'row', alignItems: 'center', borderRadius: 14, padding: 16, marginBottom: 10, elevation: 3 },
   scratchCard:   { borderRadius: 18, padding: 24, alignItems: 'center', marginBottom: 4, elevation: 6 },
@@ -995,7 +1057,7 @@ const s = StyleSheet.create({
   chatBubble:    { maxWidth: '75%', borderRadius: 14, padding: 12, marginBottom: 8 },
   chatMine:      { backgroundColor: '#e94560', alignSelf: 'flex-end', borderBottomRightRadius: 4 },
   chatTheirs:    { backgroundColor: '#fff', alignSelf: 'flex-start', borderBottomLeftRadius: 4, elevation: 1 },
-  chatInputRow:  { flexDirection: 'row', alignItems: 'center', padding: 10, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f0f0f0' },
+  chatInputRow:  { flexDirection: 'row', alignItems: 'center', padding: 10, paddingBottom: 28, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f0f0f0' },
   chatInput:     { flex: 1, backgroundColor: '#f5f5f5', borderRadius: 24, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14, marginRight: 8 },
   chatSend:      { width: 44, height: 44, borderRadius: 22, backgroundColor: '#e94560', alignItems: 'center', justifyContent: 'center' },
 });
