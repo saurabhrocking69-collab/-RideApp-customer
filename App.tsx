@@ -105,6 +105,8 @@ export default function App() {
   const [userCoords, setUserCoords]   = useState<any>(null);
   const [pickupSugg, setPickupSugg]   = useState<any[]>([]);
   const [dropSugg, setDropSugg]       = useState<any[]>([]);
+  const [fareEstimates, setFareEstimates] = useState<any>({});
+  const [estDistance, setEstDistance] = useState(0);
   const [chatMsgs, setChatMsgs]       = useState<any[]>([]);
   const [chatInput, setChatInput]     = useState('');
   const [unreadChat, setUnreadChat]   = useState(0);
@@ -226,9 +228,27 @@ export default function App() {
       const res  = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(dest)}&key=${MAPS_KEY}`);
       const data = await res.json();
       const el   = data.rows?.[0]?.elements?.[0];
-      if (el?.status === 'OK') { setEta(el.duration.text + ' · ' + el.distance.text); return el.distance.value / 1000; }
+      if (el?.status === 'OK') {
+        setEta(el.duration.text + ' · ' + el.distance.text);
+        const km = el.distance.value / 1000;
+        setEstDistance(km);
+        loadFareEstimates(km);
+        return km;
+      }
     } catch (_e) {}
     return 5;
+  };
+
+  const loadFareEstimates = async (km: number) => {
+    const est: any = {};
+    for (const r of RIDES) {
+      try {
+        const res = await fetch(`${API}/api/fare-estimate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_type: r.id, distance: km }) });
+        const d = await res.json();
+        est[r.id] = d.fare;
+      } catch (_e) {}
+    }
+    setFareEstimates(est);
   };
 
   const applyPromo = async () => {
@@ -720,7 +740,7 @@ export default function App() {
                 <Text style={[{ fontSize: 12, fontWeight: '700', marginTop: 4 }, rideType===r.id ? { color: '#fff' } : { color: '#333' }]}>{r.label}</Text>
                 <Text style={[{ fontSize: 10 }, rideType===r.id ? { color: '#ddd' } : { color: '#999' }]}>{r.eta}</Text>
                 {r.tag ? <View style={{ backgroundColor: '#4CAF50', borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1, marginTop: 2 }}><Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>{r.tag}</Text></View> : null}
-                <Text style={[{ fontSize: 12, fontWeight: 'bold', marginTop: 2 }, rideType===r.id ? { color: '#fff' } : { color: '#e94560' }]}>₹{r.base}-{r.base + r.rate * 5}+</Text>
+                <Text style={[{ fontSize: 12, fontWeight: 'bold', marginTop: 2 }, rideType===r.id ? { color: '#fff' } : { color: '#e94560' }]}>{fareEstimates[r.id] ? `₹${fareEstimates[r.id]}` : `₹${r.base}+`}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
