@@ -56,32 +56,25 @@ const RadarView = () => {
   );
 };
 
-const MapWebView = ({ pickup, drop, pickupCoords, dropCoords, driverLat, driverLng, userLat, userLng, height = 280 }: any) => {
-  const centerLat = pickupCoords?.lat || userLat || 26.8467;
-  const centerLng = pickupCoords?.lng || userLng || 80.9462;
+const MapWebView = ({ pickup, drop, pickupCoords, dropCoords, driverLat, driverLng, customerLat, customerLng, userLat, userLng, height = 280 }: any) => {
+  const centerLat = pickupCoords?.lat || userLat || customerLat || 26.8467;
+  const centerLng = pickupCoords?.lng || userLng || customerLng || 80.9462;
 
   const html = `<!DOCTYPE html>
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-  * { margin: 0; padding: 0; }
-  html, body, #map { height: 100%; width: 100%; }
-  #map { background: #e8eaed; }
-</style>
+<style>* { margin: 0; padding: 0; } html, body, #map { height: 100%; width: 100%; } #map { background: #e8eaed; }</style>
 </head>
 <body>
 <div id="map"></div>
 <script>
-  let map, pickupMarker, dropMarker, driverMarker;
+  let map, pickupMarker, dropMarker, driverMarker, customerMarker;
   function initMap() {
     const center = { lat: ${centerLat}, lng: ${centerLng} };
     map = new google.maps.Map(document.getElementById('map'), {
       center: center, zoom: 14, disableDefaultUI: true, zoomControl: true,
-      styles: [
-        { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-        { featureType: 'transit', stylers: [{ visibility: 'off' }] }
-      ]
+      styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }, { featureType: 'transit', stylers: [{ visibility: 'off' }] }]
     });
     const bounds = new google.maps.LatLngBounds();
     let hasPoint = false;
@@ -107,11 +100,21 @@ const MapWebView = ({ pickup, drop, pickupCoords, dropCoords, driverLat, driverL
     const driverPos = { lat: ${driverLat}, lng: ${driverLng} };
     driverMarker = new google.maps.Marker({
       position: driverPos, map: map,
-      label: { text: '🚗', fontSize: '24px' },
+      label: { text: '🚗', fontSize: '22px' },
       icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0, fillOpacity: 0, strokeOpacity: 0 },
       title: 'Driver'
     });
     bounds.extend(driverPos); hasPoint = true;
+    ` : ''}
+    ${customerLat && customerLng ? `
+    const customerPos = { lat: ${customerLat}, lng: ${customerLng} };
+    customerMarker = new google.maps.Marker({
+      position: customerPos, map: map,
+      label: { text: '🧑', fontSize: '22px' },
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0, fillOpacity: 0, strokeOpacity: 0 },
+      title: 'Customer'
+    });
+    bounds.extend(customerPos); hasPoint = true;
     ` : ''}
     ${pickupCoords?.lat && dropCoords?.lat ? `
     const directionsService = new google.maps.DirectionsService();
@@ -134,6 +137,8 @@ const MapWebView = ({ pickup, drop, pickupCoords, dropCoords, driverLat, driverL
 
   return <WebView source={{ html }} style={{ height, width: '100%' }} scrollEnabled={false} javaScriptEnabled domStorageEnabled />;
 };
+   
+
 
 export default function App() {
   const [screen, setScreen]           = useState<Screen>('login');
@@ -177,6 +182,8 @@ export default function App() {
   const [chatMsgs, setChatMsgs]       = useState<any[]>([]);
   const [chatInput, setChatInput]     = useState('');
   const [unreadChat, setUnreadChat]   = useState(0);
+  const [driverEta, setDriverEta]     = useState('');
+  const [driverDist, setDriverDist]   = useState('');
   const lastChatCount = useRef(0);
   const [referralData, setReferralData] = useState<any>(null);
   const [referralInput, setReferralInput] = useState('');
@@ -204,7 +211,12 @@ export default function App() {
         try {
           const lr = await fetch(`${API}/api/rides/driver-location/${rideData.ride_id}`);
           const ld = await lr.json();
-          if (ld.location) setDriverLoc(ld.location);
+          if (ld.location) {
+            setDriverLoc(ld.location);
+            if (ld.location.lat && ld.location.lng && pickupCoords?.lat) {
+              calcDriverEta(ld.location.lat, ld.location.lng, pickupCoords.lat, pickupCoords.lng);
+            }
+          }
         } catch (_e) {}
         if (st === 'matched' || st === 'arrived') {
           setRideData((p: any) => ({ ...p, startOtp: data.ride.start_otp, driver: { name: data.ride.driver_name, phone: data.ride.driver_phone, vehicle_no: data.ride.vehicle_no } }));
@@ -331,6 +343,21 @@ export default function App() {
       }
     } catch (_e) { setEta(''); return 5; }
   };
+  const calcDriverEta = async (driverLat: number, driverLng: number, pickupLat: number, pickupLng: number) => {
+    try {
+      const res = await fetch(
+        `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${driverLat},${driverLng}&destinations=${pickupLat},${pickupLng}&key=${MAPS_KEY}&mode=driving&departure_time=now`
+      );
+      const data = await res.json();
+      const el = data.rows?.[0]?.elements?.[0];
+      if (el?.status === 'OK') {
+        const duration = el.duration_in_traffic?.text || el.duration.text;
+        const dist = el.distance.text;
+        setDriverEta(duration);
+        setDriverDist(dist);
+      }
+    } catch (_e) {}
+  };
 
   const loadFareEstimates = async (km: number) => {
     const est: any = {};
@@ -366,20 +393,30 @@ export default function App() {
   const addMoney = async (amt: number) => {
     try { const res = await fetch(`${API}/api/wallet/add`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: phone || '9999999999', amount: amt }) }); const data = await res.json(); if (data.success) { setWalletBalance(data.balance); setResult(`✅ ₹${amt} add ho gaya!`); } } catch (_e) { setResult('❌ Error'); }
   };
-  const payWithWallet = async () => {
+ const payWithWallet = async () => {
     const fareNum = parseInt(String(rideData?.fare).replace(/[^0-9]/g, '')) || 0;
     if (walletBalance < fareNum) { setResult(`❌ Balance kam hai! ₹${walletBalance} hai`); return; }
-    try { const res = await fetch(`${API}/api/wallet/pay`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: phone || '9999999999', amount: fareNum, ride_id: rideData.ride_id }) }); const data = await res.json(); if (data.success) { setWalletBalance(data.balance); setPaymentDone(true); setScreen('postride'); createScratchCard(); } else setResult('❌ ' + (data.message || 'Payment fail')); } catch (_e) { setResult('❌ Server error'); }
+    try {
+      const res = await fetch(`${API}/api/wallet/pay`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: phone || '9999999999', amount: fareNum, ride_id: rideData.ride_id }) });
+      const data = await res.json();
+      if (data.success) {
+        setWalletBalance(data.balance);
+        await fetch(`${API}/api/rides/payment-complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, payment_method: 'wallet', phone: phone || '9999999999' }) });
+        setPaymentDone(true); setScreen('postride'); createScratchCard();
+      } else setResult('❌ ' + (data.message || 'Payment fail'));
+    } catch (_e) { setResult('❌ Server error'); }
   };
+  // PAYMENT-COMPLETE API //
   const handlePayment = async () => {
     try {
-      const fareNum  = parseInt(String(rideData?.fare).replace(/[^0-9]/g, '')) || 0;
+      const fareNum = parseInt(String(rideData?.fare).replace(/[^0-9]/g, '')) || 0;
       const orderRes = await fetch(`${API}/api/payment/create-order`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: fareNum, ride_id: rideData.ride_id }) });
-      const order    = await orderRes.json();
+      const order = await orderRes.json();
       if (!order.success) { setResult('❌ Order error'); return; }
       RazorpayCheckout.open({ description: 'RideApp Trip', currency: 'INR', key: order.key_id, amount: order.amount, order_id: order.order_id, name: 'RideApp', prefill: { contact: phone, name: userName || 'User' }, theme: { color: '#e94560' } })
         .then(async (data: any) => {
           await fetch(`${API}/api/payment/verify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, payment_id: data.razorpay_payment_id, amount: fareNum, method: 'online' }) });
+          await fetch(`${API}/api/rides/payment-complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, payment_method: 'online', phone: phone || '9999999999' }) });
           setPaymentDone(true); setScreen('postride'); createScratchCard();
         }).catch((_e: any) => setResult('❌ Payment cancel ya fail hua'));
     } catch (e: any) { setResult('❌ ' + (e?.message || 'Payment error')); }
@@ -923,13 +960,13 @@ export default function App() {
         <Text style={s.topTitle}>{rideData?.driver ? '🚗 Driver mil gaya!' : '🔍 Driver dhundh rahe hain'}</Text>
       </View>
       <View style={s.mapFit}>
-        <MapWebView pickupCoords={pickupCoords} dropCoords={dropCoords} driverLat={driverLoc?.lat} driverLng={driverLoc?.lng} height={220} />
+        <MapWebView pickupCoords={pickupCoords} dropCoords={dropCoords} driverLat={driverLoc?.lat} driverLng={driverLoc?.lng} customerLat={userCoords?.latitude} customerLng={userCoords?.longitude} height={220} />
       </View>
       <View style={{ flex: 1, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 16, paddingHorizontal: 16 }}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
           {rideData?.driver ? (
             <>
-              <View style={s.driverCard}>
+             <View style={s.driverCard}>
                 <View style={s.driverAvatar}><Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>{(rideData.driver.name||'D')[0].toUpperCase()}</Text></View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.driverName}>{rideData.driver.name}</Text>
@@ -937,10 +974,22 @@ export default function App() {
                   <Text style={{ fontSize: 12, color: '#f0a500', marginTop: 2 }}>⭐ 4.8</Text>
                 </View>
                 <View style={{ alignItems: 'center' }}>
-                  <PulseView><Text style={{ fontSize: 16, fontWeight: 'bold', color: '#e94560' }}>{eta ? eta.split('·')[0].trim() : '3 min'}</Text></PulseView>
+                  <PulseView><Text style={{ fontSize: 18, fontWeight: 'bold', color: '#e94560' }}>{driverEta || (eta ? eta.split('·')[0].trim() : '...')}</Text></PulseView>
                   <Text style={{ fontSize: 10, color: '#666' }}>arriving</Text>
+                  {driverDist ? <Text style={{ fontSize: 10, color: '#999', marginTop: 2 }}>{driverDist} door</Text> : null}
                 </View>
               </View>
+              {/* Live ETA banner */}
+              {driverEta ? (
+                <View style={{ backgroundColor: '#1a1a2e', borderRadius: 12, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 20, marginRight: 10 }}>🚗</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Aapka driver aa raha hai!</Text>
+                    <Text style={{ color: '#4CAF50', fontSize: 13, marginTop: 2 }}>⏱️ {driverEta} mein pahunchega · {driverDist} door</Text>
+                  </View>
+                  <PulseView><View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#4CAF50' }} /></PulseView>
+                </View>
+              ) : null}
               {rideData?.startOtp && (
                 <View style={s.otpCard}>
                   <Text style={{ color: '#aaa', fontSize: 12, marginBottom: 6 }}>🔐 Driver ko yeh OTP batao</Text>
@@ -1051,7 +1100,7 @@ export default function App() {
         <Text style={s.topTitle}>🚗 Ride Chal Rahi Hai</Text>
       </View>
       <View style={s.mapFit}>
-        <MapWebView pickupCoords={pickupCoords} dropCoords={dropCoords} driverLat={driverLoc?.lat} driverLng={driverLoc?.lng} height={220} />
+        <MapWebView pickupCoords={pickupCoords} dropCoords={dropCoords} driverLat={driverLoc?.lat} driverLng={driverLoc?.lng} customerLat={userCoords?.latitude} customerLng={userCoords?.longitude} height={220} />
       </View>
       <View style={{ flex: 1, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 16, paddingHorizontal: 16 }}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
@@ -1100,7 +1149,12 @@ export default function App() {
         {[
           { color: '#e94560', icon: '💰', title: 'Wallet se Pay', sub: `Balance: ₹${walletBalance}`, fn: payWithWallet },
           { color: '#1a1a2e', icon: '💳', title: 'Online Pay', sub: 'UPI / Card', fn: handlePayment },
-          { color: '#4CAF50', icon: '💵', title: 'Cash Pay', sub: 'Driver ko cash', fn: () => { setPaymentDone(true); setScreen('postride'); createScratchCard(); } },
+          { color: '#4CAF50', icon: '💵', title: 'Cash Pay', sub: 'Driver ko cash do', fn: async () => {
+            try {
+              await fetch(`${API}/api/rides/payment-complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, payment_method: 'cash', phone: phone || '9999999999' }) });
+            } catch (_e) {}
+            setPaymentDone(true); setScreen('postride'); createScratchCard();
+          }},
         ].map((p, i) => (
           <TouchableOpacity key={i} style={[s.payBtn, { backgroundColor: p.color }]} onPress={p.fn}>
             <Text style={{ fontSize: 20 }}>{p.icon}</Text>
