@@ -11,8 +11,7 @@ import { WebView } from 'react-native-webview';
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 const API = 'https://rideapp-backend-production-5e1c.up.railway.app';
 
-type Screen = 'login' | 'otp' | 'home' | 'booking' | 'matching' | 'inride' | 'payment' | 'postride' | 'chat' | 'referral' | 'saved';
-
+type Screen = 'login' | 'otp' | 'home' | 'booking' | 'matching' | 'inride' | 'payment' | 'postride' | 'chat' | 'referral' | 'saved' | 'policy';
 const PulseView = ({ children, style }: any) => {
   const anim = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -212,6 +211,11 @@ export default function App() {
         }
         if (st === 'started') setScreen('inride');
         if (st === 'completed') { setScreen('payment'); loadWallet(phone); clearInterval(iv); }
+        if (st === 'cancelled') {
+          clearInterval(iv);
+          setResult('❌ Driver ne ride cancel kar di. Dusra driver try karo.');
+          setScreen('home'); setTab('home'); setRideData(null); setPickup(''); setDrop(''); setEta('');
+        }
       } catch (_e) {}
     }, 3000);
     return () => clearInterval(iv);
@@ -304,30 +308,39 @@ export default function App() {
   };
 
   const fetchEta = async (origin: string, dest: string) => {
+    if (!origin || !drop) return 5;
+    setEta('⏳ Calculate ho raha hai...');
     try {
-      const res  = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(dest)}&key=${MAPS_KEY}`);
+      const res = await fetch(
+        `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(dest)}&key=${MAPS_KEY}&mode=driving&language=hi&units=metric&departure_time=now`
+      );
       const data = await res.json();
-      const el   = data.rows?.[0]?.elements?.[0];
+      if (data.status !== 'OK') { setEta(''); return 5; }
+      const el = data.rows?.[0]?.elements?.[0];
       if (el?.status === 'OK') {
-        setEta(el.duration.text + ' · ' + el.distance.text);
+        // duration_in_traffic agar available ho (more accurate)
+        const duration = el.duration_in_traffic?.text || el.duration.text;
+        const dist = el.distance.text;
         const km = el.distance.value / 1000;
+        setEta(`🕐 ${duration} · 📍 ${dist}`);
         setEstDistance(km);
         loadFareEstimates(km);
         return km;
+      } else {
+        setEta(''); return 5;
       }
-    } catch (_e) {}
-    return 5;
+    } catch (_e) { setEta(''); return 5; }
   };
 
   const loadFareEstimates = async (km: number) => {
     const est: any = {};
-    for (const r of RIDES) {
+    await Promise.all(RIDES.map(async (r) => {
       try {
         const res = await fetch(`${API}/api/fare-estimate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_type: r.id, distance: km }) });
         const d = await res.json();
         est[r.id] = d.fare;
       } catch (_e) {}
-    }
+    }));
     setFareEstimates(est);
   };
 
@@ -557,24 +570,17 @@ export default function App() {
               </TouchableOpacity>
             ))}
           </View>
-          <TouchableOpacity style={s.searchBox} onPress={() => setScreen('booking')}>
-            <Text style={s.searchIcon}>🔍</Text>
-            <Text style={s.searchPh}>Kahan jaana hai?</Text>
-          </TouchableOpacity>
-          <View style={s.quickRow}>
-            {[['🏠','Home'],['💼','Office'],['🎁','Refer'],['📍','Saved']].map(([icon,label],i) => (
-              <TouchableOpacity key={i} style={s.quickBtn} onPress={() => {
-                if (label === 'Refer') { loadReferral(); setScreen('referral'); }
-                else if (label === 'Saved') { loadSaved(); setScreen('saved'); }
-                else setScreen('booking');
-              }}>
-                <Text style={s.quickIcon}>{icon}</Text>
-                <Text style={s.quickLbl}>{label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          
           <TouchableOpacity style={s.promoBanner} onPress={() => { loadReferral(); setScreen('referral'); }}>
             <Text style={s.promoTxt}>🎁 Dost ko refer karo, dono ko ₹50 milega!</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f9f9f9', borderRadius: 12, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: '#f0f0f0' }} onPress={() => setScreen('policy')}>
+            <Text style={{ fontSize: 18, marginRight: 10 }}>📋</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#1a1a2e' }}>Cancellation Policy</Text>
+              <Text style={{ fontSize: 11, color: '#999' }}>Cancel rules aur fees jaano</Text>
+            </View>
+            <Text style={{ fontSize: 18, color: '#ddd' }}>›</Text>
           </TouchableOpacity>
           {historyRides.length > 0 && (
             <>
@@ -663,6 +669,16 @@ export default function App() {
           <View style={{ flex: 1 }}><Text style={{ fontSize: 14, color: '#1a1a2e', fontWeight: '600' }}>Saved Places</Text><Text style={{ fontSize: 11, color: '#999' }}>Home, Office save karo</Text></View>
           <Text style={{ fontSize: 18, color: '#ddd' }}>›</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={s.menuItem} onPress={() => setScreen('policy')}>
+          <View style={s.menuIconBox}><Text style={{ fontSize: 18 }}>📋</Text></View>
+          <View style={{ flex: 1 }}><Text style={{ fontSize: 14, color: '#1a1a2e', fontWeight: '600' }}>Cancellation Policy</Text><Text style={{ fontSize: 11, color: '#999' }}>Cancel rules aur fees</Text></View>
+          <Text style={{ fontSize: 18, color: '#ddd' }}>›</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={s.menuItem} onPress={() => setScreen('policy')}>
+          <View style={s.menuIconBox}><Text style={{ fontSize: 18 }}>📋</Text></View>
+          <View style={{ flex: 1 }}><Text style={{ fontSize: 14, color: '#1a1a2e', fontWeight: '600' }}>Cancellation Policy</Text><Text style={{ fontSize: 11, color: '#999' }}>Cancel rules aur fees</Text></View>
+          <Text style={{ fontSize: 18, color: '#ddd' }}>›</Text>
+        </TouchableOpacity>
         {[['🎫','Promo Codes','RIDE50, FLAT20'],['🔔','Notifications','Alerts'],['🛡️','Safety','Emergency'],['📞','Support','24x7 help']].map(([icon,title,sub],i) => (
           <TouchableOpacity key={i} style={s.menuItem}>
             <View style={s.menuIconBox}><Text style={{ fontSize: 18 }}>{icon}</Text></View>
@@ -714,7 +730,50 @@ export default function App() {
       </ScrollView>
     </View>
   );
+// ═══ CANCELLATION POLICY ═══
+  if (screen === 'policy') return (
+    <View style={s.screen}>
+      <View style={s.topBar}>
+        <TouchableOpacity onPress={() => setScreen('home')} style={s.backBtn}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
+        <Text style={s.topTitle}>📋 Cancellation Policy</Text>
+        <View style={{ width: 36 }} />
+      </View>
+      <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 30 }}>
+        <View style={{ backgroundColor: '#e8f5e9', borderRadius: 14, padding: 16, marginBottom: 16 }}>
+          <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#2e7d32', marginBottom: 6 }}>✅ Free Cancellation</Text>
+          <Text style={{ fontSize: 13, color: '#388e3c', lineHeight: 20 }}>Ride book karne ke <Text style={{ fontWeight: 'bold' }}>1 minute ke andar</Text> cancel karo — bilkul FREE! Koi charge nahi.</Text>
+        </View>
 
+        <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 16, elevation: 2 }}>
+          <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#1a1a2e', marginBottom: 12 }}>💰 Cancel Fees (1 min ke baad)</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#f5f5f5' }}>
+            <Text style={{ fontSize: 13, color: '#666' }}>Driver assign hone ke baad</Text>
+            <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#e94560' }}>₹10</Text>
+          </View>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 }}>
+            <Text style={{ fontSize: 13, color: '#666' }}>Driver pahunchne ke baad</Text>
+            <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#e94560' }}>₹15</Text>
+          </View>
+        </View>
+
+        <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 16, elevation: 2 }}>
+          <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#1a1a2e', marginBottom: 8 }}>🎯 Daily Free Cancels</Text>
+          <Text style={{ fontSize: 13, color: '#666', lineHeight: 20 }}>Har din <Text style={{ fontWeight: 'bold', color: '#1a1a2e' }}>3 free cancellations</Text> milti hain. Uske baad har cancel pe ₹10 fee lagti hai.</Text>
+        </View>
+
+        <View style={{ backgroundColor: '#fff3e0', borderRadius: 14, padding: 16, marginBottom: 16 }}>
+          <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#e65100', marginBottom: 8 }}>⚠️ Trust Score</Text>
+          <Text style={{ fontSize: 13, color: '#ef6c00', lineHeight: 20 }}>Bar-bar cancel karne se aapka trust score girta hai. Kam trust score wale customers ko booking mein dikkat ho sakti hai. Kripya zaruri hone par hi cancel karein.</Text>
+        </View>
+
+        <View style={{ backgroundColor: '#e3f2fd', borderRadius: 14, padding: 16 }}>
+          <Text style={{ fontSize: 13, color: '#1565c0', lineHeight: 20 }}>💡 Cancel karte waqt aapko hamesha dikhega ki kitni fee lagegi aur kitne free cancels bache hain.</Text>
+        </View>
+      </ScrollView>
+    </View>
+  );
+
+  
   // ═══ SAVED PLACES ═══
   if (screen === 'saved') return (
     <View style={s.screen}>
@@ -824,7 +883,11 @@ export default function App() {
               </View>
             )}
           </View>
-          {eta ? <View style={{ backgroundColor: '#e8f5e9', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center' }}><Text style={{ color: '#2e7d32', fontWeight: '600', fontSize: 13 }}>🕐 {eta}</Text></View> : null}
+          {eta ? (
+            <Animated.View style={{ backgroundColor: eta.includes('Calculate') ? '#fff3e0' : '#e8f5e9', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center', opacity: eta.includes('Calculate') ? scratchAnim : 1 }}>
+              <Text style={{ color: eta.includes('Calculate') ? '#e65100' : '#2e7d32', fontWeight: '600', fontSize: 13 }}>{eta}</Text>
+            </Animated.View>
+          ) : null}
           <TouchableOpacity style={s.locationBtn} onPress={useMyLocation}><Text style={{ color: '#2e7d32', fontWeight: '600', fontSize: 13 }}>📍 Meri Current Location Use Karo</Text></TouchableOpacity>
           <Text style={s.secTitle}>Ride Type</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
@@ -853,6 +916,7 @@ export default function App() {
   );
 
   // ═══ MATCHING — Map fit on top ═══
+  if (screen === 'matching' && showCancelModal) return renderCancelModal();
   if (screen === 'matching') return (
     <View style={s.screen}>
       <View style={s.topBar}>
@@ -900,6 +964,9 @@ export default function App() {
                 </TouchableOpacity>
               )}
               {sosActive && <View style={[s.infoBox, { backgroundColor: '#ffeeee' }]}><Text style={{ fontSize: 13, color: '#c62828', fontWeight: 'bold' }}>🆘 Alert bheja! Police: 100 · Ambulance: 108</Text></View>}
+              <TouchableOpacity style={{ backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#e94560', borderRadius: 12, padding: 14, alignItems: 'center', marginBottom: 10 }} onPress={() => setShowCancelModal(true)}>
+                <Text style={{ color: '#e94560', fontWeight: 'bold', fontSize: 14 }}>✕ Ride Cancel karein {cancelTimer > 0 ? '(Free)' : '(₹15)'}</Text>
+              </TouchableOpacity>
               <View style={s.fareCard}>
                 {[['Distance',rideData.distance],['Total Fare',rideData.fare]].map(([lbl,val],i) => (
                   <View key={i} style={[s.row, { justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: i<1 ? 1 : 0, borderBottomColor: '#f5f5f5' }]}>
@@ -939,8 +1006,8 @@ export default function App() {
       </View>
     </View>
   );
-  // ═══ CANCEL MODAL (matching screen ke liye) ═══
-  if (showCancelModal) return (
+  // ═══ CANCEL MODAL (function) ═══
+  function renderCancelModal() { return (
     <View style={s.screen}>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
         <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 30 }}>
@@ -974,7 +1041,7 @@ export default function App() {
         </View>
       </View>
     </View>
-  );
+  );}
 
 
 // ═══ IN-RIDE — Map fit on top ═══
