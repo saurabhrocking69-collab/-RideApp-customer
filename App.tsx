@@ -57,19 +57,83 @@ const RadarView = () => {
   );
 };
 
-const MapWebView = ({ pickup, drop, userLat, userLng, height = 200 }: any) => {
-  let mapUrl = '';
-  if (pickup && drop) {
-    mapUrl = `https://www.google.com/maps/embed/v1/directions?key=${MAPS_KEY}&origin=${encodeURIComponent(pickup)}&destination=${encodeURIComponent(drop)}&mode=driving`;
-  } else if (pickup && pickup !== 'Lucknow,India') {
-    mapUrl = `https://www.google.com/maps/embed/v1/place?key=${MAPS_KEY}&q=${encodeURIComponent(pickup)}`;
-  } else if (userLat && userLng) {
-    mapUrl = `https://www.google.com/maps/embed/v1/view?key=${MAPS_KEY}&center=${userLat},${userLng}&zoom=15`;
-  } else {
-    mapUrl = `https://www.google.com/maps/embed/v1/place?key=${MAPS_KEY}&q=Lucknow,Uttar+Pradesh,India`;
+const MapWebView = ({ pickup, drop, pickupCoords, dropCoords, driverLat, driverLng, userLat, userLng, height = 280 }: any) => {
+  const centerLat = pickupCoords?.lat || userLat || 26.8467;
+  const centerLng = pickupCoords?.lng || userLng || 80.9462;
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  * { margin: 0; padding: 0; }
+  html, body, #map { height: 100%; width: 100%; }
+  #map { background: #e8eaed; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+  let map, pickupMarker, dropMarker, driverMarker;
+  function initMap() {
+    const center = { lat: ${centerLat}, lng: ${centerLng} };
+    map = new google.maps.Map(document.getElementById('map'), {
+      center: center, zoom: 14, disableDefaultUI: true, zoomControl: true,
+      styles: [
+        { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+        { featureType: 'transit', stylers: [{ visibility: 'off' }] }
+      ]
+    });
+    const bounds = new google.maps.LatLngBounds();
+    let hasPoint = false;
+    ${pickupCoords?.lat ? `
+    const pickupPos = { lat: ${pickupCoords.lat}, lng: ${pickupCoords.lng} };
+    pickupMarker = new google.maps.Marker({
+      position: pickupPos, map: map,
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#4CAF50', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 3 },
+      title: 'Pickup', animation: google.maps.Animation.DROP
+    });
+    bounds.extend(pickupPos); hasPoint = true;
+    ` : ''}
+    ${dropCoords?.lat ? `
+    const dropPos = { lat: ${dropCoords.lat}, lng: ${dropCoords.lng} };
+    dropMarker = new google.maps.Marker({
+      position: dropPos, map: map,
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#e94560', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 3 },
+      title: 'Drop', animation: google.maps.Animation.DROP
+    });
+    bounds.extend(dropPos); hasPoint = true;
+    ` : ''}
+    ${driverLat && driverLng ? `
+    const driverPos = { lat: ${driverLat}, lng: ${driverLng} };
+    driverMarker = new google.maps.Marker({
+      position: driverPos, map: map,
+      label: { text: '🚗', fontSize: '24px' },
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0, fillOpacity: 0, strokeOpacity: 0 },
+      title: 'Driver'
+    });
+    bounds.extend(driverPos); hasPoint = true;
+    ` : ''}
+    ${pickupCoords?.lat && dropCoords?.lat ? `
+    const directionsService = new google.maps.DirectionsService();
+    const directionsRenderer = new google.maps.DirectionsRenderer({
+      map: map, suppressMarkers: true,
+      polylineOptions: { strokeColor: '#1a1a2e', strokeWeight: 4, strokeOpacity: 0.8 }
+    });
+    directionsService.route({
+      origin: { lat: ${pickupCoords.lat}, lng: ${pickupCoords.lng} },
+      destination: { lat: ${dropCoords.lat}, lng: ${dropCoords.lng} },
+      travelMode: 'DRIVING'
+    }, (result, status) => { if (status === 'OK') directionsRenderer.setDirections(result); });
+    ` : ''}
+    if (hasPoint) { map.fitBounds(bounds, 80); if (map.getZoom() > 16) map.setZoom(16); }
   }
-  const html = `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{margin:0;padding:0;}body{background:#dbeafe;}</style></head><body><iframe width="100%" height="${height}" frameborder="0" style="border:0" src="${mapUrl}" allowfullscreen></iframe></body></html>`;
-  return <WebView source={{ html }} style={{ height, width: '100%' }} scrollEnabled={false} javaScriptEnabled />;
+</script>
+<script async src="https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&callback=initMap"></script>
+</body>
+</html>`;
+
+  return <WebView source={{ html }} style={{ height, width: '100%' }} scrollEnabled={false} javaScriptEnabled domStorageEnabled />;
 };
 
 export default function App() {
@@ -107,6 +171,10 @@ export default function App() {
   const [dropSugg, setDropSugg]       = useState<any[]>([]);
   const [fareEstimates, setFareEstimates] = useState<any>({});
   const [estDistance, setEstDistance] = useState(0);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelTimer, setCancelTimer] = useState(60);
+  const [freeCancelsLeft, setFreeCancelsLeft] = useState(3);
+  const [bookTime, setBookTime] = useState(0);
   const [chatMsgs, setChatMsgs]       = useState<any[]>([]);
   const [chatInput, setChatInput]     = useState('');
   const [unreadChat, setUnreadChat]   = useState(0);
@@ -158,6 +226,18 @@ export default function App() {
     const iv = setInterval(load, 2500);
     return () => clearInterval(iv);
   }, [screen, rideData?.ride_id]);
+
+  // Cancel countdown timer (60 sec free)
+  useEffect(() => {
+    if (screen !== 'matching' || !bookTime) return;
+    const iv = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - bookTime) / 1000);
+      const left = Math.max(0, 60 - elapsed);
+      setCancelTimer(left);
+      if (left === 0) clearInterval(iv);
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [screen, bookTime]);
 
   // Background chat — unread badge during ride
   useEffect(() => {
@@ -323,7 +403,10 @@ export default function App() {
       if (promoDiscount > 0 && data.ride_id) {
         try { await fetch(`${API}/api/promo/apply`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: promoCode, phone, ride_id: data.ride_id, discount: promoDiscount }) }); } catch (_e) {}
       }
-      setRideData(data); setScreen('matching'); setResult('');
+  setRideData(data); setScreen('matching'); setResult('');
+      setBookTime(Date.now()); setCancelTimer(60);
+      // Free cancels load
+      try { const cs = await fetch(`${API}/api/customer/cancel-status?phone=${phone || '9999999999'}`); const csd = await cs.json(); setFreeCancelsLeft(csd.free_cancels_left ?? 3); } catch (_e) {}
     } catch { setResult('❌ Server connect nahi hua!'); }
     setLoading(false);
   };
@@ -438,29 +521,42 @@ export default function App() {
     </KeyboardAvoidingView>
   );
 
-  // ═══ HOME — Map full background, content bottom sheet ═══
+  // ═══ HOME — Map fit on top, content below ═══
   if (screen === 'home' && tab === 'home') return (
     <View style={s.screen}>
-      {/* Full screen map background */}
-      <View style={s.mapFull}>
-        <MapWebView pickup={pickup || 'Lucknow,India'} drop="" userLat={userCoords?.latitude} userLng={userCoords?.longitude} height={900} />
-      </View>
-      {/* Top transparent bar */}
-      <View style={s.topOverlay}>
-        <View style={s.topGlass}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.greetingDark}>Namaste 👋 {userName || 'Rider'}</Text>
-            <Text style={s.subTxtDark}>📍 Lucknow, UP</Text>
-          </View>
-          <TouchableOpacity style={s.avatar} onPress={() => { setTab('profile'); loadWallet(phone); }}>
-            <Text style={s.avatarTxt}>{(userName || 'R')[0].toUpperCase()}</Text>
-          </TouchableOpacity>
+      {/* Top bar */}
+      <View style={s.topBar}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.greeting}>Namaste 👋 {userName || 'Rider'}</Text>
+          <Text style={s.subTxt}>📍 Lucknow, UP</Text>
         </View>
+        <TouchableOpacity style={s.avatar} onPress={() => { setTab('profile'); loadWallet(phone); }}>
+          <Text style={s.avatarTxt}>{(userName || 'R')[0].toUpperCase()}</Text>
+        </TouchableOpacity>
       </View>
-      {/* Bottom sheet */}
-      <View style={s.bottomSheet}>
-        <View style={s.sheetHandle} />
+      {/* Map fit */}
+      <View style={s.mapFit}>
+        <MapWebView pickupCoords={pickupCoords} dropCoords={dropCoords} userLat={userCoords?.latitude} userLng={userCoords?.longitude} height={260} />
+      </View>
+      {/* Content */}
+      <View style={{ flex: 1, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 16, paddingHorizontal: 16 }}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 90 }}>
+          <TouchableOpacity style={s.searchBox} onPress={() => setScreen('booking')}>
+            <Text style={s.searchIcon}>🔍</Text>
+            <Text style={s.searchPh}>Kahan jaana hai?</Text>
+          </TouchableOpacity>
+          <View style={s.quickRow}>
+            {[['🏠','Home'],['💼','Office'],['🎁','Refer'],['📍','Saved']].map(([icon,label],i) => (
+              <TouchableOpacity key={i} style={s.quickBtn} onPress={() => {
+                if (label === 'Refer') { loadReferral(); setScreen('referral'); }
+                else if (label === 'Saved') { loadSaved(); setScreen('saved'); }
+                else setScreen('booking');
+              }}>
+                <Text style={s.quickIcon}>{icon}</Text>
+                <Text style={s.quickLbl}>{label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
           <TouchableOpacity style={s.searchBox} onPress={() => setScreen('booking')}>
             <Text style={s.searchIcon}>🔍</Text>
             <Text style={s.searchPh}>Kahan jaana hai?</Text>
@@ -686,20 +782,18 @@ export default function App() {
     </KeyboardAvoidingView>
   );
 
-  // ═══ BOOKING — Map full bg + bottom sheet ═══
+  // ═══ BOOKING — Map fit on top ═══
   if (screen === 'booking') return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <View style={s.mapFull}>
-        <MapWebView pickup={pickup} drop={drop} height={900} />
+      <View style={s.topBar}>
+        <TouchableOpacity onPress={() => setScreen('home')} style={s.backBtn}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
+        <Text style={s.topTitle}>Ride Book Karo</Text>
+        <View style={{ width: 36 }} />
       </View>
-      <View style={s.topOverlay}>
-        <View style={s.topGlass}>
-          <TouchableOpacity onPress={() => setScreen('home')} style={s.backCircle}><Text style={{ color: '#1a1a2e', fontSize: 20 }}>←</Text></TouchableOpacity>
-          <Text style={[s.topTitle, { color: '#1a1a2e', marginLeft: 12 }]}>Ride Book Karo</Text>
-        </View>
+      <View style={s.mapFit}>
+        <MapWebView pickupCoords={pickupCoords} dropCoords={dropCoords} height={200} />
       </View>
-      <View style={[s.bottomSheet, { maxHeight: '72%' }]}>
-        <View style={s.sheetHandle} />
+      <View style={{ flex: 1, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 16, paddingHorizontal: 16 }}>
         <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 20 }}>
           <View style={s.locBox}>
             <View style={s.row}>
@@ -758,14 +852,16 @@ export default function App() {
     </KeyboardAvoidingView>
   );
 
-  // ═══ MATCHING — Map full bg + bottom sheet ═══
+  // ═══ MATCHING — Map fit on top ═══
   if (screen === 'matching') return (
     <View style={s.screen}>
-      <View style={s.mapFull}>
-        <MapWebView pickup={pickup} drop={drop} height={900} />
+      <View style={s.topBar}>
+        <Text style={s.topTitle}>{rideData?.driver ? '🚗 Driver mil gaya!' : '🔍 Driver dhundh rahe hain'}</Text>
       </View>
-      <View style={[s.bottomSheet, { maxHeight: '70%' }]}>
-        <View style={s.sheetHandle} />
+      <View style={s.mapFit}>
+        <MapWebView pickupCoords={pickupCoords} dropCoords={dropCoords} driverLat={driverLoc?.lat} driverLng={driverLoc?.lng} height={220} />
+      </View>
+      <View style={{ flex: 1, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 16, paddingHorizontal: 16 }}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
           {rideData?.driver ? (
             <>
@@ -821,19 +917,17 @@ export default function App() {
               <Text style={{ fontSize: 13, color: '#999', marginTop: 6, textAlign: 'center' }}>{pickup} → {drop}</Text>
               <Text style={{ fontSize: 26, fontWeight: 'bold', color: '#e94560', marginTop: 10 }}>{rideData?.fare}</Text>
               {eta ? <Text style={{ fontSize: 13, color: '#4CAF50', marginTop: 4 }}>🕐 {eta}</Text> : null}
-              <View style={{ flexDirection: 'row', gap: 12, marginTop: 20, width: '100%' }}>
+              {/* Cancel info */}
+              <View style={{ backgroundColor: cancelTimer > 0 ? '#e8f5e9' : '#fff3e0', borderRadius: 10, padding: 10, marginTop: 16, width: '100%' }}>
+                <Text style={{ fontSize: 13, color: cancelTimer > 0 ? '#2e7d32' : '#e65100', fontWeight: '600', textAlign: 'center' }}>
+                  {cancelTimer > 0 ? `✅ ${cancelTimer}s tak FREE cancellation` : '⚠️ Ab cancel pe ₹10 fee lagega'}
+                </Text>
+                <Text style={{ fontSize: 11, color: '#888', textAlign: 'center', marginTop: 4 }}>Aaj {freeCancelsLeft} free cancels bache hain</Text>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 12, marginTop: 14, width: '100%' }}>
                 <TouchableOpacity style={{ flex: 1, backgroundColor: '#f5f5f5', borderRadius: 12, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}
-                  onPress={async () => {
-                    if (rideData?.ride_id) {
-                      try {
-                        const cr = await fetch(`${API}/api/rides/cancel-smart`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, cancelled_by: 'customer', reason: 'Customer cancelled', phone: phone || '9999999999' }) });
-                        const cd = await cr.json();
-                        if (cd.penalty > 0) setResult(`⚠️ ${cd.message}`);
-                      } catch (_e) {}
-                    }
-                    setScreen('home'); setRideData(null); setPickup(''); setDrop(''); setEta('');
-                  }}>
-                  <Text style={{ color: '#e94560', fontWeight: 'bold', fontSize: 14 }}>← Wapas Jao</Text>
+                  onPress={() => setShowCancelModal(true)}>
+                  <Text style={{ color: '#e94560', fontWeight: 'bold', fontSize: 14 }}>✕ Cancel {cancelTimer > 0 ? '(Free)' : '(₹10)'}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={{ flex: 1, backgroundColor: '#1a1a2e', borderRadius: 12, padding: 14, alignItems: 'center' }} onPress={() => { setRideData(null); bookRide(); }}>
                   <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>🔄 Retry</Text>
@@ -845,15 +939,54 @@ export default function App() {
       </View>
     </View>
   );
+  // ═══ CANCEL MODAL (matching screen ke liye) ═══
+  if (showCancelModal) return (
+    <View style={s.screen}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+        <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 30 }}>
+          <View style={s.sheetHandle} />
+          <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1a1a2e', marginBottom: 6 }}>Ride Cancel karein?</Text>
+          <View style={{ backgroundColor: cancelTimer > 0 ? '#e8f5e9' : '#fff3e0', borderRadius: 10, padding: 12, marginBottom: 16 }}>
+            <Text style={{ fontSize: 13, color: cancelTimer > 0 ? '#2e7d32' : '#e65100', fontWeight: '600' }}>
+              {cancelTimer > 0 ? `✅ Abhi cancel FREE hai (${cancelTimer}s bache)` : '⚠️ Cancel fee ₹10 lagega'}
+            </Text>
+          </View>
+          <Text style={{ fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 10 }}>Cancel ka reason?</Text>
+          {['Galti se book ho gaya', 'Bahut wait ho raha', 'Plan change ho gaya', 'Driver door hai', 'Koi aur reason'].map((reason, i) => (
+            <TouchableOpacity key={i} style={{ backgroundColor: '#f5f5f5', borderRadius: 10, padding: 14, marginBottom: 8 }}
+              onPress={async () => {
+                if (rideData?.ride_id) {
+                  try {
+                    const cr = await fetch(`${API}/api/rides/cancel-smart`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, cancelled_by: 'customer', reason, phone: phone || '9999999999' }) });
+                    const cd = await cr.json();
+                    setResult(cd.penalty > 0 ? `⚠️ ${cd.message}` : `✅ ${cd.message}`);
+                  } catch (_e) {}
+                }
+                setShowCancelModal(false); setScreen('home'); setRideData(null); setPickup(''); setDrop(''); setEta('');
+              }}>
+              <Text style={{ fontSize: 14, color: '#333' }}>{reason}</Text>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity style={{ borderWidth: 1.5, borderColor: '#1a1a2e', borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 8 }}
+            onPress={() => setShowCancelModal(false)}>
+            <Text style={{ color: '#1a1a2e', fontWeight: 'bold', fontSize: 14 }}>Nahi, ride rakhni hai</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
 
-  // ═══ IN-RIDE — Map full bg + bottom sheet ═══
+
+// ═══ IN-RIDE — Map fit on top ═══
   if (screen === 'inride') return (
     <View style={s.screen}>
-      <View style={s.mapFull}>
-        <MapWebView pickup={pickup} drop={drop} height={900} />
+      <View style={s.topBar}>
+        <Text style={s.topTitle}>🚗 Ride Chal Rahi Hai</Text>
       </View>
-      <View style={[s.bottomSheet, { maxHeight: '55%' }]}>
-        <View style={s.sheetHandle} />
+      <View style={s.mapFit}>
+        <MapWebView pickupCoords={pickupCoords} dropCoords={dropCoords} driverLat={driverLoc?.lat} driverLng={driverLoc?.lng} height={220} />
+      </View>
+      <View style={{ flex: 1, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 16, paddingHorizontal: 16 }}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
           <View style={{ backgroundColor: '#1a1a2e', borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 10 }}>
             <PulseView><Text style={{ color: '#4CAF50', fontSize: 15, fontWeight: 'bold' }}>🚗 Ride Chal Rahi Hai</Text></PulseView>
@@ -996,10 +1129,13 @@ export default function App() {
 const s = StyleSheet.create({
   screen:        { flex: 1, backgroundColor: '#f5f5f5' },
   mapFull:       { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  mapFit:        { height: 260, width: '100%', backgroundColor: '#e8eaed' },
   topOverlay:    { position: 'absolute', top: 0, left: 0, right: 0, paddingTop: 44, paddingHorizontal: 14 },
   topGlass:      { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.95)', borderRadius: 16, padding: 12, elevation: 6, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8 },
   greetingDark:  { color: '#1a1a2e', fontSize: 15, fontWeight: 'bold' },
   subTxtDark:    { color: '#666', fontSize: 11, marginTop: 2 },
+  greeting:      { color: '#fff', fontSize: 15, fontWeight: 'bold' },
+  subTxt:        { color: '#aaa', fontSize: 11, marginTop: 2 },
   backCircle:    { width: 38, height: 38, borderRadius: 19, backgroundColor: '#f0f0f0', alignItems: 'center', justifyContent: 'center' },
   bottomSheet:   { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 16, paddingTop: 8, elevation: 12, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 12, maxHeight: '60%' },
   sheetHandle:   { width: 40, height: 4, borderRadius: 2, backgroundColor: '#ddd', alignSelf: 'center', marginBottom: 12 },
