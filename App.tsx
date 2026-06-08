@@ -427,11 +427,54 @@ export default function App() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') { setResult('❌ Location permission do'); return; }
-      const loc = await Location.getCurrentPositionAsync({});
-      setUserCoords({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
-      setPickupCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
-      const geo = await Location.reverseGeocodeAsync({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
-      if (geo[0]) { const a = geo[0]; setPickup([a.name, a.street, a.city].filter(Boolean).join(', ')); setResult('✅ Location mil gayi!'); }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      const lat = loc.coords.latitude;
+      const lng = loc.coords.longitude;
+      setUserCoords({ latitude: lat, longitude: lng });
+      setPickupCoords({ lat, lng });
+
+      // Google Geocoding API se proper address lo
+      try {
+        const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${MAPS_KEY}&language=en`);
+        const data = await res.json();
+        if (data.results?.[0]) {
+          const address = data.results[0].formatted_address;
+          setPickup(address);
+          setResult('✅ Location mil gayi!');
+          // Coords se directly ETA calculate karo (accurate)
+          if (drop) {
+            const etaRes = await fetch(
+              `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${lat},${lng}&destinations=${encodeURIComponent(drop)}&key=${MAPS_KEY}&mode=driving&departure_time=now`
+            );
+            const etaData = await etaRes.json();
+            const el = etaData.rows?.[0]?.elements?.[0];
+            if (el?.status === 'OK') {
+              const duration = el.duration_in_traffic?.text || el.duration.text;
+              const dist = el.distance.text;
+              const km = el.distance.value / 1000;
+              setEta(`🕐 ${duration} · 📍 ${dist}`);
+              setEstDistance(km);
+              loadFareEstimates(km);
+            }
+          }
+        } else {
+          // Fallback — expo geocode
+          const geo = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
+          if (geo[0]) {
+            const a = geo[0];
+            const addr = [a.streetNumber, a.street, a.district, a.city].filter(Boolean).join(', ');
+            setPickup(addr);
+            setResult('✅ Location mil gayi!');
+          }
+        }
+      } catch (_e) {
+        const geo = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
+        if (geo[0]) {
+          const a = geo[0];
+          setPickup([a.streetNumber, a.street, a.city].filter(Boolean).join(', '));
+        }
+        setResult('✅ Location mil gayi!');
+      }
     } catch (_e) { setResult('❌ Location error'); }
   };
 
