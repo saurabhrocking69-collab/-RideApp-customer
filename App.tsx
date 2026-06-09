@@ -263,8 +263,16 @@ export default function App() {
         if (st === 'completed') { setScreen('payment'); loadWallet(phone); clearInterval(iv); }
         if (st === 'cancelled') {
           clearInterval(iv);
-          setResult('❌ Driver ne ride cancel kar di. Dusra driver try karo.');
-          setScreen('home'); setTab('home'); setRideData(null); setPickup(''); setDrop(''); setEta('');
+          // Notification check karo reason ke liye
+          try {
+            const nr = await fetch(`${API}/api/notifications/latest?phone=${phone}`);
+            const nd = await nr.json();
+            const msg = nd.notification?.body || 'Driver ne ride cancel kar di';
+            setResult('❌ ' + msg);
+          } catch (_e) {
+            setResult('❌ Driver ne ride cancel kar di — Dusra driver dhundh rahe hain...');
+          }
+          setScreen('home'); setTab('home'); setRideData(null); setPickup(''); setDrop(''); setEta(''); setUnreadChat(0);
         }
       } catch (_e) {}
     }, 3000);
