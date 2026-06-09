@@ -2,10 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import RazorpayCheckout from 'react-native-razorpay';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ScrollView, Switch, Animated, KeyboardAvoidingView, Platform, Linking, Share
+  StyleSheet, ScrollView, Switch, Animated, KeyboardAvoidingView, Platform, Linking, Share, BackHandler
 } from 'react-native';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import * as Clipboard from 'expo-clipboard';
 import { WebView } from 'react-native-webview';
 
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
@@ -145,6 +147,12 @@ export default function App() {
   const [phone, setPhone]             = useState('');
   const [otp, setOtp]                 = useState('');
   const [otpSent, setOtpSent]         = useState('');
+  const [otpDigits, setOtpDigits]     = useState(['','','','','','']);
+  const [resendTimer, setResendTimer] = useState(60);
+  const [canResend, setCanResend]     = useState(false);
+  const otpRefs = useRef<any[]>([]);
+  const otpShakeAnim = useRef(new Animated.Value(0)).current;
+  const otpSuccessAnim = useRef(new Animated.Value(0)).current;
   const [userName, setUserName]       = useState('');
   const [pickup, setPickup]           = useState('');
   const [drop, setDrop]               = useState('');
@@ -191,6 +199,36 @@ export default function App() {
   const scratchAnim = useRef(new Animated.Value(1)).current;
   const starAnims   = useRef([0,1,2,3,4].map(() => new Animated.Value(1))).current;
 
+  // ── Android Back Button ───────────────────────
+  useEffect(() => {
+    const backAction = () => {
+      if (screen === 'home' && tab === 'home') return false;
+      if (screen === 'home' && tab !== 'home') { setTab('home'); return true; }
+      if (screen === 'otp') { setScreen('login'); return true; }
+      if (screen === 'booking') { setScreen('home'); return true; }
+      if (screen === 'matching') { setShowCancelModal(true); return true; }
+      if (screen === 'chat') { setScreen('matching'); return true; }
+      if (screen === 'referral') { setScreen('home'); return true; }
+      if (screen === 'saved') { setScreen('home'); return true; }
+      if (screen === 'policy') { setScreen('home'); return true; }
+      if (screen === 'payment') return true;
+      if (screen === 'postride') return true;
+      return false;
+    };
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+    return () => backHandler.remove();
+  }, [screen, tab]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const sp = await AsyncStorage.getItem('userPhone');
+        const sn = await AsyncStorage.getItem('userName');
+        if (sp) { setPhone(sp); setUserName(sn || 'Rider'); setScreen('home'); loadHistory(sp); loadWallet(sp); }
+      } catch (_e) {}
+    })();
+  }, []);
+ 
   useEffect(() => {
     (async () => {
       try {
@@ -503,6 +541,69 @@ export default function App() {
     } catch { setResult('❌ Server connect nahi hua!'); }
     setLoading(false);
   };
+// OTP digit change handler
+  const handleOtpChange = (text: string, index: number) => {
+    const newDigits = [...otpDigits];
+    newDigits[index] = text.replace(/[^0-9]/g, '').slice(-1);
+    setOtpDigits(newDigits);
+    setOtp(newDigits.join(''));
+    // Auto focus next
+    if (text && index < 5) otpRefs.current[index + 1]?.focus();
+    // Auto verify when all 6 filled
+    if (newDigits.filter(d => d !== '').length === 6) {
+      setTimeout(() => verifyOtp(newDigits.join('')), 300);
+    }
+  };
+
+  const handleOtpKeyPress = (key: string, index: number) => {
+    if (key === 'Backspace' && !otpDigits[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus();
+    }
+  };
+
+  // Clipboard monitor — auto paste OTP
+  const checkClipboard = async () => {
+    try {
+      const text = await Clipboard.getStringAsync();
+      if (text && /^\d{6}$/.test(text)) {
+        const digits = text.split('');
+        setOtpDigits(digits);
+        setOtp(text);
+        // Auto verify
+        setTimeout(() => verifyOtp(text), 300);
+      }
+    } catch (_e) {}
+  };
+
+  // OTP shake animation (wrong OTP)
+  const shakeOtp = () => {
+    Animated.sequence([
+      Animated.timing(otpShakeAnim, { toValue: 10, duration: 60, useNativeDriver: true }),
+      Animated.timing(otpShakeAnim, { toValue: -10, duration: 60, useNativeDriver: true }),
+      Animated.timing(otpShakeAnim, { toValue: 10, duration: 60, useNativeDriver: true }),
+      Animated.timing(otpShakeAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
+    ]).start();
+  };
+
+  // Resend timer
+  useEffect(() => {
+    if (screen !== 'otp') return;
+    setResendTimer(60); setCanResend(false);
+    const iv = setInterval(() => {
+      setResendTimer(t => {
+        if (t <= 1) { clearInterval(iv); setCanResend(true); return 0; }
+        return t - 1;
+      });
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [screen]);
+
+  // Clipboard check every 2 sec when on OTP screen
+  useEffect(() => {
+    if (screen !== 'otp') return;
+    const iv = setInterval(checkClipboard, 2000);
+    return () => clearInterval(iv);
+  }, [screen]);
 
   const sendOtp = async () => {
     if (!phone || phone.length < 10) { setResult('❌ Sahi phone number likho'); return; }
@@ -510,10 +611,25 @@ export default function App() {
     try { const res = await fetch(`${API}/api/auth/send-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) }); const data = await res.json(); setOtpSent(data.otp || ''); setScreen('otp'); setResult(''); } catch { setResult('❌ Server connect nahi hua'); }
     setLoading(false);
   };
-  const verifyOtp = async () => {
-    if (!otp) { setResult('❌ OTP likho'); return; }
+  const verifyOtp = async (otpOverride?: string) => {
+    const otpToUse = otpOverride || otp;
+    if (!otpToUse) { setResult('❌ OTP likho'); return; }
     setLoading(true);
-    try { const res = await fetch(`${API}/api/auth/verify-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, otp, name: userName || 'Rider' }) }); const data = await res.json(); if (data.token) { await AsyncStorage.setItem('userPhone', phone); await AsyncStorage.setItem('userName', userName || 'Rider'); setScreen('home'); setResult(''); loadHistory(phone); loadWallet(phone); } else setResult('❌ ' + (data.error || 'OTP galat hai')); } catch { setResult('❌ Server connect nahi hua'); }
+    try {
+      const res = await fetch(`${API}/api/auth/verify-otp`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, otp: otpToUse, name: userName || 'Rider' })
+      });
+      const data = await res.json();
+      if (data.token) {
+        await AsyncStorage.setItem('userPhone', phone);
+        await AsyncStorage.setItem('userName', userName || 'Rider');
+        setScreen('home'); setResult(''); loadHistory(phone); loadWallet(phone);
+      } else {
+        setResult('❌ ' + (data.error || 'OTP galat hai'));
+        shakeOtp();
+      }
+    } catch { setResult('❌ Server connect nahi hua'); }
     setLoading(false);
   };
 
@@ -594,21 +710,78 @@ export default function App() {
   // ═══ OTP ═══
   if (screen === 'otp') return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+        {/* Header */}
         <View style={s.hero}>
-          <Text style={s.heroIcon}>🔐</Text>
-          <Text style={s.heroTitle}>OTP Verify</Text>
-          <Text style={s.heroSub}>+91 {phone} pe bheja gaya</Text>
+          <Animated.Text style={{ fontSize: 52, transform: [{ scale: otpSuccessAnim.interpolate({ inputRange: [0,1], outputRange: [1, 1.3] }) }] }}>🔐</Animated.Text>
+          <Text style={s.heroTitle}>OTP Verify Karo</Text>
+          <Text style={s.heroSub}>6-digit code +91 {phone} pe bheja gaya</Text>
         </View>
         <View style={s.card}>
-          <Text style={s.label}>6-digit OTP</Text>
-          <TextInput style={[s.input, s.otpInput]} placeholder="------" keyboardType="numeric" value={otp} onChangeText={setOtp} maxLength={6} />
-          {otpSent ? <Text style={s.hint}>💡 Test OTP: {otpSent}</Text> : null}
-          {result ? <Text style={s.err}>{result}</Text> : null}
-          <TouchableOpacity style={[s.btn, loading && { opacity: 0.7 }]} onPress={verifyOtp} disabled={loading}>
-            <Text style={s.btnTxt}>{loading ? '⏳ Verify ho raha hai...' : 'Verify Karo ✅'}</Text>
+          {/* Hint */}
+          <View style={{ backgroundColor: '#e3f2fd', borderRadius: 10, padding: 12, marginBottom: 18, flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={{ fontSize: 18, marginRight: 8 }}>💡</Text>
+            <Text style={{ fontSize: 12, color: '#1565c0', flex: 1, lineHeight: 18 }}>SMS aane par OTP copy karo — app automatically detect kar lega aur fill ho jaayega!</Text>
+          </View>
+
+          {/* 6 OTP Boxes */}
+          <Animated.View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20, transform: [{ translateX: otpShakeAnim }] }}>
+            {otpDigits.map((digit, i) => (
+              <TextInput
+                key={i}
+                ref={(ref) => { otpRefs.current[i] = ref; }}
+                style={{
+                  width: 44, height: 54, borderRadius: 12, textAlign: 'center', fontSize: 22, fontWeight: 'bold',
+                  borderWidth: 2, borderColor: digit ? '#e94560' : '#e0e0e0',
+                  backgroundColor: digit ? '#fff8f8' : '#fafafa', color: '#1a1a2e',
+                }}
+                keyboardType="number-pad" maxLength={1} value={digit}
+                onChangeText={(t) => handleOtpChange(t, i)}
+                onKeyPress={({ nativeEvent }) => handleOtpKeyPress(nativeEvent.key, i)}
+              />
+            ))}
+          </Animated.View>
+
+          {/* Test OTP hint */}
+          {otpSent ? (
+            <View style={{ backgroundColor: '#fff3e0', borderRadius: 10, padding: 10, marginBottom: 12, alignItems: 'center' }}>
+              <Text style={{ fontSize: 12, color: '#e65100' }}>🧪 Test OTP: <Text style={{ fontWeight: 'bold', letterSpacing: 4 }}>{otpSent}</Text></Text>
+            </View>
+          ) : null}
+
+          {/* Clipboard detect hint */}
+          <TouchableOpacity style={{ backgroundColor: '#f5f5f5', borderRadius: 10, padding: 12, marginBottom: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }} onPress={checkClipboard}>
+            <Text style={{ fontSize: 16, marginRight: 8 }}>📋</Text>
+            <Text style={{ fontSize: 13, color: '#666', fontWeight: '500' }}>Clipboard se OTP paste karo</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setScreen('login')}><Text style={s.back}>← Wapas jao</Text></TouchableOpacity>
+
+          {result ? <Text style={s.err}>{result}</Text> : null}
+
+          {/* Verify Button */}
+          <TouchableOpacity
+            style={[s.btn, (loading || otpDigits.join('').length < 6) && { opacity: 0.6 }]}
+            onPress={() => verifyOtp()} disabled={loading || otpDigits.join('').length < 6}>
+            <Text style={s.btnTxt}>{loading ? '⏳ Verify ho raha hai...' : '✅ Verify Karo'}</Text>
+          </TouchableOpacity>
+
+          {/* Resend */}
+          <View style={{ alignItems: 'center', marginTop: 14 }}>
+            {canResend ? (
+              <TouchableOpacity onPress={async () => {
+                setOtpDigits(['','','','','','']); setOtp(''); setResult('');
+                setCanResend(false); setResendTimer(60);
+                await sendOtp();
+              }}>
+                <Text style={{ color: '#e94560', fontWeight: 'bold', fontSize: 14 }}>🔄 OTP Dobara Bhejo</Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={{ color: '#999', fontSize: 13 }}>OTP dobara bhejne ke liye <Text style={{ color: '#e94560', fontWeight: 'bold' }}>{resendTimer}s</Text> wait karo</Text>
+            )}
+          </View>
+
+          <TouchableOpacity onPress={() => setScreen('login')} style={{ marginTop: 16, alignItems: 'center' }}>
+            <Text style={s.back}>← Wapas jao</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
