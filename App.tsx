@@ -8,6 +8,8 @@ import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import * as Clipboard from 'expo-clipboard';
+import { apiGet, apiPost } from './api';
+import { useRideStore } from './store';
 import { WebView } from 'react-native-webview';
 
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
@@ -23,6 +25,56 @@ const PulseView = ({ children, style }: any) => {
     ])).start();
   }, []);
   return <Animated.View style={[style, { transform: [{ scale: anim }] }]}>{children}</Animated.View>;
+};
+// ─── Bouncy Button — press pe scale animation ───
+const Bouncy = ({ children, onPress, style, disabled }: any) => {
+  const scale = useRef(new Animated.Value(1)).current;
+  const pressIn = () => Animated.spring(scale, { toValue: 0.95, friction: 5, useNativeDriver: true }).start();
+  const pressOut = () => Animated.spring(scale, { toValue: 1, friction: 4, useNativeDriver: true }).start();
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <TouchableOpacity onPress={onPress} onPressIn={pressIn} onPressOut={pressOut} style={style} disabled={disabled} activeOpacity={0.85}>
+        {children}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
+// ─── Success Burst — driver milne pe celebration ───
+const SuccessBurst = () => {
+  const scale = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(1)).current;
+  const particles = useRef([0,1,2,3,4,5,6,7].map(() => ({
+    x: new Animated.Value(0),
+    y: new Animated.Value(0),
+    o: new Animated.Value(1),
+  }))).current;
+
+  useEffect(() => {
+    Animated.sequence([
+      Animated.spring(scale, { toValue: 1, friction: 4, tension: 100, useNativeDriver: true }),
+    ]).start();
+    particles.forEach((p, i) => {
+      const angle = (i / 8) * Math.PI * 2;
+      Animated.parallel([
+        Animated.timing(p.x, { toValue: Math.cos(angle) * 70, duration: 700, useNativeDriver: true }),
+        Animated.timing(p.y, { toValue: Math.sin(angle) * 70, duration: 700, useNativeDriver: true }),
+        Animated.timing(p.o, { toValue: 0, duration: 700, useNativeDriver: true }),
+      ]).start();
+    });
+  }, []);
+
+  return (
+    <View style={{ alignItems: 'center', justifyContent: 'center', height: 90 }}>
+      {particles.map((p, i) => (
+        <Animated.Text key={i} style={{ position: 'absolute', fontSize: 18, opacity: p.o, transform: [{ translateX: p.x }, { translateY: p.y }] }}>
+          {['🎉','✨','⭐','🎊'][i % 4]}
+        </Animated.Text>
+      ))}
+      <Animated.View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#4CAF50', alignItems: 'center', justifyContent: 'center', transform: [{ scale }], elevation: 8 }}>
+        <Text style={{ fontSize: 32, color: '#fff' }}>✓</Text>
+      </Animated.View>
+    </View>
+  );
 };
 
 const FadeIn = ({ children, style, delay = 0 }: any) => {
@@ -144,6 +196,7 @@ const MapWebView = ({ pickup, drop, pickupCoords, dropCoords, driverLat, driverL
 
 export default function App() {
   const [screen, setScreen]           = useState<Screen>('login');
+  const ride = useRideStore();
   const [phone, setPhone]             = useState('');
   const [otp, setOtp]                 = useState('');
   const [otpSent, setOtpSent]         = useState('');
@@ -239,45 +292,46 @@ export default function App() {
     })();
   }, []);
 
+  // ─── RIDE STATE ENGINE (store se) ───
+  // Polling ab store mein hai — yahan sirf state changes react karte hain
   useEffect(() => {
     if (!['matching','inride'].includes(screen) || !rideData?.ride_id) return;
-    const iv = setInterval(async () => {
-      try {
-        const res  = await fetch(`${API}/api/rides/status/${rideData.ride_id}`);
-        const data = await res.json();
-        const st   = data.ride?.status;
-        try {
-          const lr = await fetch(`${API}/api/rides/driver-location/${rideData.ride_id}`);
-          const ld = await lr.json();
-          if (ld.location) {
-            setDriverLoc(ld.location);
-            if (ld.location.lat && ld.location.lng && pickupCoords?.lat) {
-              calcDriverEta(ld.location.lat, ld.location.lng, pickupCoords.lat, pickupCoords.lng);
-            }
-          }
-        } catch (_e) {}
-        if (st === 'matched' || st === 'arrived') {
-          setRideData((p: any) => ({ ...p, startOtp: data.ride.start_otp, driver: { name: data.ride.driver_name, phone: data.ride.driver_phone, vehicle_no: data.ride.vehicle_no } }));
-        }
-        if (st === 'started') setScreen('inride');
-        if (st === 'completed') { setScreen('payment'); loadWallet(phone); clearInterval(iv); }
-        if (st === 'cancelled') {
-          clearInterval(iv);
-          // Notification check karo reason ke liye
-          try {
-            const nr = await fetch(`${API}/api/notifications/latest?phone=${phone}`);
-            const nd = await nr.json();
-            const msg = nd.notification?.body || 'Driver ne ride cancel kar di';
-            setResult('❌ ' + msg);
-          } catch (_e) {
-            setResult('❌ Driver ne ride cancel kar di — Dusra driver dhundh rahe hain...');
-          }
-          setScreen('home'); setTab('home'); setRideData(null); setPickup(''); setDrop(''); setEta(''); setUnreadChat(0);
-        }
-      } catch (_e) {}
-    }, 3000);
-    return () => clearInterval(iv);
+    // Store ka single polling engine start karo
+    useRideStore.getState().startPolling(phone);
+    return () => useRideStore.getState().stopPolling();
   }, [screen, rideData?.ride_id]);
+
+  // Store status changes → screen transitions
+  useEffect(() => {
+    const st = ride.rideStatus;
+    if (st === 'matched' || st === 'arrived') {
+      setRideData((p: any) => p ? { ...p, startOtp: ride.startOtp, driver: ride.driverInfo } : p);
+    }
+    if (st === 'started' && screen === 'matching') setScreen('inride');
+    if (st === 'completed' && ['matching','inride'].includes(screen)) {
+      setScreen('payment'); loadWallet(phone);
+    }
+    if (st === 'cancelled' && ['matching','inride'].includes(screen)) {
+      (async () => {
+        try {
+          const nd = await apiGet(`/api/notifications/latest?phone=${phone}`);
+          setResult('❌ ' + (nd.notification?.body || 'Ride cancel ho gayi'));
+        } catch (_e) { setResult('❌ Ride cancel ho gayi'); }
+        setScreen('home'); setTab('home'); setRideData(null); setPickup(''); setDrop(''); setEta(''); setUnreadChat(0);
+        ride.clearRide();
+      })();
+    }
+  }, [ride.rideStatus]);
+
+  // Driver location store se sync + ETA
+  useEffect(() => {
+    if (ride.driverLoc) {
+      setDriverLoc(ride.driverLoc);
+      if (ride.driverLoc.lat && pickupCoords?.lat) {
+        calcDriverEta(ride.driverLoc.lat, ride.driverLoc.lng, pickupCoords.lat, pickupCoords.lng);
+      }
+    }
+  }, [ride.driverLoc]);
 
   useEffect(() => {
     if (screen !== 'chat' || !rideData?.ride_id) return;
@@ -301,17 +355,22 @@ export default function App() {
     return () => clearInterval(iv);
   }, [screen, bookTime]);
 
-  // Background chat — unread badge during ride
+  // Background chat — unread badge during ride (8s, overlap guard)
   useEffect(() => {
     if (!['matching','inride'].includes(screen) || !rideData?.ride_id) return;
+    let busy = false;
     const iv = setInterval(async () => {
+      if (busy) return;
+      busy = true;
       try {
-        const r = await fetch(`${API}/api/chat/${rideData.ride_id}`);
-        const d = await r.json();
-        const msgs = d.messages || [];
-        if (msgs.length > lastChatCount.current) setUnreadChat(msgs.length - lastChatCount.current);
+        const d = await apiGet(`/api/chat/${rideData.ride_id}`);
+        if (!d._error) {
+          const msgs = d.messages || [];
+          if (msgs.length > lastChatCount.current) setUnreadChat(msgs.length - lastChatCount.current);
+        }
       } catch (_e) {}
-    }, 3000);
+      busy = false;
+    }, 8000);
     return () => clearInterval(iv);
   }, [screen, rideData?.ride_id]);
 
@@ -530,19 +589,17 @@ export default function App() {
     try {
       const distanceKm = await fetchEta(pickup, drop);
       if (!dropCoords) await geocodePlace(drop, 'drop');
-      const res  = await fetch(`${API}/api/rides/book`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          passenger_phone: phone || '9999999999', pickup, drop_location: drop, ride_type: rideType, distance: distanceKm,
-          pickup_lat: pickupCoords?.lat, pickup_lng: pickupCoords?.lng, drop_lat: dropCoords?.lat, drop_lng: dropCoords?.lng,
-          discount: promoDiscount, promo_code: promoDiscount > 0 ? promoCode : null
-        })
+      const data = await apiPost('/api/rides/book', {
+        passenger_phone: phone || '9999999999', pickup, drop_location: drop, ride_type: rideType, distance: distanceKm,
+        pickup_lat: pickupCoords?.lat, pickup_lng: pickupCoords?.lng, drop_lat: dropCoords?.lat, drop_lng: dropCoords?.lng,
+        discount: promoDiscount, promo_code: promoDiscount > 0 ? promoCode : null
       });
-      const data = await res.json();
+      if (data._error) { setResult('❌ ' + data.message); setLoading(false); return; }
       if (promoDiscount > 0 && data.ride_id) {
         try { await fetch(`${API}/api/promo/apply`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: promoCode, phone, ride_id: data.ride_id, discount: promoDiscount }) }); } catch (_e) {}
       }
   setRideData(data); setScreen('matching'); setResult('');
+      ride.setRide(data); // Store mein naya ride — purana stale data auto-clear
       setBookTime(Date.now()); setCancelTimer(60);
       // Free cancels load
       try { const cs = await fetch(`${API}/api/customer/cancel-status?phone=${phone || '9999999999'}`); const csd = await cs.json(); setFreeCancelsLeft(csd.free_cancels_left ?? 3); } catch (_e) {}
@@ -1168,9 +1225,9 @@ export default function App() {
           </View>
           {promoDiscount > 0 ? <View style={{ backgroundColor: '#e8f5e9', borderRadius: 10, padding: 10, marginBottom: 10 }}><Text style={{ color: '#2e7d32', fontWeight: '600', fontSize: 13, textAlign: 'center' }}>✅ ₹{promoDiscount} discount applied!</Text></View> : null}
           {result ? <Text style={s.err}>{result}</Text> : null}
-          <TouchableOpacity style={[s.btn, loading && { opacity: 0.7 }]} onPress={bookRide} disabled={loading}>
+          <Bouncy style={[s.btn, loading && { opacity: 0.7 }]} onPress={bookRide} disabled={loading}>
             <Text style={s.btnTxt}>{loading ? '🔍 Driver dhundh raha hai...' : 'Ride Book Karo 🚀'}</Text>
-          </TouchableOpacity>
+          </Bouncy>
         </ScrollView>
       </View>
     </KeyboardAvoidingView>
@@ -1190,7 +1247,9 @@ export default function App() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
           {rideData?.driver ? (
             <>
-             <View style={s.driverCard}>
+              <SuccessBurst />
+              <Text style={{ textAlign: 'center', fontSize: 16, fontWeight: 'bold', color: '#4CAF50', marginBottom: 12 }}>Driver Mil Gaya! 🎉</Text>
+              <View style={s.driverCard}>
                 <View style={s.driverAvatar}><Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>{(rideData.driver.name||'D')[0].toUpperCase()}</Text></View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.driverName}>{rideData.driver.name}</Text>
@@ -1296,11 +1355,10 @@ export default function App() {
             <TouchableOpacity key={i} style={{ backgroundColor: '#f5f5f5', borderRadius: 10, padding: 14, marginBottom: 8 }}
               onPress={async () => {
                 if (rideData?.ride_id) {
-                  try {
-                    const cr = await fetch(`${API}/api/rides/cancel-smart`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, cancelled_by: 'customer', reason, phone: phone || '9999999999' }) });
-                    const cd = await cr.json();
-                    setResult(cd.penalty > 0 ? `⚠️ ${cd.message}` : `✅ ${cd.message}`);
-                  } catch (_e) {}
+                  const cd = await apiPost('/api/rides/cancel-smart', { ride_id: rideData.ride_id, cancelled_by: 'customer', reason, phone: phone || '9999999999' });
+                  if (cd._error) setResult('❌ ' + cd.message);
+                  else setResult(cd.penalty > 0 ? `⚠️ ${cd.message}` : `✅ ${cd.message}`);
+                  ride.clearRide();
                 }
                 setShowCancelModal(false); setScreen('home'); setRideData(null); setPickup(''); setDrop(''); setEta('');
               }}>
@@ -1446,6 +1504,8 @@ export default function App() {
           }
           setScreen('home'); setPickup(''); setDrop(''); setRating(0); setTab('home');
           setRideData(null); setPaymentDone(false); setResult(''); setScratchCard(null); setScratched(false); setEta(''); setPromoDiscount(0); setPromoCode(''); setUnreadChat(0);
+          setDriverLoc(null); setDriverEta(''); setDriverDist('');
+          ride.clearRide(); // Store clear — koi stale data nahi
           loadHistory(phone); loadWallet(phone);
         }}>
           <Text style={s.btnTxt}>Done 🏠 Home Jao</Text>
