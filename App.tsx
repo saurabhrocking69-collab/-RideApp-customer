@@ -302,47 +302,50 @@ export default function App() {
     })();
   }, []);
 
-  // ─── RIDE STATE ENGINE (store se) ───
-  // Polling ab store mein hai — yahan sirf state changes react karte hain
+  // ─── RIDE POLLING — direct & robust (timeout + retry + overlap guard) ───
   useEffect(() => {
     if (!['matching','inride'].includes(screen) || !rideData?.ride_id) return;
-    // Store ka single polling engine start karo
-    useRideStore.getState().startPolling(phone);
-    return () => useRideStore.getState().stopPolling();
+    let busy = false;
+    let stopped = false;
+    const rid = rideData.ride_id;
+    const iv = setInterval(async () => {
+      if (busy || stopped) return;
+      busy = true;
+      try {
+        const data = await apiGet(`/api/rides/status/${rid}`);
+        if (!data._error && data.ride) {
+          const st = data.ride.status;
+
+          if (st === 'matched' || st === 'arrived') {
+            setRideData((p: any) => p ? { ...p, startOtp: data.ride.start_otp, driver: { name: data.ride.driver_name, phone: data.ride.driver_phone, vehicle_no: data.ride.vehicle_no } } : p);
+            const ld = await apiGet(`/api/rides/driver-location/${rid}`);
+            if (!ld._error && ld.location) {
+              setDriverLoc(ld.location);
+              if (ld.location.lat && pickupCoords?.lat) calcDriverEta(ld.location.lat, ld.location.lng, pickupCoords.lat, pickupCoords.lng);
+            }
+          }
+
+          if (st === 'started') setScreen('inride');
+
+          if (st === 'completed') {
+            stopped = true; clearInterval(iv);
+            setScreen('payment'); loadWallet(phone);
+          }
+
+          if (st === 'cancelled') {
+            stopped = true; clearInterval(iv);
+            const nd = await apiGet(`/api/notifications/latest?phone=${phone}`);
+            setResult('❌ ' + (nd?.notification?.body || 'Ride cancel ho gayi'));
+            setScreen('home'); setTab('home'); setRideData(null); setPickup(''); setDrop(''); setEta('');
+            setUnreadChat(0); setDriverLoc(null); setDriverEta(''); setDriverDist('');
+            ride.clearRide();
+          }
+        }
+      } catch (_e) {}
+      busy = false;
+    }, 3000);
+    return () => { stopped = true; clearInterval(iv); };
   }, [screen, rideData?.ride_id]);
-
-  // Store status changes → screen transitions
-  useEffect(() => {
-    const st = storeStatus;
-    const stStore = useRideStore.getState();
-    if (st === 'matched' || st === 'arrived') {
-      setRideData((p: any) => p ? { ...p, startOtp: stStore.startOtp, driver: stStore.driverInfo } : p);
-    }
-    if (st === 'started' && screen === 'matching') setScreen('inride');
-    if (st === 'completed' && ['matching','inride'].includes(screen)) {
-      setScreen('payment'); loadWallet(phone);
-    }
-    if (st === 'cancelled' && ['matching','inride'].includes(screen)) {
-      (async () => {
-        try {
-          const nd = await apiGet(`/api/notifications/latest?phone=${phone}`);
-          setResult('❌ ' + (nd.notification?.body || 'Ride cancel ho gayi'));
-        } catch (_e) { setResult('❌ Ride cancel ho gayi'); }
-        setScreen('home'); setTab('home'); setRideData(null); setPickup(''); setDrop(''); setEta(''); setUnreadChat(0);
-        ride.clearRide();
-      })();
-    }
-  }, [storeStatus]);
-
-  // Driver location store se sync + ETA
-  useEffect(() => {
-    if (storeDriverLoc) {
-      setDriverLoc(storeDriverLoc);
-      if (storeDriverLoc.lat && pickupCoords?.lat) {
-        calcDriverEta(storeDriverLoc.lat, storeDriverLoc.lng, pickupCoords.lat, pickupCoords.lng);
-      }
-    }
-  }, [storeDriverLoc]);
 
   useEffect(() => {
     if (screen !== 'chat' || !rideData?.ride_id) return;
