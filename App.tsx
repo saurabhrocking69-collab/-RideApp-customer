@@ -197,6 +197,16 @@ const MapWebView = ({ pickup, drop, pickupCoords, dropCoords, driverLat, driverL
 export default function App() {
   const [screen, setScreen]           = useState<Screen>('login');
   const ride = useRideStore();
+  // Store watcher — guaranteed UI update jab store change ho
+  const [storeStatus, setStoreStatus] = useState('idle');
+  const [storeDriverLoc, setStoreDriverLoc] = useState<any>(null);
+  useEffect(() => {
+    const unsub = useRideStore.subscribe((state) => {
+      setStoreStatus(state.rideStatus);
+      setStoreDriverLoc(state.driverLoc);
+    });
+    return unsub;
+  }, []);
   const [phone, setPhone]             = useState('');
   const [otp, setOtp]                 = useState('');
   const [otpSent, setOtpSent]         = useState('');
@@ -303,9 +313,10 @@ export default function App() {
 
   // Store status changes → screen transitions
   useEffect(() => {
-    const st = ride.rideStatus;
+    const st = storeStatus;
+    const stStore = useRideStore.getState();
     if (st === 'matched' || st === 'arrived') {
-      setRideData((p: any) => p ? { ...p, startOtp: ride.startOtp, driver: ride.driverInfo } : p);
+      setRideData((p: any) => p ? { ...p, startOtp: stStore.startOtp, driver: stStore.driverInfo } : p);
     }
     if (st === 'started' && screen === 'matching') setScreen('inride');
     if (st === 'completed' && ['matching','inride'].includes(screen)) {
@@ -321,17 +332,17 @@ export default function App() {
         ride.clearRide();
       })();
     }
-  }, [ride.rideStatus]);
+  }, [storeStatus]);
 
   // Driver location store se sync + ETA
   useEffect(() => {
-    if (ride.driverLoc) {
-      setDriverLoc(ride.driverLoc);
-      if (ride.driverLoc.lat && pickupCoords?.lat) {
-        calcDriverEta(ride.driverLoc.lat, ride.driverLoc.lng, pickupCoords.lat, pickupCoords.lng);
+    if (storeDriverLoc) {
+      setDriverLoc(storeDriverLoc);
+      if (storeDriverLoc.lat && pickupCoords?.lat) {
+        calcDriverEta(storeDriverLoc.lat, storeDriverLoc.lng, pickupCoords.lat, pickupCoords.lng);
       }
     }
-  }, [ride.driverLoc]);
+  }, [storeDriverLoc]);
 
   useEffect(() => {
     if (screen !== 'chat' || !rideData?.ride_id) return;
