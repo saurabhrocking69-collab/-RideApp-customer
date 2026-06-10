@@ -8,6 +8,8 @@ import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import * as Clipboard from 'expo-clipboard';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
 import { apiGet, apiPost } from './api';
 import { useRideStore } from './store';
 import { WebView } from 'react-native-webview';
@@ -261,6 +263,27 @@ export default function App() {
   const [savedPlaces, setSavedPlaces] = useState<any[]>([]);
   const scratchAnim = useRef(new Animated.Value(1)).current;
   const starAnims   = useRef([0,1,2,3,4].map(() => new Animated.Value(1))).current;
+// ── FCM Token Register ────────────────────────
+  const registerFCM = async (userPhone: string) => {
+    try {
+      if (!Device.isDevice) return; // Emulator pe skip
+      const { status: existing } = await Notifications.getPermissionsAsync();
+      let finalStatus = existing;
+      if (existing !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      if (finalStatus !== 'granted') return;
+      const token = (await Notifications.getExpoPushTokenAsync({
+        projectId: '8f1a5733-b0fe-466b-ab3e-862983570572'
+      })).data;
+      // Backend mein save karo
+      await apiPost('/api/auth/save-fcm-token', { phone: userPhone, token, role: 'customer' });
+      console.log('✅ FCM token saved');
+    } catch (e) {
+      console.log('FCM error:', e);
+    }
+  };
 
   // ── Android Back Button ───────────────────────
   useEffect(() => {
@@ -704,6 +727,8 @@ export default function App() {
         await AsyncStorage.setItem('userPhone', phone);
         await AsyncStorage.setItem('userName', userName || 'Rider');
         setScreen('home'); setResult(''); loadHistory(phone); loadWallet(phone);
+        registerFCM(phone);
+    
       } else {
         setResult('❌ ' + (data.error || 'OTP galat hai'));
         shakeOtp();
