@@ -17,7 +17,7 @@ import { WebView } from 'react-native-webview';
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 const API = 'https://rideapp-backend-production-5e1c.up.railway.app';
 
-type Screen = 'login' | 'otp' | 'home' | 'booking' | 'matching' | 'inride' | 'payment' | 'postride' | 'chat' | 'referral' | 'saved' | 'policy' | 'hourly';
+type Screen = 'login' | 'otp' | 'home' | 'booking' | 'matching' | 'inride' | 'payment' | 'postride' | 'chat' | 'referral' | 'saved' | 'policy' | 'hourly' | 'wallet';
 
 const HOURLY_PACKAGES: any = {
   auto:    { 2:{fare:180,km:20}, 4:{fare:320,km:40}, 6:{fare:460,km:60}, 8:{fare:580,km:80}, extra:8  },
@@ -445,6 +445,14 @@ export default function App() {
   const [driverLoc, setDriverLoc]     = useState<any>(null);
   const [walletBalance, setWalletBalance] = useState(0);
   const [showWallet, setShowWallet]   = useState(false);
+  const [walletTxns, setWalletTxns]   = useState<any[]>([]);
+  const [walletStats, setWalletStats] = useState<any>({});
+  const [walletTxnTab, setWalletTxnTab] = useState<'all'|'earn'|'spend'|'reward'>('all');
+  const [walletWebView, setWalletWebView] = useState(false);
+  const [walletWebViewUrl, setWalletWebViewUrl] = useState('');
+  const [walletAddAmt, setWalletAddAmt] = useState(0);
+  const [walletAddInput, setWalletAddInput] = useState('');
+  const [walletPaymentId, setWalletPaymentId] = useState('');
   const [scratchCard, setScratchCard] = useState<any>(null);
   const [scratched, setScratched]     = useState(false);
   const [eta, setEta]                 = useState('');
@@ -556,6 +564,7 @@ export default function App() {
       if (screen === 'booking') { setScreen('home'); setPickupSugg([]); setDropSugg([]); setEta(''); setPromoCode(''); setPromoDiscount(0); return true; }
       if (screen === 'matching') { setShowCancelModal(true); return true; }
       if (screen === 'chat') { setScreen('matching'); return true; }
+      if (screen === 'wallet') { setScreen('home'); setTab('profile'); return true; }
       if (screen === 'referral') { setScreen('home'); return true; }
       if (screen === 'saved') { setScreen('home'); return true; }
       if (screen === 'policy') { setScreen('home'); return true; }
@@ -742,6 +751,34 @@ export default function App() {
   const loadWallet = async (ph: string) => {
     try { const r = await fetch(`${API}/api/wallet/balance?phone=${ph}`); const d = await r.json(); setWalletBalance(d.balance || 0); } catch (_e) {}
   };
+  const loadWalletDetail = async (ph: string) => {
+    try {
+      const r = await fetch(`${API}/api/wallet/customer/detail?phone=${ph}`);
+      const d = await r.json();
+      setWalletBalance(d.balance || 0);
+      setWalletTxns(d.transactions || []);
+      setWalletStats(d.stats || {});
+    } catch (_e) {}
+  };
+  const openRazorpayTopup = (amt: number) => {
+    const paise = Math.round(amt * 100);
+    const url = `https://razorpay.me/@rajawat101?amount=${paise}`;
+    setWalletAddAmt(amt);
+    setWalletWebViewUrl(url);
+    setWalletWebView(true);
+  };
+  const confirmTopup = async (paymentId: string) => {
+    try {
+      const res = await fetch(`${API}/api/wallet/topup/confirm`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, amount: walletAddAmt, payment_id: paymentId }),
+      });
+      const d = await res.json();
+      if (d.success) { setWalletBalance(d.balance); await loadWalletDetail(phone); }
+      setWalletWebView(false);
+      setWalletPaymentId('');
+    } catch (_e) { setWalletWebView(false); }
+  };
   const loadReferral = async () => {
     try { const r = await fetch(`${API}/api/referral/my-code?phone=${phone}`); const d = await r.json(); setReferralData(d); } catch (_e) {}
   };
@@ -839,9 +876,7 @@ export default function App() {
     try { await fetch(`${API}/api/scratch-card/scratch`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ card_id: scratchCard.card_id, phone: phone || '9999999999' }) }); loadWallet(phone); } catch (_e) {}
   };
 
-  const addMoney = async (amt: number) => {
-    try { const res = await fetch(`${API}/api/wallet/add`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: phone || '9999999999', amount: amt }) }); const data = await res.json(); if (data.success) { setWalletBalance(data.balance); setResult(`✅ ₹${amt} add ho gaya!`); } } catch (_e) { setResult('❌ Error'); }
-  };
+  const addMoney = async (amt: number) => { openRazorpayTopup(amt); };
  const payWithWallet = async () => {
     const fareNum = parseInt(String(rideData?.fare).replace(/[^0-9]/g, '')) || 0;
     if (walletBalance < fareNum) { setResult(`❌ Balance kam hai! ₹${walletBalance} hai`); return; }
@@ -1344,26 +1379,29 @@ export default function App() {
           <Text style={s.profilePhone}>+91 {phone}</Text>
           <View style={s.badge}><Text style={{ color: '#fff', fontWeight: 'bold' }}>⭐ 4.9 Rating</Text></View>
         </View>
-        <TouchableOpacity style={s.walletCard} onPress={() => { setShowWallet(!showWallet); loadWallet(phone); }}>
+        <TouchableOpacity style={s.walletCard} onPress={() => { loadWalletDetail(phone); setScreen('wallet'); }}>
           <View style={s.row}>
             <View style={{ flex: 1 }}>
               <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13 }}>💰 Wallet Balance</Text>
               <CountUp to={walletBalance} prefix="₹" style={{ color: '#fff', fontSize: 30, fontWeight: 'bold', marginTop: 2 }} />
             </View>
-            <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: 10 }}><Text style={{ color: '#fff', fontWeight: '700' }}>{showWallet ? '✕' : '+ Add'}</Text></View>
+            <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 }}>
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Manage ›</Text>
+            </View>
+          </View>
+          <View style={{ flexDirection: 'row', marginTop: 14, gap: 8 }}>
+            {[100, 200, 500].map(amt => (
+              <TouchableOpacity key={amt} onPress={(e) => { e.stopPropagation?.(); openRazorpayTopup(amt); }}
+                style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 8, paddingVertical: 7, alignItems: 'center' }}>
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>+₹{amt}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); openRazorpayTopup(1000); }}
+              style={{ flex: 1, backgroundColor: '#e94560', borderRadius: 8, paddingVertical: 7, alignItems: 'center' }}>
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>+₹1000</Text>
+            </TouchableOpacity>
           </View>
         </TouchableOpacity>
-        {showWallet && (
-          <View style={s.walletBox}>
-            <Text style={s.secTitle}>💰 Paisa Add Karo</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-              {[100, 200, 500, 1000].map(amt => (
-                <TouchableOpacity key={amt} style={s.amtBtn} onPress={() => addMoney(amt)}><Text style={{ color: '#1a1a2e', fontWeight: 'bold', fontSize: 15 }}>₹{amt}</Text></TouchableOpacity>
-              ))}
-            </View>
-            {result ? <Text style={{ color: '#4CAF50', textAlign: 'center', fontWeight: '600', marginTop: 8 }}>{result}</Text> : null}
-          </View>
-        )}
         <Bouncy style={s.menuItem} onPress={() => { loadReferral(); setScreen('referral'); }}>
           <View style={s.menuIconBox}><Text style={{ fontSize: 18 }}>🎁</Text></View>
           <View style={{ flex: 1 }}><Text style={{ fontSize: 14, color: '#1a1a2e', fontWeight: '600' }}>Refer & Earn</Text><Text style={{ fontSize: 11, color: '#999' }}>Dost ko bulao, ₹50 pao</Text></View>
@@ -1393,6 +1431,174 @@ export default function App() {
       <View style={s.navFloat}><NavBarInner /></View>
     </View>
   );
+
+  // ═══ WALLET SCREEN ═══
+  if (screen === 'wallet') {
+    const filteredTxns = walletTxns.filter(t => {
+      if (walletTxnTab === 'all') return true;
+      if (walletTxnTab === 'earn') return t.type === 'credit' && !(t.description || '').toLowerCase().includes('reward') && !(t.description || '').toLowerCase().includes('referral');
+      if (walletTxnTab === 'spend') return t.type === 'debit';
+      if (walletTxnTab === 'reward') return t.type === 'credit' && ((t.description || '').toLowerCase().includes('reward') || (t.description || '').toLowerCase().includes('referral') || (t.description || '').toLowerCase().includes('refund'));
+      return true;
+    });
+    const fmtDate = (d: string) => { try { return new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch { return d; } };
+    return (
+      <ScreenIn style={s.screen}>
+        {/* Header */}
+        <View style={{ backgroundColor: '#1a1a2e', paddingTop: 52, paddingBottom: 20, paddingHorizontal: 18 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 18 }}>
+            <TouchableOpacity onPress={() => { setScreen('home'); setTab('profile'); }} style={{ marginRight: 14, padding: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10 }}>
+              <Text style={{ color: '#fff', fontSize: 20 }}>←</Text>
+            </TouchableOpacity>
+            <Text style={{ color: '#fff', fontSize: 20, fontWeight: '800', flex: 1 }}>My Wallet</Text>
+            <TouchableOpacity onPress={() => loadWalletDetail(phone)} style={{ padding: 8 }}>
+              <Text style={{ fontSize: 18 }}>⟳</Text>
+            </TouchableOpacity>
+          </View>
+          {/* Balance hero */}
+          <View style={{ backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 20, padding: 20, alignItems: 'center' }}>
+            <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, letterSpacing: 1, textTransform: 'uppercase' }}>Available Balance</Text>
+            <CountUp to={walletBalance} prefix="₹" style={{ color: '#fff', fontSize: 48, fontWeight: '900', marginTop: 4 }} />
+            <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>
+              {[100, 200, 500, 1000, 2000].map(amt => (
+                <TouchableOpacity key={amt} onPress={() => openRazorpayTopup(amt)}
+                  style={{ backgroundColor: amt === 1000 ? '#e94560' : 'rgba(255,255,255,0.15)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7 }}>
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>+₹{amt}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          {/* Stats row */}
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
+            <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: 12, alignItems: 'center' }}>
+              <Text style={{ color: '#4CAF50', fontSize: 17, fontWeight: '800' }}>₹{parseFloat(walletStats?.total_credited || 0).toFixed(0)}</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, marginTop: 2 }}>Total Added</Text>
+            </View>
+            <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: 12, alignItems: 'center' }}>
+              <Text style={{ color: '#e94560', fontSize: 17, fontWeight: '800' }}>₹{parseFloat(walletStats?.total_spent || 0).toFixed(0)}</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, marginTop: 2 }}>Total Spent</Text>
+            </View>
+            <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: 12, alignItems: 'center' }}>
+              <Text style={{ color: '#FFD700', fontSize: 17, fontWeight: '800' }}>₹{parseFloat(walletStats?.total_rewards || 0).toFixed(0)}</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, marginTop: 2 }}>Rewards</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Custom amount add */}
+        <View style={{ backgroundColor: '#fff', margin: 14, borderRadius: 14, padding: 14, elevation: 2, flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+          <TextInput
+            style={{ flex: 1, borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 15, color: '#1a1a2e' }}
+            placeholder="Enter custom amount (₹)"
+            keyboardType="numeric"
+            value={walletAddInput}
+            onChangeText={setWalletAddInput}
+            placeholderTextColor="#bbb"
+          />
+          <TouchableOpacity
+            onPress={() => { const a = parseFloat(walletAddInput); if (a >= 1) { openRazorpayTopup(a); setWalletAddInput(''); } }}
+            style={{ backgroundColor: '#e94560', borderRadius: 10, paddingHorizontal: 18, paddingVertical: 11 }}>
+            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>Add ›</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Transaction tabs */}
+        <View style={{ flexDirection: 'row', marginHorizontal: 14, marginBottom: 8, gap: 8 }}>
+          {(['all', 'earn', 'spend', 'reward'] as const).map(tab => (
+            <TouchableOpacity key={tab} onPress={() => setWalletTxnTab(tab)}
+              style={{ flex: 1, borderRadius: 20, paddingVertical: 7, alignItems: 'center', backgroundColor: walletTxnTab === tab ? '#1a1a2e' : '#f0f0f0' }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: walletTxnTab === tab ? '#fff' : '#888', textTransform: 'capitalize' }}>{tab}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Transaction list */}
+        <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 14, paddingBottom: 30 }}>
+          {filteredTxns.length === 0 ? (
+            <View style={{ alignItems: 'center', padding: 40 }}>
+              <Text style={{ fontSize: 36 }}>💸</Text>
+              <Text style={{ color: '#bbb', marginTop: 10, fontSize: 14 }}>Koi transaction nahi mili</Text>
+            </View>
+          ) : filteredTxns.map((t: any, i: number) => (
+            <View key={t.id || i} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 8, elevation: 1 }}>
+              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.type === 'credit' ? '#e8f5e9' : '#ffebee', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                <Text style={{ fontSize: 18 }}>{t.type === 'credit' ? '↓' : '↑'}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, color: '#1a1a2e', fontWeight: '600' }} numberOfLines={1}>{t.description || (t.type === 'credit' ? 'Credited' : 'Debited')}</Text>
+                <Text style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>{fmtDate(t.created_at)}</Text>
+              </View>
+              <Text style={{ fontSize: 16, fontWeight: '800', color: t.type === 'credit' ? '#2e7d32' : '#c62828' }}>
+                {t.type === 'credit' ? '+' : '-'}₹{parseFloat(t.amount).toFixed(0)}
+              </Text>
+            </View>
+          ))}
+        </ScrollView>
+
+        {/* Razorpay.me WebView modal */}
+        {walletWebView && (
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#fff', zIndex: 999 }}>
+            <View style={{ backgroundColor: '#1a1a2e', paddingTop: 50, paddingBottom: 14, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center' }}>
+              <TouchableOpacity onPress={() => setWalletWebView(false)} style={{ marginRight: 14 }}>
+                <Text style={{ color: '#fff', fontSize: 20 }}>✕</Text>
+              </TouchableOpacity>
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700', flex: 1 }}>Pay ₹{walletAddAmt} via Razorpay</Text>
+            </View>
+            <WebView
+              source={{ uri: walletWebViewUrl }}
+              style={{ flex: 1 }}
+              onNavigationStateChange={(navState) => {
+                const url = navState.url || '';
+                if (url.includes('razorpay.me') && (url.includes('success') || url.includes('payment_id') || url.includes('congratulations'))) {
+                  const match = url.match(/payment_id=([^&]+)/);
+                  const pid = match?.[1] || `manual_${Date.now()}`;
+                  confirmTopup(pid);
+                }
+              }}
+              injectedJavaScript={`
+                (function() {
+                  const observer = new MutationObserver(() => {
+                    const body = document.body.innerText || '';
+                    if (body.includes('Payment Successful') || body.includes('Payment successful') || body.includes('Thank you') || body.includes('success')) {
+                      const pidMatch = body.match(/pay_[A-Za-z0-9]+/);
+                      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'payment_success', payment_id: pidMatch ? pidMatch[0] : 'manual_${Date.now()}' }));
+                    }
+                  });
+                  observer.observe(document.body, { childList: true, subtree: true });
+                })();
+                true;
+              `}
+              onMessage={(event) => {
+                try {
+                  const data = JSON.parse(event.nativeEvent.data);
+                  if (data.type === 'payment_success') { confirmTopup(data.payment_id || `manual_${Date.now()}`); }
+                } catch (_e) {}
+              }}
+              javaScriptEnabled
+              domStorageEnabled
+            />
+            {/* Manual confirm button */}
+            <View style={{ padding: 16, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f0f0f0' }}>
+              <Text style={{ color: '#888', fontSize: 12, textAlign: 'center', marginBottom: 10 }}>Agar payment complete ho gayi ho:</Text>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TextInput
+                  style={{ flex: 1, borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 13, color: '#1a1a2e' }}
+                  placeholder="Payment ID (optional)"
+                  value={walletPaymentId}
+                  onChangeText={setWalletPaymentId}
+                  placeholderTextColor="#bbb"
+                />
+                <TouchableOpacity onPress={() => confirmTopup(walletPaymentId || `manual_${Date.now()}`)}
+                  style={{ backgroundColor: '#4CAF50', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 11, justifyContent: 'center' }}>
+                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>✓ Confirm</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
+      </ScreenIn>
+    );
+  }
 
   // ═══ REFERRAL ═══
   if (screen === 'referral') return (
