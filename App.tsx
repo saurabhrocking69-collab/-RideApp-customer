@@ -553,14 +553,14 @@ export default function App() {
       if (screen === 'home' && tab === 'home') return false;
       if (screen === 'home' && tab !== 'home') { setTab('home'); return true; }
       if (screen === 'otp') { setScreen('login'); return true; }
-      if (screen === 'booking') { setScreen('home'); return true; }
+      if (screen === 'booking') { setScreen('home'); setPickupSugg([]); setDropSugg([]); setEta(''); setPromoCode(''); setPromoDiscount(0); return true; }
       if (screen === 'matching') { setShowCancelModal(true); return true; }
       if (screen === 'chat') { setScreen('matching'); return true; }
       if (screen === 'referral') { setScreen('home'); return true; }
       if (screen === 'saved') { setScreen('home'); return true; }
       if (screen === 'policy') { setScreen('home'); return true; }
       if (screen === 'hourly') {
-        if (hourlyStep === 'book') { setScreen('home'); return true; }
+        if (hourlyStep === 'book') { setHPickupSugg([]); setHDropSugg([]); setScreen('home'); return true; }
         return true;
       }
       if (screen === 'payment') return true;
@@ -1896,7 +1896,7 @@ export default function App() {
   if (screen === 'booking') return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={s.topBar}>
-        <TouchableOpacity onPress={() => setScreen('home')} style={s.backBtn}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => { setScreen('home'); setPickupSugg([]); setDropSugg([]); setEta(''); setPromoCode(''); setPromoDiscount(0); }} style={s.backBtn}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
         <Text style={s.topTitle}>Ride Book Karo</Text>
         <View style={{ width: 36 }} />
       </View>
@@ -2272,14 +2272,23 @@ export default function App() {
   return <View />;
 
   function NavBarInner() {
+    const navTabs = [
+      { t: 'home',    icon: '🏠', lbl: 'Home'    },
+      { t: 'history', icon: '🕐', lbl: 'Trips'   },
+      { t: 'profile', icon: '👤', lbl: 'Profile' },
+    ];
     return (
       <View style={s.nav}>
-        {[['home','🏠','Home'],['history','🕐','Trips'],['profile','👤','Profile']].map(([t,icon,lbl]) => (
-          <Bouncy key={t} style={s.navItem} onPress={() => { setScreen('home'); setTab(t); if(t==='history') loadHistory(phone); }}>
-            <Text style={s.navIcon}>{icon}</Text>
-            <Text style={[s.navLbl, tab===t && screen==='home' && s.navActive]}>{lbl}</Text>
-          </Bouncy>
-        ))}
+        {navTabs.map(({ t, icon, lbl }) => {
+          const active = tab === t && screen === 'home';
+          return (
+            <TouchableOpacity key={t} style={s.navItem} onPress={() => { setScreen('home'); setTab(t); if(t==='history') loadHistory(phone); }} activeOpacity={0.65}>
+              <Text style={[s.navIcon, active && { color: '#e94560' }]}>{icon}</Text>
+              <Text style={[s.navLbl, active && s.navActive]}>{lbl}</Text>
+              {active && <View style={{ width: 18, height: 3, borderRadius: 2, backgroundColor: '#e94560', marginTop: 4 }} />}
+            </TouchableOpacity>
+          );
+        })}
       </View>
     );
   }
@@ -2320,24 +2329,24 @@ const s = StyleSheet.create({
   backBtn:       { width: 36, alignItems: 'flex-start' },
   avatar:        { width: 40, height: 40, borderRadius: 20, backgroundColor: '#e94560', alignItems: 'center', justifyContent: 'center' },
   avatarTxt:     { color: '#fff', fontWeight: 'bold', fontSize: 17 },
-  searchBox:     { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 12, elevation: 4, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, borderWidth: 1, borderColor: '#f0f0f0' },
-  searchIcon:    { fontSize: 16, marginRight: 8 },
-  searchPh:      { color: '#999', fontSize: 14 },
-  quickRow:      { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  quickBtn:      { flex: 1, backgroundColor: '#f9f9f9', borderRadius: 12, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: '#f0f0f0' },
+  searchBox:     { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 18, padding: 16, marginBottom: 14, elevation: 6, shadowColor: '#1a1a2e', shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 3 }, borderWidth: 1.5, borderColor: '#f0f0f0' },
+  searchIcon:    { fontSize: 18, marginRight: 10 },
+  searchPh:      { color: '#aaa', fontSize: 14, flex: 1 },
+  quickRow:      { flexDirection: 'row', gap: 10, marginBottom: 14 },
+  quickBtn:      { flex: 1, backgroundColor: '#fff', borderRadius: 14, padding: 13, alignItems: 'center', elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6 },
   quickIcon:     { fontSize: 22 },
-  quickLbl:      { fontSize: 10, color: '#666', marginTop: 3, fontWeight: '500' },
+  quickLbl:      { fontSize: 10, color: '#555', marginTop: 4, fontWeight: '600' },
   secTitle:      { fontSize: 14, fontWeight: 'bold', color: '#1a1a2e', marginBottom: 10, marginTop: 4 },
   recentItem:    { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f9f9f9', borderRadius: 12, padding: 12, marginBottom: 8 },
   recentRoute:   { fontSize: 13, fontWeight: '600', color: '#1a1a2e' },
   recentDate:    { fontSize: 11, color: '#999', marginTop: 2 },
   recentFare:    { fontSize: 14, fontWeight: 'bold', color: '#e94560' },
-  promoBanner:   { backgroundColor: '#1a1a2e', borderRadius: 12, padding: 12, marginBottom: 14 },
-  promoTxt:      { color: '#fff', fontSize: 12, textAlign: 'center' },
-  nav:           { flexDirection: 'row', backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f0f0f0', paddingBottom: 10, paddingTop: 4, elevation: 8 },
-  navItem:       { flex: 1, alignItems: 'center', paddingTop: 7 },
-  navIcon:       { fontSize: 20 },
-  navLbl:        { fontSize: 10, color: '#bbb', marginTop: 2 },
+  promoBanner:   { backgroundColor: '#1a1a2e', borderRadius: 16, padding: 14, marginBottom: 14, elevation: 4, shadowColor: '#1a1a2e', shadowOpacity: 0.25, shadowRadius: 8 },
+  promoTxt:      { color: '#fff', fontSize: 13, textAlign: 'center', fontWeight: '500' },
+  nav:           { flexDirection: 'row', backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f0f0f0', paddingBottom: 16, paddingTop: 8, elevation: 16, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12 },
+  navItem:       { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  navIcon:       { fontSize: 22, color: '#ccc' },
+  navLbl:        { fontSize: 10, color: '#bbb', marginTop: 3, letterSpacing: 0.3 },
   navActive:     { color: '#e94560', fontWeight: 'bold' },
   histCard:      { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 10, elevation: 3, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6 },
   histIcon:      { width: 40, height: 40, borderRadius: 20, backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
@@ -2357,7 +2366,7 @@ const s = StyleSheet.create({
   dotRed:        { width: 10, height: 10, borderRadius: 5, backgroundColor: '#e94560', marginRight: 10 },
   locDivider:    { height: 1, backgroundColor: '#e8e8e8', marginVertical: 8, marginLeft: 20 },
   locationBtn:   { backgroundColor: '#e8f5e9', borderRadius: 10, padding: 12, marginBottom: 12, alignItems: 'center', borderWidth: 1, borderColor: '#c8e6c9' },
-  suggBox:       { backgroundColor: '#fff', borderRadius: 10, marginTop: 4, elevation: 8, borderWidth: 1, borderColor: '#f0f0f0' },
+  suggBox:       { backgroundColor: '#fff', borderRadius: 10, marginTop: 4, elevation: 20, borderWidth: 1, borderColor: '#f0f0f0', zIndex: 99 },
   suggItem:      { flexDirection: 'row', alignItems: 'center', padding: 10, borderBottomWidth: 1, borderBottomColor: '#f5f5f5' },
   rideCard:      { backgroundColor: '#f9f9f9', borderRadius: 12, padding: 12, marginRight: 8, alignItems: 'center', minWidth: 82, borderWidth: 2, borderColor: 'transparent' },
   rideCardActive:{ backgroundColor: '#1a1a2e', borderColor: '#e94560' },
