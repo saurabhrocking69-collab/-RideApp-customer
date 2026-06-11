@@ -296,7 +296,7 @@ export default function App() {
 // ── FCM Token Register ────────────────────────
   const registerFCM = async (userPhone: string) => {
     try {
-      if (!Device.isDevice) return; // Emulator pe skip
+      // if (!Device.isDevice) return;
       const { status: existing } = await Notifications.getPermissionsAsync();
       let finalStatus = existing;
       if (existing !== 'granted') {
@@ -340,17 +340,7 @@ export default function App() {
       try {
         const sp = await AsyncStorage.getItem('userPhone');
         const sn = await AsyncStorage.getItem('userName');
-        if (sp) { setPhone(sp); setUserName(sn || 'Rider'); setScreen('home'); loadHistory(sp); loadWallet(sp); }
-      } catch (_e) {}
-    })();
-  }, []);
- 
-  useEffect(() => {
-    (async () => {
-      try {
-        const sp = await AsyncStorage.getItem('userPhone');
-        const sn = await AsyncStorage.getItem('userName');
-        if (sp) { setPhone(sp); setUserName(sn || 'Rider'); setScreen('home'); loadHistory(sp); loadWallet(sp); }
+        if (sp) { setPhone(sp); setUserName(sn || 'Rider'); setScreen('home'); loadHistory(sp); loadWallet(sp); registerFCM(sp); }
       } catch (_e) {}
     })();
   }, []);
