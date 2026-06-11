@@ -17,13 +17,13 @@ import { WebView } from 'react-native-webview';
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 const API = 'https://rideapp-backend-production-5e1c.up.railway.app';
 
-type Screen = 'login' | 'otp' | 'home' | 'booking' | 'matching' | 'inride' | 'payment' | 'postride' | 'chat' | 'referral' | 'saved' | 'policy' | 'hourly' | 'wallet';
+type Screen = 'login' | 'otp' | 'home' | 'booking' | 'matching' | 'inride' | 'payment' | 'postride' | 'chat' | 'referral' | 'saved' | 'policy' | 'hourly' | 'wallet' | 'hourly-info';
 
 const HOURLY_PACKAGES: any = {
-  auto:    { 2:{fare:180,km:20}, 4:{fare:320,km:40}, 6:{fare:460,km:60}, 8:{fare:580,km:80}, extra:8  },
-  bike:    { 2:{fare:120,km:20}, 4:{fare:210,km:40}, 6:{fare:300,km:60}, 8:{fare:380,km:80}, extra:5  },
-  car:     { 2:{fare:260,km:20}, 4:{fare:460,km:40}, 6:{fare:660,km:60}, 8:{fare:840,km:80}, extra:12 },
-  eriksha: { 2:{fare:150,km:20}, 4:{fare:270,km:40}, 6:{fare:390,km:60}, 8:{fare:490,km:80}, extra:7  },
+  auto:    { 2:{fare:180,km:20}, 4:{fare:320,km:40}, 6:{fare:460,km:60}, 8:{fare:580,km:80},  24:{fare:1500,km:200}, 48:{fare:2800,km:400}, 72:{fare:4000,km:600}, extra:8  },
+  bike:    { 2:{fare:120,km:20}, 4:{fare:210,km:40}, 6:{fare:300,km:60}, 8:{fare:380,km:80},  24:{fare:1000,km:200}, 48:{fare:1800,km:400}, 72:{fare:2600,km:600}, extra:5  },
+  car:     { 2:{fare:260,km:20}, 4:{fare:460,km:40}, 6:{fare:660,km:60}, 8:{fare:840,km:80},  24:{fare:2200,km:200}, 48:{fare:4000,km:400}, 72:{fare:5800,km:600}, extra:12 },
+  eriksha: { 2:{fare:150,km:20}, 4:{fare:270,km:40}, 6:{fare:390,km:60}, 8:{fare:490,km:80},  24:{fare:1200,km:200}, 48:{fare:2200,km:400}, 72:{fare:3200,km:600}, extra:7  },
 };
 const PulseView = ({ children, style }: any) => {
   const anim = useRef(new Animated.Value(1)).current;
@@ -495,6 +495,13 @@ export default function App() {
   const [hourlyTimerSec, setHourlyTimerSec] = useState(0);
   const [hOtpInput, setHOtpInput]       = useState('');
   const hourlyTimerRef = useRef<any>(null);
+  // Scheduling
+  const [hScheduled, setHScheduled]     = useState(false);
+  const [hScheduleDate, setHScheduleDate] = useState('');
+  const [hScheduleTime, setHScheduleTime] = useState('');
+  // Loyalty
+  const [loyaltyPoints, setLoyaltyPoints] = useState(0);
+  const [loyaltyCashback, setLoyaltyCashback] = useState(0);
 
   // ── Notification Handler ──────────────────────
   useEffect(() => {
@@ -565,6 +572,7 @@ export default function App() {
       if (screen === 'booking') { setScreen('home'); setPickupSugg([]); setDropSugg([]); setEta(''); setPromoCode(''); setPromoDiscount(0); return true; }
       if (screen === 'matching') { setShowCancelModal(true); return true; }
       if (screen === 'chat') { setScreen('matching'); return true; }
+      if (screen === 'hourly-info') { setScreen('home'); return true; }
       if (screen === 'wallet') { setScreen('home'); setTab('profile'); return true; }
       if (screen === 'referral') { setScreen('home'); return true; }
       if (screen === 'saved') { setScreen('home'); return true; }
@@ -761,6 +769,10 @@ export default function App() {
       setWalletStats(d.stats || {});
     } catch (_e) {}
   };
+  const loadLoyalty = async (ph: string) => {
+    try { const r = await fetch(`${API}/api/loyalty/my-points?phone=${ph}`); const d = await r.json(); setLoyaltyPoints(d.points || 0); setLoyaltyCashback(d.cashback_available || 0); } catch (_e) {}
+  };
+
   const openRazorpayTopup = (amt: number) => {
     const paise = Math.round(amt * 100);
     const url = `https://razorpay.me/@rajawat101?amount=${paise}`;
@@ -1315,6 +1327,14 @@ export default function App() {
             </Bouncy>
           </SlideUp>
 
+          <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f9f9f9', borderRadius: 12, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: '#f0f0f0' }} onPress={() => setScreen('hourly-info')}>
+            <Text style={{ fontSize: 18, marginRight: 10 }}>⏱️</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#1a1a2e' }}>Book by Hour — Kaise Kaam Karta Hai?</Text>
+              <Text style={{ fontSize: 11, color: '#999' }}>Rules, fares, packages — sab jaano</Text>
+            </View>
+            <Text style={{ fontSize: 18, color: '#ddd' }}>›</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f9f9f9', borderRadius: 12, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: '#f0f0f0' }} onPress={() => setScreen('policy')}>
             <Text style={{ fontSize: 18, marginRight: 10 }}>📋</Text>
             <View style={{ flex: 1 }}>
@@ -1380,7 +1400,7 @@ export default function App() {
           <Text style={s.profilePhone}>+91 {phone}</Text>
           <View style={s.badge}><Text style={{ color: '#fff', fontWeight: 'bold' }}>⭐ 4.9 Rating</Text></View>
         </View>
-        <TouchableOpacity style={s.walletCard} onPress={() => { loadWalletDetail(phone); setScreen('wallet'); }}>
+        <TouchableOpacity style={s.walletCard} onPress={() => { loadWalletDetail(phone); loadLoyalty(phone); setScreen('wallet'); }}>
           <View style={s.row}>
             <View style={{ flex: 1 }}>
               <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13 }}>💰 Wallet Balance</Text>
@@ -1484,6 +1504,16 @@ export default function App() {
               <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, marginTop: 2 }}>Rewards</Text>
             </View>
           </View>
+          {/* Loyalty points */}
+          {loyaltyPoints > 0 && (
+            <View style={{ marginTop: 10, backgroundColor: 'rgba(255,215,0,0.15)', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={{ fontSize: 20, marginRight: 10 }}>⭐</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#FFD700', fontWeight: '800', fontSize: 15 }}>{loyaltyPoints} Loyalty Points</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 1 }}>100 points = ₹10 cashback · Aapke paas: ₹{loyaltyCashback} cashback available</Text>
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Custom amount add */}
@@ -1728,8 +1758,8 @@ export default function App() {
   if (screen === 'hourly') {
     const pkg = HOURLY_PACKAGES[hVehicle]?.[hPackageHours];
     const hVehicleIcons: any = { auto: '🛺', bike: '🏍️', car: '🚕', eriksha: '🛵' };
-    const hHourLabel = (h: number) => h === 8 ? 'Full Day' : `${h} Hours`;
-    const hHourEmoji = (h: number) => h === 2 ? '⏱️' : h === 4 ? '🕐' : h === 6 ? '🕕' : '☀️';
+    const hHourLabel = (h: number) => h >= 24 ? `${h/24} Day${h > 24 ? 's' : ''}` : h === 8 ? 'Full Day (8h)' : `${h} Hours`;
+    const hHourEmoji = (h: number) => h >= 72 ? '🗓️' : h >= 48 ? '📅' : h >= 24 ? '🌙' : h === 2 ? '⏱️' : h === 4 ? '🕐' : h === 6 ? '🕕' : '☀️';
     const fmtTime = (sec: number) => `${String(Math.floor(sec/3600)).padStart(2,'0')}:${String(Math.floor((sec%3600)/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`;
 
     const searchHourly = async (text: string, which: 'pickup'|'drop') => {
@@ -1755,12 +1785,20 @@ export default function App() {
     const bookHourly = async () => {
       if (!hPickup) { alert('Pickup location daalo'); return; }
       if (!phone) return;
+      if (hScheduled && (!hScheduleDate || !hScheduleTime)) { alert('Date aur time select karo'); return; }
+      let scheduled_at: string | null = null;
+      if (hScheduled && hScheduleDate && hScheduleTime) {
+        const dt = new Date(`${hScheduleDate}T${hScheduleTime}:00`);
+        if (dt <= new Date()) { alert('Future ka time select karo'); return; }
+        scheduled_at = dt.toISOString();
+      }
       try {
         const body: any = { phone, vehicle_type: hVehicle, package_hours: hPackageHours, pickup: hPickup, pickup_lat: hPickupCoords?.lat, pickup_lng: hPickupCoords?.lng, is_roundtrip: hRoundTrip, stay_hours: hStayHours };
         if (hDrop) { body.drop_location = hDrop; body.drop_lat = hDropCoords?.lat; body.drop_lng = hDropCoords?.lng; }
+        if (scheduled_at) body.scheduled_at = scheduled_at;
         const data = await apiPost('/api/hourly/book', body);
         if (data.success) {
-          setHourlyBooking({ id: data.booking_id, fare: data.fare, km_included: data.km_included, status: 'pending', vehicle_type: hVehicle, package_hours: hPackageHours, pickup: hPickup, drop_location: hDrop, is_roundtrip: hRoundTrip, stay_hours: hStayHours });
+          setHourlyBooking({ id: data.booking_id, fare: data.fare, km_included: data.km_included, status: 'pending', vehicle_type: hVehicle, package_hours: hPackageHours, pickup: hPickup, drop_location: hDrop, is_roundtrip: hRoundTrip, stay_hours: hStayHours, scheduled_at });
           setHourlyStep('waiting');
           loadWallet(phone);
         } else {
@@ -1927,12 +1965,21 @@ export default function App() {
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <PulseView><Text style={{ fontSize: 72, marginBottom: 16 }}>⏱️</Text></PulseView>
           <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1a1a2e', marginBottom: 6 }}>Booking Confirmed!</Text>
+          {hourlyBooking?.scheduled_at ? (
+            <View style={{ backgroundColor: '#fff3e0', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={{ fontSize: 16, marginRight: 8 }}>🗓️</Text>
+              <View>
+                <Text style={{ color: '#e65100', fontWeight: '700', fontSize: 13 }}>Scheduled Booking</Text>
+                <Text style={{ color: '#e65100', fontSize: 12 }}>{new Date(hourlyBooking.scheduled_at).toLocaleString('hi-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</Text>
+              </View>
+            </View>
+          ) : null}
           <View style={{ backgroundColor: '#e8f5e9', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
             <Text style={{ fontSize: 16, marginRight: 8 }}>✅</Text>
             <Text style={{ color: '#2e7d32', fontWeight: '600' }}>₹{hourlyBooking?.fare} Payment Paid — Escrow Mein</Text>
           </View>
           <FloatingDots />
-          <Text style={{ color: '#999', fontSize: 13, marginTop: 16, marginBottom: 24 }}>Aapke area mein {hVehicleIcons[hVehicle]} driver dhundh rahe hain...</Text>
+          <Text style={{ color: '#999', fontSize: 13, marginTop: 16, marginBottom: 24 }}>{hourlyBooking?.scheduled_at ? `Driver ${new Date(hourlyBooking.scheduled_at).toLocaleTimeString('hi-IN',{hour:'2-digit',minute:'2-digit'})} pe aayega` : `Aapke area mein ${hVehicleIcons[hVehicle]} driver dhundh rahe hain...`}</Text>
           <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, width: '100%', elevation: 2, marginBottom: 20 }}>
             {[
               ['Package', `${hHourEmoji(hPackageHours)} ${hHourLabel(hPackageHours)}`],
@@ -1960,7 +2007,7 @@ export default function App() {
         <View style={s.topBar}>
           <TouchableOpacity onPress={() => setScreen('home')} style={s.backBtn}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
           <Text style={s.topTitle}>⏱️ Book by Hour</Text>
-          <View style={{ width: 36 }} />
+          <TouchableOpacity onPress={() => setScreen('hourly-info')} style={{ width: 36, alignItems: 'flex-end' }}><Text style={{ fontSize: 20 }}>ℹ️</Text></TouchableOpacity>
         </View>
         <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16, paddingBottom: 50 }}>
 
@@ -1977,7 +2024,20 @@ export default function App() {
 
           {/* Package Cards */}
           <Text style={s.secTitle}>Package Select Karo</Text>
-          {[2, 4, 6, 8].map(h => {
+          {/* Standard / Multi-Day tab */}
+          <View style={{ flexDirection: 'row', backgroundColor: '#f5f5f5', borderRadius: 12, padding: 4, marginBottom: 12 }}>
+            {[['standard','⏱️ Same Day'],[' multi','📅 Multi-Day']].map(([key, label]) => {
+              const isMulti = key.trim() === 'multi';
+              const isMultiSelected = [24,48,72].includes(hPackageHours);
+              const active = isMulti ? isMultiSelected : !isMultiSelected;
+              return (
+                <Bouncy key={key} onPress={() => { if (isMulti) setHPackageHours(24); else setHPackageHours(4); }} style={{ flex: 1, backgroundColor: active ? '#1a1a2e' : 'transparent', borderRadius: 10, paddingVertical: 8, alignItems: 'center' }}>
+                  <Text style={{ fontWeight: '700', color: active ? '#fff' : '#666', fontSize: 13 }}>{label}</Text>
+                </Bouncy>
+              );
+            })}
+          </View>
+          {([24,48,72].includes(hPackageHours) ? [24,48,72] : [2,4,6,8]).map(h => {
             const p = HOURLY_PACKAGES[hVehicle]?.[h];
             const sel = hPackageHours === h;
             return (
@@ -2046,6 +2106,50 @@ export default function App() {
             )}
           </View>
 
+          {/* Scheduling */}
+          <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 14, marginTop: 4, marginBottom: 14, elevation: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#1a1a2e' }}>🗓️ Schedule for Later?</Text>
+                <Text style={{ fontSize: 11, color: '#999', marginTop: 2 }}>Advance booking — driver abhi/kal ayega</Text>
+              </View>
+              <Switch value={hScheduled} onValueChange={v => { setHScheduled(v); if (!v) { setHScheduleDate(''); setHScheduleTime(''); }}} trackColor={{ true: '#e94560' }} />
+            </View>
+            {!hScheduled && (
+              <View style={{ marginTop: 10, backgroundColor: '#e8f5e9', borderRadius: 8, padding: 8, flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 14, marginRight: 6 }}>⚡</Text>
+                <Text style={{ color: '#2e7d32', fontSize: 12, fontWeight: '600' }}>Abhi Book Karo — Driver Turant Aayega</Text>
+              </View>
+            )}
+            {hScheduled && (
+              <View style={{ marginTop: 12 }}>
+                <Text style={{ fontSize: 12, color: '#666', marginBottom: 6, fontWeight: '600' }}>Date (YYYY-MM-DD):</Text>
+                <TextInput
+                  style={{ borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 10, padding: 10, fontSize: 14, color: '#1a1a2e', marginBottom: 10 }}
+                  placeholder={`${new Date().toISOString().split('T')[0]} (aaj)`}
+                  placeholderTextColor="#bbb"
+                  value={hScheduleDate}
+                  onChangeText={setHScheduleDate}
+                  keyboardType="numeric"
+                />
+                <Text style={{ fontSize: 12, color: '#666', marginBottom: 6, fontWeight: '600' }}>Time (HH:MM, 24h format):</Text>
+                <TextInput
+                  style={{ borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 10, padding: 10, fontSize: 14, color: '#1a1a2e' }}
+                  placeholder="14:30"
+                  placeholderTextColor="#bbb"
+                  value={hScheduleTime}
+                  onChangeText={setHScheduleTime}
+                  keyboardType="numeric"
+                />
+                {hScheduleDate && hScheduleTime && (
+                  <View style={{ marginTop: 8, backgroundColor: '#fff3e0', borderRadius: 8, padding: 8 }}>
+                    <Text style={{ color: '#e65100', fontSize: 12 }}>📅 Scheduled: {hScheduleDate} at {hScheduleTime}</Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+
           {/* Fare Summary */}
           <View style={{ backgroundColor: '#1a1a2e', borderRadius: 16, padding: 16, marginBottom: 20 }}>
             <Text style={{ color: '#aaa', fontSize: 12, marginBottom: 10, letterSpacing: 1 }}>FARE SUMMARY</Text>
@@ -2074,6 +2178,112 @@ export default function App() {
       </ScreenIn>
     );
   }
+
+  // ═══ HOURLY INFO ═══
+  if (screen === 'hourly-info') return (
+    <ScreenIn style={s.screen}>
+      <View style={s.topBar}>
+        <TouchableOpacity onPress={() => setScreen('home')} style={s.backBtn}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
+        <Text style={s.topTitle}>⏱️ Book by Hour — Guide</Text>
+        <View style={{ width: 36 }} />
+      </View>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 50 }}>
+        {/* How It Works */}
+        <View style={{ backgroundColor: '#1a1a2e', borderRadius: 16, padding: 18, marginBottom: 16 }}>
+          <Text style={{ color: '#e94560', fontSize: 16, fontWeight: 'bold', marginBottom: 12 }}>🚀 Kaise Kaam Karta Hai?</Text>
+          {[
+            ['1️⃣', 'Package select karo', '2h, 4h, 6h, 8h (same day) ya 1-3 din (multi-day)'],
+            ['2️⃣', 'Pickup location daalo', 'Drop optional hai — driver aapke saath rahega'],
+            ['3️⃣', 'Wallet se payment', 'Fare escrow mein hold hota hai (safe)'],
+            ['4️⃣', 'Driver accept karta hai', 'OTP share karo trip start karne ke liye'],
+            ['5️⃣', 'Trip enjoy karo', 'Timer chalta rehta hai — driver aapka hai'],
+            ['6️⃣', 'Trip complete', 'Driver release karta hai — final payment auto'],
+          ].map(([num, title, desc], i) => (
+            <View key={i} style={{ flexDirection: 'row', marginBottom: 14 }}>
+              <Text style={{ fontSize: 20, marginRight: 12 }}>{num}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>{title}</Text>
+                <Text style={{ color: '#aaa', fontSize: 12, marginTop: 2 }}>{desc}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* Packages & Fares */}
+        <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 18, marginBottom: 16, elevation: 2 }}>
+          <Text style={{ color: '#1a1a2e', fontSize: 15, fontWeight: 'bold', marginBottom: 12 }}>💰 Packages & Fares</Text>
+          <View style={{ flexDirection: 'row', backgroundColor: '#f8f8f8', borderRadius: 8, padding: 8, marginBottom: 8 }}>
+            <Text style={{ flex: 1, color: '#666', fontSize: 12, fontWeight: '700' }}>Package</Text>
+            <Text style={{ width: 50, color: '#666', fontSize: 12, fontWeight: '700', textAlign: 'center' }}>Auto</Text>
+            <Text style={{ width: 50, color: '#666', fontSize: 12, fontWeight: '700', textAlign: 'center' }}>Car</Text>
+            <Text style={{ width: 50, color: '#666', fontSize: 12, fontWeight: '700', textAlign: 'center' }}>Bike</Text>
+          </View>
+          {[
+            ['2 Hours (20km)', 180, 260, 120],
+            ['4 Hours (40km)', 320, 460, 210],
+            ['6 Hours (60km)', 460, 660, 300],
+            ['8 Hours (80km)', 580, 840, 380],
+            ['1 Day (200km)', 1500, 2200, 1000],
+            ['2 Days (400km)', 2800, 4000, 1800],
+            ['3 Days (600km)', 4000, 5800, 2600],
+          ].map(([label, auto, car, bike], i) => (
+            <View key={i} style={{ flexDirection: 'row', paddingVertical: 8, borderBottomWidth: i < 6 ? 1 : 0, borderColor: '#f5f5f5' }}>
+              <Text style={{ flex: 1, color: '#333', fontSize: 12 }}>{label}</Text>
+              <Text style={{ width: 50, color: '#e94560', fontSize: 12, fontWeight: '600', textAlign: 'center' }}>₹{auto}</Text>
+              <Text style={{ width: 50, color: '#e94560', fontSize: 12, fontWeight: '600', textAlign: 'center' }}>₹{car}</Text>
+              <Text style={{ width: 50, color: '#e94560', fontSize: 12, fontWeight: '600', textAlign: 'center' }}>₹{bike}</Text>
+            </View>
+          ))}
+          <Text style={{ color: '#999', fontSize: 11, marginTop: 10 }}>Extra KM: Auto ₹8/km · Car ₹12/km · Bike ₹5/km · E-Riksha ₹7/km</Text>
+        </View>
+
+        {/* Rules */}
+        <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 18, marginBottom: 16, elevation: 2 }}>
+          <Text style={{ color: '#1a1a2e', fontSize: 15, fontWeight: 'bold', marginBottom: 12 }}>📋 Important Rules</Text>
+          {[
+            ['✅', 'Escrow Payment', 'Aapka paisa trip complete hone par hi driver ko milega — 100% safe'],
+            ['⏱️', 'Timer', 'Trip start OTP confirm hone par chalta hai. Package time khatam = auto complete'],
+            ['🔄', 'Round Trip', 'Toggle on karo agar wapas pickup aana ho. Stay time bhi set kar sakte ho'],
+            ['⚡', 'Early End', 'Driver ya aap early end request kar sakte ho — dono ki agreement zaroori'],
+            ['💰', 'Early End Refund', 'Actual time proportional payment. Min 70% driver ko milega'],
+            ['📍', 'Extra KM', 'Package KM limit se zyada chale to extra charge lagega'],
+            ['❌', 'Cancellation', 'Driver match hone se pehle cancel = full refund to wallet'],
+            ['🗓️', 'Advance Booking', 'Schedule kar sakte ho — driver ±75 min window mein accept karega'],
+            ['🚫', 'Misuse', 'Package time mein driver ko kisi aur kaam ke liye use mat karo'],
+          ].map(([icon, title, desc], i) => (
+            <View key={i} style={{ flexDirection: 'row', marginBottom: 12 }}>
+              <Text style={{ fontSize: 18, marginRight: 10, width: 30 }}>{icon}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#1a1a2e', fontWeight: '700', fontSize: 13 }}>{title}</Text>
+                <Text style={{ color: '#666', fontSize: 12, marginTop: 2 }}>{desc}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* Tips */}
+        <View style={{ backgroundColor: '#e8f5e9', borderRadius: 16, padding: 18, marginBottom: 16 }}>
+          <Text style={{ color: '#2e7d32', fontSize: 15, fontWeight: 'bold', marginBottom: 10 }}>💡 Pro Tips</Text>
+          {[
+            'Zyada trips plan ho to multi-day book karo — per-day cost kam padega',
+            'Round trip toggle karo agar ek jagah rukna hai aur wapas aana hai',
+            'Wallet top-up karke rakho — booking instant hogi',
+            'Advance schedule karo taaki last minute tension na ho',
+            'OTP sirf driver ko batao trip shuru karne pe',
+          ].map((tip, i) => (
+            <View key={i} style={{ flexDirection: 'row', marginBottom: 8 }}>
+              <Text style={{ color: '#4CAF50', marginRight: 8, fontSize: 14, fontWeight: 'bold' }}>•</Text>
+              <Text style={{ color: '#1b5e20', fontSize: 13, flex: 1 }}>{tip}</Text>
+            </View>
+          ))}
+        </View>
+
+        <Bouncy style={s.btn} onPress={() => setScreen('hourly')}>
+          <Text style={s.btnTxt}>⏱️ Abhi Book Karo</Text>
+        </Bouncy>
+      </ScrollView>
+    </ScreenIn>
+  );
 
   // ═══ CHAT ═══
   if (screen === 'chat') return (
