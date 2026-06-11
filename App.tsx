@@ -263,6 +263,36 @@ export default function App() {
   const [savedPlaces, setSavedPlaces] = useState<any[]>([]);
   const scratchAnim = useRef(new Animated.Value(1)).current;
   const starAnims   = useRef([0,1,2,3,4].map(() => new Animated.Value(1))).current;
+
+  // ── Notification Handler ──────────────────────
+  useEffect(() => {
+    // Foreground notification handler
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+
+    // Notification receive hone pe
+    const sub1 = Notifications.addNotificationReceivedListener(notification => {
+      console.log('📱 Notification received:', notification);
+    });
+
+    // Notification tap karne pe
+    const sub2 = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log('👆 Notification tapped:', response);
+    });
+
+    return () => {
+      sub1.remove();
+      sub2.remove();
+    };
+  }, []);
+
 // ── FCM Token Register ────────────────────────
   const registerFCM = async (userPhone: string) => {
     try {
