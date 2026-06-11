@@ -193,8 +193,207 @@ const MapWebView = ({ pickup, drop, pickupCoords, dropCoords, driverLat, driverL
 
   return <WebView source={{ html }} style={{ height, width: '100%' }} scrollEnabled={false} javaScriptEnabled domStorageEnabled />;
 };
-   
 
+// ─── SlideUp — bottom se slide in animation ───
+const SlideUp = ({ children, style, delay = 0 }: any) => {
+  const y = useRef(new Animated.Value(50)).current;
+  const o = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(y, { toValue: 0, duration: 380, delay, useNativeDriver: true }),
+      Animated.timing(o, { toValue: 1, duration: 380, delay, useNativeDriver: true }),
+    ]).start();
+  }, []);
+  return <Animated.View style={[style, { transform: [{ translateY: y }], opacity: o }]}>{children}</Animated.View>;
+};
+
+// ─── FloatingDots — bouncing loading dots ───
+const FloatingDots = ({ color = '#e94560' }: any) => {
+  const dots = [useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current];
+  useEffect(() => {
+    dots.forEach((d, i) => {
+      Animated.loop(Animated.sequence([
+        Animated.delay(i * 200),
+        Animated.timing(d, { toValue: -9, duration: 280, useNativeDriver: true }),
+        Animated.timing(d, { toValue: 0, duration: 280, useNativeDriver: true }),
+        Animated.delay(540),
+      ])).start();
+    });
+  }, []);
+  return (
+    <View style={{ flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center', marginTop: 12 }}>
+      {dots.map((d, i) => (
+        <Animated.View key={i} style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: color, transform: [{ translateY: d }] }} />
+      ))}
+    </View>
+  );
+};
+
+// ─── EmptyAnim — khali screen ke liye bouncing graphic ───
+const EmptyAnim = ({ icon, title, sub }: any) => {
+  const bounce = useRef(new Animated.Value(0)).current;
+  const fade   = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(fade, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+    Animated.loop(Animated.sequence([
+      Animated.timing(bounce, { toValue: -14, duration: 650, useNativeDriver: true }),
+      Animated.timing(bounce, { toValue: 0, duration: 650, useNativeDriver: true }),
+    ])).start();
+  }, []);
+  return (
+    <Animated.View style={{ alignItems: 'center', marginTop: 60, paddingHorizontal: 30, opacity: fade }}>
+      <Animated.Text style={{ fontSize: 72, transform: [{ translateY: bounce }] }}>{icon}</Animated.Text>
+      <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1a1a2e', marginTop: 22 }}>{title}</Text>
+      {sub ? <Text style={{ fontSize: 13, color: '#999', marginTop: 8, textAlign: 'center', lineHeight: 20 }}>{sub}</Text> : null}
+    </Animated.View>
+  );
+};
+
+// ─── MapOverlay — map ke uper LIVE badge + route bar ───
+const MapOverlay = ({ hasRoute, pickup, drop, live = false }: any) => {
+  const pulse = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!live) return;
+    Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1.6, duration: 750, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 1, duration: 750, useNativeDriver: true }),
+    ])).start();
+  }, [live]);
+  return (
+    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} pointerEvents="none">
+      {live && (
+        <View style={{ position: 'absolute', top: 10, right: 10, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(46,125,50,0.92)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5, elevation: 4 }}>
+          <Animated.View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#fff', marginRight: 5, transform: [{ scale: pulse }] }} />
+          <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold', letterSpacing: 0.5 }}>LIVE</Text>
+        </View>
+      )}
+      {hasRoute && (
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(26,26,46,0.86)', paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#4CAF50', marginRight: 6 }} />
+          <Text style={{ color: '#fff', fontSize: 11, flex: 1 }} numberOfLines={1}>{pickup}</Text>
+          <Text style={{ color: '#666', fontSize: 12, marginHorizontal: 5 }}>→</Text>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#e94560', marginRight: 6 }} />
+          <Text style={{ color: '#fff', fontSize: 11, flex: 1 }} numberOfLines={1}>{drop}</Text>
+        </View>
+      )}
+    </View>
+  );
+};
+
+// ─── Confetti — trip complete pe falling celebration ───
+const Confetti = () => {
+  const COLORS = ['#e94560','#4CAF50','#f0a500','#2196F3','#9C27B0','#FF5722','#00BCD4'];
+  const pieces = useRef([...Array(28)].map((_, i) => ({
+    y:     new Animated.Value(-20),
+    rot:   new Animated.Value(0),
+    o:     new Animated.Value(1),
+    left:  (i * 13 + (i % 4) * 9) % 360,
+    dur:   1200 + (i % 6) * 180,
+    delay: (i % 7) * 90,
+    color: COLORS[i % COLORS.length],
+    size:  i % 3 === 0 ? 10 : i % 2 === 0 ? 7 : 5,
+    round: i % 4 === 0,
+  }))).current;
+  useEffect(() => {
+    pieces.forEach(p => {
+      Animated.sequence([
+        Animated.delay(p.delay),
+        Animated.parallel([
+          Animated.timing(p.y,   { toValue: 720, duration: p.dur, useNativeDriver: true }),
+          Animated.timing(p.rot, { toValue: 8,   duration: p.dur, useNativeDriver: true }),
+          Animated.sequence([
+            Animated.timing(p.o, { toValue: 1, duration: p.dur * 0.65, useNativeDriver: true }),
+            Animated.timing(p.o, { toValue: 0, duration: p.dur * 0.35, useNativeDriver: true }),
+          ]),
+        ]),
+      ]).start();
+    });
+  }, []);
+  return (
+    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }} pointerEvents="none">
+      {pieces.map((p, i) => (
+        <Animated.View key={i} style={{
+          position: 'absolute', left: p.left,
+          width: p.size, height: p.round ? p.size : p.size * 1.6,
+          backgroundColor: p.color, borderRadius: p.round ? p.size : 2,
+          opacity: p.o,
+          transform: [
+            { translateY: p.y },
+            { rotate: p.rot.interpolate({ inputRange: [0, 8], outputRange: ['0deg', '720deg'] }) },
+          ],
+        }} />
+      ))}
+    </View>
+  );
+};
+
+// ─── ScreenIn — screen mount transition (slide from right + fade) ───
+const ScreenIn = ({ children, style }: any) => {
+  const x = useRef(new Animated.Value(45)).current;
+  const o = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(x, { toValue: 0, friction: 9, tension: 65, useNativeDriver: true }),
+      Animated.timing(o, { toValue: 1, duration: 230, useNativeDriver: true }),
+    ]).start();
+  }, []);
+  return (
+    <Animated.View style={[style, { transform: [{ translateX: x }], opacity: o }]}>
+      {children}
+    </Animated.View>
+  );
+};
+
+// ─── TripSteps — animated ride progress stepper ───
+const TripSteps = ({ step }: { step: 0 | 1 | 2 | 3 }) => {
+  const anim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(anim, { toValue: step, friction: 8, tension: 60, useNativeDriver: false }).start();
+  }, [step]);
+  const steps = [{ icon: '🔍', label: 'Booking' }, { icon: '🚗', label: 'Driver' }, { icon: '🛣️', label: 'Ride' }, { icon: '✅', label: 'Done' }];
+  return (
+    <View style={{ paddingHorizontal: 6, paddingBottom: 14, paddingTop: 4 }}>
+      <View style={{ height: 4, backgroundColor: '#f0f0f0', borderRadius: 2, marginHorizontal: 14, marginBottom: 10, overflow: 'hidden' }}>
+        <Animated.View style={{
+          height: 4, backgroundColor: '#e94560', borderRadius: 2,
+          width: anim.interpolate({ inputRange: [0, 3], outputRange: ['0%', '100%'] }),
+        }} />
+      </View>
+      <View style={{ flexDirection: 'row' }}>
+        {steps.map((s, i) => (
+          <View key={i} style={{ flex: 1, alignItems: 'center' }}>
+            <Animated.View style={{
+              width: 30, height: 30, borderRadius: 15,
+              backgroundColor: i <= step ? '#e94560' : '#efefef',
+              alignItems: 'center', justifyContent: 'center',
+              transform: [{ scale: i === step ? 1.2 : 1 }],
+              elevation: i === step ? 4 : 0,
+            }}>
+              <Text style={{ fontSize: 13 }}>{i <= step ? s.icon : '·'}</Text>
+            </Animated.View>
+            <Text style={{ fontSize: 9, marginTop: 4, color: i <= step ? '#e94560' : '#bbb', fontWeight: i === step ? 'bold' : 'normal' }}>{s.label}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+};
+
+// ─── CountUp — number animated counter (wallet, fare etc) ───
+const CountUp = ({ to, prefix = '', style }: any) => {
+  const anim = useRef(new Animated.Value(0)).current;
+  const [display, setDisplay] = useState(0);
+  const prevRef = useRef(0);
+  useEffect(() => {
+    anim.setValue(prevRef.current);
+    const id = anim.addListener(({ value }) => setDisplay(Math.floor(value)));
+    Animated.timing(anim, { toValue: to, duration: 750, useNativeDriver: false }).start(() => {
+      prevRef.current = to;
+    });
+    return () => anim.removeListener(id);
+  }, [to]);
+  return <Text style={style}>{prefix}{display}</Text>;
+};
 
 export default function App() {
   const [screen, setScreen]           = useState<Screen>('login');
@@ -266,6 +465,15 @@ export default function App() {
 
   // ── Notification Handler ──────────────────────
   useEffect(() => {
+    if (Platform.OS === 'android') {
+      Notifications.setNotificationChannelAsync('default', {
+        name: 'RideApp Notifications',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#e94560',
+      });
+    }
+
     // Foreground notification handler
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
@@ -448,6 +656,24 @@ export default function App() {
     const t = setInterval(() => { cur = Math.min(cur + step, target); setFareCount(cur); if (cur >= target) clearInterval(t); }, 40);
     return () => clearInterval(t);
   }, [screen]);
+
+  // Driver ne directly payment confirm kari toh auto-update
+  useEffect(() => {
+    if (screen !== 'payment' || !rideData?.ride_id) return;
+    const iv = setInterval(async () => {
+      try {
+        const res = await fetch(`${API}/api/rides/payment-status/${rideData.ride_id}`);
+        const data = await res.json();
+        if (data.payment_status === 'completed') {
+          clearInterval(iv);
+          setPaymentDone(true);
+          setScreen('postride');
+          createScratchCard();
+        }
+      } catch (_e) {}
+    }, 3000);
+    return () => clearInterval(iv);
+  }, [screen, rideData?.ride_id]);
 
   const loadHistory = async (ph: string) => {
     try { const r = await fetch(`${API}/api/rides/history?phone=${ph}`); const d = await r.json(); setHistoryRides(d.rides || []); } catch (_e) {}
@@ -822,9 +1048,9 @@ export default function App() {
             <TextInput style={[s.input, { flex: 1, marginBottom: 0 }]} placeholder="10 digit number" keyboardType="numeric" value={phone} onChangeText={setPhone} maxLength={10} />
           </View>
           {result ? <Text style={s.err}>{result}</Text> : null}
-          <TouchableOpacity style={[s.btn, loading && { opacity: 0.7 }]} onPress={sendOtp} disabled={loading}>
+          <Bouncy style={[s.btn, loading && { opacity: 0.7 }]} onPress={sendOtp} disabled={loading}>
             <Text style={s.btnTxt}>{loading ? '⏳ Bhej raha hai...' : 'OTP Bhejo 📱'}</Text>
-          </TouchableOpacity>
+          </Bouncy>
           <Text style={s.terms}>Continue karke aap Terms & Privacy se agree karte hain</Text>
         </View>
       </ScrollView>
@@ -882,11 +1108,11 @@ export default function App() {
           {result ? <Text style={s.err}>{result}</Text> : null}
 
           {/* Verify Button */}
-          <TouchableOpacity
+          <Bouncy
             style={[s.btn, (loading || otpDigits.join('').length < 6) && { opacity: 0.6 }]}
             onPress={() => verifyOtp()} disabled={loading || otpDigits.join('').length < 6}>
             <Text style={s.btnTxt}>{loading ? '⏳ Verify ho raha hai...' : '✅ Verify Karo'}</Text>
-          </TouchableOpacity>
+          </Bouncy>
 
           {/* Resend */}
           <View style={{ alignItems: 'center', marginTop: 14 }}>
@@ -927,30 +1153,46 @@ export default function App() {
       {/* Map fit */}
       <View style={s.mapFit}>
         <MapWebView pickupCoords={pickupCoords} dropCoords={dropCoords} userLat={userCoords?.latitude} userLng={userCoords?.longitude} height={260} />
+        <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} />
       </View>
       {/* Content */}
       <View style={{ flex: 1, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 16, paddingHorizontal: 16 }}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 90 }}>
-          <TouchableOpacity style={s.searchBox} onPress={() => setScreen('booking')}>
-            <Text style={s.searchIcon}>🔍</Text>
-            <Text style={s.searchPh}>Kahan jaana hai?</Text>
-          </TouchableOpacity>
-          <View style={s.quickRow}>
-            {[['🏠','Home'],['💼','Office'],['🎁','Refer'],['📍','Saved']].map(([icon,label],i) => (
-              <TouchableOpacity key={i} style={s.quickBtn} onPress={() => {
-                if (label === 'Refer') { loadReferral(); setScreen('referral'); }
-                else if (label === 'Saved') { loadSaved(); setScreen('saved'); }
-                else setScreen('booking');
-              }}>
-                <Text style={s.quickIcon}>{icon}</Text>
-                <Text style={s.quickLbl}>{label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          
-          <TouchableOpacity style={s.promoBanner} onPress={() => { loadReferral(); setScreen('referral'); }}>
-            <Text style={s.promoTxt}>🎁 Dost ko refer karo, dono ko ₹50 milega!</Text>
-          </TouchableOpacity>
+          <SlideUp delay={0}>
+            <Bouncy onPress={() => setScreen('booking')} style={s.searchBox}>
+              <Text style={s.searchIcon}>🔍</Text>
+              <Text style={s.searchPh}>Kahan jaana hai?</Text>
+              <View style={{ marginLeft: 'auto', backgroundColor: '#e94560', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
+                <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>Book</Text>
+              </View>
+            </Bouncy>
+          </SlideUp>
+
+          <SlideUp delay={60}>
+            <View style={s.quickRow}>
+              {[
+                { icon: '🏠', label: 'Home',   bg: '#e3f2fd', fn: () => setScreen('booking') },
+                { icon: '💼', label: 'Office',  bg: '#f3e5f5', fn: () => setScreen('booking') },
+                { icon: '🎁', label: 'Refer',   bg: '#e8f5e9', fn: () => { loadReferral(); setScreen('referral'); } },
+                { icon: '📍', label: 'Saved',   bg: '#fff3e0', fn: () => { loadSaved(); setScreen('saved'); } },
+              ].map(({ icon, label, bg, fn }, i) => (
+                <Bouncy key={i} onPress={fn} style={[s.quickBtn, { backgroundColor: bg, borderColor: 'transparent' }]}>
+                  <Text style={s.quickIcon}>{icon}</Text>
+                  <Text style={[s.quickLbl, { color: '#1a1a2e', fontWeight: '600' }]}>{label}</Text>
+                </Bouncy>
+              ))}
+            </View>
+          </SlideUp>
+
+          <SlideUp delay={120}>
+            <TouchableOpacity style={s.promoBanner} onPress={() => { loadReferral(); setScreen('referral'); }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                <PulseView><Text style={{ fontSize: 18, marginRight: 8 }}>🎁</Text></PulseView>
+                <Text style={s.promoTxt}>Dost ko refer karo, dono ko ₹50 milega!</Text>
+                <Text style={{ color: '#e94560', marginLeft: 8, fontWeight: 'bold', fontSize: 12 }}>→</Text>
+              </View>
+            </TouchableOpacity>
+          </SlideUp>
           <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f9f9f9', borderRadius: 12, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: '#f0f0f0' }} onPress={() => setScreen('policy')}>
             <Text style={{ fontSize: 18, marginRight: 10 }}>📋</Text>
             <View style={{ flex: 1 }}>
@@ -986,7 +1228,7 @@ export default function App() {
       <View style={s.topBar}><Text style={s.topTitle}>🕐 My Trips</Text></View>
       <ScrollView style={{ flex: 1, padding: 14 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
         {historyRides.length === 0
-          ? <View style={{ alignItems: 'center', marginTop: 60 }}><Text style={{ fontSize: 56 }}>🚗</Text><Text style={{ fontSize: 17, color: '#333', marginTop: 14, fontWeight: '600' }}>Abhi koi trip nahi</Text></View>
+          ? <EmptyAnim icon="🚖" title="Abhi koi trip nahi" sub="Pehli ride book karo aur yahan apni history dekho!" />
           : historyRides.map((h, i) => (
             <View key={i} style={s.histCard}>
               <View style={s.row}>
@@ -1020,7 +1262,7 @@ export default function App() {
           <View style={s.row}>
             <View style={{ flex: 1 }}>
               <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13 }}>💰 Wallet Balance</Text>
-              <Text style={{ color: '#fff', fontSize: 30, fontWeight: 'bold', marginTop: 2 }}>₹{walletBalance}</Text>
+              <CountUp to={walletBalance} prefix="₹" style={{ color: '#fff', fontSize: 30, fontWeight: 'bold', marginTop: 2 }} />
             </View>
             <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: 10 }}><Text style={{ color: '#fff', fontWeight: '700' }}>{showWallet ? '✕' : '+ Add'}</Text></View>
           </View>
@@ -1036,36 +1278,31 @@ export default function App() {
             {result ? <Text style={{ color: '#4CAF50', textAlign: 'center', fontWeight: '600', marginTop: 8 }}>{result}</Text> : null}
           </View>
         )}
-        <TouchableOpacity style={s.menuItem} onPress={() => { loadReferral(); setScreen('referral'); }}>
+        <Bouncy style={s.menuItem} onPress={() => { loadReferral(); setScreen('referral'); }}>
           <View style={s.menuIconBox}><Text style={{ fontSize: 18 }}>🎁</Text></View>
           <View style={{ flex: 1 }}><Text style={{ fontSize: 14, color: '#1a1a2e', fontWeight: '600' }}>Refer & Earn</Text><Text style={{ fontSize: 11, color: '#999' }}>Dost ko bulao, ₹50 pao</Text></View>
           <Text style={{ fontSize: 18, color: '#ddd' }}>›</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={s.menuItem} onPress={() => { loadSaved(); setScreen('saved'); }}>
+        </Bouncy>
+        <Bouncy style={s.menuItem} onPress={() => { loadSaved(); setScreen('saved'); }}>
           <View style={s.menuIconBox}><Text style={{ fontSize: 18 }}>📍</Text></View>
           <View style={{ flex: 1 }}><Text style={{ fontSize: 14, color: '#1a1a2e', fontWeight: '600' }}>Saved Places</Text><Text style={{ fontSize: 11, color: '#999' }}>Home, Office save karo</Text></View>
           <Text style={{ fontSize: 18, color: '#ddd' }}>›</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={s.menuItem} onPress={() => setScreen('policy')}>
+        </Bouncy>
+        <Bouncy style={s.menuItem} onPress={() => setScreen('policy')}>
           <View style={s.menuIconBox}><Text style={{ fontSize: 18 }}>📋</Text></View>
           <View style={{ flex: 1 }}><Text style={{ fontSize: 14, color: '#1a1a2e', fontWeight: '600' }}>Cancellation Policy</Text><Text style={{ fontSize: 11, color: '#999' }}>Cancel rules aur fees</Text></View>
           <Text style={{ fontSize: 18, color: '#ddd' }}>›</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={s.menuItem} onPress={() => setScreen('policy')}>
-          <View style={s.menuIconBox}><Text style={{ fontSize: 18 }}>📋</Text></View>
-          <View style={{ flex: 1 }}><Text style={{ fontSize: 14, color: '#1a1a2e', fontWeight: '600' }}>Cancellation Policy</Text><Text style={{ fontSize: 11, color: '#999' }}>Cancel rules aur fees</Text></View>
-          <Text style={{ fontSize: 18, color: '#ddd' }}>›</Text>
-        </TouchableOpacity>
+        </Bouncy>
         {[['🎫','Promo Codes','RIDE50, FLAT20'],['🔔','Notifications','Alerts'],['🛡️','Safety','Emergency'],['📞','Support','24x7 help']].map(([icon,title,sub],i) => (
-          <TouchableOpacity key={i} style={s.menuItem}>
+          <Bouncy key={i} style={s.menuItem} onPress={() => {}}>
             <View style={s.menuIconBox}><Text style={{ fontSize: 18 }}>{icon}</Text></View>
             <View style={{ flex: 1 }}><Text style={{ fontSize: 14, color: '#1a1a2e', fontWeight: '600' }}>{title}</Text><Text style={{ fontSize: 11, color: '#999' }}>{sub}</Text></View>
             <Text style={{ fontSize: 18, color: '#ddd' }}>›</Text>
-          </TouchableOpacity>
+          </Bouncy>
         ))}
-        <TouchableOpacity style={s.logoutBtn} onPress={async () => { await AsyncStorage.removeItem('userPhone'); await AsyncStorage.removeItem('userName'); setScreen('login'); setTab('home'); setPhone(''); setOtp(''); setWalletBalance(0); }}>
+        <Bouncy style={s.logoutBtn} onPress={async () => { await AsyncStorage.removeItem('userPhone'); await AsyncStorage.removeItem('userName'); setScreen('login'); setTab('home'); setPhone(''); setOtp(''); setWalletBalance(0); }}>
           <Text style={{ color: '#e94560', fontWeight: 'bold', fontSize: 14 }}>🚪 Logout</Text>
-        </TouchableOpacity>
+        </Bouncy>
       </ScrollView>
       <View style={s.navFloat}><NavBarInner /></View>
     </View>
@@ -1073,7 +1310,7 @@ export default function App() {
 
   // ═══ REFERRAL ═══
   if (screen === 'referral') return (
-    <View style={s.screen}>
+    <ScreenIn style={s.screen}>
       <View style={s.topBar}>
         <TouchableOpacity onPress={() => setScreen('home')} style={s.backBtn}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
         <Text style={s.topTitle}>🎁 Refer & Earn</Text>
@@ -1088,9 +1325,9 @@ export default function App() {
         <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 20, marginBottom: 16, alignItems: 'center', elevation: 2 }}>
           <Text style={{ fontSize: 13, color: '#888' }}>Aapka Referral Code</Text>
           <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#e94560', letterSpacing: 3, marginVertical: 10 }}>{referralData?.code || '...'}</Text>
-          <TouchableOpacity style={[s.btn, { marginTop: 0, marginBottom: 0, width: '100%' }]} onPress={shareReferral}>
+          <Bouncy style={[s.btn, { marginTop: 0, marginBottom: 0, width: '100%' }]} onPress={shareReferral}>
             <Text style={s.btnTxt}>📤 Share Karo</Text>
-          </TouchableOpacity>
+          </Bouncy>
         </View>
         <View style={s.row}>
           <View style={[s.statBox, { marginRight: 8 }]}><Text style={s.statNum}>{referralData?.total_referrals || 0}</Text><Text style={s.statLbl}>Total Referrals</Text></View>
@@ -1105,11 +1342,11 @@ export default function App() {
           {result ? <Text style={[s.err, { marginTop: 10, color: result.includes('✅') ? '#4CAF50' : '#e94560' }]}>{result}</Text> : null}
         </View>
       </ScrollView>
-    </View>
+    </ScreenIn>
   );
 // ═══ CANCELLATION POLICY ═══
   if (screen === 'policy') return (
-    <View style={s.screen}>
+    <ScreenIn style={s.screen}>
       <View style={s.topBar}>
         <TouchableOpacity onPress={() => setScreen('home')} style={s.backBtn}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
         <Text style={s.topTitle}>📋 Cancellation Policy</Text>
@@ -1147,13 +1384,13 @@ export default function App() {
           <Text style={{ fontSize: 13, color: '#1565c0', lineHeight: 20 }}>💡 Cancel karte waqt aapko hamesha dikhega ki kitni fee lagegi aur kitne free cancels bache hain.</Text>
         </View>
       </ScrollView>
-    </View>
+    </ScreenIn>
   );
 
-  
+
   // ═══ SAVED PLACES ═══
   if (screen === 'saved') return (
-    <View style={s.screen}>
+    <ScreenIn style={s.screen}>
       <View style={s.topBar}>
         <TouchableOpacity onPress={() => setScreen('home')} style={s.backBtn}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
         <Text style={s.topTitle}>📍 Saved Places</Text>
@@ -1181,7 +1418,7 @@ export default function App() {
         {result ? <Text style={{ color: '#4CAF50', textAlign: 'center', marginBottom: 12 }}>{result}</Text> : null}
         <Text style={s.secTitle}>Saved Locations</Text>
         {savedPlaces.length === 0
-          ? <Text style={{ color: '#999', fontSize: 13 }}>Koi saved place nahi</Text>
+          ? <EmptyAnim icon="📍" title="Koi saved place nahi" sub="Home aur Office save karo — booking aur bhi fast ho jaayegi!" />
           : savedPlaces.map((p, i) => (
             <View key={i} style={s.menuItem}>
               <View style={s.menuIconBox}><Text style={{ fontSize: 18 }}>{p.label === 'Home' ? '🏠' : p.label === 'Office' ? '💼' : '📍'}</Text></View>
@@ -1191,7 +1428,7 @@ export default function App() {
           ))
         }
       </ScrollView>
-    </View>
+    </ScreenIn>
   );
 
   // ═══ CHAT ═══
@@ -1228,6 +1465,7 @@ export default function App() {
       </View>
       <View style={s.mapFit}>
         <MapWebView pickupCoords={pickupCoords} dropCoords={dropCoords} height={200} />
+        <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} />
       </View>
       <View style={{ flex: 1, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 16, paddingHorizontal: 16 }}>
         <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 20 }}>
@@ -1301,8 +1539,10 @@ export default function App() {
       </View>
       <View style={s.mapFit}>
         <MapWebView pickupCoords={pickupCoords} dropCoords={dropCoords} driverLat={driverLoc?.lat} driverLng={driverLoc?.lng} customerLat={userCoords?.latitude} customerLng={userCoords?.longitude} height={220} />
+        <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} live={!!rideData?.driver} />
       </View>
       <View style={{ flex: 1, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 16, paddingHorizontal: 16 }}>
+        <TripSteps step={rideData?.driver ? 1 : 0} />
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
           {rideData?.driver ? (
             <>
@@ -1339,15 +1579,15 @@ export default function App() {
                 </View>
               )}
               <View style={s.actionRow}>
-                <TouchableOpacity style={s.actionBtn} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
+                <Bouncy style={s.actionBtn} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
                   <View>
                     <Text style={{ fontSize: 22 }}>💬</Text>
                     {unreadChat > 0 && <View style={s.chatBadge}><Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>{unreadChat}</Text></View>}
                   </View>
                   <Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>Chat</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={s.actionBtn} onPress={callDriver}><Text style={{ fontSize: 22 }}>📞</Text><Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>Call</Text></TouchableOpacity>
-                <TouchableOpacity style={s.actionBtn} onPress={triggerSOS}><Text style={{ fontSize: 22 }}>🆘</Text><Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>SOS</Text></TouchableOpacity>
+                </Bouncy>
+                <Bouncy style={s.actionBtn} onPress={callDriver}><Text style={{ fontSize: 22 }}>📞</Text><Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>Call</Text></Bouncy>
+                <Bouncy style={s.actionBtn} onPress={triggerSOS}><Text style={{ fontSize: 22 }}>🆘</Text><Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>SOS</Text></Bouncy>
               </View>
               {unreadChat > 0 && (
                 <TouchableOpacity style={s.chatAlert} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
@@ -1369,29 +1609,37 @@ export default function App() {
               <Text style={{ textAlign: 'center', color: '#bbb', fontSize: 12, marginTop: 8 }}>⏳ Driver OTP daalkar trip shuru karega...</Text>
             </>
           ) : (
-            <View style={{ alignItems: 'center', paddingVertical: 20 }}>
-              <RadarView />
-              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1a1a2e', marginTop: 16 }}>Driver dhundh rahe hain...</Text>
-              <Text style={{ fontSize: 13, color: '#999', marginTop: 6, textAlign: 'center' }}>{pickup} → {drop}</Text>
-              <Text style={{ fontSize: 26, fontWeight: 'bold', color: '#e94560', marginTop: 10 }}>{rideData?.fare}</Text>
-              {eta ? <Text style={{ fontSize: 13, color: '#4CAF50', marginTop: 4 }}>🕐 {eta}</Text> : null}
-              {/* Cancel info */}
-              <View style={{ backgroundColor: cancelTimer > 0 ? '#e8f5e9' : '#fff3e0', borderRadius: 10, padding: 10, marginTop: 16, width: '100%' }}>
-                <Text style={{ fontSize: 13, color: cancelTimer > 0 ? '#2e7d32' : '#e65100', fontWeight: '600', textAlign: 'center' }}>
-                  {cancelTimer > 0 ? `✅ ${cancelTimer}s tak FREE cancellation` : '⚠️ Ab cancel pe ₹10 fee lagega'}
-                </Text>
-                <Text style={{ fontSize: 11, color: '#888', textAlign: 'center', marginTop: 4 }}>Aaj {freeCancelsLeft} free cancels bache hain</Text>
+            <SlideUp>
+              <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+                <RadarView />
+                <FloatingDots />
+                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1a1a2e', marginTop: 14 }}>Driver dhundh rahe hain...</Text>
+                <Text style={{ fontSize: 13, color: '#999', marginTop: 5, textAlign: 'center', paddingHorizontal: 20 }} numberOfLines={2}>{pickup} → {drop}</Text>
+
+                {/* Fare badge */}
+                <View style={{ backgroundColor: '#1a1a2e', borderRadius: 20, paddingHorizontal: 20, paddingVertical: 8, marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#e94560' }}>{rideData?.fare}</Text>
+                  {eta ? <Text style={{ fontSize: 12, color: '#4CAF50' }}>{eta.replace('🕐 ', '')}</Text> : null}
+                </View>
+
+                {/* Cancel info */}
+                <View style={{ backgroundColor: cancelTimer > 0 ? '#e8f5e9' : '#fff3e0', borderRadius: 14, padding: 14, marginTop: 16, width: '100%', borderWidth: 1, borderColor: cancelTimer > 0 ? '#c8e6c9' : '#ffe0b2' }}>
+                  <Text style={{ fontSize: 13, color: cancelTimer > 0 ? '#2e7d32' : '#e65100', fontWeight: '700', textAlign: 'center' }}>
+                    {cancelTimer > 0 ? `✅ ${cancelTimer}s tak FREE cancellation` : '⚠️ Ab cancel pe ₹10 fee lagega'}
+                  </Text>
+                  <Text style={{ fontSize: 11, color: '#888', textAlign: 'center', marginTop: 4 }}>Aaj {freeCancelsLeft} free cancels bache hain</Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 12, marginTop: 14, width: '100%' }}>
+                  <Bouncy onPress={() => setShowCancelModal(true)} style={{ flex: 1, backgroundColor: '#fff', borderRadius: 12, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: '#e94560' }}>
+                    <Text style={{ color: '#e94560', fontWeight: 'bold', fontSize: 14 }}>✕ Cancel {cancelTimer > 0 ? '(Free)' : '(₹10)'}</Text>
+                  </Bouncy>
+                  <Bouncy onPress={() => { setRideData(null); bookRide(); }} style={{ flex: 1, backgroundColor: '#1a1a2e', borderRadius: 12, padding: 14, alignItems: 'center' }}>
+                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>🔄 Retry</Text>
+                  </Bouncy>
+                </View>
               </View>
-              <View style={{ flexDirection: 'row', gap: 12, marginTop: 14, width: '100%' }}>
-                <TouchableOpacity style={{ flex: 1, backgroundColor: '#f5f5f5', borderRadius: 12, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}
-                  onPress={() => setShowCancelModal(true)}>
-                  <Text style={{ color: '#e94560', fontWeight: 'bold', fontSize: 14 }}>✕ Cancel {cancelTimer > 0 ? '(Free)' : '(₹10)'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={{ flex: 1, backgroundColor: '#1a1a2e', borderRadius: 12, padding: 14, alignItems: 'center' }} onPress={() => { setRideData(null); bookRide(); }}>
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>🔄 Retry</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+            </SlideUp>
           )}
         </ScrollView>
       </View>
@@ -1442,8 +1690,10 @@ export default function App() {
       </View>
       <View style={s.mapFit}>
         <MapWebView pickupCoords={pickupCoords} dropCoords={dropCoords} driverLat={driverLoc?.lat} driverLng={driverLoc?.lng} customerLat={userCoords?.latitude} customerLng={userCoords?.longitude} height={220} />
+        <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} live={true} />
       </View>
       <View style={{ flex: 1, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 16, paddingHorizontal: 16 }}>
+        <TripSteps step={2} />
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
           <View style={{ backgroundColor: '#1a1a2e', borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 10 }}>
             <PulseView><Text style={{ color: '#4CAF50', fontSize: 15, fontWeight: 'bold' }}>🚗 Ride Chal Rahi Hai</Text></PulseView>
@@ -1478,7 +1728,8 @@ export default function App() {
 
   // ═══ PAYMENT ═══
   if (screen === 'payment') return (
-    <ScrollView style={s.screen} contentContainerStyle={{ flexGrow: 1 }}>
+    <ScreenIn style={s.screen}>
+    <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
       <View style={[s.hero, { paddingTop: 50 }]}>
         <Text style={{ fontSize: 55 }}>🎉</Text>
         <Text style={s.heroTitle}>Trip Complete!</Text>
@@ -1497,25 +1748,31 @@ export default function App() {
             setPaymentDone(true); setScreen('postride'); createScratchCard();
           }},
         ].map((p, i) => (
-          <TouchableOpacity key={i} style={[s.payBtn, { backgroundColor: p.color }]} onPress={p.fn}>
+          <Bouncy key={i} style={[s.payBtn, { backgroundColor: p.color }]} onPress={p.fn}>
             <Text style={{ fontSize: 20 }}>{p.icon}</Text>
             <View style={{ flex: 1, marginLeft: 12 }}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>{p.title}</Text><Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, marginTop: 2 }}>{p.sub}</Text></View>
             <Text style={{ color: '#fff', fontSize: 18 }}>→</Text>
-          </TouchableOpacity>
+          </Bouncy>
         ))}
         {result ? <Text style={s.err}>{result}</Text> : null}
       </View>
     </ScrollView>
+    </ScreenIn>
   );
 
   // ═══ POST-RIDE ═══
   if (screen === 'postride') return (
-    <ScrollView style={s.screen} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
+    <ScreenIn style={s.screen}>
+      <Confetti />
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
       <View style={[s.hero, { paddingTop: 44 }]}>
         <Text style={{ fontSize: 50 }}>{paymentDone ? '✅' : '🎉'}</Text>
         <Text style={s.heroTitle}>{paymentDone ? 'Payment Done!' : 'Pahunch Gaye!'}</Text>
         <Text style={s.heroSub}>{pickup} → {drop}</Text>
         <Text style={{ color: '#e94560', fontSize: 26, fontWeight: 'bold', marginTop: 6 }}>{rideData?.fare}</Text>
+      </View>
+      <View style={{ paddingHorizontal: 14, paddingTop: 8 }}>
+        <TripSteps step={3} />
       </View>
       {scratchCard && (
         <View style={{ paddingHorizontal: 14, paddingTop: 14 }}>
@@ -1557,21 +1814,22 @@ export default function App() {
             </TouchableOpacity>
           ))}
         </View>
-        <TouchableOpacity style={s.btn} onPress={async () => {
+        <Bouncy style={s.btn} onPress={async () => {
           if (rating > 0 && rideData?.ride_id) {
             try { await fetch(`${API}/api/rides/rate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, rating, review, tip }) }); } catch (_e) {}
           }
           setScreen('home'); setPickup(''); setDrop(''); setRating(0); setTab('home');
           setRideData(null); setPaymentDone(false); setResult(''); setScratchCard(null); setScratched(false); setEta(''); setPromoDiscount(0); setPromoCode(''); setUnreadChat(0);
           setDriverLoc(null); setDriverEta(''); setDriverDist('');
-          ride.clearRide(); // Store clear — koi stale data nahi
+          ride.clearRide();
           loadHistory(phone); loadWallet(phone);
         }}>
           <Text style={s.btnTxt}>Done 🏠 Home Jao</Text>
-        </TouchableOpacity>
+        </Bouncy>
       </View>
       <View style={{ height: 24 }} />
-    </ScrollView>
+      </ScrollView>
+    </ScreenIn>
   );
 
   return <View />;
@@ -1580,10 +1838,10 @@ export default function App() {
     return (
       <View style={s.nav}>
         {[['home','🏠','Home'],['history','🕐','Trips'],['profile','👤','Profile']].map(([t,icon,lbl]) => (
-          <TouchableOpacity key={t} style={s.navItem} onPress={() => { setScreen('home'); setTab(t); if(t==='history') loadHistory(phone); }}>
+          <Bouncy key={t} style={s.navItem} onPress={() => { setScreen('home'); setTab(t); if(t==='history') loadHistory(phone); }}>
             <Text style={s.navIcon}>{icon}</Text>
             <Text style={[s.navLbl, tab===t && screen==='home' && s.navActive]}>{lbl}</Text>
-          </TouchableOpacity>
+          </Bouncy>
         ))}
       </View>
     );
@@ -1611,7 +1869,7 @@ const s = StyleSheet.create({
   card:          { margin: 14, backgroundColor: '#fff', borderRadius: 18, padding: 20, elevation: 4 },
   input:         { borderWidth: 1.5, borderColor: '#efefef', borderRadius: 12, padding: 12, fontSize: 14, backgroundColor: '#fafafa', marginBottom: 10 },
   label:         { fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 6 },
-  btn:           { backgroundColor: '#e94560', borderRadius: 13, padding: 16, alignItems: 'center', marginTop: 6, marginBottom: 6, elevation: 3 },
+  btn:           { backgroundColor: '#e94560', borderRadius: 14, padding: 17, alignItems: 'center', marginTop: 6, marginBottom: 6, elevation: 5, shadowColor: '#e94560', shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
   btnTxt:        { color: '#fff', fontSize: 15, fontWeight: 'bold' },
   err:           { textAlign: 'center', color: '#e94560', fontWeight: '600', marginBottom: 8 },
   hint:          { color: '#888', fontSize: 12, textAlign: 'center', marginBottom: 10 },
@@ -1625,7 +1883,7 @@ const s = StyleSheet.create({
   backBtn:       { width: 36, alignItems: 'flex-start' },
   avatar:        { width: 40, height: 40, borderRadius: 20, backgroundColor: '#e94560', alignItems: 'center', justifyContent: 'center' },
   avatarTxt:     { color: '#fff', fontWeight: 'bold', fontSize: 17 },
-  searchBox:     { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f5f5f5', borderRadius: 14, padding: 14, marginBottom: 12 },
+  searchBox:     { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 12, elevation: 4, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, borderWidth: 1, borderColor: '#f0f0f0' },
   searchIcon:    { fontSize: 16, marginRight: 8 },
   searchPh:      { color: '#999', fontSize: 14 },
   quickRow:      { flexDirection: 'row', gap: 8, marginBottom: 12 },
@@ -1644,7 +1902,7 @@ const s = StyleSheet.create({
   navIcon:       { fontSize: 20 },
   navLbl:        { fontSize: 10, color: '#bbb', marginTop: 2 },
   navActive:     { color: '#e94560', fontWeight: 'bold' },
-  histCard:      { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 8, elevation: 2 },
+  histCard:      { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 10, elevation: 3, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6 },
   histIcon:      { width: 40, height: 40, borderRadius: 20, backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
   profileHero:   { backgroundColor: '#1a1a2e', borderRadius: 18, padding: 24, alignItems: 'center', marginBottom: 14, elevation: 4 },
   profileAvatar: { width: 76, height: 76, borderRadius: 38, backgroundColor: '#e94560', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
@@ -1654,7 +1912,7 @@ const s = StyleSheet.create({
   walletCard:    { backgroundColor: '#e94560', borderRadius: 16, padding: 20, marginBottom: 12, elevation: 4 },
   walletBox:     { backgroundColor: '#fff', borderRadius: 14, padding: 18, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#f0f0f0' },
   amtBtn:        { flex: 1, minWidth: 68, padding: 12, borderRadius: 10, borderWidth: 1.5, borderColor: '#e94560', alignItems: 'center', backgroundColor: '#fff8f8' },
-  menuItem:      { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 7, elevation: 1 },
+  menuItem:      { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 8, elevation: 2, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4 },
   menuIconBox:   { width: 36, height: 36, borderRadius: 10, backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
   logoutBtn:     { borderWidth: 1.5, borderColor: '#e94560', borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 6, marginBottom: 24 },
   locBox:        { backgroundColor: '#f9f9f9', borderRadius: 14, padding: 14, marginBottom: 10 },
@@ -1677,7 +1935,7 @@ const s = StyleSheet.create({
   chatBadge:     { position: 'absolute', top: -6, right: -10, backgroundColor: '#e94560', borderRadius: 9, minWidth: 18, height: 18, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
   chatAlert:     { backgroundColor: '#e94560', borderRadius: 10, padding: 12, marginBottom: 10, alignItems: 'center' },
   infoBox:       { backgroundColor: '#e8f5e9', borderRadius: 10, padding: 12, marginBottom: 10 },
-  payBtn:        { flexDirection: 'row', alignItems: 'center', borderRadius: 14, padding: 16, marginBottom: 10, elevation: 3 },
+  payBtn:        { flexDirection: 'row', alignItems: 'center', borderRadius: 16, padding: 18, marginBottom: 12, elevation: 4, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 6, shadowOffset: { width: 0, height: 3 } },
   scratchCard:   { borderRadius: 18, padding: 24, alignItems: 'center', marginBottom: 4, elevation: 6 },
   tipBtn:        { flex: 1, padding: 10, borderRadius: 10, borderWidth: 1.5, borderColor: '#e0e0e0', alignItems: 'center', backgroundColor: '#fafafa' },
   statBox:       { flex: 1, backgroundColor: '#fff', borderRadius: 14, padding: 18, alignItems: 'center', elevation: 2 },
