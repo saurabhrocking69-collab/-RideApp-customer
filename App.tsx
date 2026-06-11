@@ -502,6 +502,8 @@ export default function App() {
   // Loyalty
   const [loyaltyPoints, setLoyaltyPoints] = useState(0);
   const [loyaltyCashback, setLoyaltyCashback] = useState(0);
+  const [activeOffers, setActiveOffers]   = useState<any[]>([]);
+  const [offerDismissed, setOfferDismissed] = useState<Set<number>>(new Set());
 
   // ── Notification Handler ──────────────────────
   useEffect(() => {
@@ -594,7 +596,7 @@ export default function App() {
       try {
         const sp = await AsyncStorage.getItem('userPhone');
         const sn = await AsyncStorage.getItem('userName');
-        if (sp) { setPhone(sp); setUserName(sn || 'Rider'); setScreen('home'); loadHistory(sp); loadWallet(sp); registerFCM(sp); }
+        if (sp) { setPhone(sp); setUserName(sn || 'Rider'); setScreen('home'); loadHistory(sp); loadWallet(sp); registerFCM(sp); loadOffers(); }
       } catch (_e) {}
     })();
   }, []);
@@ -768,6 +770,9 @@ export default function App() {
       setWalletTxns(d.transactions || []);
       setWalletStats(d.stats || {});
     } catch (_e) {}
+  };
+  const loadOffers = async () => {
+    try { const r = await fetch(`${API}/api/offers/active?role=customer`); const d = await r.json(); setActiveOffers(d.offers || []); } catch (_e) {}
   };
   const loadLoyalty = async (ph: string) => {
     try { const r = await fetch(`${API}/api/loyalty/my-points?phone=${ph}`); const d = await r.json(); setLoyaltyPoints(d.points || 0); setLoyaltyCashback(d.cashback_available || 0); } catch (_e) {}
@@ -1082,7 +1087,7 @@ export default function App() {
         await AsyncStorage.setItem('userPhone', phone);
         await AsyncStorage.setItem('userName', userName || 'Rider');
         setScreen('home'); setResult(''); loadHistory(phone); loadWallet(phone);
-        registerFCM(phone);
+        registerFCM(phone); loadOffers();
     
       } else {
         setResult('❌ ' + (data.error || 'OTP galat hai'));
@@ -1292,6 +1297,37 @@ export default function App() {
               ))}
             </View>
           </SlideUp>
+
+          {/* Active marketing campaign banners */}
+          {activeOffers.filter(o => !offerDismissed.has(o.id)).map((offer: any) => (
+            <SlideUp key={offer.id} delay={80}>
+              <View style={{ borderRadius: 14, marginBottom: 10, backgroundColor: offer.type === 'promo' ? '#fff3e0' : offer.type === 'incentive' ? '#e8f5e9' : '#e8eaf6', borderWidth: 1.5, borderColor: offer.type === 'promo' ? '#e65100' : offer.type === 'incentive' ? '#2e7d32' : '#5c6bc0', overflow: 'hidden' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', padding: 14 }}>
+                  <Text style={{ fontSize: 24, marginRight: 12 }}>{offer.type === 'promo' ? '🎫' : offer.type === 'incentive' ? '💰' : '📢'}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontWeight: '800', fontSize: 14, color: '#1a1a2e' }}>{offer.title}</Text>
+                    {offer.body ? <Text style={{ fontSize: 12, color: '#555', marginTop: 3 }}>{offer.body}</Text> : null}
+                    {offer.promo_code ? (
+                      <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <View style={{ backgroundColor: '#e94560', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 3 }}>
+                          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12, letterSpacing: 1 }}>{offer.promo_code}</Text>
+                        </View>
+                        <Text style={{ fontSize: 11, color: '#666' }}>Booking mein apply karo</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  <TouchableOpacity onPress={() => setOfferDismissed(s => new Set([...s, offer.id]))} style={{ padding: 6 }}>
+                    <Text style={{ fontSize: 16, color: '#aaa' }}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+                {offer.cta_label ? (
+                  <TouchableOpacity onPress={() => setScreen('booking')} style={{ backgroundColor: '#e94560', padding: 10, alignItems: 'center' }}>
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>{offer.cta_label} →</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            </SlideUp>
+          ))}
 
           <SlideUp delay={120}>
             <TouchableOpacity style={s.promoBanner} onPress={() => { loadReferral(); setScreen('referral'); }}>
