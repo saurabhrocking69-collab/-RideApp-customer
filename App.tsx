@@ -689,6 +689,11 @@ export default function App() {
     return () => clearInterval(iv);
   }, [screen, rideData?.ride_id]);
 
+  // Auto-fill GPS location when booking screen opens and pickup is empty
+  useEffect(() => {
+    if (screen === 'booking' && !pickup) useMyLocation();
+  }, [screen]);
+
   // Cancel countdown timer (60 sec free)
   useEffect(() => {
     if (screen !== 'matching' || !bookTime) return;
@@ -1935,8 +1940,27 @@ export default function App() {
           {/* Driver info */}
           <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 16, elevation: 2 }}>
             <Text style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>DRIVER</Text>
-            <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#1a1a2e' }}>{hourlyBooking?.driver?.name || '...'}</Text>
-            <Text style={{ color: '#666', fontSize: 13, marginTop: 2 }}>Vehicle: {hourlyBooking?.driver?.vehicle_no || '...'}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#1a1a2e' }}>{hourlyBooking?.driver?.name || '...'}</Text>
+                <Text style={{ color: '#666', fontSize: 13, marginTop: 2 }}>🚗 {hourlyBooking?.driver?.vehicle_no || '...'}</Text>
+                {hourlyBooking?.driver_phone && (
+                  <Text style={{ color: '#888', fontSize: 12, marginTop: 2 }}>📱 +91 {hourlyBooking.driver_phone}</Text>
+                )}
+              </View>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Bouncy style={{ backgroundColor: '#e8f5e9', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, alignItems: 'center' }}
+                  onPress={() => hourlyBooking?.driver_phone && Linking.openURL(`tel:${hourlyBooking.driver_phone}`)}>
+                  <Text style={{ fontSize: 20 }}>📞</Text>
+                  <Text style={{ fontSize: 10, color: '#2e7d32', fontWeight: '600', marginTop: 2 }}>Call</Text>
+                </Bouncy>
+                <Bouncy style={{ backgroundColor: '#e3f2fd', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, alignItems: 'center' }}
+                  onPress={() => hourlyBooking?.driver_phone && Linking.openURL(`https://wa.me/91${hourlyBooking.driver_phone}`)}>
+                  <Text style={{ fontSize: 20 }}>💬</Text>
+                  <Text style={{ fontSize: 10, color: '#1565c0', fontWeight: '600', marginTop: 2 }}>WhatsApp</Text>
+                </Bouncy>
+              </View>
+            </View>
           </View>
 
           {/* Trip details */}
@@ -1960,6 +1984,44 @@ export default function App() {
             <Text style={{ fontSize: 18, marginRight: 8 }}>✅</Text>
             <Text style={{ color: '#2e7d32', fontSize: 12, flex: 1 }}>₹{hourlyBooking?.base_fare} paid & held safely. Trip khatam hone par driver ko milega.</Text>
           </View>
+
+          {/* Driver completed early — customer must confirm or dispute (FCM fallback: polling picks this up) */}
+          {hourlyBooking?.pending_customer_confirm && (
+            <View style={{ backgroundColor: '#fff3e0', borderRadius: 14, padding: 16, marginBottom: 16, borderWidth: 2, borderColor: '#ff9800' }}>
+              <Text style={{ fontWeight: 'bold', color: '#e65100', marginBottom: 4, fontSize: 16 }}>⚠️ Driver ne Trip Complete Kiya!</Text>
+              <Text style={{ color: '#666', fontSize: 13, marginBottom: 4 }}>Kya trip actually complete hui? Confirm karo ya dispute karo.</Text>
+              <Text style={{ color: '#999', fontSize: 11, marginBottom: 14 }}>10 min mein auto-confirm ho jayega</Text>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <Bouncy style={{ flex: 1, backgroundColor: '#4CAF50', borderRadius: 10, padding: 14, alignItems: 'center' }}
+                  onPress={async () => {
+                    try {
+                      await apiPost('/api/hourly/customer-confirm-complete', { booking_id: hourlyBooking.id });
+                      setHourlyStep('done'); loadWallet(phone);
+                    } catch (_e) {}
+                  }}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>✅ Confirm</Text>
+                  <Text style={{ color: '#c8e6c9', fontSize: 11, marginTop: 2 }}>Trip khatam hui</Text>
+                </Bouncy>
+                <Bouncy style={{ flex: 1, backgroundColor: '#ffebee', borderRadius: 10, padding: 14, alignItems: 'center' }}
+                  onPress={async () => {
+                    try {
+                      await apiPost('/api/hourly/customer-dispute-complete', { booking_id: hourlyBooking.id, reason: 'Driver abandoned customer' });
+                      setHourlyBooking((p: any) => ({ ...p, pending_customer_confirm: false, dispute_raised: true }));
+                    } catch (_e) {}
+                  }}>
+                  <Text style={{ color: '#c62828', fontWeight: 'bold', fontSize: 15 }}>⚠️ Dispute</Text>
+                  <Text style={{ color: '#ef9a9a', fontSize: 11, marginTop: 2 }}>Driver chhod gaya</Text>
+                </Bouncy>
+              </View>
+            </View>
+          )}
+
+          {hourlyBooking?.dispute_raised && (
+            <View style={{ backgroundColor: '#fce4ec', borderRadius: 14, padding: 14, marginBottom: 16, alignItems: 'center' }}>
+              <Text style={{ fontWeight: 'bold', color: '#880e4f', marginBottom: 4 }}>🛡️ Dispute Raised — Admin Review Mein</Text>
+              <Text style={{ color: '#666', fontSize: 12 }}>24h mein resolve hoga — paise escrow mein safe hain</Text>
+            </View>
+          )}
 
           {/* Early end — driver requested, waiting for customer to confirm */}
           {hourlyBooking?.early_end_requested_by === 'driver' && (
@@ -2358,17 +2420,29 @@ export default function App() {
         <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} />
       </View>
       <View style={{ flex: 1, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 16, paddingHorizontal: 16 }}>
-        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 20 }}>
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets contentContainerStyle={{ paddingBottom: 30 }}>
+          {/* GPS auto-location button — TOP, prominent */}
+          <TouchableOpacity
+            style={{ backgroundColor: '#1a1a2e', borderRadius: 14, padding: 14, marginBottom: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}
+            onPress={useMyLocation}>
+            <Text style={{ fontSize: 22 }}>📍</Text>
+            <View>
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Current Location Use Karo</Text>
+              <Text style={{ color: '#aaa', fontSize: 11, marginTop: 1 }}>GPS se pickup auto-fill hoga</Text>
+            </View>
+          </TouchableOpacity>
+
           <View style={s.locBox}>
             <View style={s.row}>
               <View style={s.dotGreen} />
-              <TextInput style={[s.input, { flex: 1, marginBottom: 0 }]} placeholder="📍 Pickup location..." value={pickup} onChangeText={(t) => { setPickup(t); searchPlaces(t, 'pickup'); }} />
+              <TextInput style={[s.input, { flex: 1, marginBottom: 0, fontSize: 15 }]} placeholder="📍 Pickup location..." value={pickup} onChangeText={(t) => { setPickup(t); searchPlaces(t, 'pickup'); }} returnKeyType="next" />
             </View>
             {pickupSugg.length > 0 && (
-              <View style={s.suggBox}>
-                {pickupSugg.slice(0, 4).map((sg, i) => (
-                  <TouchableOpacity key={i} style={s.suggItem} onPress={() => { setPickup(sg.text); setPickupSugg([]); geocodePlace(sg.text, 'pickup'); if(drop) fetchEta(sg.text, drop); }}>
-                    <Text style={{ fontSize: 12 }}>📍 </Text><Text style={{ fontSize: 12, color: '#333', flex: 1 }} numberOfLines={1}>{sg.text}</Text>
+              <View style={[s.suggBox, { zIndex: 100 }]}>
+                {pickupSugg.slice(0, 5).map((sg, i) => (
+                  <TouchableOpacity key={i} style={[s.suggItem, { paddingVertical: 13 }]} onPress={() => { setPickup(sg.text); setPickupSugg([]); geocodePlace(sg.text, 'pickup'); if(drop) fetchEta(sg.text, drop); }}>
+                    <Text style={{ fontSize: 16, marginRight: 8 }}>📍</Text>
+                    <Text style={{ fontSize: 14, color: '#1a1a2e', flex: 1, fontWeight: '500' }} numberOfLines={2}>{sg.text}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -2376,24 +2450,24 @@ export default function App() {
             <View style={s.locDivider} />
             <View style={s.row}>
               <View style={s.dotRed} />
-              <TextInput style={[s.input, { flex: 1, marginBottom: 0 }]} placeholder="🎯 Drop location..." value={drop} onChangeText={(t) => { setDrop(t); searchPlaces(t, 'drop'); }} />
+              <TextInput style={[s.input, { flex: 1, marginBottom: 0, fontSize: 15 }]} placeholder="🎯 Drop location..." value={drop} onChangeText={(t) => { setDrop(t); searchPlaces(t, 'drop'); }} returnKeyType="done" />
             </View>
             {dropSugg.length > 0 && (
-              <View style={s.suggBox}>
-                {dropSugg.slice(0, 4).map((sg, i) => (
-                  <TouchableOpacity key={i} style={s.suggItem} onPress={() => { setDrop(sg.text); setDropSugg([]); geocodePlace(sg.text, 'drop'); if(pickup) fetchEta(pickup, sg.text); }}>
-                    <Text style={{ fontSize: 12 }}>🎯 </Text><Text style={{ fontSize: 12, color: '#333', flex: 1 }} numberOfLines={1}>{sg.text}</Text>
+              <View style={[s.suggBox, { zIndex: 100 }]}>
+                {dropSugg.slice(0, 5).map((sg, i) => (
+                  <TouchableOpacity key={i} style={[s.suggItem, { paddingVertical: 13 }]} onPress={() => { setDrop(sg.text); setDropSugg([]); geocodePlace(sg.text, 'drop'); if(pickup) fetchEta(pickup, sg.text); }}>
+                    <Text style={{ fontSize: 16, marginRight: 8 }}>🎯</Text>
+                    <Text style={{ fontSize: 14, color: '#1a1a2e', flex: 1, fontWeight: '500' }} numberOfLines={2}>{sg.text}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
             )}
           </View>
           {eta ? (
-            <Animated.View style={{ backgroundColor: eta.includes('Calculate') ? '#fff3e0' : '#e8f5e9', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center', opacity: eta.includes('Calculate') ? scratchAnim : 1 }}>
-              <Text style={{ color: eta.includes('Calculate') ? '#e65100' : '#2e7d32', fontWeight: '600', fontSize: 13 }}>{eta}</Text>
+            <Animated.View style={{ backgroundColor: eta.includes('Calculate') ? '#fff3e0' : '#e8f5e9', borderRadius: 10, padding: 12, marginBottom: 10, alignItems: 'center' }}>
+              <Text style={{ color: eta.includes('Calculate') ? '#e65100' : '#2e7d32', fontWeight: '700', fontSize: 14 }}>{eta}</Text>
             </Animated.View>
           ) : null}
-          <TouchableOpacity style={s.locationBtn} onPress={useMyLocation}><Text style={{ color: '#2e7d32', fontWeight: '600', fontSize: 13 }}>📍 Meri Current Location Use Karo</Text></TouchableOpacity>
           <Text style={s.secTitle}>Ride Type</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
             {RIDES.map(r => (
