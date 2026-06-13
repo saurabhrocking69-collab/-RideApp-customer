@@ -2811,8 +2811,8 @@ export default function App() {
             ['2️⃣', 'Pickup location daalo', 'Drop optional hai — driver aapke saath rahega'],
             ['3️⃣', 'Wallet se payment', 'Fare escrow mein hold hota hai (safe)'],
             ['4️⃣', 'Driver accept karta hai', 'OTP share karo trip start karne ke liye'],
-            ['5️⃣', 'Trip enjoy karo', 'Timer chalta rehta hai — driver aapka hai'],
-            ['6️⃣', 'Trip complete', 'Driver release karta hai — final payment auto'],
+            ['5️⃣', 'Trip enjoy karo', 'Timer chalta hai — driver sirf aapka hai poore package time tak'],
+            ['6️⃣', 'Time khatam hone par', 'Driver Complete press karta hai — final payment auto settle'],
           ].map(([num, title, desc], i) => (
             <View key={i} style={{ flexDirection: 'row', marginBottom: 14 }}>
               <Text style={{ fontSize: 20, marginRight: 12 }}>{num}</Text>
@@ -2852,25 +2852,81 @@ export default function App() {
           <Text style={{ color: '#999', fontSize: 11, marginTop: 10 }}>Extra KM: Auto ₹8/km · Car ₹12/km · Bike ₹5/km · E-Riksha ₹7/km</Text>
         </View>
 
-        {/* Rules */}
-        <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 18, marginBottom: 16, elevation: 2 }}>
+        {/* Core Rules */}
+        <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 18, marginBottom: 14, elevation: 2 }}>
           <Text style={{ color: '#1a1a2e', fontSize: 15, fontWeight: 'bold', marginBottom: 12 }}>📋 Important Rules</Text>
           {[
-            ['✅', 'Escrow Payment', 'Aapka paisa trip complete hone par hi driver ko milega — 100% safe'],
-            ['⏱️', 'Timer', 'Trip start OTP confirm hone par chalta hai. Package time khatam = auto complete'],
+            ['✅', 'Escrow Payment', 'Aapka paisa trip complete hone par hi driver ko milega — 100% safe, koi risk nahi'],
+            ['⏱️', 'Timer', 'OTP confirm hone par timer start. Package time khatam hone par driver Complete button press kar sakta hai'],
+            ['🔒', 'Driver Time Lock', 'Driver package time khatam hone se pehle ride complete NAHI kar sakta — aapka poora time guaranteed hai'],
             ['🔄', 'Round Trip', 'Toggle on karo agar wapas pickup aana ho. Stay time bhi set kar sakte ho'],
-            ['⚡', 'Early End', 'Driver ya aap early end request kar sakte ho — dono ki agreement zaroori'],
-            ['💰', 'Early End Refund', 'Actual time proportional payment. Min 70% driver ko milega'],
-            ['📍', 'Extra KM', 'Package KM limit se zyada chale to extra charge lagega'],
-            ['❌', 'Cancellation', 'Driver match hone se pehle cancel = full refund to wallet'],
-            ['🗓️', 'Advance Booking', 'Schedule kar sakte ho — driver ±75 min window mein accept karega'],
-            ['🚫', 'Misuse', 'Package time mein driver ko kisi aur kaam ke liye use mat karo'],
+            ['📍', 'Extra KM', 'Package KM se zyada chale to extra charge lagega — driver app pe live track hoga'],
+            ['❌', 'Cancellation', 'Driver accept karne se pehle cancel = full refund. Baad mein cancel nahi ho sakta'],
           ].map(([icon, title, desc], i) => (
             <View key={i} style={{ flexDirection: 'row', marginBottom: 12 }}>
               <Text style={{ fontSize: 18, marginRight: 10, width: 30 }}>{icon}</Text>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: '#1a1a2e', fontWeight: '700', fontSize: 13 }}>{title}</Text>
                 <Text style={{ color: '#666', fontSize: 12, marginTop: 2 }}>{desc}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* Early End Rules */}
+        <View style={{ backgroundColor: '#fff3e0', borderRadius: 16, padding: 18, marginBottom: 14, borderLeftWidth: 4, borderLeftColor: '#ff9800' }}>
+          <Text style={{ color: '#e65100', fontSize: 15, fontWeight: 'bold', marginBottom: 10 }}>⏹️ Early End — Kaise Kaam Karta Hai?</Text>
+          {[
+            ['1️⃣', 'Request karo', 'Aap ya driver "Early End Request" bhejta hai app se'],
+            ['2️⃣', 'Dono agree karein', 'Dusra party Accept kare — tabhi early end hoga'],
+            ['3️⃣', 'Proportional payment', 'Actual time ke hisaab se fare calculate hoga — unused time refund wallet mein'],
+            ['🚫', 'Driver shortcut nahi', 'Driver directly Complete nahi kar sakta — sirf mutual agreement se hi early end possible hai'],
+            ['⚠️', 'Reject limit', 'Early end 2 baar reject karne par 15 min cooldown — 2 se zyada reject par support contact'],
+          ].map(([icon, title, desc], i) => (
+            <View key={i} style={{ flexDirection: 'row', marginBottom: 10 }}>
+              <Text style={{ fontSize: 16, marginRight: 10, width: 30 }}>{icon}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#bf360c', fontWeight: '700', fontSize: 13 }}>{title}</Text>
+                <Text style={{ color: '#795548', fontSize: 12, marginTop: 2 }}>{desc}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* Extension Rules */}
+        <View style={{ backgroundColor: '#e8eaf6', borderRadius: 16, padding: 18, marginBottom: 14, borderLeftWidth: 4, borderLeftColor: '#3f51b5' }}>
+          <Text style={{ color: '#283593', fontSize: 15, fontWeight: 'bold', marginBottom: 10 }}>🔄 Time Extension — Aur Time Chahiye?</Text>
+          {[
+            ['⏱️', 'Extend request', 'Active ride mein "+1h / +2h / +3h" option se request bhejein'],
+            ['✅ Driver', 'Driver accept/reject kar sakta hai', 'Agar driver agree kare to extra hours add ho jaate hain'],
+            ['💰 Extra fare', 'Auto-deducted wallet se', 'Extension ka additional fare wallet balance se instantly hold hoga'],
+            ['🔒 Lock rule', 'Extension bhi same time-lock se cover', 'Extended time bhi poora karna hoga — early end ka option rahega'],
+          ].map(([icon, title, desc], i) => (
+            <View key={i} style={{ flexDirection: 'row', marginBottom: 10 }}>
+              <Text style={{ fontSize: 16, marginRight: 10, width: 30 }}>{icon}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#1a237e', fontWeight: '700', fontSize: 13 }}>{title}</Text>
+                <Text style={{ color: '#5c6bc0', fontSize: 12, marginTop: 2 }}>{desc}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* Schedule Rules */}
+        <View style={{ backgroundColor: '#e0f2f1', borderRadius: 16, padding: 18, marginBottom: 14, borderLeftWidth: 4, borderLeftColor: '#009688' }}>
+          <Text style={{ color: '#004d40', fontSize: 15, fontWeight: 'bold', marginBottom: 10 }}>🗓️ Schedule for Later — Advance Booking</Text>
+          {[
+            ['📅', 'Kitni advance booking?', 'Koi bhi future time select karo — date + hour + minute se schedule karo'],
+            ['🔍', 'Driver kab dikhega?', 'Driver ko booking 75 min pehle se dikhti hai — wo accept karega'],
+            ['✅ Accept', 'Driver ne accept kar liya', 'Notification aata hai — app band kar sakte hain, scheduled time pe OTP aayega'],
+            ['⏰ OTP timing', 'OTP kab milega?', 'Scheduled time se 20 min pehle se OTP active hoga — driver aayega aur start karega'],
+            ['❌ Cancel', 'Schedule cancel karna ho?', 'Driver accept karne se pehle cancel karo — full refund. Baad mein mutual termination'],
+          ].map(([icon, title, desc], i) => (
+            <View key={i} style={{ flexDirection: 'row', marginBottom: 10 }}>
+              <Text style={{ fontSize: 16, marginRight: 10, width: 30 }}>{icon}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#004d40', fontWeight: '700', fontSize: 13 }}>{title}</Text>
+                <Text style={{ color: '#00695c', fontSize: 12, marginTop: 2 }}>{desc}</Text>
               </View>
             </View>
           ))}
@@ -2883,8 +2939,9 @@ export default function App() {
             'Zyada trips plan ho to multi-day book karo — per-day cost kam padega',
             'Round trip toggle karo agar ek jagah rukna hai aur wapas aana hai',
             'Wallet top-up karke rakho — booking instant hogi',
-            'Advance schedule karo taaki last minute tension na ho',
-            'OTP sirf driver ko batao trip shuru karne pe',
+            'Kal subah ki ride? Aaj raat schedule karo — tension-free',
+            'Driver se chat karo pickup exact location confirm karne ke liye',
+            'OTP sirf driver ko batao — trip start hone par hi share karo',
           ].map((tip, i) => (
             <View key={i} style={{ flexDirection: 'row', marginBottom: 8 }}>
               <Text style={{ color: '#4CAF50', marginRight: 8, fontSize: 14, fontWeight: 'bold' }}>•</Text>
