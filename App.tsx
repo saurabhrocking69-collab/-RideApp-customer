@@ -624,7 +624,7 @@ export default function App() {
           const st = data.ride.status;
 
           if (st === 'matched' || st === 'arrived') {
-            setRideData((p: any) => p ? { ...p, startOtp: data.ride.start_otp, driver: { name: data.ride.driver_name, phone: data.ride.driver_phone, vehicle_no: data.ride.vehicle_no, upi_id: data.ride.driver_upi_id } } : p);
+            setRideData((p: any) => p ? { ...p, startOtp: data.ride.start_otp, driver: { name: data.ride.driver_name, phone: data.ride.driver_phone, vehicle_no: data.ride.vehicle_no, vehicle_brand: data.ride.vehicle_brand, vehicle_model: data.ride.vehicle_model, upi_id: data.ride.driver_upi_id } } : p);
             const ld = await apiGet(`/api/rides/driver-location/${rid}`);
             if (!ld._error && ld.location) {
               setDriverLoc(ld.location);
@@ -2058,7 +2058,12 @@ export default function App() {
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#1a1a2e' }}>{hourlyBooking?.driver?.name || '...'}</Text>
-                <Text style={{ color: '#666', fontSize: 13, marginTop: 2 }}>🚗 {hourlyBooking?.driver?.vehicle_no || '...'}</Text>
+                {(hourlyBooking?.driver?.vehicle_brand || hourlyBooking?.driver?.vehicle_model) ? (
+                  <Text style={{ color: '#1a1a2e', fontSize: 12, fontWeight: '600', marginTop: 1 }}>
+                    {[hourlyBooking.driver.vehicle_brand, hourlyBooking.driver.vehicle_model].filter(Boolean).join(' ')}
+                  </Text>
+                ) : null}
+                <Text style={{ color: '#666', fontSize: 12, marginTop: 1 }}>🚗 {hourlyBooking?.driver?.vehicle_no || '...'}</Text>
                 {hourlyBooking?.driver_phone && (
                   <Text style={{ color: '#888', fontSize: 12, marginTop: 2 }}>📱 +91 {hourlyBooking.driver_phone}</Text>
                 )}
@@ -2815,7 +2820,10 @@ export default function App() {
                 <View style={s.driverAvatar}><Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>{(rideData.driver.name||'D')[0].toUpperCase()}</Text></View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.driverName}>{rideData.driver.name}</Text>
-                  <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>🚗 {rideData.driver.vehicle_no}</Text>
+                  <Text style={{ fontSize: 12, color: '#1a1a2e', fontWeight: '600', marginTop: 2 }}>
+                    {rideData.driver.vehicle_brand ? `${rideData.driver.vehicle_brand} ` : ''}{rideData.driver.vehicle_model || ''}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#666', marginTop: 1 }}>🚗 {rideData.driver.vehicle_no}</Text>
                   <Text style={{ fontSize: 12, color: '#f0a500', marginTop: 2 }}>⭐ 4.8</Text>
                 </View>
                 <View style={{ alignItems: 'center' }}>
