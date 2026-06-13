@@ -499,8 +499,6 @@ export default function App() {
   const [hScheduled, setHScheduled]     = useState(false);
   const [hScheduleDate, setHScheduleDate] = useState('');
   const [hScheduleTime, setHScheduleTime] = useState('');
-  // Drop validation
-  const [hDropDistKm, setHDropDistKm]   = useState<number|null>(null);
   // Extension request
   const [hExtendStep, setHExtendStep]   = useState<'idle'|'choose'|'pending'>('idle');
   const [hExtendHours, setHExtendHours] = useState(1);
@@ -1815,7 +1813,7 @@ export default function App() {
     const hHourEmoji = (h: number) => h >= 72 ? '🗓️' : h >= 48 ? '📅' : h >= 24 ? '🌙' : h === 2 ? '⏱️' : h === 4 ? '🕐' : h === 6 ? '🕕' : '☀️';
     const fmtTime = (sec: number) => `${String(Math.floor(sec/3600)).padStart(2,'0')}:${String(Math.floor((sec%3600)/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`;
 
-    // Haversine distance in km between two lat/lng points
+    // Haversine kept for future use (round-trip ETA estimate)
     const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number) => {
       const R = 6371;
       const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -1857,20 +1855,8 @@ export default function App() {
         const loc = d.result?.geometry?.location;
         if (which === 'pickup') {
           setHPickup(text); setHPickupCoords(loc || null); setHPickupSugg([]);
-          // Recalculate drop distance if drop already set
-          if (loc && hDropCoords) {
-            const dist = haversineKm(loc.lat, loc.lng, hDropCoords.lat, hDropCoords.lng);
-            setHDropDistKm(Math.round(dist));
-          }
         } else {
           setHDrop(text); setHDropCoords(loc || null); setHDropSugg([]);
-          // Validate drop distance vs km_included
-          if (loc && hPickupCoords) {
-            const dist = haversineKm(hPickupCoords.lat, hPickupCoords.lng, loc.lat, loc.lng);
-            setHDropDistKm(Math.round(dist));
-          } else {
-            setHDropDistKm(null);
-          }
         }
       } catch (_e) {}
     };
@@ -2038,11 +2024,24 @@ export default function App() {
         </View>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
           {/* Timer */}
-          <View style={{ backgroundColor: '#1a1a2e', borderRadius: 20, padding: 24, alignItems: 'center', marginBottom: 16 }}>
-            <Text style={{ color: '#aaa', fontSize: 12, letterSpacing: 2, marginBottom: 8 }}>TRIP TIME</Text>
-            <Text style={{ color: '#e94560', fontSize: 48, fontWeight: 'bold', fontVariant: ['tabular-nums'] }}>{fmtTime(hourlyTimerSec)}</Text>
-            <Text style={{ color: '#aaa', fontSize: 12, marginTop: 6 }}>{hHourLabel(hourlyBooking?.package_hours || hPackageHours)} package</Text>
-          </View>
+          {(() => {
+            const minLeft = hApproachLimit?.min_left ?? null;
+            const isCritical = hApproachLimit?.critical;
+            const isWarn = hApproachLimit?.warn;
+            const timerColor = isCritical ? '#f44336' : isWarn ? '#ff9800' : '#e94560';
+            const remainLabel = minLeft !== null ? (minLeft >= 60 ? `${Math.floor(minLeft/60)}h ${minLeft%60}m remaining` : `${minLeft} min remaining`) : `${hHourLabel(hourlyBooking?.package_hours || hPackageHours)} package`;
+            return (
+              <View style={{ backgroundColor: '#1a1a2e', borderRadius: 20, padding: 24, alignItems: 'center', marginBottom: 16 }}>
+                <Text style={{ color: '#aaa', fontSize: 12, letterSpacing: 2, marginBottom: 8 }}>ELAPSED TIME</Text>
+                <Text style={{ color: timerColor, fontSize: 48, fontWeight: 'bold', fontVariant: ['tabular-nums'] }}>{fmtTime(hourlyTimerSec)}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 6 }}>
+                  <Text style={{ fontSize: 12, color: isCritical ? '#f44336' : isWarn ? '#ff9800' : '#4caf50', fontWeight: '700' }}>
+                    {isCritical ? '🚨' : isWarn ? '⚠️' : '⏳'} {remainLabel}
+                  </Text>
+                </View>
+              </View>
+            );
+          })()}
 
           {/* OTP for driver if not started yet */}
           {hourlyBooking?.status === 'matched' && (
@@ -2082,10 +2081,10 @@ export default function App() {
           <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 16, elevation: 2 }}>
             {[
               ['Pickup', hourlyBooking?.pickup || hPickup],
-              ['Drop', hourlyBooking?.drop_location || hDrop || 'Flexible'],
-              ['Round Trip', (hourlyBooking?.is_roundtrip || hRoundTrip) ? 'Yes' : 'No'],
+              ['Pehla Stop', hourlyBooking?.drop_location || hDrop || 'Flexible — driver ke sath jaao'],
+              ['Round Trip', (hourlyBooking?.is_roundtrip || hRoundTrip) ? '✅ Haan' : 'Nahi'],
               ['KM Included', `${hourlyBooking?.km_included} km`],
-              ['Extra KM Rate', `₹${HOURLY_PACKAGES[hVehicle]?.extra}/km`],
+              ['Extra KM Rate', `₹${HOURLY_PACKAGES[hourlyBooking?.vehicle_type || hVehicle]?.extra}/km`],
             ].map(([k, v], i) => (
               <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 7, borderBottomWidth: i < 4 ? 1 : 0, borderColor: '#f5f5f5' }}>
                 <Text style={{ color: '#888', fontSize: 13 }}>{k}</Text>
@@ -2100,27 +2099,56 @@ export default function App() {
             <Text style={{ color: '#2e7d32', fontSize: 12, flex: 1 }}>₹{hourlyBooking?.base_fare} paid & held safely. Trip khatam hone par driver ko milega.</Text>
           </View>
 
-          {/* Approaching limit warning */}
+          {/* Live KM tracker — always visible during active trip */}
+          {hourlyBooking?.status === 'active' && hApproachLimit && (() => {
+            const traveled = parseFloat(hourlyBooking.actual_km || 0);
+            const included = parseFloat(hourlyBooking.km_included || 0);
+            const extraKm = Math.max(0, traveled - included);
+            const extraRate = HOURLY_PACKAGES[hourlyBooking.vehicle_type || hVehicle]?.extra || 8;
+            const extraCharge = Math.round(extraKm * extraRate);
+            return (
+              <View style={{ backgroundColor: extraKm > 0 ? '#fce4ec' : '#e8f5e9', borderRadius: 12, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: extraKm > 0 ? '#ef9a9a' : '#a5d6a7' }}>
+                <Text style={{ fontSize: 18, marginRight: 10 }}>🛣️</Text>
+                <View style={{ flex: 1 }}>
+                  {extraKm > 0 ? (
+                    <>
+                      <Text style={{ color: '#c62828', fontWeight: '700', fontSize: 13 }}>+{extraKm.toFixed(1)} km extra — ₹{extraCharge} trip end pe pay karein</Text>
+                      <Text style={{ color: '#888', fontSize: 11, marginTop: 2 }}>{included} km package mein | ab tak: {traveled.toFixed(1)} km</Text>
+                    </>
+                  ) : (
+                    <Text style={{ color: '#2e7d32', fontSize: 12, fontWeight: '600' }}>
+                      {traveled.toFixed(1)} / {included} km — Package limit safe hai ✓
+                    </Text>
+                  )}
+                </View>
+                <Text style={{ fontSize: 11, color: '#888' }}>⏰ {hApproachLimit.min_left}m left</Text>
+              </View>
+            );
+          })()}
+
+          {/* Time warning banner — primary constraint */}
           {hApproachLimit?.warn && hourlyBooking?.status === 'active' && (
             <View style={{ backgroundColor: hApproachLimit.critical ? '#ffebee' : '#fff3e0', borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 2, borderColor: hApproachLimit.critical ? '#f44336' : '#ff9800', flexDirection: 'row', alignItems: 'flex-start' }}>
               <Text style={{ fontSize: 20, marginRight: 10 }}>{hApproachLimit.critical ? '🚨' : '⚠️'}</Text>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontWeight: 'bold', color: hApproachLimit.critical ? '#c62828' : '#e65100', fontSize: 14, marginBottom: 4 }}>
-                  {hApproachLimit.critical ? 'Limit Khatam Hone Wali Hai!' : 'Limit Khatam Hone Wali Hai'}
+                  {hApproachLimit.critical ? 'Sirf ~' + hApproachLimit.min_left + ' min bacha!' : '⏰ ~' + hApproachLimit.min_left + ' minute bacha hai'}
                 </Text>
-                {hApproachLimit.time_pct >= 80 && (
-                  <Text style={{ color: hApproachLimit.critical ? '#c62828' : '#e65100', fontSize: 12 }}>
-                    ⏰ ~{hApproachLimit.min_left} minute bacha hai ({hApproachLimit.time_pct}% complete)
+                {hApproachLimit.is_roundtrip ? (
+                  <Text style={{ color: hApproachLimit.critical ? '#c62828' : '#bf360c', fontSize: 12, fontWeight: '700' }}>
+                    🔄 Round Trip — Abhi wapas pickup ke liye chalo!
                   </Text>
-                )}
-                {hApproachLimit.km_pct >= 80 && (
-                  <Text style={{ color: hApproachLimit.critical ? '#c62828' : '#e65100', fontSize: 12, marginTop: 2 }}>
-                    🛣️ ~{hApproachLimit.km_left} km bacha hai ({hApproachLimit.km_pct}% use)
+                ) : (
+                  <Text style={{ color: hApproachLimit.critical ? '#c62828' : '#e65100', fontSize: 12 }}>
+                    Trip extend karo ya driver se wrap up karo
                   </Text>
                 )}
                 {hExtendStep === 'idle' && (
-                  <TouchableOpacity onPress={() => setHExtendStep('choose')} style={{ marginTop: 8, backgroundColor: '#ff9800', borderRadius: 8, padding: 8, alignSelf: 'flex-start' }}>
-                    <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>⏱️ Extend Karo</Text>
+                  <TouchableOpacity onPress={() => setHExtendStep('choose')}
+                    style={{ marginTop: 8, backgroundColor: hApproachLimit.is_roundtrip ? '#1565c0' : '#ff9800', borderRadius: 8, padding: 8, alignSelf: 'flex-start' }}>
+                    <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>
+                      {hApproachLimit.is_roundtrip ? '⏱️ Extension Chahiye?' : '⏱️ Extend Karo'}
+                    </Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -2400,10 +2428,10 @@ export default function App() {
             </View>
           )}
 
-          <Text style={[s.secTitle, { marginTop: 4 }]}>Drop Location (Optional)</Text>
+          <Text style={[s.secTitle, { marginTop: 4 }]}>Pehla Stop / Area (Optional)</Text>
           <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 4, elevation: 1, borderWidth: 1, borderColor: '#f0f0f0' }}>
-            <TextInput style={{ fontSize: 14, color: '#1a1a2e' }} placeholder="📍 Drop kahaan jaana hai? (agar pata ho)" placeholderTextColor="#bbb" value={hDrop}
-              onChangeText={t => { setHDrop(t); if (!t) { setHDropDistKm(null); } searchHourly(t, 'drop'); }} />
+            <TextInput style={{ fontSize: 14, color: '#1a1a2e' }} placeholder="🗺️ Pehla stop ya area? (e.g. hospital, mall — optional)" placeholderTextColor="#bbb" value={hDrop}
+              onChangeText={t => { setHDrop(t); searchHourly(t, 'drop'); }} />
           </View>
           {hDropSugg.length > 0 && (
             <View style={{ backgroundColor: '#fff', borderRadius: 10, elevation: 4, marginBottom: 8 }}>
@@ -2414,38 +2442,23 @@ export default function App() {
               ))}
             </View>
           )}
-          {/* Drop distance warning */}
-          {hDropDistKm !== null && (() => {
-            const kmIncl = HOURLY_PACKAGES[hVehicle]?.[hPackageHours]?.km || 0;
-            const isRoundTrip = hRoundTrip;
-            const needed = isRoundTrip ? hDropDistKm * 2 : hDropDistKm;
-            const isOver = needed > kmIncl;
-            return (
-              <View style={{ backgroundColor: isOver ? '#fff3e0' : '#e8f5e9', borderRadius: 10, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: isOver ? '#ff9800' : '#4caf50', flexDirection: 'row', alignItems: 'flex-start' }}>
-                <Text style={{ fontSize: 16, marginRight: 8 }}>{isOver ? '⚠️' : '✅'}</Text>
-                <View style={{ flex: 1 }}>
-                  {isOver ? (
-                    <>
-                      <Text style={{ color: '#e65100', fontWeight: '700', fontSize: 13 }}>Drop bahut dur hai ({hDropDistKm} km){isRoundTrip ? ' — Round Trip: ' + needed + ' km total' : ''}</Text>
-                      <Text style={{ color: '#e65100', fontSize: 12, marginTop: 3 }}>Is package mein {kmIncl} km hi included hai. Ya zyada package choose karo, ya Standard Ride se jao.</Text>
-                      <TouchableOpacity onPress={() => { setScreen('booking'); }} style={{ marginTop: 8, backgroundColor: '#e65100', borderRadius: 8, padding: 8, alignSelf: 'flex-start' }}>
-                        <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>→ Standard Ride Book Karo</Text>
-                      </TouchableOpacity>
-                    </>
-                  ) : (
-                    <Text style={{ color: '#2e7d32', fontSize: 13 }}>Drop {hDropDistKm} km dur hai{isRoundTrip ? ` (round trip: ${needed} km)` : ''} — {kmIncl} km package mein fit hai ✓</Text>
-                  )}
-                </View>
-              </View>
-            );
-          })()}
+          {/* KM info — educational, not a blocker */}
+          <View style={{ backgroundColor: '#e3f2fd', borderRadius: 10, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'flex-start' }}>
+            <Text style={{ fontSize: 15, marginRight: 8 }}>ℹ️</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#1565c0', fontWeight: '700', fontSize: 12 }}>Package mein {HOURLY_PACKAGES[hVehicle]?.[hPackageHours]?.km} km included</Text>
+              <Text style={{ color: '#1565c0', fontSize: 11, marginTop: 3 }}>
+                Aap kahi bhi ja sakte hain {hPackageHours} hour mein. Agar package km exceed hua to extra ₹{HOURLY_PACKAGES[hVehicle]?.extra}/km trip end pe pay hoga.
+              </Text>
+            </View>
+          </View>
 
           {/* Round Trip */}
           <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 14, marginTop: 8, marginBottom: 12, elevation: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <View>
+              <View style={{ flex: 1, marginRight: 12 }}>
                 <Text style={{ fontSize: 14, fontWeight: '600', color: '#1a1a2e' }}>🔄 Round Trip</Text>
-                <Text style={{ fontSize: 11, color: '#999', marginTop: 2 }}>Wapas pickup pe aana hai?</Text>
+                <Text style={{ fontSize: 11, color: '#999', marginTop: 2 }}>Driver aapko wapas pickup pe drop karega — package time ke andar</Text>
               </View>
               <Switch value={hRoundTrip} onValueChange={setHRoundTrip} trackColor={{ true: '#e94560' }} />
             </View>
