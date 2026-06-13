@@ -20,10 +20,11 @@ const API = 'https://rideapp-backend-production-5e1c.up.railway.app';
 type Screen = 'login' | 'otp' | 'home' | 'booking' | 'matching' | 'inride' | 'payment' | 'postride' | 'chat' | 'referral' | 'saved' | 'policy' | 'hourly' | 'wallet' | 'hourly-info';
 
 const HOURLY_PACKAGES: any = {
-  auto:    { 2:{fare:180,km:20}, 4:{fare:320,km:40}, 6:{fare:460,km:60}, 8:{fare:580,km:80},  24:{fare:1500,km:200}, 48:{fare:2800,km:400}, 72:{fare:4000,km:600}, extra:8  },
-  bike:    { 2:{fare:120,km:20}, 4:{fare:210,km:40}, 6:{fare:300,km:60}, 8:{fare:380,km:80},  24:{fare:1000,km:200}, 48:{fare:1800,km:400}, 72:{fare:2600,km:600}, extra:5  },
-  car:     { 2:{fare:260,km:20}, 4:{fare:460,km:40}, 6:{fare:660,km:60}, 8:{fare:840,km:80},  24:{fare:2200,km:200}, 48:{fare:4000,km:400}, 72:{fare:5800,km:600}, extra:12 },
-  eriksha: { 2:{fare:150,km:20}, 4:{fare:270,km:40}, 6:{fare:390,km:60}, 8:{fare:490,km:80},  24:{fare:1200,km:200}, 48:{fare:2200,km:400}, 72:{fare:3200,km:600}, extra:7  },
+  auto:         { 2:{fare:180,km:20}, 4:{fare:320,km:40}, 6:{fare:460,km:60}, 8:{fare:580,km:80},  24:{fare:1500,km:200}, 48:{fare:2800,km:400}, 72:{fare:4000,km:600}, extra:8  },
+  bike:         { 2:{fare:120,km:20}, 4:{fare:210,km:40}, 6:{fare:300,km:60}, 8:{fare:380,km:80},  24:{fare:1000,km:200}, 48:{fare:1800,km:400}, 72:{fare:2600,km:600}, extra:5  },
+  car:          { 2:{fare:260,km:20}, 4:{fare:460,km:40}, 6:{fare:660,km:60}, 8:{fare:840,km:80},  24:{fare:2200,km:200}, 48:{fare:4000,km:400}, 72:{fare:5800,km:600}, extra:12 },
+  eriksha:      { 2:{fare:150,km:20}, 4:{fare:270,km:40}, 6:{fare:390,km:60}, 8:{fare:490,km:80},  24:{fare:1200,km:200}, 48:{fare:2200,km:400}, 72:{fare:3200,km:600}, extra:7  },
+  ultra_luxury: { 2:{fare:800,km:20}, 4:{fare:1400,km:40}, 6:{fare:2000,km:60}, 8:{fare:2600,km:80}, 24:{fare:6000,km:200}, 48:{fare:10000,km:400}, 72:{fare:14000,km:600}, extra:25 },
 };
 const PulseView = ({ children, style }: any) => {
   const anim = useRef(new Animated.Value(1)).current;
@@ -1808,7 +1809,7 @@ export default function App() {
   // ═══ HOURLY BOOKING ═══
   if (screen === 'hourly') {
     const pkg = HOURLY_PACKAGES[hVehicle]?.[hPackageHours];
-    const hVehicleIcons: any = { auto: '🛺', bike: '🏍️', car: '🚕', eriksha: '🛵' };
+    const hVehicleIcons: any = { auto: '🛺', bike: '🏍️', car: '🚕', eriksha: '🛵', ultra_luxury: '💎' };
     const hHourLabel = (h: number) => h >= 24 ? `${h/24} Day${h > 24 ? 's' : ''}` : h === 8 ? 'Full Day (8h)' : `${h} Hours`;
     const hHourEmoji = (h: number) => h >= 72 ? '🗓️' : h >= 48 ? '📅' : h >= 24 ? '🌙' : h === 2 ? '⏱️' : h === 4 ? '🕐' : h === 6 ? '🕕' : '☀️';
     const fmtTime = (sec: number) => `${String(Math.floor(sec/3600)).padStart(2,'0')}:${String(Math.floor((sec%3600)/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`;
@@ -2159,37 +2160,52 @@ export default function App() {
           {hExtendStep === 'choose' && (
             <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 16, elevation: 3, borderWidth: 2, borderColor: '#1a1a2e' }}>
               <Text style={{ fontWeight: 'bold', color: '#1a1a2e', fontSize: 15, marginBottom: 12 }}>⏱️ Trip Extend Karo</Text>
+
+              {/* Hours row */}
               <Text style={{ color: '#666', fontSize: 12, marginBottom: 8 }}>Extra Hours:</Text>
-              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
-                {[0, 1, 2, 4].map(h => (
-                  <Bouncy key={h} onPress={() => setHExtendHours(h)} style={{ flex: 1, backgroundColor: hExtendHours === h ? '#1a1a2e' : '#f5f5f5', borderRadius: 10, padding: 10, alignItems: 'center' }}>
-                    <Text style={{ color: hExtendHours === h ? '#fff' : '#333', fontWeight: 'bold', fontSize: 12 }}>{h === 0 ? 'Min only' : `+${h}h`}</Text>
+              <View style={{ flexDirection: 'row', gap: 6, marginBottom: 12 }}>
+                {[0, 1, 2, 3, 4].map(h => (
+                  <Bouncy key={h} onPress={() => { setHExtendHours(h); if (h > 0) setHExtendMin(0); }} style={{ flex: 1, backgroundColor: hExtendHours === h ? '#1a1a2e' : '#f5f5f5', borderRadius: 10, padding: 8, alignItems: 'center' }}>
+                    <Text style={{ color: hExtendHours === h ? '#fff' : '#333', fontWeight: 'bold', fontSize: 11 }}>{h === 0 ? 'Min' : `+${h}h`}</Text>
                   </Bouncy>
                 ))}
               </View>
-              {hExtendHours === 0 && (
-                <>
-                  <Text style={{ color: '#666', fontSize: 12, marginBottom: 8 }}>Extra Minutes:</Text>
-                  <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
-                    {[15, 30, 45, 60].map(m => (
-                      <Bouncy key={m} onPress={() => setHExtendMin(m)} style={{ flex: 1, backgroundColor: hExtendMin === m ? '#1a1a2e' : '#f5f5f5', borderRadius: 10, padding: 10, alignItems: 'center' }}>
-                        <Text style={{ color: hExtendMin === m ? '#fff' : '#333', fontWeight: 'bold', fontSize: 12 }}>{m}m</Text>
-                      </Bouncy>
-                    ))}
-                  </View>
-                </>
+
+              {/* Minutes row — always visible, add extra mins to hours */}
+              <Text style={{ color: '#666', fontSize: 12, marginBottom: 8 }}>
+                {hExtendHours === 0 ? 'Extra Minutes (minimum 15):' : 'Extra Minutes (optional):'}
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+                {(hExtendHours === 0 ? [15, 30, 45, 60] : [0, 15, 30, 45]).map(m => (
+                  <Bouncy key={m} onPress={() => setHExtendMin(m)} style={{ flex: 1, backgroundColor: hExtendMin === m ? '#1a1a2e' : '#f5f5f5', borderRadius: 10, padding: 10, alignItems: 'center' }}>
+                    <Text style={{ color: hExtendMin === m ? '#fff' : '#333', fontWeight: 'bold', fontSize: 12 }}>
+                      {hExtendHours === 0 ? `${m}m` : m === 0 ? 'None' : `+${m}m`}
+                    </Text>
+                  </Bouncy>
+                ))}
+              </View>
+
+              {/* Summary label */}
+              {(hExtendHours > 0 || hExtendMin >= 15) && (
+                <Text style={{ color: '#1a1a2e', fontSize: 13, fontWeight: '700', textAlign: 'center', marginBottom: 8 }}>
+                  Extension: {hExtendHours > 0 && hExtendMin > 0 ? `${hExtendHours}h ${hExtendMin}m` : hExtendHours > 0 ? `${hExtendHours} hour${hExtendHours > 1 ? 's' : ''}` : `${hExtendMin} minutes`}
+                </Text>
               )}
+
               {/* Cost preview */}
               {(hExtendHours > 0 || hExtendMin >= 15) && (() => {
                 const pkg = HOURLY_PACKAGES[hourlyBooking?.vehicle_type || hVehicle];
+                const totalDecimal = hExtendHours + hExtendMin / 60;
                 let cost = 0;
-                if (hExtendHours >= 1 && pkg?.[hExtendHours]) {
+                if (hExtendMin === 0 && hExtendHours >= 1 && pkg?.[hExtendHours]) {
                   cost = pkg[hExtendHours].fare;
                 } else {
                   const perHr = (hourlyBooking?.base_fare || 0) / (hourlyBooking?.package_hours || 1);
-                  cost = Math.round(perHr * (hExtendHours + hExtendMin / 60));
+                  cost = Math.round(perHr * totalDecimal);
                 }
-                const extraKm = hExtendHours >= 1 && pkg?.[hExtendHours] ? pkg[hExtendHours].km : Math.round((hourlyBooking?.km_included || 0) / (hourlyBooking?.package_hours || 1) * (hExtendHours + hExtendMin / 60));
+                const extraKm = hExtendMin === 0 && hExtendHours >= 1 && pkg?.[hExtendHours]
+                  ? pkg[hExtendHours].km
+                  : Math.round((hourlyBooking?.km_included || 0) / (hourlyBooking?.package_hours || 1) * totalDecimal);
                 return (
                   <View style={{ backgroundColor: '#f5f5f5', borderRadius: 10, padding: 12, marginBottom: 12 }}>
                     <Text style={{ fontWeight: 'bold', color: '#1a1a2e', fontSize: 14 }}>Estimated Cost: ₹{cost}</Text>
@@ -2369,7 +2385,7 @@ export default function App() {
 
           {/* Vehicle Selector */}
           <Text style={s.secTitle}>Vehicle Type</Text>
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 18 }}>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
             {[{id:'auto',icon:'🛺',label:'Auto'},{id:'bike',icon:'🏍️',label:'Bike'},{id:'car',icon:'🚕',label:'Car'},{id:'eriksha',icon:'🛵',label:'E-Riksha'}].map(v => (
               <Bouncy key={v.id} style={{ flex: 1, backgroundColor: hVehicle === v.id ? '#1a1a2e' : '#f5f5f5', borderRadius: 12, padding: 10, alignItems: 'center', borderWidth: 2, borderColor: hVehicle === v.id ? '#e94560' : 'transparent' }} onPress={() => setHVehicle(v.id)}>
                 <Text style={{ fontSize: 22 }}>{v.icon}</Text>
@@ -2377,6 +2393,17 @@ export default function App() {
               </Bouncy>
             ))}
           </View>
+          {/* Ultra Luxury — premium row */}
+          <Bouncy
+            onPress={() => setHVehicle('ultra_luxury')}
+            style={{ backgroundColor: hVehicle === 'ultra_luxury' ? '#1a1a2e' : '#fff8e1', borderRadius: 12, padding: 14, marginBottom: 18, borderWidth: 2, borderColor: hVehicle === 'ultra_luxury' ? '#ffd700' : '#ffe082', flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={{ fontSize: 26, marginRight: 12 }}>💎</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: 'bold', color: hVehicle === 'ultra_luxury' ? '#ffd700' : '#b8860b' }}>Ultra Luxury</Text>
+              <Text style={{ fontSize: 11, color: hVehicle === 'ultra_luxury' ? '#aaa' : '#999', marginTop: 2 }}>BMW · Mercedes · Audi · Land Rover · Lexus</Text>
+            </View>
+            <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#e94560' }}>₹{HOURLY_PACKAGES.ultra_luxury?.[hPackageHours]?.fare || 800}</Text>
+          </Bouncy>
 
           {/* Package Cards */}
           <Text style={s.secTitle}>Package Select Karo</Text>
