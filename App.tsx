@@ -589,6 +589,7 @@ export default function App() {
       if (screen === 'policy') { setScreen('home'); return true; }
       if (screen === 'hourly') {
         if (hourlyStep === 'book') { setHPickupSugg([]); setHDropSugg([]); setScreen('home'); return true; }
+        // Block back during active/waiting — ride is in progress
         return true;
       }
       if (screen === 'payment') return true;
@@ -597,14 +598,31 @@ export default function App() {
     };
     const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
     return () => backHandler.remove();
-  }, [screen, tab]);
+  }, [screen, tab, hourlyStep]);
 
   useEffect(() => {
     (async () => {
       try {
         const sp = await AsyncStorage.getItem('userPhone');
         const sn = await AsyncStorage.getItem('userName');
-        if (sp) { setPhone(sp); setUserName(sn || 'Rider'); setScreen('home'); loadHistory(sp); loadWallet(sp); registerFCM(sp); loadOffers(); }
+        if (!sp) return;
+        setPhone(sp); setUserName(sn || 'Rider'); loadHistory(sp); loadWallet(sp); registerFCM(sp); loadOffers();
+        // Check for active hourly ride
+        const savedHourlyId = await AsyncStorage.getItem('activeHourlyId');
+        if (savedHourlyId) {
+          try {
+            const data = await apiGet('/api/hourly/active?phone=' + sp);
+            if (data.booking && ['pending','matched','active'].includes(data.booking.status)) {
+              setHourlyBooking({ ...data.booking, driver: data.driver || null });
+              setHourlyStep(data.booking.status === 'active' ? 'active' : 'waiting');
+              setScreen('hourly');
+              return;
+            } else {
+              await AsyncStorage.removeItem('activeHourlyId');
+            }
+          } catch (_e) {}
+        }
+        setScreen('home');
       } catch (_e) {}
     })();
   }, []);
@@ -669,7 +687,7 @@ export default function App() {
           if (data.approaching_limit) setHApproachLimit(data.approaching_limit);
           if (b.status === 'matched' && hourlyStep === 'waiting') setHourlyStep('active');
           if (b.status === 'active' && hourlyStep === 'waiting') setHourlyStep('active');
-          if (b.status === 'completed') { setHourlyStep('done'); loadWallet(phone); }
+          if (b.status === 'completed') { setHourlyStep('done'); loadWallet(phone); AsyncStorage.removeItem('activeHourlyId').catch(() => {}); }
           // Extension accepted by driver — reset UI
           if (!b.extend_requested_hours && hExtendStep === 'pending') setHExtendStep('idle');
         }
@@ -1354,8 +1372,26 @@ export default function App() {
               </View>
             </TouchableOpacity>
           </SlideUp>
+          {hourlyBooking && ['pending','matched','active'].includes(hourlyBooking.status) && (
+            <SlideUp delay={130}>
+              <TouchableOpacity onPress={() => setScreen('hourly')} style={{ backgroundColor: '#e94560', borderRadius: 14, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', elevation: 4 }}>
+                <Text style={{ fontSize: 22, marginRight: 10 }}>⏱️</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>Active Hourly Ride</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12 }}>Tap to resume your ongoing ride</Text>
+                </View>
+                <Text style={{ color: '#fff', fontSize: 22 }}>→</Text>
+              </TouchableOpacity>
+            </SlideUp>
+          )}
           <SlideUp delay={150}>
-            <Bouncy onPress={() => { setHourlyStep('book'); setHPickup(''); setHDrop(''); setHPickupCoords(null); setHDropCoords(null); setHPickupSugg([]); setHDropSugg([]); setHRoundTrip(false); setHStayHours(1); setHourlyBooking(null); setScreen('hourly'); }} style={{ borderRadius: 16, marginBottom: 14, overflow: 'hidden', elevation: 4 }}>
+            <Bouncy onPress={() => {
+              if (hourlyBooking && ['pending','matched','active'].includes(hourlyBooking.status)) {
+                setScreen('hourly');
+                return;
+              }
+              setHourlyStep('book'); setHPickup(''); setHDrop(''); setHPickupCoords(null); setHDropCoords(null); setHPickupSugg([]); setHDropSugg([]); setHRoundTrip(false); setHStayHours(1); setHourlyBooking(null); setScreen('hourly');
+            }} style={{ borderRadius: 16, marginBottom: 14, overflow: 'hidden', elevation: 4 }}>
               <View style={{ backgroundColor: '#1a1a2e', padding: 16, flexDirection: 'row', alignItems: 'center' }}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: '#e94560', fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 4 }}>NEW FEATURE</Text>
@@ -1879,6 +1915,7 @@ export default function App() {
         const data = await apiPost('/api/hourly/book', body);
         if (data.success) {
           setHourlyBooking({ id: data.booking_id, fare: data.fare, km_included: data.km_included, status: 'pending', vehicle_type: hVehicle, package_hours: hPackageHours, pickup: hPickup, drop_location: hDrop, is_roundtrip: hRoundTrip, stay_hours: hStayHours, scheduled_at });
+          AsyncStorage.setItem('activeHourlyId', String(data.booking_id)).catch(() => {});
           setHourlyStep('waiting');
           loadWallet(phone);
         } else {
@@ -2246,7 +2283,7 @@ export default function App() {
           )}
 
           {/* Extension pending */}
-          {(hExtendStep === 'pending' || hourlyBooking?.extend_requested_hours) && hExtendStep !== 'choose' && (
+          {hExtendStep === 'pending' && (
             <View style={{ backgroundColor: '#e3f2fd', borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: 'row', alignItems: 'center' }}>
               <Text style={{ fontSize: 20, marginRight: 10 }}>⏳</Text>
               <View>
