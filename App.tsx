@@ -17,7 +17,7 @@ import { WebView } from 'react-native-webview';
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 const API = 'https://rideapp-backend-production-5e1c.up.railway.app';
 
-type Screen = 'login' | 'otp' | 'home' | 'booking' | 'matching' | 'inride' | 'payment' | 'postride' | 'chat' | 'referral' | 'saved' | 'policy' | 'hourly' | 'wallet' | 'hourly-info';
+type Screen = 'splash' | 'login' | 'otp' | 'onboarding' | 'home' | 'booking' | 'matching' | 'inride' | 'payment' | 'postride' | 'chat' | 'referral' | 'saved' | 'policy' | 'hourly' | 'wallet' | 'hourly-info';
 
 const HOURLY_PACKAGES: any = {
   auto:         { 2:{fare:180,km:20}, 4:{fare:320,km:40}, 6:{fare:460,km:60}, 8:{fare:580,km:80},  24:{fare:1500,km:200}, 48:{fare:2800,km:400}, 72:{fare:4000,km:600}, extra:8  },
@@ -404,7 +404,15 @@ const CountUp = ({ to, prefix = '', style }: any) => {
 };
 
 export default function App() {
-  const [screen, setScreen]           = useState<Screen>('login');
+  const [screen, setScreen]           = useState<Screen>('splash');
+  // Splash animations
+  const splashLogo  = useRef(new Animated.Value(0)).current;
+  const splashScale = useRef(new Animated.Value(0.4)).current;
+  const splashTag   = useRef(new Animated.Value(0)).current;
+  const splashFade  = useRef(new Animated.Value(1)).current;
+  // Onboarding
+  const [gender, setGender] = useState<'male'|'female'|'other'|''>('');
+  const onboardFade = useRef(new Animated.Value(0)).current;
   const ride = useRideStore();
   // Store watcher — guaranteed UI update jab store change ho
   const [storeStatus, setStoreStatus] = useState('idle');
@@ -620,62 +628,60 @@ export default function App() {
     return () => backHandler.remove();
   }, [screen, tab, hourlyStep, rideData?.ride_id]);
 
+  // ── Splash animation + startup ──────────────────
   useEffect(() => {
-    (async () => {
-      try {
-        const sp = await AsyncStorage.getItem('userPhone');
-        const sn = await AsyncStorage.getItem('userName');
-        if (!sp) return;
-        setPhone(sp); setUserName(sn || 'Rider'); loadHistory(sp); loadWallet(sp); registerFCM(sp); loadOffers();
-        // Check for active hourly ride
-        const savedHourlyId = await AsyncStorage.getItem('activeHourlyId');
-        if (savedHourlyId) {
-          try {
-            const data = await apiGet('/api/hourly/active?phone=' + sp);
-            if (data.booking && ['pending','matched','active'].includes(data.booking.status)) {
-              setHourlyBooking({ ...data.booking, driver: data.driver || null });
-              setHourlyStep(data.booking.status === 'active' ? 'active' : 'waiting');
-              setScreen('hourly');
-              return;
-            } else {
-              await AsyncStorage.removeItem('activeHourlyId');
-            }
-          } catch (_e) {}
-        }
+    // Logo pop in
+    Animated.parallel([
+      Animated.spring(splashScale, { toValue: 1, friction: 5, tension: 60, useNativeDriver: true }),
+      Animated.timing(splashLogo, { toValue: 1, duration: 600, useNativeDriver: true }),
+    ]).start(() => {
+      // Tagline slides up
+      Animated.timing(splashTag, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+    });
 
-        // ── Active standard ride restore ─────────────────
-        const savedRideId = await AsyncStorage.getItem('activeStdRideId');
-        if (savedRideId) {
-          try {
-            const rs = await apiGet('/api/rides/status/' + savedRideId);
-            if (rs.ride && ['matched','arrived','started','requested'].includes(rs.ride.status)) {
-              const r = rs.ride;
-              setRideData({
-                ride_id: savedRideId,
-                fare: '₹' + Math.round(parseFloat(r.fare) || 0),
-                startOtp: r.start_otp || '',
-                driver: r.driver_name ? {
-                  name: r.driver_name, phone: r.driver_phone,
-                  vehicle_no: r.vehicle_no, vehicle_brand: r.vehicle_brand,
-                  vehicle_model: r.vehicle_model, upi_id: r.driver_upi_id,
-                } : null,
-              });
-              setPickup(r.pickup || '');
-              setDrop(r.drop_location || '');
-              if (r.pickup_lat) setPickupCoords({ lat: parseFloat(r.pickup_lat), lng: parseFloat(r.pickup_lng) });
-              if (r.drop_lat)   setDropCoords({ lat: parseFloat(r.drop_lat),   lng: parseFloat(r.drop_lng) });
-              setScreen(r.status === 'started' ? 'inride' : 'matching');
-              return;
-            } else {
-              await AsyncStorage.removeItem('activeStdRideId');
-            }
-          } catch (_e) {}
-        }
+    // After 2.6s, fade out and navigate
+    const timer = setTimeout(async () => {
+      Animated.timing(splashFade, { toValue: 0, duration: 400, useNativeDriver: true }).start(async () => {
+        try {
+          const sp = await AsyncStorage.getItem('userPhone');
+          const sn = await AsyncStorage.getItem('userName');
+          if (!sp) { setScreen('login'); return; }
+          setPhone(sp); setUserName(sn || ''); loadHistory(sp); loadWallet(sp); registerFCM(sp); loadOffers();
 
-        setScreen('home');
-      } catch (_e) {}
-    })();
+          // Active hourly ride check
+          const savedHourlyId = await AsyncStorage.getItem('activeHourlyId');
+          if (savedHourlyId) {
+            try {
+              const data = await apiGet('/api/hourly/active?phone=' + sp);
+              if (data.booking && ['pending','matched','active'].includes(data.booking.status)) {
+                setHourlyBooking({ ...data.booking, driver: data.driver || null });
+                setHourlyStep(data.booking.status === 'active' ? 'active' : 'waiting');
+                setScreen('hourly'); return;
+              } else { await AsyncStorage.removeItem('activeHourlyId'); }
+            } catch (_e) {}
+          }
+          // Active standard ride check
+          const savedRideId = await AsyncStorage.getItem('activeStdRideId');
+          if (savedRideId) {
+            try {
+              const rs = await apiGet('/api/rides/status/' + savedRideId);
+              if (rs.ride && ['matched','arrived','started','requested'].includes(rs.ride.status)) {
+                const r = rs.ride;
+                setRideData({ ride_id: savedRideId, fare: '₹' + Math.round(parseFloat(r.fare) || 0), startOtp: r.start_otp || '', driver: r.driver_name ? { name: r.driver_name, phone: r.driver_phone, vehicle_no: r.vehicle_no, vehicle_brand: r.vehicle_brand, vehicle_model: r.vehicle_model, upi_id: r.driver_upi_id } : null });
+                setPickup(r.pickup || ''); setDrop(r.drop_location || '');
+                if (r.pickup_lat) setPickupCoords({ lat: parseFloat(r.pickup_lat), lng: parseFloat(r.pickup_lng) });
+                if (r.drop_lat)   setDropCoords({ lat: parseFloat(r.drop_lat),   lng: parseFloat(r.drop_lng) });
+                setScreen(r.status === 'started' ? 'inride' : 'matching'); return;
+              } else { await AsyncStorage.removeItem('activeStdRideId'); }
+            } catch (_e) {}
+          }
+          setScreen('home');
+        } catch (_e) { setScreen('login'); }
+      });
+    }, 2600);
+    return () => clearTimeout(timer);
   }, []);
+
 
   // ─── RIDE POLLING — screen-agnostic, overlap guard, AsyncStorage sync ───
   useEffect(() => {
@@ -1283,15 +1289,38 @@ export default function App() {
       const data = await res.json();
       if (data.token) {
         await AsyncStorage.setItem('userPhone', phone);
-        await AsyncStorage.setItem('userName', userName || 'Rider');
-        setScreen('home'); setResult(''); loadHistory(phone); loadWallet(phone);
-        registerFCM(phone); loadOffers();
+        const isNew = !userName || userName === 'Rider' || userName === 'User' || !data.user?.name || data.user?.name === 'User';
+        if (isNew) {
+          // New user — collect name + gender first
+          Animated.timing(onboardFade, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+          setScreen('onboarding'); setResult('');
+        } else {
+          await AsyncStorage.setItem('userName', userName);
+          setScreen('home'); setResult(''); loadHistory(phone); loadWallet(phone);
+          registerFCM(phone); loadOffers();
+        }
     
       } else {
         setResult('❌ ' + (data.error || 'OTP galat hai'));
         shakeOtp();
       }
     } catch { setResult('❌ Server connect nahi hua'); }
+    setLoading(false);
+  };
+
+  const completeOnboarding = async () => {
+    if (!userName.trim()) { setResult('❌ Naam toh batao!'); return; }
+    setLoading(true);
+    try {
+      await fetch(`${API}/api/auth/update-name`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, name: userName.trim(), gender }),
+      });
+    } catch (_e) {}
+    await AsyncStorage.setItem('userName', userName.trim());
+    if (gender) await AsyncStorage.setItem('userGender', gender);
+    setResult('');
+    setScreen('home'); loadHistory(phone); loadWallet(phone); registerFCM(phone); loadOffers();
     setLoading(false);
   };
 
@@ -1342,6 +1371,97 @@ export default function App() {
     { id: 'luxury',  icon: '🚙', label: 'Ultra Luxury',  base: 80, rate: 25, eta: '7-10 min', tag: 'PREMIUM', tagColor: '#9C27B0', desc: 'Premium SUV experience' },
   ];
 
+
+  // ═══ SPLASH ═══
+  if (screen === 'splash') return (
+    <Animated.View style={{ flex: 1, backgroundColor: '#0D0D1A', alignItems: 'center', justifyContent: 'center', opacity: splashFade }}>
+      {/* Background circles */}
+      <View style={{ position: 'absolute', width: 400, height: 400, borderRadius: 200, backgroundColor: 'rgba(147,51,234,0.08)', top: -80, right: -80 }} />
+      <View style={{ position: 'absolute', width: 280, height: 280, borderRadius: 140, backgroundColor: 'rgba(233,69,96,0.06)', bottom: 40, left: -60 }} />
+
+      {/* Logo block */}
+      <Animated.View style={{ alignItems: 'center', opacity: splashLogo, transform: [{ scale: splashScale }] }}>
+        <View style={{ width: 110, height: 110, borderRadius: 32, backgroundColor: 'rgba(147,51,234,0.18)', borderWidth: 1.5, borderColor: 'rgba(147,51,234,0.35)', alignItems: 'center', justifyContent: 'center', marginBottom: 20, shadowColor: '#9333ea', shadowOpacity: 0.5, shadowRadius: 20, elevation: 12 }}>
+          <Text style={{ fontSize: 52 }}>🚖</Text>
+        </View>
+        <Text style={{ fontSize: 46, fontWeight: '900', color: '#fff', letterSpacing: -1.5 }}>Sppero</Text>
+      </Animated.View>
+
+      {/* Tagline */}
+      <Animated.View style={{ alignItems: 'center', marginTop: 14, opacity: splashTag, transform: [{ translateY: splashTag.interpolate({ inputRange: [0,1], outputRange: [16, 0] }) }] }}>
+        <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 15, letterSpacing: 0.5 }}>Lucknow ka smartest ride</Text>
+      </Animated.View>
+
+      {/* Bottom loader dots */}
+      <View style={{ position: 'absolute', bottom: 60, flexDirection: 'row', gap: 8 }}>
+        {[0,1,2].map(i => (
+          <PulseView key={i} style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: i === 0 ? '#9333ea' : 'rgba(255,255,255,0.2)' }} />
+        ))}
+      </View>
+    </Animated.View>
+  );
+
+  // ═══ ONBOARDING ═══
+  if (screen === 'onboarding') return (
+    <Animated.View style={{ flex: 1, backgroundColor: '#fff', opacity: onboardFade }}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 28 }} keyboardShouldPersistTaps="handled">
+        {/* Top purple wave */}
+        <View style={{ backgroundColor: '#0D0D1A', borderBottomLeftRadius: 40, borderBottomRightRadius: 40, paddingTop: 60, paddingBottom: 40, alignItems: 'center', marginHorizontal: -28, paddingHorizontal: 28 }}>
+          <View style={{ width: 80, height: 80, borderRadius: 24, backgroundColor: 'rgba(147,51,234,0.2)', borderWidth: 1, borderColor: 'rgba(147,51,234,0.4)', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+            <Text style={{ fontSize: 38 }}>👋</Text>
+          </View>
+          <Text style={{ fontSize: 26, fontWeight: '900', color: '#fff', textAlign: 'center', letterSpacing: -0.5 }}>Welcome to Sppero!</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13.5, marginTop: 8, textAlign: 'center', lineHeight: 20 }}>Lucknow ki sabse smart ride — sirf aapke liye{'\n'}Bas 2 cheezein aur aap ready hain 🚀</Text>
+        </View>
+
+        <View style={{ marginTop: 32 }}>
+          {/* Name */}
+          <Text style={{ fontSize: 13, fontWeight: '700', color: '#555', marginBottom: 8, letterSpacing: 0.3 }}>AAPKA NAAM</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 16, paddingHorizontal: 16, backgroundColor: '#fafafa', marginBottom: 28 }}>
+            <Text style={{ fontSize: 20, marginRight: 10 }}>✍️</Text>
+            <TextInput
+              style={{ flex: 1, fontSize: 16, fontWeight: '600', color: '#1a1a2e', paddingVertical: 16 }}
+              placeholder="Naam likho..."
+              placeholderTextColor="#bbb"
+              value={userName}
+              onChangeText={setUserName}
+              autoFocus
+            />
+          </View>
+
+          {/* Gender */}
+          <Text style={{ fontSize: 13, fontWeight: '700', color: '#555', marginBottom: 12, letterSpacing: 0.3 }}>AAPKA GENDER</Text>
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 36 }}>
+            {[
+              { id: 'male',   icon: '👨', label: 'Male' },
+              { id: 'female', icon: '👩', label: 'Female' },
+              { id: 'other',  icon: '🌈', label: 'Other' },
+            ].map(g => (
+              <TouchableOpacity
+                key={g.id}
+                onPress={() => setGender(g.id as any)}
+                style={{ flex: 1, alignItems: 'center', paddingVertical: 16, borderRadius: 16,
+                  backgroundColor: gender === g.id ? '#0D0D1A' : '#f5f5f5',
+                  borderWidth: 2, borderColor: gender === g.id ? '#9333ea' : '#ebebeb' }}>
+                <Text style={{ fontSize: 26, marginBottom: 6 }}>{g.icon}</Text>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: gender === g.id ? '#fff' : '#555' }}>{g.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {result ? <Text style={{ color: '#e94560', fontSize: 13, marginBottom: 12, textAlign: 'center' }}>{result}</Text> : null}
+
+          {/* CTA */}
+          <Bouncy onPress={completeOnboarding} disabled={loading || !userName.trim()} style={{ backgroundColor: !userName.trim() ? '#ccc' : '#0D0D1A', borderRadius: 18, paddingVertical: 18, alignItems: 'center', elevation: 6, shadowColor: '#9333ea', shadowOpacity: 0.3, shadowRadius: 12 }}>
+            <Text style={{ color: '#fff', fontSize: 17, fontWeight: '800', letterSpacing: 0.3 }}>
+              {loading ? '⏳ Saving...' : 'Chalte Hain! 🚀'}
+            </Text>
+          </Bouncy>
+          <Text style={{ color: '#bbb', fontSize: 12, textAlign: 'center', marginTop: 18 }}>Aapki profile 100% secure hai 🔒</Text>
+        </View>
+      </ScrollView>
+    </Animated.View>
+  );
 
   // ═══ LOGIN ═══
   if (screen === 'login') return (
