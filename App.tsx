@@ -533,7 +533,7 @@ export default function App() {
   useEffect(() => {
     if (Platform.OS === 'android') {
       Notifications.setNotificationChannelAsync('default', {
-        name: 'RideApp Notifications',
+        name: 'Sppero Notifications',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#e94560',
@@ -1112,7 +1112,7 @@ export default function App() {
       const orderRes = await fetch(`${API}/api/payment/create-order`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: fareNum, ride_id: rideData.ride_id }) });
       const order = await orderRes.json();
       if (!order.success) { setResult('❌ Order error'); return; }
-      RazorpayCheckout.open({ description: 'RideApp Trip', currency: 'INR', key: order.key_id, amount: order.amount, order_id: order.order_id, name: 'RideApp', prefill: { contact: phone, name: userName || 'User' }, theme: { color: '#e94560' } })
+      RazorpayCheckout.open({ description: 'Sppero Trip', currency: 'INR', key: order.key_id, amount: order.amount, order_id: order.order_id, name: 'Sppero', prefill: { contact: phone, name: userName || 'User' }, theme: { color: '#e94560' } })
         .then(async (data: any) => {
           await fetch(`${API}/api/payment/verify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, payment_id: data.razorpay_payment_id, amount: fareNum, method: 'online' }) });
           await fetch(`${API}/api/rides/payment-complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, payment_method: 'online', phone: phone || '9999999999' }) });
@@ -1314,7 +1314,7 @@ export default function App() {
   };
   const shareReferral = async () => {
     if (!referralData?.code) return;
-    try { await Share.share({ message: `🚖 RideApp join karo aur ₹50 pao! Mera referral code: ${referralData.code}` }); } catch (_e) {}
+    try { await Share.share({ message: `🚖 Sppero join karo aur ₹50 pao! Mera referral code: ${referralData.code}` }); } catch (_e) {}
   };
 
   const savePlace = async (label: string) => {
@@ -1349,7 +1349,7 @@ export default function App() {
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
         <View style={s.hero}>
           <Text style={s.heroIcon}>🚖</Text>
-          <Text style={s.heroTitle}>RideApp</Text>
+          <Text style={s.heroTitle}>Sppero</Text>
           <Text style={s.heroSub}>Lucknow ka sabse fast ride</Text>
         </View>
         <View style={s.card}>
@@ -3515,7 +3515,7 @@ export default function App() {
     const driverUpiId = rideData?.driver?.upi_id || '';
     const fareNum = parseInt(String(rideData?.fare).replace(/[^0-9]/g, '')) || fareCount;
     const upiLink = driverUpiId
-      ? `upi://pay?pa=${encodeURIComponent(driverUpiId)}&pn=${encodeURIComponent(rideData?.driver?.name || 'Driver')}&am=${fareNum}&cu=INR&tn=RideApp%20Trip`
+      ? `upi://pay?pa=${encodeURIComponent(driverUpiId)}&pn=${encodeURIComponent(rideData?.driver?.name || 'Driver')}&am=${fareNum}&cu=INR&tn=Sppero%20Trip`
       : '';
     const qrUrl = driverUpiId
       ? `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=10&data=${encodeURIComponent(upiLink)}`
