@@ -592,11 +592,16 @@ export default function App() {
   // ── Android Back Button ───────────────────────
   useEffect(() => {
     const backAction = () => {
-      if (screen === 'home' && tab === 'home') return false;
+      if (screen === 'home' && tab === 'home') {
+        // Active ride hai to home exit band — matching pe wapas bhejo
+        if (rideData?.ride_id) { setScreen('matching'); return true; }
+        return false;
+      }
       if (screen === 'home' && tab !== 'home') { setTab('home'); return true; }
       if (screen === 'otp') { setScreen('login'); return true; }
       if (screen === 'booking') { setScreen('home'); setPickupSugg([]); setDropSugg([]); setEta(''); setPromoCode(''); setPromoDiscount(0); return true; }
       if (screen === 'matching') { setShowCancelModal(true); return true; }
+      if (screen === 'inride') return true;  // trip chal rahi hai — back band
       if (screen === 'chat') { setScreen('matching'); return true; }
       if (screen === 'hourly-info') { setScreen('home'); return true; }
       if (screen === 'wallet') { setScreen('home'); setTab('profile'); return true; }
@@ -605,7 +610,6 @@ export default function App() {
       if (screen === 'policy') { setScreen('home'); return true; }
       if (screen === 'hourly') {
         if (hourlyStep === 'book') { setHPickupSugg([]); setHDropSugg([]); setScreen('home'); return true; }
-        // Block back during active/waiting — ride is in progress
         return true;
       }
       if (screen === 'payment') return true;
@@ -614,7 +618,7 @@ export default function App() {
     };
     const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
     return () => backHandler.remove();
-  }, [screen, tab, hourlyStep]);
+  }, [screen, tab, hourlyStep, rideData?.ride_id]);
 
   useEffect(() => {
     (async () => {
@@ -638,14 +642,44 @@ export default function App() {
             }
           } catch (_e) {}
         }
+
+        // ── Active standard ride restore ─────────────────
+        const savedRideId = await AsyncStorage.getItem('activeStdRideId');
+        if (savedRideId) {
+          try {
+            const rs = await apiGet('/api/rides/status/' + savedRideId);
+            if (rs.ride && ['matched','arrived','started','requested'].includes(rs.ride.status)) {
+              const r = rs.ride;
+              setRideData({
+                ride_id: savedRideId,
+                fare: '₹' + Math.round(parseFloat(r.fare) || 0),
+                startOtp: r.start_otp || '',
+                driver: r.driver_name ? {
+                  name: r.driver_name, phone: r.driver_phone,
+                  vehicle_no: r.vehicle_no, vehicle_brand: r.vehicle_brand,
+                  vehicle_model: r.vehicle_model, upi_id: r.driver_upi_id,
+                } : null,
+              });
+              setPickup(r.pickup || '');
+              setDrop(r.drop_location || '');
+              if (r.pickup_lat) setPickupCoords({ lat: parseFloat(r.pickup_lat), lng: parseFloat(r.pickup_lng) });
+              if (r.drop_lat)   setDropCoords({ lat: parseFloat(r.drop_lat),   lng: parseFloat(r.drop_lng) });
+              setScreen(r.status === 'started' ? 'inride' : 'matching');
+              return;
+            } else {
+              await AsyncStorage.removeItem('activeStdRideId');
+            }
+          } catch (_e) {}
+        }
+
         setScreen('home');
       } catch (_e) {}
     })();
   }, []);
 
-  // ─── RIDE POLLING — direct & robust (timeout + retry + overlap guard) ───
+  // ─── RIDE POLLING — screen-agnostic, overlap guard, AsyncStorage sync ───
   useEffect(() => {
-    if (!['matching','inride'].includes(screen) || !rideData?.ride_id) return;
+    if (!rideData?.ride_id) return;
     let busy = false;
     let stopped = false;
     const rid = rideData.ride_id;
@@ -670,11 +704,14 @@ export default function App() {
 
           if (st === 'completed') {
             stopped = true; clearInterval(iv);
-            setScreen('payment'); loadWallet(phone);
+            AsyncStorage.removeItem('activeStdRideId').catch(() => {});
+            setScreen((cur: Screen) => (cur === 'payment' || cur === 'postride') ? cur : 'payment');
+            loadWallet(phone);
           }
 
           if (st === 'cancelled') {
             stopped = true; clearInterval(iv);
+            AsyncStorage.removeItem('activeStdRideId').catch(() => {});
             const nd = await apiGet(`/api/notifications/latest?phone=${phone}`);
             setResult('❌ ' + (nd?.notification?.body || 'Ride cancel ho gayi'));
             setScreen('home'); setTab('home'); setRideData(null); setPickup(''); setDrop(''); setEta('');
@@ -686,7 +723,7 @@ export default function App() {
       busy = false;
     }, 3000);
     return () => { stopped = true; clearInterval(iv); };
-  }, [screen, rideData?.ride_id]);
+  }, [rideData?.ride_id]);
 
   // ── Hourly booking polling ──────────────────────
   useEffect(() => {
@@ -852,6 +889,7 @@ export default function App() {
           const ride = await apiGet(`/api/rides/status/${d.new_ride_id}`);
           if (ride.ride) {
             setRideData({ ride_id: d.new_ride_id, fare: `₹${Math.round(extReq.estimated_fare)}`, driver: ride.ride.driver, vehicle_type: ride.ride.ride_type, payment_method: ride.ride.payment_method });
+            AsyncStorage.setItem('activeStdRideId', String(d.new_ride_id)).catch(() => {});
             setPickup(extReq.extPickup || drop); setDrop(extDrop);
             setPaymentDone(false); setExtStep('done'); setExtReq(null);
             setScreen('matching');
@@ -1155,6 +1193,7 @@ export default function App() {
         try { await fetch(`${API}/api/promo/apply`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: promoCode, phone, ride_id: data.ride_id, discount: promoDiscount }) }); } catch (_e) {}
       }
   setRideData(data); setScreen('matching'); setResult('');
+      AsyncStorage.setItem('activeStdRideId', String(data.ride_id)).catch(() => {});
       ride.setRide(data); // Store mein naya ride — purana stale data auto-clear
       setBookTime(Date.now()); setCancelTimer(60);
       // Free cancels load
@@ -1498,6 +1537,20 @@ export default function App() {
               </View>
             </TouchableOpacity>
           </SlideUp>
+          {rideData?.ride_id && (
+            <SlideUp delay={125}>
+              <TouchableOpacity onPress={() => setScreen('matching')} style={{ backgroundColor: '#1565C0', borderRadius: 14, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', elevation: 5, shadowColor: '#1565C0', shadowOpacity: 0.35, shadowRadius: 8 }}>
+                <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                  <Text style={{ fontSize: 22 }}>🚗</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>Active Ride In Progress!</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12, marginTop: 2 }}>{drop ? `→ ${drop}` : 'Tap karo ride screen pe jao'}</Text>
+                </View>
+                <Text style={{ color: '#fff', fontSize: 24, fontWeight: '300' }}>›</Text>
+              </TouchableOpacity>
+            </SlideUp>
+          )}
           {hourlyBooking && ['pending','matched','active'].includes(hourlyBooking.status) && (
             <SlideUp delay={130}>
               <TouchableOpacity onPress={() => setScreen('hourly')} style={{ backgroundColor: '#e94560', borderRadius: 14, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', elevation: 4 }}>
@@ -3396,6 +3449,7 @@ export default function App() {
                   if (cd._error) setResult('❌ ' + cd.message);
                   else setResult(cd.penalty > 0 ? `⚠️ ${cd.message}` : `✅ ${cd.message}`);
                   ride.clearRide();
+                  AsyncStorage.removeItem('activeStdRideId').catch(() => {});
                 }
                 setShowCancelModal(false); setScreen('home'); setRideData(null); setPickup(''); setDrop(''); setEta('');
               }}>
@@ -3684,6 +3738,7 @@ export default function App() {
           setDriverLoc(null); setDriverEta(''); setDriverDist('');
           setExtStep('idle'); setExtReq(null); setExtDrop(''); setExtDropSugg([]); setExtMsg(''); setExtWindowSec(0);
           ride.clearRide();
+          AsyncStorage.removeItem('activeStdRideId').catch(() => {});
           loadHistory(phone); loadWallet(phone);
         }}>
           <Text style={s.btnTxt}>Done 🏠 Home Jao</Text>
