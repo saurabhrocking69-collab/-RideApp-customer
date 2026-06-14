@@ -487,6 +487,7 @@ export default function App() {
   const [referralInput, setReferralInput] = useState('');
   const [savedPlaces, setSavedPlaces] = useState<any[]>([]);
   const scratchAnim = useRef(new Animated.Value(1)).current;
+  const [showExtInfo, setShowExtInfo] = useState(false);
   const starAnims   = useRef([0,1,2,3,4].map(() => new Animated.Value(1))).current;
 
   // ── Hourly Booking State ──────────────────────
@@ -1292,13 +1293,14 @@ export default function App() {
     ]).start();
   };
 
-  const rideIcon = (type: string) => type === 'auto' ? '🛺' : type === 'bike' ? '🏍️' : type === 'eriksha' ? '🛵' : '🚕';
+  const rideIcon = (type: string) => type === 'auto' ? '🛺' : type === 'bike' ? '🏍️' : type === 'eriksha' ? '🛵' : type === 'luxury' ? '🚙' : '🚕';
 
   const RIDES = [
-    { id: 'auto',    icon: '🛺', label: 'Auto',    base: 25, rate: 12, eta: '3-5 min' },
-    { id: 'bike',    icon: '🏍️', label: 'Bike',    base: 15, rate: 8,  eta: '2-3 min', tag: 'FASTER' },
-    { id: 'car',     icon: '🚕', label: 'Car',      base: 40, rate: 15, eta: '5-7 min' },
-    { id: 'eriksha', icon: '🛵', label: 'E-Riksha', base: 20, rate: 10, eta: '4-6 min' },
+    { id: 'bike',    icon: '🏍️', label: 'Bike',        base: 15, rate: 8,  eta: '2-3 min', tag: 'FASTEST', tagColor: '#FF6B35', desc: 'Traffic cut karo fast' },
+    { id: 'auto',    icon: '🛺', label: 'Auto',         base: 25, rate: 12, eta: '3-5 min', tag: null,      tagColor: '',        desc: 'Budget friendly ride' },
+    { id: 'car',     icon: '🚕', label: 'Car',           base: 40, rate: 15, eta: '5-7 min', tag: 'POPULAR', tagColor: '#2196F3', desc: 'AC • Comfortable' },
+    { id: 'eriksha', icon: '🛵', label: 'E-Riksha',      base: 20, rate: 10, eta: '4-6 min', tag: 'ECO',     tagColor: '#4CAF50', desc: 'Eco-friendly ride' },
+    { id: 'luxury',  icon: '🚙', label: 'Ultra Luxury',  base: 80, rate: 25, eta: '7-10 min', tag: 'PREMIUM', tagColor: '#9C27B0', desc: 'Premium SUV experience' },
   ];
 
 
@@ -3065,88 +3067,191 @@ export default function App() {
     </KeyboardAvoidingView>
   );
 
-  // ═══ BOOKING — Map fit on top ═══
+  // ═══ BOOKING — Premium Redesign ═══
   if (screen === 'booking') return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={s.topBar}>
         <TouchableOpacity onPress={() => { setScreen('home'); setPickupSugg([]); setDropSugg([]); setEta(''); setPromoCode(''); setPromoDiscount(0); }} style={s.backBtn}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
-        <Text style={s.topTitle}>Ride Book Karo</Text>
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text style={s.topTitle}>Ride Book Karo</Text>
+          <Text style={{ color: '#9ba5b7', fontSize: 11, marginTop: 1 }}>Live fares • Lucknow</Text>
+        </View>
         <View style={{ width: 36 }} />
       </View>
       <View style={s.mapFit}>
         <MapWebView pickupCoords={pickupCoords} dropCoords={dropCoords} height={200} />
         <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} />
       </View>
-      <View style={{ flex: 1, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 16, paddingHorizontal: 16 }}>
-        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets contentContainerStyle={{ paddingBottom: 30 }}>
-          {/* GPS auto-location button — TOP, prominent */}
-          <TouchableOpacity
-            style={{ backgroundColor: '#1a1a2e', borderRadius: 14, padding: 14, marginBottom: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}
-            onPress={useMyLocation}>
-            <Text style={{ fontSize: 22 }}>📍</Text>
-            <View>
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Current Location Use Karo</Text>
-              <Text style={{ color: '#aaa', fontSize: 11, marginTop: 1 }}>GPS se pickup auto-fill hoga</Text>
+      <View style={{ flex: 1, backgroundColor: '#f5f6fa', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20 }}>
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets contentContainerStyle={{ paddingBottom: 32, paddingHorizontal: 16, paddingTop: 18 }}>
+
+          {/* GPS Button */}
+          <TouchableOpacity onPress={useMyLocation} style={{ backgroundColor: '#1a1a2e', borderRadius: 14, padding: 13, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#e94560', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 18 }}>📍</Text>
             </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Current Location Use Karo</Text>
+              <Text style={{ color: '#777', fontSize: 11, marginTop: 1 }}>GPS se pickup auto-fill hoga</Text>
+            </View>
+            <Text style={{ color: '#e94560', fontSize: 22, fontWeight: '300' }}>›</Text>
           </TouchableOpacity>
 
-          <View style={s.locBox}>
-            <View style={s.row}>
-              <View style={s.dotGreen} />
-              <TextInput style={[s.input, { flex: 1, marginBottom: 0, fontSize: 15 }]} placeholder="📍 Pickup location..." value={pickup} onChangeText={(t) => { setPickup(t); searchPlaces(t, 'pickup'); }} returnKeyType="next" />
+          {/* Location Card */}
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#4CAF50', borderWidth: 2, borderColor: '#a5d6a7' }} />
+              <TextInput style={{ flex: 1, fontSize: 14, color: '#1a1a2e', fontWeight: '500', paddingVertical: 6 }} placeholder="Pickup location..." placeholderTextColor="#bbb" value={pickup} onChangeText={(t) => { setPickup(t); searchPlaces(t, 'pickup'); }} returnKeyType="next" />
             </View>
             {pickupSugg.length > 0 && (
               <View style={[s.suggBox, { zIndex: 100 }]}>
                 {pickupSugg.slice(0, 5).map((sg, i) => (
-                  <TouchableOpacity key={i} style={[s.suggItem, { paddingVertical: 13 }]} onPress={() => { setPickup(sg.text); setPickupSugg([]); geocodePlace(sg.text, 'pickup'); if(drop) fetchEta(sg.text, drop); }}>
-                    <Text style={{ fontSize: 16, marginRight: 8 }}>📍</Text>
-                    <Text style={{ fontSize: 14, color: '#1a1a2e', flex: 1, fontWeight: '500' }} numberOfLines={2}>{sg.text}</Text>
+                  <TouchableOpacity key={i} style={[s.suggItem, { paddingVertical: 12 }]} onPress={() => { setPickup(sg.text); setPickupSugg([]); geocodePlace(sg.text, 'pickup'); if(drop) fetchEta(sg.text, drop); }}>
+                    <Text style={{ fontSize: 15, marginRight: 8 }}>📍</Text>
+                    <Text style={{ fontSize: 13, color: '#1a1a2e', flex: 1, fontWeight: '500' }} numberOfLines={2}>{sg.text}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
             )}
-            <View style={s.locDivider} />
-            <View style={s.row}>
-              <View style={s.dotRed} />
-              <TextInput style={[s.input, { flex: 1, marginBottom: 0, fontSize: 15 }]} placeholder="🎯 Drop location..." value={drop} onChangeText={(t) => { setDrop(t); searchPlaces(t, 'drop'); }} returnKeyType="done" />
+            <View style={{ height: 1, backgroundColor: '#f0f0f0', marginVertical: 8, marginLeft: 20 }} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: '#e94560' }} />
+              <TextInput style={{ flex: 1, fontSize: 14, color: '#1a1a2e', fontWeight: '500', paddingVertical: 6 }} placeholder="Drop location..." placeholderTextColor="#bbb" value={drop} onChangeText={(t) => { setDrop(t); searchPlaces(t, 'drop'); }} returnKeyType="done" />
             </View>
             {dropSugg.length > 0 && (
               <View style={[s.suggBox, { zIndex: 100 }]}>
                 {dropSugg.slice(0, 5).map((sg, i) => (
-                  <TouchableOpacity key={i} style={[s.suggItem, { paddingVertical: 13 }]} onPress={() => { setDrop(sg.text); setDropSugg([]); geocodePlace(sg.text, 'drop'); if(pickup) fetchEta(pickup, sg.text); }}>
-                    <Text style={{ fontSize: 16, marginRight: 8 }}>🎯</Text>
-                    <Text style={{ fontSize: 14, color: '#1a1a2e', flex: 1, fontWeight: '500' }} numberOfLines={2}>{sg.text}</Text>
+                  <TouchableOpacity key={i} style={[s.suggItem, { paddingVertical: 12 }]} onPress={() => { setDrop(sg.text); setDropSugg([]); geocodePlace(sg.text, 'drop'); if(pickup) fetchEta(pickup, sg.text); }}>
+                    <Text style={{ fontSize: 15, marginRight: 8 }}>🎯</Text>
+                    <Text style={{ fontSize: 13, color: '#1a1a2e', flex: 1, fontWeight: '500' }} numberOfLines={2}>{sg.text}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
             )}
           </View>
+
+          {/* ETA / Distance chip */}
           {eta ? (
-            <Animated.View style={{ backgroundColor: eta.includes('Calculate') ? '#fff3e0' : '#e8f5e9', borderRadius: 10, padding: 12, marginBottom: 10, alignItems: 'center' }}>
-              <Text style={{ color: eta.includes('Calculate') ? '#e65100' : '#2e7d32', fontWeight: '700', fontSize: 14 }}>{eta}</Text>
-            </Animated.View>
+            <View style={{ backgroundColor: eta.includes('Calculate') ? '#fff3e0' : '#e8f5e9', borderRadius: 12, padding: 12, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={{ fontSize: 18 }}>{eta.includes('Calculate') ? '🔄' : '🗺️'}</Text>
+              <Text style={{ color: eta.includes('Calculate') ? '#e65100' : '#2e7d32', fontWeight: '700', fontSize: 13, flex: 1 }}>{eta}</Text>
+            </View>
           ) : null}
-          <Text style={s.secTitle}>Ride Type</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
-            {RIDES.map(r => (
-              <TouchableOpacity key={r.id} style={[s.rideCard, rideType===r.id && s.rideCardActive]} onPress={() => setRideType(r.id)}>
-                <Text style={{ fontSize: 24 }}>{r.icon}</Text>
-                <Text style={[{ fontSize: 12, fontWeight: '700', marginTop: 4 }, rideType===r.id ? { color: '#fff' } : { color: '#333' }]}>{r.label}</Text>
-                <Text style={[{ fontSize: 10 }, rideType===r.id ? { color: '#ddd' } : { color: '#999' }]}>{r.eta}</Text>
-                {r.tag ? <View style={{ backgroundColor: '#4CAF50', borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1, marginTop: 2 }}><Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>{r.tag}</Text></View> : null}
-                <Text style={[{ fontSize: 12, fontWeight: 'bold', marginTop: 2 }, rideType===r.id ? { color: '#fff' } : { color: '#e94560' }]}>{fareEstimates[r.id] ? `₹${fareEstimates[r.id]}` : `₹${r.base}+`}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-          <View style={[s.row, { marginBottom: 12 }]}>
-            <TextInput style={[s.input, { flex: 1, marginBottom: 0 }]} placeholder="🎫 Promo code (RIDE50)" autoCapitalize="characters" value={promoCode} onChangeText={setPromoCode} />
-            <TouchableOpacity style={s.applyBtn} onPress={applyPromo}><Text style={{ color: '#e94560', fontWeight: 'bold' }}>Apply</Text></TouchableOpacity>
+
+          {/* Ride Type — 2-column grid */}
+          <Text style={{ fontSize: 15, fontWeight: '800', color: '#1a1a2e', marginBottom: 12 }}>Ride Type Chuniye</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 10 }}>
+            {RIDES.filter(r => r.id !== 'luxury').map(r => {
+              const isSel = rideType === r.id;
+              return (
+                <TouchableOpacity key={r.id} onPress={() => setRideType(r.id)} style={{ width: '47.5%', backgroundColor: isSel ? '#1a1a2e' : '#fff', borderRadius: 16, padding: 14, borderWidth: 2, borderColor: isSel ? '#e94560' : '#f0f0f0', shadowColor: '#000', shadowOpacity: isSel ? 0.15 : 0.04, shadowRadius: 8, elevation: isSel ? 4 : 1 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <Text style={{ fontSize: 28 }}>{r.icon}</Text>
+                    {r.tag ? <View style={{ backgroundColor: r.tagColor || '#4CAF50', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}><Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{r.tag}</Text></View> : null}
+                  </View>
+                  <Text style={{ fontSize: 14, fontWeight: '800', marginTop: 8, color: isSel ? '#fff' : '#1a1a2e' }}>{r.label}</Text>
+                  <Text style={{ fontSize: 11, color: isSel ? '#9ba5b7' : '#999', marginTop: 2 }}>{r.desc}</Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: '#e94560' }}>{fareEstimates[r.id] ? `₹${fareEstimates[r.id]}` : `₹${r.base}+`}</Text>
+                    <Text style={{ fontSize: 10, color: isSel ? '#777' : '#bbb' }}>⏱ {r.eta}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
-          {promoDiscount > 0 ? <View style={{ backgroundColor: '#e8f5e9', borderRadius: 10, padding: 10, marginBottom: 10 }}><Text style={{ color: '#2e7d32', fontWeight: '600', fontSize: 13, textAlign: 'center' }}>✅ ₹{promoDiscount} discount applied!</Text></View> : null}
+
+          {/* Ultra Luxury — full-width premium card */}
+          {(() => {
+            const lux = RIDES.find(r => r.id === 'luxury')!;
+            const isSel = rideType === 'luxury';
+            return (
+              <TouchableOpacity onPress={() => setRideType('luxury')} style={{ backgroundColor: isSel ? '#1a1a2e' : '#fff', borderRadius: 18, padding: 16, marginBottom: 14, borderWidth: 2, borderColor: isSel ? '#9C27B0' : '#e8d5f5', shadowColor: '#9C27B0', shadowOpacity: isSel ? 0.3 : 0.08, shadowRadius: 12, elevation: isSel ? 6 : 2 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                  <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: isSel ? '#7B1FA2' : '#f3e5f5', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 30 }}>{lux.icon}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '800', color: isSel ? '#fff' : '#1a1a2e' }}>{lux.label}</Text>
+                      <View style={{ backgroundColor: '#9C27B0', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
+                        <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800', letterSpacing: 0.8 }}>★ PREMIUM</Text>
+                      </View>
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+                      {['🛋️ Leather', '❄️ AC', '⭐ Top Driver', '🎵 Music'].map(f => (
+                        <View key={f} style={{ backgroundColor: isSel ? 'rgba(255,255,255,0.1)' : '#f3e5f5', borderRadius: 7, paddingHorizontal: 7, paddingVertical: 3 }}>
+                          <Text style={{ color: isSel ? '#e0b3ff' : '#7B1FA2', fontSize: 10, fontWeight: '600' }}>{f}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={{ fontSize: 16, fontWeight: '800', color: '#9C27B0' }}>{fareEstimates['luxury'] ? `₹${fareEstimates['luxury']}` : `₹${lux.base}+`}</Text>
+                    <Text style={{ fontSize: 10, color: isSel ? '#9ba5b7' : '#aaa', marginTop: 3 }}>⏱ {lux.eta}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          })()}
+
+          {/* Promo Code */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', borderRadius: 13, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: '#f0f0f0', elevation: 1 }}>
+            <Text style={{ fontSize: 18 }}>🎫</Text>
+            <TextInput style={{ flex: 1, fontSize: 13, color: '#1a1a2e', fontWeight: '600' }} placeholder="Promo code daalo (RIDE50)" placeholderTextColor="#ccc" autoCapitalize="characters" value={promoCode} onChangeText={setPromoCode} />
+            <TouchableOpacity onPress={applyPromo} style={{ backgroundColor: '#1a1a2e', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8 }}>
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>Apply</Text>
+            </TouchableOpacity>
+          </View>
+          {promoDiscount > 0 ? (
+            <View style={{ backgroundColor: '#e8f5e9', borderRadius: 10, padding: 10, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={{ fontSize: 16 }}>✅</Text>
+              <Text style={{ color: '#2e7d32', fontWeight: '700', fontSize: 13 }}>₹{promoDiscount} discount applied!</Text>
+            </View>
+          ) : null}
+
+          {/* Ride Extension Info Card */}
+          <TouchableOpacity onPress={() => setShowExtInfo(v => !v)} style={{ backgroundColor: '#fff', borderRadius: 14, marginBottom: 14, overflow: 'hidden', borderWidth: 1.5, borderColor: '#bbdefb' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 10 }}>
+              <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#e3f2fd', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontSize: 20 }}>🔄</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: '#1565C0' }}>New: Ride Extension Feature</Text>
+                <Text style={{ fontSize: 11, color: '#888', marginTop: 1 }}>Trip ke baad same driver ko dobara use karo</Text>
+              </View>
+              <Text style={{ fontSize: 14, color: '#1565C0', fontWeight: '700' }}>{showExtInfo ? '▲' : '▼'}</Text>
+            </View>
+            {showExtInfo ? (
+              <View style={{ backgroundColor: '#e3f2fd', padding: 14, gap: 8 }}>
+                {[
+                  ['⏱️', 'Trip complete hone ke 15 minute tak available'],
+                  ['🚗', 'Same driver — already aapke saath hai'],
+                  ['📍', 'New drop location dalo, fare auto-calculate hoga'],
+                  ['⚡', 'Driver ko 60 seconds ka response time milta hai'],
+                  ['✅', 'Accept hote hi driver assign — koi wait nahi'],
+                  ['❌', 'Driver free hona chahiye (no active ride)'],
+                  ['🕒', '15 min baad feature expire — fresh ride book karo'],
+                ].map(([icon, rule], i) => (
+                  <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+                    <Text style={{ fontSize: 14 }}>{icon}</Text>
+                    <Text style={{ fontSize: 12, color: '#1565C0', flex: 1, fontWeight: '500', lineHeight: 18 }}>{rule}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+          </TouchableOpacity>
+
           {result ? <Text style={s.err}>{result}</Text> : null}
-          <Bouncy style={[s.btn, loading && { opacity: 0.7 }]} onPress={bookRide} disabled={loading}>
-            <Text style={s.btnTxt}>{loading ? '🔍 Driver dhundh raha hai...' : 'Ride Book Karo 🚀'}</Text>
+
+          {/* Book Button */}
+          <Bouncy style={[{ borderRadius: 16, overflow: 'hidden' }, loading && { opacity: 0.7 }]} onPress={bookRide} disabled={loading}>
+            <View style={{ backgroundColor: loading ? '#aaa' : '#e94560', padding: 18, alignItems: 'center', borderRadius: 16 }}>
+              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16, letterSpacing: 0.3 }}>
+                {loading ? '🔍 Driver dhundh raha hai...' : `🚀 Ride Book Karo${fareEstimates[rideType] ? '  •  ₹' + fareEstimates[rideType] : ''}`}
+              </Text>
+            </View>
           </Bouncy>
+
         </ScrollView>
       </View>
     </KeyboardAvoidingView>
