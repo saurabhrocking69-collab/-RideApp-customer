@@ -443,6 +443,15 @@ export default function App() {
   const [review, setReview]           = useState('');
   const [paymentDone, setPaymentDone] = useState(false);
   const [showUpiQr, setShowUpiQr] = useState(false);
+  // Ride Extension (same driver, new drop)
+  const [extReq, setExtReq]           = useState<any>(null);   // { id, driver_name, estimated_fare }
+  const [extStep, setExtStep]         = useState<'idle'|'form'|'waiting'|'done'>('idle');
+  const [extDrop, setExtDrop]         = useState('');
+  const [extDropCoords, setExtDropCoords] = useState<any>(null);
+  const [extDropSugg, setExtDropSugg] = useState<any[]>([]);
+  const [extRespSec, setExtRespSec]   = useState(60);
+  const [extWindowSec, setExtWindowSec] = useState(900); // 15-min window
+  const [extMsg, setExtMsg]           = useState('');
   const [historyRides, setHistoryRides] = useState<any[]>([]);
   const [driverLoc, setDriverLoc]     = useState<any>(null);
   const [walletBalance, setWalletBalance] = useState(0);
@@ -830,6 +839,40 @@ export default function App() {
     return () => clearInterval(iv);
   }, [screen, rideData?.ride_id]);
 
+  // Extension polling — customer waits for driver to accept/reject
+  useEffect(() => {
+    if (screen !== 'postride' || extStep !== 'waiting' || !extReq?.id) return;
+    const iv = setInterval(async () => {
+      try {
+        const d = await apiGet(`/api/rides/extension-status/${extReq.id}`);
+        setExtRespSec(d.seconds_left ?? 0);
+        if (d.status === 'accepted' && d.new_ride_id) {
+          clearInterval(iv);
+          const ride = await apiGet(`/api/rides/status/${d.new_ride_id}`);
+          if (ride.ride) {
+            setRideData({ ride_id: d.new_ride_id, fare: `₹${Math.round(extReq.estimated_fare)}`, driver: ride.ride.driver, vehicle_type: ride.ride.ride_type, payment_method: ride.ride.payment_method });
+            setPickup(extReq.extPickup || drop); setDrop(extDrop);
+            setPaymentDone(false); setExtStep('done'); setExtReq(null);
+            setScreen('matching');
+          }
+        } else if (d.status === 'rejected') {
+          clearInterval(iv); setExtStep('idle'); setExtMsg('Driver ne reject kiya — naya ride book karo ya koi aur driver try karo');
+        } else if (d.status === 'expired' || (d.seconds_left !== undefined && d.seconds_left <= 0)) {
+          clearInterval(iv); setExtStep('idle'); setExtMsg('Driver ne respond nahi kiya — naya ride book karo');
+        }
+      } catch (_e) {}
+    }, 2000);
+    return () => clearInterval(iv);
+  }, [screen, extStep, extReq?.id]);
+
+  // Extension 15-min window countdown on postride screen
+  useEffect(() => {
+    if (screen !== 'postride') return;
+    setExtWindowSec(900); setExtMsg('');
+    const iv = setInterval(() => setExtWindowSec(s => { if (s <= 1) { clearInterval(iv); return 0; } return s - 1; }), 1000);
+    return () => clearInterval(iv);
+  }, [screen]);
+
   const loadHistory = async (ph: string) => {
     try { const r = await fetch(`${API}/api/rides/history?phone=${ph}`); const d = await r.json(); setHistoryRides(d.rides || []); } catch (_e) {}
   };
@@ -895,6 +938,47 @@ export default function App() {
       const loc  = data.results?.[0]?.geometry?.location;
       if (loc) { type === 'pickup' ? setPickupCoords({ lat: loc.lat, lng: loc.lng }) : setDropCoords({ lat: loc.lat, lng: loc.lng }); }
     } catch (_e) {}
+  };
+
+  const searchExtDrop = async (text: string) => {
+    if (text.length < 3) { setExtDropSugg([]); return; }
+    try {
+      const res = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${MAPS_KEY}&components=country:in&location=26.8467,80.9462&radius=50000`);
+      const data = await res.json();
+      setExtDropSugg(data.predictions?.map((p: any) => ({ id: p.place_id, text: p.description })) || []);
+    } catch (_e) {}
+  };
+
+  const geocodeExtDrop = async (address: string) => {
+    try {
+      const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${MAPS_KEY}`);
+      const data = await res.json();
+      const loc = data.results?.[0]?.geometry?.location;
+      if (loc) setExtDropCoords({ lat: loc.lat, lng: loc.lng });
+    } catch (_e) {}
+  };
+
+  const sendExtensionRequest = async () => {
+    if (!extDrop || !rideData?.ride_id) return;
+    setLoading(true);
+    try {
+      const data = await apiPost('/api/rides/extension-request', {
+        original_ride_id: rideData.ride_id,
+        customer_phone: phone,
+        new_drop: extDrop,
+        new_drop_lat: extDropCoords?.lat || null,
+        new_drop_lng: extDropCoords?.lng || null,
+      });
+      if (data.success) {
+        setExtReq({ id: data.extension_id, driver_name: data.driver_name, driver_phone: data.driver_phone, estimated_fare: data.estimated_fare, extPickup: drop });
+        setExtRespSec(60);
+        setExtStep('waiting');
+      } else {
+        setExtMsg(data.error || 'Request nahi bheji ja saki');
+        if (data.expired || data.busy) setExtStep('idle');
+      }
+    } catch (_e) { setExtMsg('Network error — retry karo'); }
+    setLoading(false);
   };
 
   const fetchEta = async (origin: string, dest: string) => {
@@ -3424,13 +3508,76 @@ export default function App() {
             </TouchableOpacity>
           ))}
         </View>
-        <Bouncy style={s.btn} onPress={async () => {
+        {/* ── Ride Extension ── */}
+        {extWindowSec > 0 && extStep === 'idle' && (
+          <View style={{ backgroundColor: '#1a1a2e', borderRadius: 16, padding: 16, marginTop: 8, marginBottom: 4 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <Text style={{ fontSize: 22, marginRight: 10 }}>🔄</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>Same Driver — Naya Destination?</Text>
+                <Text style={{ color: '#aaa', fontSize: 11, marginTop: 2 }}>Yahi driver aapko aur kahin le ja sakta hai • {Math.floor(extWindowSec / 60)}:{String(extWindowSec % 60).padStart(2,'0')} bacha hai</Text>
+              </View>
+            </View>
+            {extMsg ? <Text style={{ color: '#e94560', fontSize: 12, marginBottom: 8 }}>{extMsg}</Text> : null}
+            <Bouncy style={{ backgroundColor: '#e94560', borderRadius: 12, padding: 12, alignItems: 'center' }} onPress={() => { setExtStep('form'); setExtMsg(''); }}>
+              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>➕ Extend Ride — Naya Location</Text>
+            </Bouncy>
+          </View>
+        )}
+
+        {extStep === 'form' && (
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginTop: 8, marginBottom: 4, elevation: 3 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={{ fontSize: 20, marginRight: 8 }}>📍</Text>
+              <Text style={{ fontWeight: 'bold', fontSize: 15, color: '#1a1a2e', flex: 1 }}>Naya Drop Location</Text>
+              <TouchableOpacity onPress={() => { setExtStep('idle'); setExtDrop(''); setExtDropSugg([]); }}><Text style={{ color: '#999', fontSize: 18 }}>✕</Text></TouchableOpacity>
+            </View>
+            <TextInput
+              style={{ borderWidth: 1.5, borderColor: '#e94560', borderRadius: 10, padding: 12, fontSize: 14, color: '#1a1a2e', marginBottom: 6 }}
+              placeholder="Kahan jana hai? Location likhein..." placeholderTextColor="#bbb"
+              value={extDrop} onChangeText={t => { setExtDrop(t); searchExtDrop(t); }}
+            />
+            {extDropSugg.length > 0 && (
+              <View style={{ backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: '#eee', marginBottom: 8, maxHeight: 180, overflow: 'hidden' }}>
+                {extDropSugg.slice(0, 4).map((sg: any, i: number) => (
+                  <TouchableOpacity key={i} style={{ padding: 12, borderBottomWidth: i < extDropSugg.length - 1 ? 1 : 0, borderColor: '#f5f5f5', flexDirection: 'row', alignItems: 'center' }}
+                    onPress={() => { setExtDrop(sg.text); setExtDropSugg([]); geocodeExtDrop(sg.text); }}>
+                    <Text style={{ fontSize: 14, marginRight: 8 }}>📍</Text>
+                    <Text style={{ fontSize: 13, color: '#1a1a2e', flex: 1 }} numberOfLines={2}>{sg.text}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+            {extMsg ? <Text style={{ color: '#e94560', fontSize: 12, marginBottom: 8 }}>{extMsg}</Text> : null}
+            <Bouncy style={[s.btn, { marginTop: 4 }]} onPress={sendExtensionRequest} disabled={!extDrop || loading}>
+              <Text style={s.btnTxt}>{loading ? '⏳ Bhej rahe hain...' : '📤 Driver ko Request Bhejo'}</Text>
+            </Bouncy>
+          </View>
+        )}
+
+        {extStep === 'waiting' && extReq && (
+          <View style={{ backgroundColor: '#fff3e0', borderRadius: 16, padding: 18, marginTop: 8, marginBottom: 4, alignItems: 'center', borderWidth: 2, borderColor: '#ff9800' }}>
+            <Text style={{ fontSize: 32, marginBottom: 6 }}>⏳</Text>
+            <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#e65100', marginBottom: 4 }}>Driver se Confirmation Ka Intezaar...</Text>
+            <Text style={{ color: '#555', fontSize: 13, marginBottom: 2 }}>{extReq.driver_name} ko request bheji — {extDrop}</Text>
+            <Text style={{ color: '#e94560', fontSize: 22, fontWeight: 'bold', marginTop: 4 }}>₹{extReq.estimated_fare}</Text>
+            <View style={{ backgroundColor: '#ffe0b2', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6, marginTop: 10, marginBottom: 12 }}>
+              <Text style={{ color: '#bf360c', fontWeight: 'bold', fontSize: 16 }}>{extRespSec}s</Text>
+            </View>
+            <TouchableOpacity onPress={() => { setExtStep('idle'); setExtMsg('Request cancel kar di'); }} style={{ borderWidth: 1, borderColor: '#bbb', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8 }}>
+              <Text style={{ color: '#888', fontSize: 13 }}>Cancel Request</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <Bouncy style={[s.btn, { marginTop: extWindowSec > 0 ? 8 : 0 }]} onPress={async () => {
           if (rating > 0 && rideData?.ride_id) {
             try { await fetch(`${API}/api/rides/rate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, rating, review, tip }) }); } catch (_e) {}
           }
           setScreen('home'); setPickup(''); setDrop(''); setRating(0); setTab('home');
           setRideData(null); setPaymentDone(false); setResult(''); setScratchCard(null); setScratched(false); setEta(''); setPromoDiscount(0); setPromoCode(''); setUnreadChat(0);
           setDriverLoc(null); setDriverEta(''); setDriverDist('');
+          setExtStep('idle'); setExtReq(null); setExtDrop(''); setExtDropSugg([]); setExtMsg(''); setExtWindowSec(0);
           ride.clearRide();
           loadHistory(phone); loadWallet(phone);
         }}>
