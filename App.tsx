@@ -1310,7 +1310,12 @@ export default function App() {
   const sendOtp = async () => {
     if (!phone || phone.length < 10) { setResult('❌ Sahi phone number likho'); return; }
     setLoading(true);
-    try { const res = await fetch(`${API}/api/auth/send-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) }); const data = await res.json(); setOtpSent(data.otp || ''); setScreen('otp'); setResult(''); } catch { setResult('❌ Server connect nahi hua'); }
+    try {
+      const res = await fetch(`${API}/api/auth/send-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
+      const data = await res.json();
+      if (data.error) { setResult('❌ ' + data.error); setLoading(false); return; }
+      setOtpSent(data.otp || ''); setScreen('otp'); setResult('');
+    } catch { setResult('❌ Server connect nahi hua'); }
     setLoading(false);
   };
   const verifyOtp = async (otpOverride?: string) => {
