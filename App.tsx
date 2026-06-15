@@ -561,15 +561,30 @@ export default function App() {
       }),
     });
 
-    // Notification receive hone pe
-    const sub1 = Notifications.addNotificationReceivedListener(notification => {
-      console.log('📱 Notification received:', notification);
-    });
+    const sub1 = Notifications.addNotificationReceivedListener(_n => {});
 
-    // Notification tap karne pe
-    const sub2 = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log('👆 Notification tapped:', response);
-    });
+    // Notification tap → navigate to right screen (app in background or killed)
+    const handleNotifTap = async (response: any) => {
+      const data = response?.notification?.request?.content?.data as any;
+      if (!data?.type) return;
+      const rideId = data.ride_id;
+      if (rideId) await AsyncStorage.setItem('activeStdRideId', String(rideId)).catch(() => {});
+      switch (data.type) {
+        case 'ride_matched':
+        case 'driver_arrived':
+          setScreen('matching'); break;
+        case 'trip_started':
+          setScreen('inride'); break;
+        case 'trip_completed':
+          setScreen('payment'); break;
+        case 'ride_cancelled':
+          setScreen('home'); break;
+      }
+    };
+    const sub2 = Notifications.addNotificationResponseReceivedListener(handleNotifTap);
+
+    // Handle tap when app was fully killed
+    Notifications.getLastNotificationResponseAsync().then(r => { if (r) handleNotifTap(r); });
 
     return () => {
       sub1.remove();
@@ -667,14 +682,20 @@ export default function App() {
           if (savedRideId) {
             try {
               const rs = await apiGet('/api/rides/status/' + savedRideId);
-              if (rs.ride && ['matched','arrived','started','requested'].includes(rs.ride.status)) {
+              const LIVE = ['requested','matched','arrived','started','completed'];
+              if (rs.ride && LIVE.includes(rs.ride.status)) {
                 const r = rs.ride;
-                setRideData({ ride_id: savedRideId, fare: '₹' + Math.round(parseFloat(r.fare) || 0), startOtp: r.start_otp || '', driver: r.driver_name ? { name: r.driver_name, phone: r.driver_phone, vehicle_no: r.vehicle_no, vehicle_brand: r.vehicle_brand, vehicle_model: r.vehicle_model, upi_id: r.driver_upi_id } : null });
+                const driverObj = r.driver_name ? { name: r.driver_name, phone: r.driver_phone, vehicle_no: r.vehicle_no, vehicle_brand: r.vehicle_brand, vehicle_model: r.vehicle_model, upi_id: r.driver_upi_id } : null;
+                setRideData({ ride_id: savedRideId, fare: '₹' + Math.round(parseFloat(r.fare) || 0), startOtp: r.start_otp || '', driver: driverObj });
                 setPickup(r.pickup || ''); setDrop(r.drop_location || '');
                 if (r.pickup_lat) setPickupCoords({ lat: parseFloat(r.pickup_lat), lng: parseFloat(r.pickup_lng) });
                 if (r.drop_lat)   setDropCoords({ lat: parseFloat(r.drop_lat),   lng: parseFloat(r.drop_lng) });
                 joinRideSocket(savedRideId);
-                setScreen(r.status === 'started' ? 'inride' : 'matching'); return;
+                connectSocket(sp);
+                // Route to correct screen based on status
+                if (r.status === 'completed') { setScreen('payment'); return; }
+                if (r.status === 'started')   { setScreen('inride');  return; }
+                setScreen('matching'); return;
               } else { await AsyncStorage.removeItem('activeStdRideId'); }
             } catch (_e) {}
           }
