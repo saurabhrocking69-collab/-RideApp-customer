@@ -13,6 +13,7 @@ import * as Device from 'expo-device';
 import { apiGet, apiPost } from './api';
 import { useRideStore } from './store';
 import { WebView } from 'react-native-webview';
+import { io, Socket } from 'socket.io-client';
 
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 const API = 'https://rideapp-backend-production-5e1c.up.railway.app';
@@ -424,6 +425,7 @@ export default function App() {
     });
     return unsub;
   }, []);
+  const socketRef = useRef<Socket | null>(null);
   const [phone, setPhone]             = useState('');
   const [otp, setOtp]                 = useState('');
   const [otpSent, setOtpSent]         = useState('');
@@ -671,6 +673,7 @@ export default function App() {
                 setPickup(r.pickup || ''); setDrop(r.drop_location || '');
                 if (r.pickup_lat) setPickupCoords({ lat: parseFloat(r.pickup_lat), lng: parseFloat(r.pickup_lng) });
                 if (r.drop_lat)   setDropCoords({ lat: parseFloat(r.drop_lat),   lng: parseFloat(r.drop_lng) });
+                joinRideSocket(savedRideId);
                 setScreen(r.status === 'started' ? 'inride' : 'matching'); return;
               } else { await AsyncStorage.removeItem('activeStdRideId'); }
             } catch (_e) {}
@@ -727,7 +730,7 @@ export default function App() {
         }
       } catch (_e) {}
       busy = false;
-    }, 3000);
+    }, 6000); // Socket handles real-time; polling is fallback
     return () => { stopped = true; clearInterval(iv); };
   }, [rideData?.ride_id]);
 
@@ -1200,6 +1203,7 @@ export default function App() {
       }
   setRideData(data); setScreen('matching'); setResult('');
       AsyncStorage.setItem('activeStdRideId', String(data.ride_id)).catch(() => {});
+      joinRideSocket(data.ride_id);
       ride.setRide(data); // Store mein naya ride — purana stale data auto-clear
       setBookTime(Date.now()); setCancelTimer(60);
       // Free cancels load
@@ -1297,7 +1301,7 @@ export default function App() {
         } else {
           await AsyncStorage.setItem('userName', userName);
           setScreen('home'); setResult(''); loadHistory(phone); loadWallet(phone);
-          registerFCM(phone); loadOffers();
+          registerFCM(phone); loadOffers(); connectSocket(phone);
         }
     
       } else {
@@ -1321,7 +1325,37 @@ export default function App() {
     if (gender) await AsyncStorage.setItem('userGender', gender);
     setResult('');
     setScreen('home'); loadHistory(phone); loadWallet(phone); registerFCM(phone); loadOffers();
+    connectSocket(phone);
     setLoading(false);
+  };
+
+  const connectSocket = (userPhone: string) => {
+    if (socketRef.current?.connected) return;
+    const s = io(API, { transports: ['websocket'], autoConnect: true });
+    s.on('connect', () => {
+      // Listen for live ride status updates — no polling needed
+      s.on('rideUpdate', (data: any) => {
+        const st = data.status;
+        if (st === 'matched' || st === 'arrived') {
+          setRideData((p: any) => p ? { ...p, ...(data.driver ? { driver: data.driver } : {}) } : p);
+        }
+        if (st === 'started') setScreen('inride');
+        if (st === 'completed') {
+          AsyncStorage.removeItem('activeStdRideId').catch(() => {});
+          setScreen((cur: Screen) => (cur === 'payment' || cur === 'postride') ? cur : 'payment');
+          loadWallet(userPhone);
+        }
+        if (st === 'cancelled') {
+          AsyncStorage.removeItem('activeStdRideId').catch(() => {});
+          setResult('❌ Ride cancel ho gayi'); setScreen('home'); setRideData(null);
+        }
+      });
+    });
+    socketRef.current = s;
+  };
+
+  const joinRideSocket = (rideId: string | number) => {
+    socketRef.current?.emit('joinRide', { rideId });
   };
 
   const sendChat = async () => {
