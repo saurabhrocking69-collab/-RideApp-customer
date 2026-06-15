@@ -469,11 +469,7 @@ export default function App() {
   const [walletTxns, setWalletTxns]   = useState<any[]>([]);
   const [walletStats, setWalletStats] = useState<any>({});
   const [walletTxnTab, setWalletTxnTab] = useState<'all'|'earn'|'spend'|'reward'>('all');
-  const [walletWebView, setWalletWebView] = useState(false);
-  const [walletWebViewUrl, setWalletWebViewUrl] = useState('');
-  const [walletAddAmt, setWalletAddAmt] = useState(0);
   const [walletAddInput, setWalletAddInput] = useState('');
-  const [walletPaymentId, setWalletPaymentId] = useState('');
   const [scratchCard, setScratchCard] = useState<any>(null);
   const [scratched, setScratched]     = useState(false);
   const [eta, setEta]                 = useState('');
@@ -964,24 +960,39 @@ export default function App() {
     try { const r = await fetch(`${API}/api/loyalty/my-points?phone=${ph}`); const d = await r.json(); setLoyaltyPoints(d.points || 0); setLoyaltyCashback(d.cashback_available || 0); } catch (_e) {}
   };
 
-  const openRazorpayTopup = (amt: number) => {
-    const paise = Math.round(amt * 100);
-    const url = `https://razorpay.me/@rajawat101?amount=${paise}`;
-    setWalletAddAmt(amt);
-    setWalletWebViewUrl(url);
-    setWalletWebView(true);
-  };
-  const confirmTopup = async (paymentId: string) => {
+  const openRazorpayTopup = async (amt: number) => {
+    if (amt < 1) return;
     try {
-      const res = await fetch(`${API}/api/wallet/topup/confirm`, {
+      const r = await fetch(`${API}/api/wallet/topup/order`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, amount: walletAddAmt, payment_id: paymentId }),
+        body: JSON.stringify({ phone, amount: amt }),
       });
-      const d = await res.json();
-      if (d.success) { setWalletBalance(d.balance); await loadWalletDetail(phone); }
-      setWalletWebView(false);
-      setWalletPaymentId('');
-    } catch (_e) { setWalletWebView(false); }
+      const d = await r.json();
+      if (!d.success) { setResult('❌ ' + (d.error || 'Payment start nahi hua')); return; }
+      RazorpayCheckout.open({
+        key: d.key_id,
+        amount: d.amount,
+        currency: d.currency || 'INR',
+        order_id: d.order_id,
+        name: 'Sppero',
+        description: `Wallet Recharge ₹${amt}`,
+        prefill: { contact: phone },
+        theme: { color: '#e94560' },
+      }).then(async (payment: any) => {
+        const vr = await fetch(`${API}/api/wallet/topup/verify`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phone,
+            razorpay_order_id: payment.razorpay_order_id,
+            razorpay_payment_id: payment.razorpay_payment_id,
+            razorpay_signature: payment.razorpay_signature,
+            amount: amt,
+          }),
+        });
+        const vd = await vr.json();
+        if (vd.success) { setWalletBalance(vd.balance); await loadWalletDetail(phone); }
+      }).catch((_e: any) => {});
+    } catch (_e) { setResult('❌ Server error'); }
   };
   const loadReferral = async () => {
     try { const r = await fetch(`${API}/api/referral/my-code?phone=${phone}`); const d = await r.json(); setReferralData(d); } catch (_e) {}
@@ -2008,67 +2019,6 @@ export default function App() {
           ))}
         </ScrollView>
 
-        {/* Razorpay.me WebView modal */}
-        {walletWebView && (
-          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#fff', zIndex: 999 }}>
-            <View style={{ backgroundColor: '#1a1a2e', paddingTop: 50, paddingBottom: 14, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center' }}>
-              <TouchableOpacity onPress={() => setWalletWebView(false)} style={{ marginRight: 14 }}>
-                <Text style={{ color: '#fff', fontSize: 20 }}>✕</Text>
-              </TouchableOpacity>
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700', flex: 1 }}>Pay ₹{walletAddAmt} via Razorpay</Text>
-            </View>
-            <WebView
-              source={{ uri: walletWebViewUrl }}
-              style={{ flex: 1 }}
-              onNavigationStateChange={(navState) => {
-                const url = navState.url || '';
-                if (url.includes('razorpay.me') && (url.includes('success') || url.includes('payment_id') || url.includes('congratulations'))) {
-                  const match = url.match(/payment_id=([^&]+)/);
-                  const pid = match?.[1] || `manual_${Date.now()}`;
-                  confirmTopup(pid);
-                }
-              }}
-              injectedJavaScript={`
-                (function() {
-                  const observer = new MutationObserver(() => {
-                    const body = document.body.innerText || '';
-                    if (body.includes('Payment Successful') || body.includes('Payment successful') || body.includes('Thank you') || body.includes('success')) {
-                      const pidMatch = body.match(/pay_[A-Za-z0-9]+/);
-                      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'payment_success', payment_id: pidMatch ? pidMatch[0] : 'manual_${Date.now()}' }));
-                    }
-                  });
-                  observer.observe(document.body, { childList: true, subtree: true });
-                })();
-                true;
-              `}
-              onMessage={(event) => {
-                try {
-                  const data = JSON.parse(event.nativeEvent.data);
-                  if (data.type === 'payment_success') { confirmTopup(data.payment_id || `manual_${Date.now()}`); }
-                } catch (_e) {}
-              }}
-              javaScriptEnabled
-              domStorageEnabled
-            />
-            {/* Manual confirm button */}
-            <View style={{ padding: 16, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f0f0f0' }}>
-              <Text style={{ color: '#888', fontSize: 12, textAlign: 'center', marginBottom: 10 }}>Agar payment complete ho gayi ho:</Text>
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                <TextInput
-                  style={{ flex: 1, borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 13, color: '#1a1a2e' }}
-                  placeholder="Payment ID (optional)"
-                  value={walletPaymentId}
-                  onChangeText={setWalletPaymentId}
-                  placeholderTextColor="#bbb"
-                />
-                <TouchableOpacity onPress={() => confirmTopup(walletPaymentId || `manual_${Date.now()}`)}
-                  style={{ backgroundColor: '#4CAF50', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 11, justifyContent: 'center' }}>
-                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>✓ Confirm</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        )}
       </ScreenIn>
     );
   }
