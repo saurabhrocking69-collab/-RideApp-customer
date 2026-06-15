@@ -690,8 +690,8 @@ export default function App() {
                 setPickup(r.pickup || ''); setDrop(r.drop_location || '');
                 if (r.pickup_lat) setPickupCoords({ lat: parseFloat(r.pickup_lat), lng: parseFloat(r.pickup_lng) });
                 if (r.drop_lat)   setDropCoords({ lat: parseFloat(r.drop_lat),   lng: parseFloat(r.drop_lng) });
-                joinRideSocket(savedRideId);
-                connectSocket(sp);
+                connectSocket(sp);  // must connect first
+                joinRideSocket(savedRideId);  // emit is buffered until connected
                 // Route to correct screen based on status
                 if (r.status === 'completed') { setScreen('payment'); return; }
                 if (r.status === 'started')   { setScreen('inride');  return; }
