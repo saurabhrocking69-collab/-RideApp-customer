@@ -1325,13 +1325,16 @@ export default function App() {
       const data = await res.json();
       if (data.token) {
         await AsyncStorage.setItem('userPhone', phone);
-        const isNew = !userName || userName === 'Rider' || userName === 'User' || !data.user?.name || data.user?.name === 'User';
+        // Use server's stored name as source of truth — local userName state can be stale after logout
+        const serverName = data.user?.name || '';
+        const isNew = !serverName || serverName === 'User' || serverName === 'Rider';
         if (isNew) {
           // New user — collect name + gender first
           Animated.timing(onboardFade, { toValue: 1, duration: 500, useNativeDriver: true }).start();
           setScreen('onboarding'); setResult('');
         } else {
-          await AsyncStorage.setItem('userName', userName);
+          setUserName(serverName);
+          await AsyncStorage.setItem('userName', serverName);
           setScreen('home'); setResult(''); loadHistory(phone); loadWallet(phone);
           registerFCM(phone); loadOffers(); connectSocket(phone);
         }
@@ -1898,7 +1901,7 @@ export default function App() {
             <Text style={{ fontSize: 18, color: '#ddd' }}>›</Text>
           </Bouncy>
         ))}
-        <Bouncy style={s.logoutBtn} onPress={async () => { await AsyncStorage.removeItem('userPhone'); await AsyncStorage.removeItem('userName'); setScreen('login'); setTab('home'); setPhone(''); setOtp(''); setWalletBalance(0); }}>
+        <Bouncy style={s.logoutBtn} onPress={async () => { await AsyncStorage.removeItem('userPhone'); await AsyncStorage.removeItem('userName'); setScreen('login'); setTab('home'); setPhone(''); setOtp(''); setOtpDigits(['','','','','','']); setUserName(''); setGender(''); setWalletBalance(0); }}>
           <Text style={{ color: '#e94560', fontWeight: 'bold', fontSize: 14 }}>🚪 Logout</Text>
         </Bouncy>
       </ScrollView>
