@@ -682,7 +682,7 @@ export default function App() {
               const LIVE = ['requested','matched','arrived','started','completed'];
               if (rs.ride && LIVE.includes(rs.ride.status)) {
                 const r = rs.ride;
-                const driverObj = r.driver_name ? { name: r.driver_name, phone: r.driver_phone, vehicle_no: r.vehicle_no, vehicle_brand: r.vehicle_brand, vehicle_model: r.vehicle_model, upi_id: r.driver_upi_id } : null;
+                const driverObj = r.driver_name ? { name: r.driver_name, phone: r.driver_phone, vehicle_no: r.vehicle_no, vehicle_brand: r.vehicle_brand, vehicle_model: r.vehicle_model, upi_id: r.driver_upi_id, verified: r.driver_verification_status === 'approved', rating: r.driver_rating } : null;
                 setRideData({ ride_id: savedRideId, fare: '₹' + Math.round(parseFloat(r.fare) || 0), startOtp: r.start_otp || '', driver: driverObj });
                 setPickup(r.pickup || ''); setDrop(r.drop_location || '');
                 if (r.pickup_lat) setPickupCoords({ lat: parseFloat(r.pickup_lat), lng: parseFloat(r.pickup_lng) });
@@ -718,7 +718,7 @@ export default function App() {
           const st = data.ride.status;
 
           if (st === 'matched' || st === 'arrived') {
-            setRideData((p: any) => p ? { ...p, startOtp: data.ride.start_otp, driver: { name: data.ride.driver_name, phone: data.ride.driver_phone, vehicle_no: data.ride.vehicle_no, vehicle_brand: data.ride.vehicle_brand, vehicle_model: data.ride.vehicle_model, upi_id: data.ride.driver_upi_id } } : p);
+            setRideData((p: any) => p ? { ...p, startOtp: data.ride.start_otp, driver: { name: data.ride.driver_name, phone: data.ride.driver_phone, vehicle_no: data.ride.vehicle_no, vehicle_brand: data.ride.vehicle_brand, vehicle_model: data.ride.vehicle_model, upi_id: data.ride.driver_upi_id, verified: data.ride.driver_verification_status === 'approved', rating: data.ride.driver_rating } } : p);
             const ld = await apiGet(`/api/rides/driver-location/${rid}`);
             if (!ld._error && ld.location) {
               setDriverLoc(ld.location);
@@ -1371,7 +1371,7 @@ export default function App() {
 
   const connectSocket = (userPhone: string) => {
     if (socketRef.current?.connected) return;
-    const s = io(API, { transports: ['websocket'], autoConnect: true });
+    const s = io(API, { transports: ['websocket', 'polling'], reconnection: true, reconnectionAttempts: 20, reconnectionDelay: 2000 });
     s.on('connect', () => {
       // Listen for live ride status updates — no polling needed
       s.on('rideUpdate', (data: any) => {
@@ -1906,7 +1906,14 @@ export default function App() {
                       <Text style={{ color: '#fff', fontWeight: '800', fontSize: 18 }}>{(driverInfo.name||'D')[0]}</Text>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ color: '#1a1a2e', fontWeight: '700', fontSize: 14 }}>{driverInfo.name}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <Text style={{ color: '#1a1a2e', fontWeight: '700', fontSize: 14 }}>{driverInfo.name}</Text>
+                        {driverInfo.verified && (
+                          <View style={{ backgroundColor: '#e8f5e9', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
+                            <Text style={{ fontSize: 9, color: '#2e7d32', fontWeight: '800' }}>✓ VERIFIED</Text>
+                          </View>
+                        )}
+                      </View>
                       <Text style={{ color: '#666', fontSize: 12, marginTop: 1 }}>
                         {[driverInfo.vehicle_brand, driverInfo.vehicle_model].filter(Boolean).join(' ')}
                         {driverInfo.vehicle_no ? ` · ${driverInfo.vehicle_no}` : ''}
@@ -3667,14 +3674,28 @@ export default function App() {
               <SuccessBurst />
               <Text style={{ textAlign: 'center', fontSize: 16, fontWeight: 'bold', color: '#4CAF50', marginBottom: 12 }}>Driver Mil Gaya! 🎉</Text>
               <View style={s.driverCard}>
-                <View style={s.driverAvatar}><Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>{(rideData.driver.name||'D')[0].toUpperCase()}</Text></View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.driverName}>{rideData.driver.name}</Text>
+                <View style={{ position: 'relative' }}>
+                  <View style={s.driverAvatar}><Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>{(rideData.driver.name||'D')[0].toUpperCase()}</Text></View>
+                  {rideData.driver.verified && (
+                    <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: '#4CAF50', borderRadius: 10, width: 20, height: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff' }}>
+                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>✓</Text>
+                    </View>
+                  )}
+                </View>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <Text style={s.driverName}>{rideData.driver.name}</Text>
+                    {rideData.driver.verified && (
+                      <View style={{ backgroundColor: '#e8f5e9', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2, flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                        <Text style={{ fontSize: 9, color: '#2e7d32', fontWeight: '800' }}>✓ VERIFIED</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={{ fontSize: 12, color: '#1a1a2e', fontWeight: '600', marginTop: 2 }}>
                     {rideData.driver.vehicle_brand ? `${rideData.driver.vehicle_brand} ` : ''}{rideData.driver.vehicle_model || ''}
                   </Text>
                   <Text style={{ fontSize: 12, color: '#666', marginTop: 1 }}>🚗 {rideData.driver.vehicle_no}</Text>
-                  <Text style={{ fontSize: 12, color: '#f0a500', marginTop: 2 }}>⭐ 4.8</Text>
+                  <Text style={{ fontSize: 12, color: '#f0a500', marginTop: 2 }}>⭐ {rideData.driver.rating ? parseFloat(rideData.driver.rating).toFixed(1) : '4.8'}</Text>
                 </View>
                 <View style={{ alignItems: 'center' }}>
                   <PulseView><Text style={{ fontSize: 18, fontWeight: 'bold', color: '#e94560' }}>{driverEta || (eta ? eta.split('·')[0].trim() : '...')}</Text></PulseView>
