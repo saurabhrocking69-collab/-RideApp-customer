@@ -614,8 +614,9 @@ export default function App() {
   useEffect(() => {
     const backAction = () => {
       if (screen === 'home' && tab === 'home') {
-        // Active ride hai to home exit band — matching pe wapas bhejo
-        if (rideData?.ride_id) { setScreen('matching'); return true; }
+        if (rideData?.ride_id || (hourlyBooking && ['pending','matched','active'].includes(hourlyBooking?.status))) {
+          setTab('live'); return true;
+        }
         return false;
       }
       if (screen === 'home' && tab !== 'home') { setTab('home'); return true; }
@@ -669,7 +670,7 @@ export default function App() {
               if (data.booking && ['pending','matched','active'].includes(data.booking.status)) {
                 setHourlyBooking({ ...data.booking, driver: data.driver || null });
                 setHourlyStep(data.booking.status === 'active' ? 'active' : 'waiting');
-                setScreen('hourly'); return;
+                setScreen('home'); setTab('live'); return;
               } else { await AsyncStorage.removeItem('activeHourlyId'); }
             } catch (_e) {}
           }
@@ -690,8 +691,7 @@ export default function App() {
                 joinRideSocket(savedRideId);  // emit is buffered until connected
                 // Route to correct screen based on status
                 if (r.status === 'completed') { setScreen('payment'); return; }
-                if (r.status === 'started')   { setScreen('inride');  return; }
-                setScreen('matching'); return;
+                setScreen('home'); setTab('live'); return;
               } else { await AsyncStorage.removeItem('activeStdRideId'); }
             } catch (_e) {}
           }
@@ -1827,6 +1827,208 @@ export default function App() {
       <View style={s.navFloat}><NavBarInner /></View>
     </View>
   );
+
+  // ═══ LIVE RIDE TAB ═══
+  if (screen === 'home' && tab === 'live') {
+    const hasStd     = !!rideData?.ride_id && storeStatus !== 'cancelled';
+    const hasHourly  = !!hourlyBooking && ['pending','matched','active'].includes(hourlyBooking?.status);
+    const stdStatus  = storeStatus !== 'idle' ? storeStatus : (rideData?.ride_id ? 'requested' : 'idle');
+    const stdStatusMap: any = {
+      requested: { label: 'Driver dhoondh rahe hain...', color: '#f57c00', icon: '🔍' },
+      matched:   { label: 'Driver aa raha hai',          color: '#1565C0', icon: '🚗' },
+      arrived:   { label: 'Driver pahunch gaya!',        color: '#388e3c', icon: '📍' },
+      started:   { label: 'Trip chal rahi hai',          color: '#7b1fa2', icon: '🛣️' },
+      completed: { label: 'Trip complete — Payment pending', color: '#e94560', icon: '✅' },
+    };
+    const si = stdStatusMap[stdStatus] || stdStatusMap.requested;
+    const driverInfo = ride.driverInfo || rideData?.driver;
+    const otp        = ride.startOtp   || rideData?.startOtp;
+
+    const hElapsed   = hourlyTimerSec;
+    const hh2 = Math.floor(hElapsed / 3600);
+    const mm2 = Math.floor((hElapsed % 3600) / 60);
+    const ss2 = hElapsed % 60;
+    const hTimerStr  = hh2 > 0 ? `${hh2}h ${mm2}m ${ss2}s` : `${mm2}m ${ss2}s`;
+    const hStatus    = hourlyStep === 'active' ? 'Ride chal rahi hai' : hourlyBooking?.status === 'matched' ? 'Driver aa raha hai' : 'Driver dhoondh rahe hain...';
+    const hColor     = hourlyStep === 'active' ? '#7b1fa2' : hourlyBooking?.status === 'matched' ? '#1565C0' : '#f57c00';
+    const vEmoji: any = { auto:'🛺', bike:'🏍️', car:'🚕', eriksha:'🛵', ultra_luxury:'🚙' };
+
+    return (
+      <View style={s.screen}>
+        <View style={s.topBar}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.topTitle}>🔴 Live Ride</Text>
+          </View>
+          {(hasStd || hasHourly) && (
+            <PulseView><View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#e94560', marginRight: 4 }} /></PulseView>
+          )}
+        </View>
+
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+
+          {/* ── Standard Ride Card ── */}
+          {hasStd && (
+            <View style={{ backgroundColor: '#fff', borderRadius: 18, elevation: 5, marginBottom: 18, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10 }}>
+              <View style={{ backgroundColor: si.color, padding: 14, flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 24, marginRight: 10 }}>{si.icon}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>Standard Ride</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 12, marginTop: 2 }}>{si.label}</Text>
+                </View>
+                <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5 }}>
+                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>{rideData?.fare}</Text>
+                </View>
+              </View>
+
+              <View style={{ padding: 14 }}>
+                {/* Route */}
+                {(pickup || drop) ? (
+                  <View style={{ backgroundColor: '#f9f9f9', borderRadius: 12, padding: 12, marginBottom: 12 }}>
+                    {pickup ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: drop ? 8 : 0 }}>
+                        <Text style={{ fontSize: 14, marginRight: 8, marginTop: 1 }}>📍</Text>
+                        <Text style={{ color: '#333', fontSize: 13, flex: 1 }} numberOfLines={2}>{pickup}</Text>
+                      </View>
+                    ) : null}
+                    {drop ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                        <Text style={{ fontSize: 14, marginRight: 8, marginTop: 1 }}>🎯</Text>
+                        <Text style={{ color: '#333', fontSize: 13, flex: 1 }} numberOfLines={2}>{drop}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                ) : null}
+
+                {/* Driver info */}
+                {driverInfo ? (
+                  <View style={{ backgroundColor: '#f0f4ff', borderRadius: 12, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: '#1565C0', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                      <Text style={{ color: '#fff', fontWeight: '800', fontSize: 18 }}>{(driverInfo.name||'D')[0]}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: '#1a1a2e', fontWeight: '700', fontSize: 14 }}>{driverInfo.name}</Text>
+                      <Text style={{ color: '#666', fontSize: 12, marginTop: 1 }}>
+                        {[driverInfo.vehicle_brand, driverInfo.vehicle_model].filter(Boolean).join(' ')}
+                        {driverInfo.vehicle_no ? ` · ${driverInfo.vehicle_no}` : ''}
+                      </Text>
+                    </View>
+                    {driverInfo.phone ? (
+                      <TouchableOpacity onPress={() => Linking.openURL(`tel:${driverInfo.phone}`)} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#e8f5e9', alignItems: 'center', justifyContent: 'center' }}>
+                        <Text style={{ fontSize: 18 }}>📞</Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+                ) : null}
+
+                {/* Start OTP */}
+                {(stdStatus === 'started' || stdStatus === 'arrived') && otp ? (
+                  <View style={{ backgroundColor: '#e8f5e9', borderRadius: 12, padding: 14, marginBottom: 12, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 12, color: '#2e7d32', fontWeight: '600', marginBottom: 4 }}>Ride Start OTP — Driver ko dikhao</Text>
+                    <Text style={{ fontSize: 32, fontWeight: '800', color: '#1b5e20', letterSpacing: 8 }}>{otp}</Text>
+                  </View>
+                ) : null}
+
+                {/* Full screen CTA */}
+                <Bouncy
+                  onPress={() => {
+                    if (stdStatus === 'completed') setScreen('payment');
+                    else if (stdStatus === 'started') setScreen('inride');
+                    else setScreen('matching');
+                  }}
+                  style={{ backgroundColor: '#1a1a2e', borderRadius: 12, padding: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' }}>
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+                    {stdStatus === 'completed' ? '💳 Payment Screen' : stdStatus === 'started' ? '🛣️ Ride Screen' : '🗺️ Full Tracking Screen'} →
+                  </Text>
+                </Bouncy>
+              </View>
+            </View>
+          )}
+
+          {/* ── Hourly Ride Card ── */}
+          {hasHourly && (
+            <View style={{ backgroundColor: '#fff', borderRadius: 18, elevation: 5, marginBottom: 18, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10 }}>
+              <View style={{ backgroundColor: hColor, padding: 14, flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 24, marginRight: 10 }}>⏱️</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>
+                    Hourly Ride · {hourlyBooking?.package_hours}h · {vEmoji[hourlyBooking?.vehicle_type] || '🚗'}
+                  </Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 12, marginTop: 2 }}>{hStatus}</Text>
+                </View>
+                <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5 }}>
+                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>₹{hourlyBooking?.fare || hourlyBooking?.package_fare}</Text>
+                </View>
+              </View>
+
+              <View style={{ padding: 14 }}>
+                {/* Live timer */}
+                {hourlyStep === 'active' && (
+                  <View style={{ backgroundColor: '#f3e5f5', borderRadius: 12, padding: 14, marginBottom: 12, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 12, color: '#7b1fa2', fontWeight: '600', marginBottom: 4 }}>Time Elapsed</Text>
+                    <Text style={{ fontSize: 30, fontWeight: '800', color: '#6a1b9a', letterSpacing: 4 }}>{hTimerStr}</Text>
+                    <Text style={{ fontSize: 11, color: '#9c27b0', marginTop: 4 }}>Package: {hourlyBooking?.package_hours} hours · {hourlyBooking?.km_included} km included</Text>
+                  </View>
+                )}
+
+                {/* Driver info */}
+                {hourlyBooking?.driver ? (
+                  <View style={{ backgroundColor: '#f0f4ff', borderRadius: 12, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: '#7b1fa2', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                      <Text style={{ color: '#fff', fontWeight: '800', fontSize: 18 }}>{(hourlyBooking.driver.name||'D')[0]}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: '#1a1a2e', fontWeight: '700', fontSize: 14 }}>{hourlyBooking.driver.name}</Text>
+                      <Text style={{ color: '#666', fontSize: 12, marginTop: 1 }}>
+                        {[hourlyBooking.driver.vehicle_brand, hourlyBooking.driver.vehicle_model].filter(Boolean).join(' ')}
+                      </Text>
+                    </View>
+                    {hourlyBooking.driver_phone ? (
+                      <TouchableOpacity onPress={() => Linking.openURL(`tel:${hourlyBooking.driver_phone}`)} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#f3e5f5', alignItems: 'center', justifyContent: 'center' }}>
+                        <Text style={{ fontSize: 18 }}>📞</Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+                ) : (
+                  <View style={{ backgroundColor: '#fff8e1', borderRadius: 12, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 20, marginRight: 10 }}>🔍</Text>
+                    <Text style={{ color: '#f57c00', fontSize: 13, fontWeight: '600' }}>Driver dhoondha ja raha hai...</Text>
+                  </View>
+                )}
+
+                {/* Scheduled time */}
+                {hourlyBooking?.scheduled_at && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                    <Text style={{ fontSize: 13, marginRight: 8 }}>🕐</Text>
+                    <Text style={{ color: '#555', fontSize: 13 }}>
+                      Scheduled: {new Date(hourlyBooking.scheduled_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  </View>
+                )}
+
+                <Bouncy onPress={() => setScreen('hourly')} style={{ backgroundColor: '#1a1a2e', borderRadius: 12, padding: 14, alignItems: 'center' }}>
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>⏱️ Full Hourly Ride Screen →</Text>
+                </Bouncy>
+              </View>
+            </View>
+          )}
+
+          {/* ── Empty state ── */}
+          {!hasStd && !hasHourly && (
+            <View style={{ alignItems: 'center', paddingTop: 60 }}>
+              <Text style={{ fontSize: 56, marginBottom: 16 }}>🚗</Text>
+              <Text style={{ fontSize: 20, fontWeight: '800', color: '#1a1a2e', marginBottom: 8 }}>Koi Active Ride Nahi</Text>
+              <Text style={{ fontSize: 14, color: '#888', textAlign: 'center', marginBottom: 28, paddingHorizontal: 30 }}>Jab ride book karoge yahan live status milega — chahe app band ho jaye</Text>
+              <Bouncy onPress={() => setTab('home')} style={[s.btn, { paddingHorizontal: 32 }]}>
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Book a Ride →</Text>
+              </Bouncy>
+            </View>
+          )}
+
+        </ScrollView>
+        <View style={s.navFloat}><NavBarInner /></View>
+      </View>
+    );
+  }
 
   // ═══ HISTORY ═══
   if (screen === 'home' && tab === 'history') return (
@@ -3888,8 +4090,11 @@ export default function App() {
   return <View />;
 
   function NavBarInner() {
+    const hasLive = (!!rideData?.ride_id && storeStatus !== 'cancelled') ||
+                    (!!hourlyBooking && ['pending','matched','active'].includes(hourlyBooking?.status));
     const navTabs = [
       { t: 'home',    icon: '🏠', lbl: 'Home'    },
+      { t: 'live',    icon: '🔴', lbl: 'Live'    },
       { t: 'history', icon: '🕐', lbl: 'Trips'   },
       { t: 'profile', icon: '👤', lbl: 'Profile' },
     ];
@@ -3899,7 +4104,12 @@ export default function App() {
           const active = tab === t && screen === 'home';
           return (
             <TouchableOpacity key={t} style={s.navItem} onPress={() => { setScreen('home'); setTab(t); if(t==='history') loadHistory(phone); }} activeOpacity={0.65}>
-              <Text style={[s.navIcon, active && { color: '#e94560' }]}>{icon}</Text>
+              <View style={{ position: 'relative', alignItems: 'center' }}>
+                <Text style={[s.navIcon, active && { color: '#e94560' }]}>{icon}</Text>
+                {t === 'live' && hasLive && !active && (
+                  <View style={{ position: 'absolute', top: -2, right: -6, width: 9, height: 9, borderRadius: 5, backgroundColor: '#e94560', borderWidth: 1.5, borderColor: '#fff' }} />
+                )}
+              </View>
               <Text style={[s.navLbl, active && s.navActive]}>{lbl}</Text>
               {active && <View style={{ width: 18, height: 3, borderRadius: 2, backgroundColor: '#e94560', marginTop: 4 }} />}
             </TouchableOpacity>
