@@ -1599,12 +1599,15 @@ export default function App() {
             ))}
           </Animated.View>
 
-          {/* Test OTP hint */}
-          {otpSent ? (
-            <View style={{ backgroundColor: '#fff3e0', borderRadius: 10, padding: 10, marginBottom: 12, alignItems: 'center' }}>
-              <Text style={{ fontSize: 12, color: '#e65100' }}>🧪 Test OTP: <Text style={{ fontWeight: 'bold', letterSpacing: 4 }}>{otpSent}</Text></Text>
-            </View>
-          ) : null}
+          {/* Test OTP hint — always visible */}
+          <View style={{ backgroundColor: '#fff3e0', borderRadius: 10, padding: 10, marginBottom: 12 }}>
+            {otpSent ? (
+              <Text style={{ fontSize: 12, color: '#e65100', textAlign: 'center' }}>🧪 Test OTP: <Text style={{ fontWeight: 'bold', letterSpacing: 4 }}>{otpSent}</Text></Text>
+            ) : null}
+            <Text style={{ fontSize: 11, color: '#e65100', textAlign: 'center', marginTop: otpSent ? 4 : 0 }}>
+              Testing ke liye <Text style={{ fontWeight: 'bold', letterSpacing: 2 }}>000000</Text> kisi bhi number pe kaam karta hai
+            </Text>
+          </View>
 
           {/* Clipboard detect hint */}
           <TouchableOpacity style={{ backgroundColor: '#f5f5f5', borderRadius: 10, padding: 12, marginBottom: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }} onPress={checkClipboard}>
