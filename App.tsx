@@ -524,10 +524,12 @@ export default function App() {
   const [hChatInput, setHChatInput]       = useState('');
   const [hChatUnread, setHChatUnread]     = useState(0);
   // Extension request
-  const [hExtendStep, setHExtendStep]   = useState<'idle'|'choose'|'pending'>('idle');
-  const [hExtendHours, setHExtendHours] = useState(1);
-  const [hExtendMin, setHExtendMin]     = useState(0);
-  const [hExtendCost, setHExtendCost]   = useState<any>(null);
+  const [hExtendStep, setHExtendStep]     = useState<'idle'|'choose'|'pending'>('idle');
+  const [hExtendResult, setHExtendResult] = useState<'accepted'|'rejected'|null>(null);
+  const hExtendPrevHoursRef               = useRef<number>(0);
+  const [hExtendHours, setHExtendHours]   = useState(1);
+  const [hExtendMin, setHExtendMin]       = useState(0);
+  const [hExtendCost, setHExtendCost]     = useState<any>(null);
   // Approaching limit
   const [hApproachLimit, setHApproachLimit] = useState<any>(null);
   // Loyalty
@@ -681,6 +683,7 @@ export default function App() {
               if (data.booking && ['pending','matched','active'].includes(data.booking.status)) {
                 setHourlyBooking({ ...data.booking, driver: data.driver || null });
                 setHourlyStep(data.booking.status === 'active' ? 'active' : 'waiting');
+                joinHourlySocket(data.booking.id);
                 setScreen('home'); setTab('live'); return;
               } else { await AsyncStorage.removeItem('activeHourlyId'); }
             } catch (_e) {}
@@ -783,8 +786,22 @@ export default function App() {
           }
           if (b.status === 'active' && hourlyStep === 'waiting') setHourlyStep('active');
           if (b.status === 'completed') { setHourlyStep('done'); loadWallet(phone); AsyncStorage.removeItem('activeHourlyId').catch(() => {}); }
-          // Extension accepted by driver — reset UI
-          if (!b.extend_requested_hours && hExtendStep === 'pending') setHExtendStep('idle');
+          // Extension result detection
+          if (b.extend_requested_hours && hExtendStep === 'idle') {
+            hExtendPrevHoursRef.current = parseFloat(b.package_hours || 0);
+            setHExtendStep('pending');
+          }
+          if (!b.extend_requested_hours && hExtendStep === 'pending') {
+            const prevHours = hExtendPrevHoursRef.current;
+            const newHours = parseFloat(b.package_hours || 0);
+            if (prevHours > 0 && newHours > prevHours) {
+              setHExtendResult('accepted');
+            } else {
+              setHExtendResult('rejected');
+            }
+            setHExtendStep('idle');
+            setTimeout(() => setHExtendResult(null), 6000);
+          }
         }
       } catch (_e) {}
     }, 3500);
@@ -1394,6 +1411,18 @@ export default function App() {
     if (socketRef.current?.connected) return;
     const s = io(API, { transports: ['websocket', 'polling'], reconnection: true, reconnectionAttempts: 20, reconnectionDelay: 2000 });
     s.on('connect', () => {
+      s.on('hourlyExtensionResult', (data: any) => {
+        if (data.accepted) {
+          setHExtendResult('accepted');
+          setHourlyBooking((p: any) => p ? { ...p, extend_requested_hours: null, package_hours: data.new_hours ?? p.package_hours, km_included: data.new_km ?? p.km_included, base_fare: data.new_fare ?? p.base_fare } : p);
+        } else {
+          setHExtendResult('rejected');
+          setHourlyBooking((p: any) => p ? { ...p, extend_requested_hours: null } : p);
+          loadWallet(userPhone);
+        }
+        setHExtendStep('idle');
+        setTimeout(() => setHExtendResult(null), 6000);
+      });
       // Listen for live ride status updates — no polling needed
       s.on('rideUpdate', (data: any) => {
         const st = data.status;
@@ -1417,6 +1446,10 @@ export default function App() {
 
   const joinRideSocket = (rideId: string | number) => {
     socketRef.current?.emit('joinRide', { rideId });
+  };
+
+  const joinHourlySocket = (bookingId: string | number) => {
+    socketRef.current?.emit('joinHourly', { bookingId });
   };
 
   const sendChat = async () => {
@@ -2467,6 +2500,7 @@ export default function App() {
         if (data.success) {
           setHourlyBooking({ id: data.booking_id, fare: data.fare, km_included: data.km_included, status: 'pending', vehicle_type: hVehicle, package_hours: hPackageHours, pickup: hPickup, drop_location: hDrop, is_roundtrip: hRoundTrip, stay_hours: hStayHours, scheduled_at });
           AsyncStorage.setItem('activeHourlyId', String(data.booking_id)).catch(() => {});
+          joinHourlySocket(data.booking_id);
           setHourlyStep('waiting');
           loadWallet(phone);
         } else {
@@ -2883,6 +2917,7 @@ export default function App() {
                     try {
                       const data = await apiPost('/api/hourly/request-extend-v2', { booking_id: hourlyBooking.id, extra_hours: hExtendHours, extra_minutes: hExtendMin, customer_phone: phone });
                       if (data.success) {
+                        hExtendPrevHoursRef.current = parseFloat(hourlyBooking?.package_hours || 0);
                         setHExtendStep('pending');
                         setHourlyBooking((p: any) => ({ ...p, extend_requested_hours: hExtendHours + hExtendMin / 60 }));
                         loadWallet(phone);
@@ -2894,6 +2929,26 @@ export default function App() {
                   }}>
                   <Text style={{ color: '#fff', fontWeight: 'bold' }}>📤 Driver ko Request Bhejo</Text>
                 </Bouncy>
+              </View>
+            </View>
+          )}
+
+          {/* Extension result feedback */}
+          {hExtendResult === 'accepted' && (
+            <View style={{ backgroundColor: '#e8f5e9', borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: 'row', alignItems: 'center', borderLeftWidth: 4, borderLeftColor: '#4CAF50' }}>
+              <Text style={{ fontSize: 22, marginRight: 10 }}>✅</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontWeight: 'bold', color: '#2e7d32', fontSize: 14 }}>Extension Approve Ho Gaya!</Text>
+                <Text style={{ color: '#388e3c', fontSize: 12, marginTop: 2 }}>Trip aur {parseFloat(hourlyBooking?.package_hours || 0) > hExtendPrevHoursRef.current ? `${Math.round((parseFloat(hourlyBooking?.package_hours || 0) - hExtendPrevHoursRef.current) * 60)} minute` : ''} extend ho gayi</Text>
+              </View>
+            </View>
+          )}
+          {hExtendResult === 'rejected' && (
+            <View style={{ backgroundColor: '#ffebee', borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: 'row', alignItems: 'center', borderLeftWidth: 4, borderLeftColor: '#e53935' }}>
+              <Text style={{ fontSize: 22, marginRight: 10 }}>❌</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontWeight: 'bold', color: '#c62828', fontSize: 14 }}>Extension Reject Ho Gaya</Text>
+                <Text style={{ color: '#e53935', fontSize: 12, marginTop: 2 }}>Driver ne reject kiya — paise wapas wallet mein aa gaye</Text>
               </View>
             </View>
           )}
