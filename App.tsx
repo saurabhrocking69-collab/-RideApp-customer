@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import RazorpayCheckout from 'react-native-razorpay';
 import {
-  View, Text, TextInput, TouchableOpacity, Image,
+  View, Text, TextInput, TouchableOpacity, Image, Alert, AppState,
   StyleSheet, ScrollView, Switch, Animated, KeyboardAvoidingView, Platform, Linking, Share, BackHandler
 } from 'react-native';
 import * as Location from 'expo-location';
@@ -500,6 +500,7 @@ export default function App() {
   // ── Hourly Booking State ──────────────────────
   const [hourlyStep, setHourlyStep]     = useState<'book'|'waiting'|'active'|'done'>('book');
   const [hourlyBooking, setHourlyBooking] = useState<any>(null);
+  const activeHourlyIdRef               = useRef<string|number|null>(null);
   const [hPackageHours, setHPackageHours] = useState(4);
   const [hVehicle, setHVehicle]         = useState('auto');
   const [hPickup, setHPickup]           = useState('');
@@ -525,6 +526,7 @@ export default function App() {
   const [hChatUnread, setHChatUnread]     = useState(0);
   // Extension request
   const [hExtendStep, setHExtendStep]     = useState<'idle'|'choose'|'pending'>('idle');
+  const hExtendStepRef                    = useRef<'idle'|'choose'|'pending'>('idle');
   const [hExtendResult, setHExtendResult] = useState<'accepted'|'rejected'|null>(null);
   const hExtendPrevHoursRef               = useRef<number>(0);
   const [hExtendHours, setHExtendHours]   = useState(1);
@@ -786,19 +788,22 @@ export default function App() {
           }
           if (b.status === 'active' && hourlyStep === 'waiting') setHourlyStep('active');
           if (b.status === 'completed') { setHourlyStep('done'); loadWallet(phone); AsyncStorage.removeItem('activeHourlyId').catch(() => {}); }
-          // Extension result detection
-          if (b.extend_requested_hours && hExtendStep === 'idle') {
+          // Extension result detection — use ref to avoid stale closure
+          if (b.extend_requested_hours && hExtendStepRef.current === 'idle') {
             hExtendPrevHoursRef.current = parseFloat(b.package_hours || 0);
+            hExtendStepRef.current = 'pending';
             setHExtendStep('pending');
           }
-          if (!b.extend_requested_hours && hExtendStep === 'pending') {
+          if (!b.extend_requested_hours && hExtendStepRef.current === 'pending') {
             const prevHours = hExtendPrevHoursRef.current;
             const newHours = parseFloat(b.package_hours || 0);
             if (prevHours > 0 && newHours > prevHours) {
               setHExtendResult('accepted');
             } else {
               setHExtendResult('rejected');
+              loadWallet(phone);
             }
+            hExtendStepRef.current = 'idle';
             setHExtendStep('idle');
             setTimeout(() => setHExtendResult(null), 6000);
           }
@@ -808,17 +813,19 @@ export default function App() {
     return () => { stopped = true; clearInterval(iv); };
   }, [screen, hourlyBooking?.id, hourlyStep]);
 
-  // Hourly trip timer — counts up from 0 while active
+  // Hourly trip timer — timestamp-based so it survives minimize/background
   useEffect(() => {
     if (screen === 'hourly' && hourlyStep === 'active' && hourlyBooking?.status === 'active') {
       if (hourlyTimerRef.current) clearInterval(hourlyTimerRef.current);
       const startMs = hourlyBooking.started_at ? new Date(hourlyBooking.started_at).getTime() : Date.now();
-      hourlyTimerRef.current = setInterval(() => {
-        setHourlyTimerSec(Math.floor((Date.now() - startMs) / 1000));
-      }, 1000);
-      return () => { if (hourlyTimerRef.current) clearInterval(hourlyTimerRef.current); };
+      const tick = () => setHourlyTimerSec(Math.floor((Date.now() - startMs) / 1000));
+      tick();
+      hourlyTimerRef.current = setInterval(tick, 1000);
+      // When app comes back to foreground, force immediate tick so timer snaps to correct value
+      const appSub = AppState.addEventListener('change', s => { if (s === 'active') tick(); });
+      return () => { if (hourlyTimerRef.current) clearInterval(hourlyTimerRef.current); appSub.remove(); };
     }
-  }, [screen, hourlyStep, hourlyBooking?.status]);
+  }, [screen, hourlyStep, hourlyBooking?.status, hourlyBooking?.started_at]);
 
   useEffect(() => {
     if (screen !== 'chat' || !rideData?.ride_id) return;
@@ -1411,6 +1418,8 @@ export default function App() {
     if (socketRef.current?.connected) return;
     const s = io(API, { transports: ['websocket', 'polling'], reconnection: true, reconnectionAttempts: 20, reconnectionDelay: 2000 });
     s.on('connect', () => {
+      // Re-join hourly room on reconnect so we don't miss events
+      if (activeHourlyIdRef.current) s.emit('joinHourly', { bookingId: activeHourlyIdRef.current });
       s.on('hourlyExtensionResult', (data: any) => {
         if (data.accepted) {
           setHExtendResult('accepted');
@@ -1420,8 +1429,13 @@ export default function App() {
           setHourlyBooking((p: any) => p ? { ...p, extend_requested_hours: null } : p);
           loadWallet(userPhone);
         }
+        hExtendStepRef.current = 'idle';
         setHExtendStep('idle');
         setTimeout(() => setHExtendResult(null), 6000);
+      });
+      s.on('hourlyTripCompleted', (data: any) => {
+        setHourlyBooking((p: any) => p ? { ...p, status: 'completed', driver_earning: data.driver_earning } : p);
+        setHourlyStep('done');
       });
       // Listen for live ride status updates — no polling needed
       s.on('rideUpdate', (data: any) => {
@@ -1449,6 +1463,7 @@ export default function App() {
   };
 
   const joinHourlySocket = (bookingId: string | number) => {
+    activeHourlyIdRef.current = bookingId;
     socketRef.current?.emit('joinHourly', { bookingId });
   };
 
@@ -2509,10 +2524,31 @@ export default function App() {
       } catch (e: any) { alert('Error: ' + e.message); }
     };
 
-    const requestEarlyEnd = async () => {
+    const requestEarlyEnd = () => {
       if (!hourlyBooking?.id) return;
-      await apiPost('/api/hourly/early-end-request', { booking_id: hourlyBooking.id, requested_by: 'customer' });
-      setHourlyBooking((p: any) => ({ ...p, early_end_requested_by: 'customer' }));
+      Alert.alert(
+        '✅ Trip Khatam Karo',
+        'Kya aap trip abhi complete karna chahte hain?\n\nDriver ko FULL package payment milegi — aap koi refund nahi le sakte.',
+        [
+          { text: 'Wapas Jao', style: 'cancel' },
+          {
+            text: '✅ Haan, Complete Karo',
+            onPress: async () => {
+              try {
+                const data = await apiPost('/api/hourly/customer-early-complete', { booking_id: hourlyBooking.id });
+                if (data.success) {
+                  setHourlyBooking((p: any) => ({ ...p, status: 'completed', driver_earning: data.driver_earning }));
+                  setHourlyStep('done');
+                } else {
+                  Alert.alert('Error', data.error || 'Kuch galat ho gaya — dobara try karo');
+                }
+              } catch (e: any) {
+                Alert.alert('Network Error', 'Server se connect nahi hua');
+              }
+            }
+          }
+        ]
+      );
     };
 
     const confirmEarlyEnd = async () => {
@@ -2629,7 +2665,7 @@ export default function App() {
               </View>
             )}
 
-            <Bouncy style={s.btn} onPress={() => { setHourlyStep('book'); setHourlyBooking(null); setHExtendStep('idle'); setHApproachLimit(null); setScreen('home'); }}>
+            <Bouncy style={s.btn} onPress={() => { setHourlyStep('book'); setHourlyBooking(null); hExtendStepRef.current = 'idle'; setHExtendStep('idle'); setHApproachLimit(null); setScreen('home'); }}>
               <Text style={s.btnTxt}>🏠 Ghar Wapas</Text>
             </Bouncy>
           </ScrollView>
@@ -2837,7 +2873,7 @@ export default function App() {
                   </Text>
                 )}
                 {hExtendStep === 'idle' && (
-                  <TouchableOpacity onPress={() => setHExtendStep('choose')}
+                  <TouchableOpacity onPress={() => { hExtendStepRef.current = 'choose'; setHExtendStep('choose'); }}
                     style={{ marginTop: 8, backgroundColor: hApproachLimit.is_roundtrip ? '#1565c0' : '#ff9800', borderRadius: 8, padding: 8, alignSelf: 'flex-start' }}>
                     <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>
                       {hApproachLimit.is_roundtrip ? '⏱️ Extension Chahiye?' : '⏱️ Extend Karo'}
@@ -2907,7 +2943,7 @@ export default function App() {
                 );
               })()}
               <View style={{ flexDirection: 'row', gap: 10 }}>
-                <Bouncy style={{ flex: 1, backgroundColor: '#e0e0e0', borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={() => { setHExtendStep('idle'); setHExtendHours(1); setHExtendMin(0); }}>
+                <Bouncy style={{ flex: 1, backgroundColor: '#e0e0e0', borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={() => { hExtendStepRef.current = 'idle'; setHExtendStep('idle'); setHExtendHours(1); setHExtendMin(0); }}>
                   <Text style={{ color: '#333', fontWeight: 'bold' }}>Cancel</Text>
                 </Bouncy>
                 <Bouncy
@@ -2918,6 +2954,7 @@ export default function App() {
                       const data = await apiPost('/api/hourly/request-extend-v2', { booking_id: hourlyBooking.id, extra_hours: hExtendHours, extra_minutes: hExtendMin, customer_phone: phone });
                       if (data.success) {
                         hExtendPrevHoursRef.current = parseFloat(hourlyBooking?.package_hours || 0);
+                        hExtendStepRef.current = 'pending';
                         setHExtendStep('pending');
                         setHourlyBooking((p: any) => ({ ...p, extend_requested_hours: hExtendHours + hExtendMin / 60 }));
                         loadWallet(phone);
@@ -2966,7 +3003,7 @@ export default function App() {
 
           {/* Extend button (not near limit) */}
           {!hApproachLimit?.warn && hExtendStep === 'idle' && hourlyBooking?.status === 'active' && !hourlyBooking?.extend_requested_hours && (
-            <Bouncy style={{ backgroundColor: '#e3f2fd', borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }} onPress={() => setHExtendStep('choose')}>
+            <Bouncy style={{ backgroundColor: '#e3f2fd', borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }} onPress={() => { hExtendStepRef.current = 'choose'; setHExtendStep('choose'); }}>
               <Text style={{ fontSize: 16, marginRight: 8 }}>⏱️</Text>
               <Text style={{ color: '#1565c0', fontWeight: '700' }}>Trip Extend Karo</Text>
             </Bouncy>
@@ -3022,16 +3059,16 @@ export default function App() {
             </View>
           )}
 
-          {/* Customer wants to end early */}
+          {/* Customer wants to end early — immediate, full payment to driver */}
           {!hourlyBooking?.early_end_requested_by && (
-            <Bouncy
+            <TouchableOpacity
               style={{ backgroundColor: '#e94560', borderRadius: 14, padding: 18, alignItems: 'center', elevation: 4, shadowColor: '#e94560', shadowOpacity: 0.35, shadowOffset: { width: 0, height: 4 }, shadowRadius: 8 }}
               onPress={requestEarlyEnd}
             >
               <Text style={{ fontSize: 26, marginBottom: 4 }}>⏹️</Text>
-              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>Trip Early Khatam Karo</Text>
-              <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 4, textAlign: 'center' }}>Driver se mutual agreement — paise proportional milenge</Text>
-            </Bouncy>
+              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>Trip Complete Karo</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 4, textAlign: 'center' }}>Driver ko full payment milegi — turant complete hoga</Text>
+            </TouchableOpacity>
           )}
           {hourlyBooking?.early_end_requested_by === 'customer' && (
             <View style={{ backgroundColor: '#fff3e0', borderRadius: 14, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: '#ffe082' }}>
