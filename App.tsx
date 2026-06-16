@@ -3024,15 +3024,20 @@ export default function App() {
 
           {/* Customer wants to end early */}
           {!hourlyBooking?.early_end_requested_by && (
-            <Bouncy style={{ backgroundColor: '#fff', borderRadius: 14, padding: 14, borderWidth: 2, borderColor: '#e94560', alignItems: 'center' }} onPress={() => { if(confirm !== undefined) requestEarlyEnd(); else requestEarlyEnd(); }}>
-              <Text style={{ color: '#e94560', fontWeight: 'bold' }}>⏹️ Trip Early End Request</Text>
-              <Text style={{ color: '#999', fontSize: 11, marginTop: 4 }}>Driver se mutual agreement se trip khatam karein</Text>
+            <Bouncy
+              style={{ backgroundColor: '#e94560', borderRadius: 14, padding: 18, alignItems: 'center', elevation: 4, shadowColor: '#e94560', shadowOpacity: 0.35, shadowOffset: { width: 0, height: 4 }, shadowRadius: 8 }}
+              onPress={requestEarlyEnd}
+            >
+              <Text style={{ fontSize: 26, marginBottom: 4 }}>⏹️</Text>
+              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>Trip Early Khatam Karo</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 4, textAlign: 'center' }}>Driver se mutual agreement — paise proportional milenge</Text>
             </Bouncy>
           )}
           {hourlyBooking?.early_end_requested_by === 'customer' && (
-            <View style={{ backgroundColor: '#fff3e0', borderRadius: 12, padding: 14, alignItems: 'center' }}>
-              <Text style={{ color: '#e65100', fontWeight: '600' }}>⏳ Driver ke confirm ka intezaar...</Text>
-              <Text style={{ color: '#999', fontSize: 11, marginTop: 4 }}>Driver ne abhi confirm nahi kiya</Text>
+            <View style={{ backgroundColor: '#fff3e0', borderRadius: 14, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: '#ffe082' }}>
+              <Text style={{ fontSize: 22, marginBottom: 4 }}>⏳</Text>
+              <Text style={{ color: '#e65100', fontWeight: '700', fontSize: 14 }}>Driver ke Confirm ka Intezaar...</Text>
+              <Text style={{ color: '#999', fontSize: 12, marginTop: 4 }}>Driver ne abhi confirm nahi kiya</Text>
             </View>
           )}
         </ScrollView>
