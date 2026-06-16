@@ -20,7 +20,8 @@ const API = 'https://rideapp-backend-production-5e1c.up.railway.app';
 
 type Screen = 'splash' | 'login' | 'otp' | 'onboarding' | 'home' | 'booking' | 'matching' | 'inride' | 'payment' | 'postride' | 'chat' | 'referral' | 'saved' | 'policy' | 'hourly' | 'wallet' | 'hourly-info';
 
-const HOURLY_PACKAGES: any = {
+// Default fares — used for instant render while API loads
+const DEFAULT_hourlyPackages: any = {
   auto:         { 2:{fare:180,km:20}, 4:{fare:320,km:40}, 6:{fare:460,km:60}, 8:{fare:580,km:80},  24:{fare:1500,km:200}, 48:{fare:2800,km:400}, 72:{fare:4000,km:600}, extra:8  },
   bike:         { 2:{fare:120,km:20}, 4:{fare:210,km:40}, 6:{fare:300,km:60}, 8:{fare:380,km:80},  24:{fare:1000,km:200}, 48:{fare:1800,km:400}, 72:{fare:2600,km:600}, extra:5  },
   car:          { 2:{fare:260,km:20}, 4:{fare:460,km:40}, 6:{fare:660,km:60}, 8:{fare:840,km:80},  24:{fare:2200,km:200}, 48:{fare:4000,km:400}, 72:{fare:5800,km:600}, extra:12 },
@@ -535,6 +536,16 @@ export default function App() {
   const [activeOffers, setActiveOffers]   = useState<any[]>([]);
   const [offerDismissed, setOfferDismissed] = useState<Set<number>>(new Set());
 
+  // Hourly packages — fetched from server so admin fare changes reflect immediately
+  const [hourlyPackages, setHourlyPackages] = useState<any>(DEFAULT_hourlyPackages);
+
+  // Debounce refs for place search (prevents API spam on every keystroke)
+  const pickupDebounceRef = useRef<any>(null);
+  const dropDebounceRef   = useRef<any>(null);
+  const extDropDebounceRef = useRef<any>(null);
+  const hPickupDebounceRef = useRef<any>(null);
+  const hDropDebounceRef   = useRef<any>(null);
+
   // ── Notification Handler ──────────────────────
   useEffect(() => {
     if (Platform.OS === 'android') {
@@ -660,7 +671,7 @@ export default function App() {
           const sp = await AsyncStorage.getItem('userPhone');
           const sn = await AsyncStorage.getItem('userName');
           if (!sp) { setScreen('login'); return; }
-          setPhone(sp); setUserName(sn || ''); loadHistory(sp); loadWallet(sp); registerFCM(sp); loadOffers();
+          setPhone(sp); setUserName(sn || ''); loadHistory(sp); loadWallet(sp); registerFCM(sp); loadOffers(); loadHourlyPackages();
 
           // Active hourly ride check
           const savedHourlyId = await AsyncStorage.getItem('activeHourlyId');
@@ -956,6 +967,9 @@ export default function App() {
   const loadOffers = async () => {
     try { const r = await fetch(`${API}/api/offers/active?role=customer`); const d = await r.json(); setActiveOffers(d.offers || []); } catch (_e) {}
   };
+  const loadHourlyPackages = async () => {
+    try { const r = await fetch(`${API}/api/hourly/packages`); const d = await r.json(); if (d.fares) setHourlyPackages(d.fares); } catch (_e) {}
+  };
   const loadLoyalty = async (ph: string) => {
     try { const r = await fetch(`${API}/api/loyalty/my-points?phone=${ph}`); const d = await r.json(); setLoyaltyPoints(d.points || 0); setLoyaltyCashback(d.cashback_available || 0); } catch (_e) {}
   };
@@ -1001,14 +1015,18 @@ export default function App() {
     try { const r = await fetch(`${API}/api/places/saved?phone=${phone}`); const d = await r.json(); setSavedPlaces(d.places || []); } catch (_e) {}
   };
 
-  const searchPlaces = async (text: string, type: 'pickup' | 'drop') => {
+  const searchPlaces = (text: string, type: 'pickup' | 'drop') => {
     if (text.length < 3) { type === 'pickup' ? setPickupSugg([]) : setDropSugg([]); return; }
-    try {
-      const res  = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${MAPS_KEY}&components=country:in&location=26.8467,80.9462&radius=50000`);
-      const data = await res.json();
-      const sugg = data.predictions?.map((p: any) => ({ id: p.place_id, text: p.description })) || [];
-      type === 'pickup' ? setPickupSugg(sugg) : setDropSugg(sugg);
-    } catch (_e) {}
+    const ref = type === 'pickup' ? pickupDebounceRef : dropDebounceRef;
+    if (ref.current) clearTimeout(ref.current);
+    ref.current = setTimeout(async () => {
+      try {
+        const res  = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${MAPS_KEY}&components=country:in&location=26.8467,80.9462&radius=50000`);
+        const data = await res.json();
+        const sugg = data.predictions?.map((p: any) => ({ id: p.place_id, text: p.description })) || [];
+        type === 'pickup' ? setPickupSugg(sugg) : setDropSugg(sugg);
+      } catch (_e) {}
+    }, 400);
   };
 
   const geocodePlace = async (address: string, type: 'pickup' | 'drop') => {
@@ -1020,13 +1038,16 @@ export default function App() {
     } catch (_e) {}
   };
 
-  const searchExtDrop = async (text: string) => {
+  const searchExtDrop = (text: string) => {
     if (text.length < 3) { setExtDropSugg([]); return; }
-    try {
-      const res = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${MAPS_KEY}&components=country:in&location=26.8467,80.9462&radius=50000`);
-      const data = await res.json();
-      setExtDropSugg(data.predictions?.map((p: any) => ({ id: p.place_id, text: p.description })) || []);
-    } catch (_e) {}
+    if (extDropDebounceRef.current) clearTimeout(extDropDebounceRef.current);
+    extDropDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${MAPS_KEY}&components=country:in&location=26.8467,80.9462&radius=50000`);
+        const data = await res.json();
+        setExtDropSugg(data.predictions?.map((p: any) => ({ id: p.place_id, text: p.description })) || []);
+      } catch (_e) {}
+    }, 400);
   };
 
   const geocodeExtDrop = async (address: string) => {
@@ -1155,7 +1176,7 @@ export default function App() {
       if (!order.success) { setResult('❌ Order error'); return; }
       RazorpayCheckout.open({ description: 'Sppero Trip', currency: 'INR', key: order.key_id, amount: order.amount, order_id: order.order_id, name: 'Sppero', prefill: { contact: phone, name: userName || 'User' }, theme: { color: '#e94560' } })
         .then(async (data: any) => {
-          await fetch(`${API}/api/payment/verify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, payment_id: data.razorpay_payment_id, amount: fareNum, method: 'online' }) });
+          await fetch(`${API}/api/payment/verify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, razorpay_payment_id: data.razorpay_payment_id, razorpay_order_id: data.razorpay_order_id, razorpay_signature: data.razorpay_signature, amount: fareNum, method: 'online' }) });
           await fetch(`${API}/api/rides/payment-complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, payment_method: 'online', phone: phone || '9999999999' }) });
           setPaymentDone(true); setScreen('postride'); createScratchCard();
         }).catch((_e: any) => setResult('❌ Payment cancel ya fail hua'));
@@ -1341,7 +1362,7 @@ export default function App() {
           setUserName(serverName);
           await AsyncStorage.setItem('userName', serverName);
           setScreen('home'); setResult(''); loadHistory(phone); loadWallet(phone);
-          registerFCM(phone); loadOffers(); connectSocket(phone);
+          registerFCM(phone); loadOffers(); loadHourlyPackages(); connectSocket(phone);
         }
     
       } else {
@@ -2368,7 +2389,7 @@ export default function App() {
 
   // ═══ HOURLY BOOKING ═══
   if (screen === 'hourly') {
-    const pkg = HOURLY_PACKAGES[hVehicle]?.[hPackageHours];
+    const pkg = hourlyPackages[hVehicle]?.[hPackageHours];
     const hVehicleIcons: any = { auto: '🛺', bike: '🏍️', car: '🚕', eriksha: '🛵', ultra_luxury: '💎' };
     const hHourLabel = (h: number) => h >= 24 ? `${h/24} Day${h > 24 ? 's' : ''}` : h === 8 ? 'Full Day (8h)' : `${h} Hours`;
     const hHourEmoji = (h: number) => h >= 72 ? '🗓️' : h >= 48 ? '📅' : h >= 24 ? '🌙' : h === 2 ? '⏱️' : h === 4 ? '🕐' : h === 6 ? '🕕' : '☀️';
@@ -2399,14 +2420,18 @@ export default function App() {
       } catch (e) { alert('Location nahi mili — manually daalo'); }
     };
 
-    const searchHourly = async (text: string, which: 'pickup'|'drop') => {
+    const searchHourly = (text: string, which: 'pickup'|'drop') => {
       if (text.length < 3) { which === 'pickup' ? setHPickupSugg([]) : setHDropSugg([]); return; }
-      try {
-        const r = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${MAPS_KEY}&components=country:in&location=26.8467,80.9462&radius=100000`);
-        const d = await r.json();
-        const list = (d.predictions || []).map((p: any) => ({ id: p.place_id, text: p.description }));
-        which === 'pickup' ? setHPickupSugg(list) : setHDropSugg(list);
-      } catch (_e) {}
+      const ref = which === 'pickup' ? hPickupDebounceRef : hDropDebounceRef;
+      if (ref.current) clearTimeout(ref.current);
+      ref.current = setTimeout(async () => {
+        try {
+          const r = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${MAPS_KEY}&components=country:in&location=26.8467,80.9462&radius=100000`);
+          const d = await r.json();
+          const list = (d.predictions || []).map((p: any) => ({ id: p.place_id, text: p.description }));
+          which === 'pickup' ? setHPickupSugg(list) : setHDropSugg(list);
+        } catch (_e) {}
+      }, 400);
     };
 
     const selectHourlyPlace = async (placeId: string, text: string, which: 'pickup'|'drop') => {
@@ -2537,7 +2562,7 @@ export default function App() {
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderColor: '#f5f5f5' }}>
                   <View>
                     <Text style={{ color: '#e65100', fontSize: 13, fontWeight: '600' }}>Extra KM Charge</Text>
-                    <Text style={{ color: '#999', fontSize: 11 }}>{b.extra_km || 0} km × ₹{HOURLY_PACKAGES[b.vehicle_type || hVehicle]?.extra || 8}/km</Text>
+                    <Text style={{ color: '#999', fontSize: 11 }}>{b.extra_km || 0} km × ₹{hourlyPackages[b.vehicle_type || hVehicle]?.extra || 8}/km</Text>
                   </View>
                   <Text style={{ color: '#e65100', fontWeight: '700', fontSize: 14 }}>₹{extraKmChg.toFixed(0)}</Text>
                 </View>
@@ -2718,7 +2743,7 @@ export default function App() {
               ['Pehla Stop', hourlyBooking?.drop_location || hDrop || 'Flexible — driver ke sath jaao'],
               ['Round Trip', (hourlyBooking?.is_roundtrip || hRoundTrip) ? '✅ Haan' : 'Nahi'],
               ['KM Included', `${hourlyBooking?.km_included} km`],
-              ['Extra KM Rate', `₹${HOURLY_PACKAGES[hourlyBooking?.vehicle_type || hVehicle]?.extra}/km`],
+              ['Extra KM Rate', `₹${hourlyPackages[hourlyBooking?.vehicle_type || hVehicle]?.extra}/km`],
             ].map(([k, v], i) => (
               <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 7, borderBottomWidth: i < 4 ? 1 : 0, borderColor: '#f5f5f5' }}>
                 <Text style={{ color: '#888', fontSize: 13 }}>{k}</Text>
@@ -2738,7 +2763,7 @@ export default function App() {
             const traveled = parseFloat(hourlyBooking.actual_km || 0);
             const included = parseFloat(hourlyBooking.km_included || 0);
             const extraKm = Math.max(0, traveled - included);
-            const extraRate = HOURLY_PACKAGES[hourlyBooking.vehicle_type || hVehicle]?.extra || 8;
+            const extraRate = hourlyPackages[hourlyBooking.vehicle_type || hVehicle]?.extra || 8;
             const extraCharge = Math.round(extraKm * extraRate);
             return (
               <View style={{ backgroundColor: extraKm > 0 ? '#fce4ec' : '#e8f5e9', borderRadius: 12, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: extraKm > 0 ? '#ef9a9a' : '#a5d6a7' }}>
@@ -2827,7 +2852,7 @@ export default function App() {
 
               {/* Cost preview */}
               {(hExtendHours > 0 || hExtendMin >= 15) && (() => {
-                const pkg = HOURLY_PACKAGES[hourlyBooking?.vehicle_type || hVehicle];
+                const pkg = hourlyPackages[hourlyBooking?.vehicle_type || hVehicle];
                 const totalDecimal = hExtendHours + hExtendMin / 60;
                 let cost = 0;
                 if (hExtendMin === 0 && hExtendHours >= 1 && pkg?.[hExtendHours]) {
@@ -3069,7 +3094,7 @@ export default function App() {
               <Text style={{ fontSize: 13, fontWeight: 'bold', color: hVehicle === 'ultra_luxury' ? '#ffd700' : '#b8860b' }}>Ultra Luxury</Text>
               <Text style={{ fontSize: 11, color: hVehicle === 'ultra_luxury' ? '#aaa' : '#999', marginTop: 2 }}>BMW · Mercedes · Audi · Land Rover · Lexus</Text>
             </View>
-            <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#e94560' }}>₹{HOURLY_PACKAGES.ultra_luxury?.[hPackageHours]?.fare || 800}</Text>
+            <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#e94560' }}>₹{hourlyPackages.ultra_luxury?.[hPackageHours]?.fare || 800}</Text>
           </Bouncy>
 
           {/* Package Cards */}
@@ -3088,14 +3113,14 @@ export default function App() {
             })}
           </View>
           {([24,48,72].includes(hPackageHours) ? [24,48,72] : [2,4,6,8]).map(h => {
-            const p = HOURLY_PACKAGES[hVehicle]?.[h];
+            const p = hourlyPackages[hVehicle]?.[h];
             const sel = hPackageHours === h;
             return (
               <Bouncy key={h} onPress={() => setHPackageHours(h)} style={{ backgroundColor: sel ? '#1a1a2e' : '#fff', borderRadius: 16, padding: 16, marginBottom: 10, borderWidth: 2, borderColor: sel ? '#e94560' : '#f0f0f0', flexDirection: 'row', alignItems: 'center', elevation: sel ? 4 : 1 }}>
                 <Text style={{ fontSize: 28, marginRight: 14 }}>{hHourEmoji(h)}</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 15, fontWeight: 'bold', color: sel ? '#fff' : '#1a1a2e' }}>{hHourLabel(h)}</Text>
-                  <Text style={{ fontSize: 12, color: sel ? '#aaa' : '#999', marginTop: 2 }}>{p?.km} km included · extra ₹{HOURLY_PACKAGES[hVehicle]?.extra}/km</Text>
+                  <Text style={{ fontSize: 12, color: sel ? '#aaa' : '#999', marginTop: 2 }}>{p?.km} km included · extra ₹{hourlyPackages[hVehicle]?.extra}/km</Text>
                 </View>
                 <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#e94560' }}>₹{p?.fare}</Text>
               </Bouncy>
@@ -3140,9 +3165,9 @@ export default function App() {
           <View style={{ backgroundColor: '#e3f2fd', borderRadius: 10, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'flex-start' }}>
             <Text style={{ fontSize: 15, marginRight: 8 }}>ℹ️</Text>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#1565c0', fontWeight: '700', fontSize: 12 }}>Package mein {HOURLY_PACKAGES[hVehicle]?.[hPackageHours]?.km} km included</Text>
+              <Text style={{ color: '#1565c0', fontWeight: '700', fontSize: 12 }}>Package mein {hourlyPackages[hVehicle]?.[hPackageHours]?.km} km included</Text>
               <Text style={{ color: '#1565c0', fontSize: 11, marginTop: 3 }}>
-                Aap kahi bhi ja sakte hain {hPackageHours} hour mein. Agar package km exceed hua to extra ₹{HOURLY_PACKAGES[hVehicle]?.extra}/km trip end pe pay hoga.
+                Aap kahi bhi ja sakte hain {hPackageHours} hour mein. Agar package km exceed hua to extra ₹{hourlyPackages[hVehicle]?.extra}/km trip end pe pay hoga.
               </Text>
             </View>
           </View>
@@ -3255,7 +3280,7 @@ export default function App() {
             {[
               [`${hHourLabel(hPackageHours)} (${hVehicleIcons[hVehicle]})`, `₹${pkg?.fare}`],
               [`KM Included`, `${pkg?.km} km`],
-              [`Extra KM Rate`, `₹${HOURLY_PACKAGES[hVehicle]?.extra}/km`],
+              [`Extra KM Rate`, `₹${hourlyPackages[hVehicle]?.extra}/km`],
               [`Wallet Balance`, `₹${walletBalance.toFixed(0)}`],
             ].map(([k, v], i) => (
               <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: i < 3 ? 1 : 0, borderColor: '#2a2a4e' }}>
