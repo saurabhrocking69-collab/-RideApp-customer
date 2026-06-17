@@ -105,7 +105,7 @@ export const useRideStore = create<RideState>((set, get) => ({
             },
           });
         } else if (st === 'started') {
-          set({ rideStatus: 'started' });
+          set({ rideStatus: 'started', startOtp: '' });
         } else if (st === 'completed') {
           set({ rideStatus: 'completed' });
           get().stopPolling();

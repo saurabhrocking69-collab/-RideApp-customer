@@ -781,10 +781,7 @@ export default function App() {
           setHourlyBooking((p: any) => ({ ...p, ...b, driver: data.driver || p?.driver }));
           if (data.approaching_limit) setHApproachLimit(data.approaching_limit);
           if (b.status === 'matched' && hourlyStep === 'waiting') {
-            // Scheduled rides: don't show OTP/active screen until within 20 min of scheduled time
-            const scheduledFarAway = b.scheduled_at &&
-              (new Date(b.scheduled_at).getTime() - Date.now() > 20 * 60 * 1000);
-            if (!scheduledFarAway) setHourlyStep('active');
+            setHourlyStep('active');
           }
           if (b.status === 'active' && hourlyStep === 'waiting') setHourlyStep('active');
           if (b.status === 'completed') { setHourlyStep('done'); loadWallet(phone); AsyncStorage.removeItem('activeHourlyId').catch(() => {}); }
@@ -1473,7 +1470,20 @@ export default function App() {
     try { await fetch(`${API}/api/chat/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, sender: 'customer', message: msg }) }); const r = await fetch(`${API}/api/chat/${rideData.ride_id}`); const d = await r.json(); setChatMsgs(d.messages || []); } catch (_e) {}
   };
 
-  const callDriver = () => { if (rideData?.driver?.phone) Linking.openURL(`tel:${rideData.driver.phone}`); };
+  const initiateCall = async (rideId: string | null, bookingId: string | null = null) => {
+    try {
+      const body: any = { caller_role: 'customer' };
+      if (rideId) body.ride_id = rideId;
+      if (bookingId) body.booking_id = bookingId;
+      const r = await fetch(`${API}/api/call/initiate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await r.json();
+      if (!data.success) { Alert.alert('Call', data.error || 'Call nahi ho saki'); return; }
+      if (data.method === 'direct' && data.call_number) Linking.openURL(`tel:${data.call_number}`);
+      else if (data.method === 'exotel') Alert.alert('📞 Calling', 'Aapke phone pe call aa rahi hai...');
+    } catch (_e) { Alert.alert('Error', 'Network error'); }
+  };
+
+  const callDriver = () => initiateCall(rideData?.ride_id ?? null);
 
   const triggerSOS = async () => {
     setSosActive(true);
@@ -1988,8 +1998,8 @@ export default function App() {
                         {driverInfo.vehicle_no ? ` · ${driverInfo.vehicle_no}` : ''}
                       </Text>
                     </View>
-                    {driverInfo.phone ? (
-                      <TouchableOpacity onPress={() => Linking.openURL(`tel:${driverInfo.phone}`)} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#e8f5e9', alignItems: 'center', justifyContent: 'center' }}>
+                    {driverInfo?.name ? (
+                      <TouchableOpacity onPress={callDriver} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#e8f5e9', alignItems: 'center', justifyContent: 'center' }}>
                         <Text style={{ fontSize: 18 }}>📞</Text>
                       </TouchableOpacity>
                     ) : null}
@@ -1997,7 +2007,7 @@ export default function App() {
                 ) : null}
 
                 {/* Start OTP */}
-                {(stdStatus === 'started' || stdStatus === 'arrived') && otp ? (
+                {(stdStatus === 'matched' || stdStatus === 'arrived') && otp ? (
                   <View style={{ backgroundColor: '#e8f5e9', borderRadius: 12, padding: 14, marginBottom: 12, alignItems: 'center' }}>
                     <Text style={{ fontSize: 12, color: '#2e7d32', fontWeight: '600', marginBottom: 4 }}>Ride Start OTP — Driver ko dikhao</Text>
                     <Text style={{ fontSize: 32, fontWeight: '800', color: '#1b5e20', letterSpacing: 8 }}>{otp}</Text>
@@ -2058,8 +2068,8 @@ export default function App() {
                         {[hourlyBooking.driver.vehicle_brand, hourlyBooking.driver.vehicle_model].filter(Boolean).join(' ')}
                       </Text>
                     </View>
-                    {hourlyBooking.driver_phone ? (
-                      <TouchableOpacity onPress={() => Linking.openURL(`tel:${hourlyBooking.driver_phone}`)} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#f3e5f5', alignItems: 'center', justifyContent: 'center' }}>
+                    {hourlyBooking?.driver?.name ? (
+                      <TouchableOpacity onPress={() => initiateCall(null, hourlyBooking.id)} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#f3e5f5', alignItems: 'center', justifyContent: 'center' }}>
                         <Text style={{ fontSize: 18 }}>📞</Text>
                       </TouchableOpacity>
                     ) : null}
@@ -2068,16 +2078,6 @@ export default function App() {
                   <View style={{ backgroundColor: '#fff8e1', borderRadius: 12, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
                     <Text style={{ fontSize: 20, marginRight: 10 }}>🔍</Text>
                     <Text style={{ color: '#f57c00', fontSize: 13, fontWeight: '600' }}>Driver dhoondha ja raha hai...</Text>
-                  </View>
-                )}
-
-                {/* Scheduled time */}
-                {hourlyBooking?.scheduled_at && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                    <Text style={{ fontSize: 13, marginRight: 8 }}>🕐</Text>
-                    <Text style={{ color: '#555', fontSize: 13 }}>
-                      Scheduled: {new Date(hourlyBooking.scheduled_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                    </Text>
                   </View>
                 )}
 
@@ -2498,22 +2498,12 @@ export default function App() {
     const bookHourly = async () => {
       if (!hPickup) { alert('Pickup location daalo'); return; }
       if (!phone) return;
-      if (hScheduled && (!hScheduleDate || !hScheduleHour)) { alert('Date aur time select karo'); return; }
-      let scheduled_at: string | null = null;
-      if (hScheduled && hScheduleDate && hScheduleHour) {
-        const hh = hScheduleHour.padStart(2, '0');
-        const mm = (hScheduleMin || '00').padStart(2, '0');
-        const dt = new Date(`${hScheduleDate}T${hh}:${mm}:00`);
-        if (dt <= new Date()) { alert('Future ka time select karo'); return; }
-        scheduled_at = dt.toISOString();
-      }
       try {
         const body: any = { phone, vehicle_type: hVehicle, package_hours: hPackageHours, pickup: hPickup, pickup_lat: hPickupCoords?.lat, pickup_lng: hPickupCoords?.lng, is_roundtrip: hRoundTrip, stay_hours: hStayHours };
         if (hDrop) { body.drop_location = hDrop; body.drop_lat = hDropCoords?.lat; body.drop_lng = hDropCoords?.lng; }
-        if (scheduled_at) body.scheduled_at = scheduled_at;
         const data = await apiPost('/api/hourly/book', body);
         if (data.success) {
-          setHourlyBooking({ id: data.booking_id, fare: data.fare, km_included: data.km_included, status: 'pending', vehicle_type: hVehicle, package_hours: hPackageHours, pickup: hPickup, drop_location: hDrop, is_roundtrip: hRoundTrip, stay_hours: hStayHours, scheduled_at });
+          setHourlyBooking({ id: data.booking_id, fare: data.fare, km_included: data.km_included, status: 'pending', vehicle_type: hVehicle, package_hours: hPackageHours, pickup: hPickup, drop_location: hDrop, is_roundtrip: hRoundTrip, stay_hours: hStayHours });
           AsyncStorage.setItem('activeHourlyId', String(data.booking_id)).catch(() => {});
           joinHourlySocket(data.booking_id);
           setHourlyStep('waiting');
@@ -2727,20 +2717,12 @@ export default function App() {
                   </Text>
                 ) : null}
                 <Text style={{ color: '#666', fontSize: 12, marginTop: 1 }}>🚗 {hourlyBooking?.driver?.vehicle_no || '...'}</Text>
-                {hourlyBooking?.driver_phone && (
-                  <Text style={{ color: '#888', fontSize: 12, marginTop: 2 }}>📱 +91 {hourlyBooking.driver_phone}</Text>
-                )}
               </View>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <Bouncy style={{ backgroundColor: '#e8f5e9', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, alignItems: 'center' }}
-                  onPress={() => hourlyBooking?.driver_phone && Linking.openURL(`tel:${hourlyBooking.driver_phone}`)}>
+                  onPress={() => initiateCall(null, hourlyBooking?.id)}>
                   <Text style={{ fontSize: 18 }}>📞</Text>
                   <Text style={{ fontSize: 9, color: '#2e7d32', fontWeight: '600', marginTop: 2 }}>Call</Text>
-                </Bouncy>
-                <Bouncy style={{ backgroundColor: '#e3f2fd', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, alignItems: 'center' }}
-                  onPress={() => hourlyBooking?.driver_phone && Linking.openURL(`https://wa.me/91${hourlyBooking.driver_phone}`)}>
-                  <Text style={{ fontSize: 18 }}>💬</Text>
-                  <Text style={{ fontSize: 9, color: '#1565c0', fontWeight: '600', marginTop: 2 }}>WA</Text>
                 </Bouncy>
                 <Bouncy style={{ backgroundColor: hChatOpen ? '#1a1a2e' : '#f3e5f5', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, alignItems: 'center' }}
                   onPress={() => { setHChatOpen(o => !o); setHChatUnread(0); }}>
@@ -3083,57 +3065,30 @@ export default function App() {
 
     // ── WAITING FOR DRIVER ──
     if (hourlyStep === 'waiting') {
-      const isScheduledFarAway = hourlyBooking?.scheduled_at &&
-        (new Date(hourlyBooking.scheduled_at).getTime() - Date.now() > 20 * 60 * 1000);
       const driverAccepted = hourlyBooking?.status === 'matched';
-      const scheduledTimeStr = hourlyBooking?.scheduled_at
-        ? new Date(hourlyBooking.scheduled_at).toLocaleString('hi-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
-        : '';
       return (
         <ScreenIn style={s.screen}>
           <View style={s.topBar}>
             <View style={{ width: 36 }} />
-            <Text style={s.topTitle}>{driverAccepted && isScheduledFarAway ? '🗓️ Booking Confirmed' : '⏱️ Driver Dhundh Rahe Hain'}</Text>
+            <Text style={s.topTitle}>⏱️ Driver Dhundh Rahe Hain</Text>
             <View style={{ width: 36 }} />
           </View>
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-            <PulseView><Text style={{ fontSize: 72, marginBottom: 16 }}>{driverAccepted && isScheduledFarAway ? '✅' : '⏱️'}</Text></PulseView>
+            <PulseView><Text style={{ fontSize: 72, marginBottom: 16 }}>⏱️</Text></PulseView>
             <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1a1a2e', marginBottom: 10 }}>
-              {driverAccepted && isScheduledFarAway ? 'Driver ne Accept kar liya!' : 'Booking Confirmed!'}
+              {driverAccepted ? 'Driver Mil Gaya!' : 'Booking Confirmed!'}
             </Text>
-
-            {/* Scheduled ride — driver accepted, far away */}
-            {driverAccepted && isScheduledFarAway && (
-              <View style={{ backgroundColor: '#e8f5e9', borderRadius: 14, padding: 14, width: '100%', marginBottom: 14, alignItems: 'center' }}>
-                <Text style={{ color: '#2e7d32', fontWeight: '700', fontSize: 15 }}>✅ Driver Confirm Ho Gaya</Text>
-                <Text style={{ color: '#2e7d32', fontSize: 13, marginTop: 4 }}>📅 {scheduledTimeStr} pe aayega</Text>
-                <Text style={{ color: '#777', fontSize: 11, marginTop: 6, textAlign: 'center' }}>App band kar sakte hain — scheduled time se pehle notification aayega</Text>
-              </View>
-            )}
-
-            {/* Scheduled ride — still looking for driver */}
-            {hourlyBooking?.scheduled_at && !driverAccepted && (
-              <View style={{ backgroundColor: '#fff3e0', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', marginBottom: 12, width: '100%' }}>
-                <Text style={{ fontSize: 16, marginRight: 8 }}>🗓️</Text>
-                <View>
-                  <Text style={{ color: '#e65100', fontWeight: '700', fontSize: 13 }}>Scheduled Booking</Text>
-                  <Text style={{ color: '#e65100', fontSize: 12 }}>{scheduledTimeStr}</Text>
-                </View>
-              </View>
-            )}
 
             <View style={{ backgroundColor: '#e8f5e9', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', marginBottom: 16, width: '100%' }}>
               <Text style={{ fontSize: 16, marginRight: 8 }}>✅</Text>
               <Text style={{ color: '#2e7d32', fontWeight: '600' }}>₹{hourlyBooking?.fare} Payment Paid — Escrow Mein</Text>
             </View>
 
-            {!(driverAccepted && isScheduledFarAway) && <FloatingDots />}
+            {!driverAccepted && <FloatingDots />}
             <Text style={{ color: '#999', fontSize: 13, marginTop: 12, marginBottom: 20, textAlign: 'center' }}>
-              {driverAccepted && isScheduledFarAway
-                ? `Driver ko OTP ${scheduledTimeStr} ke paas milega`
-                : hourlyBooking?.scheduled_at
-                  ? `Driver ${scheduledTimeStr} ke paas milega`
-                  : `Aapke area mein ${hVehicleIcons[hVehicle]} driver dhundh rahe hain...`}
+              {driverAccepted
+                ? 'Driver aa raha hai — OTP ready rakho'
+                : `Aapke area mein ${hVehicleIcons[hVehicle]} driver dhundh rahe hain...`}
             </Text>
 
             <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, width: '100%', elevation: 2, marginBottom: 20 }}>
@@ -3151,8 +3106,7 @@ export default function App() {
               ))}
             </View>
 
-            {/* Cancel — only if driver hasn't accepted or it's still far from scheduled */}
-            {(!driverAccepted || isScheduledFarAway) && (
+            {!driverAccepted && (
               <Bouncy style={{ borderRadius: 12, borderWidth: 2, borderColor: '#e94560', padding: 12, width: '100%', alignItems: 'center' }} onPress={cancelHourlyBooking}>
                 <Text style={{ color: '#e94560', fontWeight: '600' }}>✗ Booking Cancel (Full Refund)</Text>
               </Bouncy>
@@ -3288,85 +3242,6 @@ export default function App() {
                     </Bouncy>
                   ))}
                 </View>
-              </View>
-            )}
-          </View>
-
-          {/* Scheduling */}
-          <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 14, marginTop: 4, marginBottom: 14, elevation: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <View>
-                <Text style={{ fontSize: 14, fontWeight: '600', color: '#1a1a2e' }}>🗓️ Schedule for Later?</Text>
-                <Text style={{ fontSize: 11, color: '#999', marginTop: 2 }}>Advance booking — driver abhi/kal ayega</Text>
-              </View>
-              <Switch value={hScheduled} onValueChange={v => { setHScheduled(v); if (!v) { setHScheduleDate(''); setHScheduleHour(''); setHScheduleMin('00'); }}} trackColor={{ true: '#e94560' }} />
-            </View>
-            {!hScheduled && (
-              <View style={{ marginTop: 10, backgroundColor: '#e8f5e9', borderRadius: 8, padding: 8, flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontSize: 14, marginRight: 6 }}>⚡</Text>
-                <Text style={{ color: '#2e7d32', fontSize: 12, fontWeight: '600' }}>Abhi Book Karo — Driver Turant Aayega</Text>
-              </View>
-            )}
-            {hScheduled && (
-              <View style={{ marginTop: 12 }}>
-                {/* Date quick chips */}
-                <Text style={{ fontSize: 12, color: '#666', marginBottom: 6, fontWeight: '600' }}>Date:</Text>
-                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
-                  {[{label:'Aaj',days:0},{label:'Kal',days:1},{label:'+2 Din',days:2}].map(({ label, days }) => {
-                    const d = new Date(); d.setDate(d.getDate() + days);
-                    const ds = d.toISOString().split('T')[0];
-                    const active = hScheduleDate === ds;
-                    return (
-                      <TouchableOpacity key={days} onPress={() => setHScheduleDate(ds)}
-                        style={{ flex: 1, backgroundColor: active ? '#1a1a2e' : '#f5f5f5', borderRadius: 10, padding: 10, alignItems: 'center' }}>
-                        <Text style={{ color: active ? '#fff' : '#333', fontWeight: '700', fontSize: 13 }}>{label}</Text>
-                        <Text style={{ color: active ? '#aaa' : '#999', fontSize: 10, marginTop: 2 }}>{d.getDate()}/{d.getMonth()+1}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-
-                {/* Hour + Minute inputs — no colon needed */}
-                <Text style={{ fontSize: 12, color: '#666', marginBottom: 6, fontWeight: '600' }}>Time:</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <View style={{ flex: 1, alignItems: 'center' }}>
-                    <Text style={{ fontSize: 10, color: '#999', marginBottom: 4 }}>Hour (0–23)</Text>
-                    <TextInput
-                      style={{ borderWidth: 1.5, borderColor: hScheduleHour ? '#1a1a2e' : '#e0e0e0', borderRadius: 12, padding: 14, fontSize: 26, fontWeight: 'bold', color: '#1a1a2e', textAlign: 'center', width: '100%' }}
-                      placeholder="14" placeholderTextColor="#ccc"
-                      value={hScheduleHour} keyboardType="number-pad" maxLength={2}
-                      onChangeText={v => { const n = v.replace(/\D/g,''); if (n === '' || parseInt(n) <= 23) setHScheduleHour(n.slice(0,2)); }}
-                    />
-                  </View>
-                  <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#ccc', marginTop: 18 }}>:</Text>
-                  <View style={{ flex: 1, alignItems: 'center' }}>
-                    <Text style={{ fontSize: 10, color: '#999', marginBottom: 4 }}>Minute</Text>
-                    <TextInput
-                      style={{ borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 12, padding: 14, fontSize: 26, fontWeight: 'bold', color: '#1a1a2e', textAlign: 'center', width: '100%' }}
-                      placeholder="00" placeholderTextColor="#ccc"
-                      value={hScheduleMin} keyboardType="number-pad" maxLength={2}
-                      onChangeText={v => { const n = v.replace(/\D/g,''); if (n === '' || parseInt(n) <= 59) setHScheduleMin(n.slice(0,2)); }}
-                    />
-                  </View>
-                </View>
-                {/* Minute quick buttons */}
-                <View style={{ flexDirection: 'row', gap: 6, marginBottom: 10 }}>
-                  {['00','15','30','45'].map(m => (
-                    <TouchableOpacity key={m} onPress={() => setHScheduleMin(m)}
-                      style={{ flex: 1, backgroundColor: hScheduleMin === m ? '#e94560' : '#f5f5f5', borderRadius: 8, paddingVertical: 7, alignItems: 'center' }}>
-                      <Text style={{ color: hScheduleMin === m ? '#fff' : '#666', fontSize: 13, fontWeight: '700' }}>:{m}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                {hScheduleDate && hScheduleHour !== '' && (
-                  <View style={{ backgroundColor: '#fff3e0', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ fontSize: 16, marginRight: 8 }}>📅</Text>
-                    <Text style={{ color: '#e65100', fontSize: 13, fontWeight: '700' }}>
-                      {hScheduleDate} at {hScheduleHour.padStart(2,'0')}:{(hScheduleMin||'00').padStart(2,'0')}
-                    </Text>
-                  </View>
-                )}
               </View>
             )}
           </View>
@@ -3513,26 +3388,6 @@ export default function App() {
               <View style={{ flex: 1 }}>
                 <Text style={{ color: '#1a237e', fontWeight: '700', fontSize: 13 }}>{title}</Text>
                 <Text style={{ color: '#5c6bc0', fontSize: 12, marginTop: 2 }}>{desc}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
-
-        {/* Schedule Rules */}
-        <View style={{ backgroundColor: '#e0f2f1', borderRadius: 16, padding: 18, marginBottom: 14, borderLeftWidth: 4, borderLeftColor: '#009688' }}>
-          <Text style={{ color: '#004d40', fontSize: 15, fontWeight: 'bold', marginBottom: 10 }}>🗓️ Schedule for Later — Advance Booking</Text>
-          {[
-            ['📅', 'Kitni advance booking?', 'Koi bhi future time select karo — date + hour + minute se schedule karo'],
-            ['🔍', 'Driver kab dikhega?', 'Driver ko booking 75 min pehle se dikhti hai — wo accept karega'],
-            ['✅ Accept', 'Driver ne accept kar liya', 'Notification aata hai — app band kar sakte hain, scheduled time pe OTP aayega'],
-            ['⏰ OTP timing', 'OTP kab milega?', 'Scheduled time se 20 min pehle se OTP active hoga — driver aayega aur start karega'],
-            ['❌ Cancel', 'Schedule cancel karna ho?', 'Driver accept karne se pehle cancel karo — full refund. Baad mein mutual termination'],
-          ].map(([icon, title, desc], i) => (
-            <View key={i} style={{ flexDirection: 'row', marginBottom: 10 }}>
-              <Text style={{ fontSize: 16, marginRight: 10, width: 30 }}>{icon}</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: '#004d40', fontWeight: '700', fontSize: 13 }}>{title}</Text>
-                <Text style={{ color: '#00695c', fontSize: 12, marginTop: 2 }}>{desc}</Text>
               </View>
             </View>
           ))}
