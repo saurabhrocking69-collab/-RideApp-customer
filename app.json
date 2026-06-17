@@ -31,6 +31,10 @@
     "apiKey": "AIzaSyAD-A9qcLSXbgrz4CI4PYLFOZ"
   }
     },
+    "plugins": [
+      ["expo-notifications", { "icon": "./assets/icon.png", "color": "#e94560" }],
+      ["expo-location", { "locationAlwaysAndWhenInUsePermission": "Ride tracking ke liye location chahiye" }]
+    ],
     "web": {
       "favicon": "./assets/favicon.png"
     },

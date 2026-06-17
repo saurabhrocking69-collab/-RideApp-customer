@@ -558,8 +558,11 @@ export default function App() {
       Notifications.setNotificationChannelAsync('default', {
         name: 'Sppero Notifications',
         importance: Notifications.AndroidImportance.MAX,
+        sound: 'default',
         vibrationPattern: [0, 250, 250, 250],
+        enableVibrate: true,
         lightColor: '#e94560',
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       });
     }
 
