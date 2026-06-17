@@ -445,6 +445,8 @@ export default function App() {
   const [result, setResult]           = useState('');
   const [loading, setLoading]         = useState(false);
   const [rideData, setRideData]       = useState<any>(null);
+  const [altSuggest, setAltSuggest]   = useState<{alternatives: string[], current_type: string} | null>(null);
+  const [switchingVehicle, setSwitchingVehicle] = useState(false);
   const [rating, setRating]           = useState(0);
   const [sosActive, setSosActive]     = useState(false);
   const [tab, setTab]                 = useState('home');
@@ -1275,16 +1277,31 @@ export default function App() {
       if (promoDiscount > 0 && data.ride_id) {
         try { await fetch(`${API}/api/promo/apply`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: promoCode, phone, ride_id: data.ride_id, discount: promoDiscount }) }); } catch (_e) {}
       }
-  setRideData(data); setScreen('matching'); setResult('');
+  setRideData(data); setScreen('matching'); setResult(''); setAltSuggest(null);
       AsyncStorage.setItem('activeStdRideId', String(data.ride_id)).catch(() => {});
       joinRideSocket(data.ride_id);
       ride.setRide(data); // Store mein naya ride — purana stale data auto-clear
+      ride.startPolling(phone || '9999999999'); // fallback polling in case socket drops
       setBookTime(Date.now()); setCancelTimer(60);
       // Free cancels load
       try { const cs = await fetch(`${API}/api/customer/cancel-status?phone=${phone || '9999999999'}`); const csd = await cs.json(); setFreeCancelsLeft(csd.free_cancels_left ?? 3); } catch (_e) {}
     } catch { setResult('❌ Server connect nahi hua!'); }
     setLoading(false);
   };
+
+  const switchVehicle = async (newType: string) => {
+    if (!rideData?.ride_id || switchingVehicle) return;
+    setSwitchingVehicle(true);
+    try {
+      const res = await apiPost('/api/rides/switch-vehicle', { ride_id: rideData.ride_id, new_vehicle_type: newType });
+      if (res._error) { setResult('❌ ' + res.message); return; }
+      setAltSuggest(null);
+      setRideData((p: any) => p ? { ...p, ride_type: newType, fare: res.new_fare } : p);
+      setResult(`🔄 ${newType.toUpperCase()} driver dhundh rahe hain...`);
+    } catch { setResult('❌ Switch nahi hua, try again'); }
+    finally { setSwitchingVehicle(false); }
+  };
+
 // OTP digit change handler
   const handleOtpChange = (text: string, index: number) => {
     const newDigits = [...otpDigits];
@@ -1434,21 +1451,43 @@ export default function App() {
         setHourlyBooking((p: any) => p ? { ...p, status: 'completed', driver_earning: data.driver_earning } : p);
         setHourlyStep('done');
       });
-      // Listen for live ride status updates — no polling needed
+      // Live ride status updates via socket
       s.on('rideUpdate', (data: any) => {
         const st = data.status;
         if (st === 'matched' || st === 'arrived') {
-          setRideData((p: any) => p ? { ...p, ...(data.driver ? { driver: data.driver } : {}) } : p);
+          setAltSuggest(null); // clear suggestion when driver found
+          setRideData((p: any) => p ? {
+            ...p,
+            startOtp: data.start_otp || p?.startOtp,
+            ...(data.driver ? { driver: data.driver } : {}),
+          } : p);
+          // Sync to Zustand store so live tab status updates too
+          useRideStore.setState({ rideStatus: st, startOtp: data.start_otp || '' });
         }
-        if (st === 'started') setScreen('inride');
+        if (st === 'searching') {
+          // Vehicle switched — update displayed fare/type
+          setRideData((p: any) => p ? { ...p, ...(data.new_fare ? { fare: data.new_fare } : {}), ...(data.new_vehicle_type ? { vehicle_type: data.new_vehicle_type } : {}) } : p);
+          useRideStore.setState({ rideStatus: 'requested' });
+        }
+        if (st === 'started') { setScreen('inride'); useRideStore.setState({ rideStatus: 'started', startOtp: '' }); }
         if (st === 'completed') {
           AsyncStorage.removeItem('activeStdRideId').catch(() => {});
+          useRideStore.setState({ rideStatus: 'completed' });
           setScreen((cur: Screen) => (cur === 'payment' || cur === 'postride') ? cur : 'payment');
           loadWallet(userPhone);
         }
-        if (st === 'cancelled') {
+        if (st === 'cancelled' || st === 'no_driver') {
           AsyncStorage.removeItem('activeStdRideId').catch(() => {});
-          setResult('❌ Ride cancel ho gayi'); setScreen('home'); setRideData(null);
+          ride.clearRide();
+          setRideData(null); setAltSuggest(null);
+          setScreen('home');
+          setResult(st === 'no_driver' ? '😔 Abhi driver available nahi — thodi der baad try karo' : '❌ Ride cancel ho gayi');
+        }
+      });
+      // Alternative vehicle suggestion from backend
+      s.on('suggestAlternative', (data: any) => {
+        if (data.alternatives?.length > 0) {
+          setAltSuggest({ alternatives: data.alternatives, current_type: data.current_type });
         }
       });
     });
@@ -3748,6 +3787,31 @@ export default function App() {
                   </Text>
                   <Text style={{ fontSize: 11, color: '#888', textAlign: 'center', marginTop: 4 }}>Aaj {freeCancelsLeft} free cancels bache hain</Text>
                 </View>
+
+                {/* Alternative vehicle suggestion banner */}
+                {altSuggest && altSuggest.alternatives.length > 0 && (
+                  <View style={{ backgroundColor: '#fff8e1', borderRadius: 16, padding: 16, marginTop: 16, width: '100%', borderWidth: 1.5, borderColor: '#ffd54f' }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#e65100', textAlign: 'center', marginBottom: 4 }}>
+                      😕 {altSuggest.current_type.toUpperCase()} driver nahi mila
+                    </Text>
+                    <Text style={{ fontSize: 12, color: '#666', textAlign: 'center', marginBottom: 12 }}>
+                      Kya hum aapke liye doosra vehicle dhundhe?
+                    </Text>
+                    <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+                      {altSuggest.alternatives.map((alt) => {
+                        const icons: Record<string, string> = { auto: '🛺', car: '🚕', bike: '🏍️', eriksha: '🛵', luxury: '🚙' };
+                        const labels: Record<string, string> = { auto: 'Auto', car: 'Car', bike: 'Bike', eriksha: 'E-Riksha', luxury: 'Luxury' };
+                        return (
+                          <Bouncy key={alt} onPress={() => switchVehicle(alt)} disabled={switchingVehicle}
+                            style={{ backgroundColor: switchingVehicle ? '#ccc' : '#1a1a2e', borderRadius: 12, paddingHorizontal: 18, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Text style={{ fontSize: 18 }}>{icons[alt] || '🚗'}</Text>
+                            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>{labels[alt] || alt}</Text>
+                          </Bouncy>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
 
                 <View style={{ flexDirection: 'row', gap: 12, marginTop: 14, width: '100%' }}>
                   <Bouncy onPress={() => setShowCancelModal(true)} style={{ flex: 1, backgroundColor: '#fff', borderRadius: 12, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: '#e94560' }}>
