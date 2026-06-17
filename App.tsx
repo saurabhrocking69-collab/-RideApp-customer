@@ -427,6 +427,7 @@ export default function App() {
     return unsub;
   }, []);
   const socketRef = useRef<Socket | null>(null);
+  const phoneRef  = useRef<string>(''); // always-fresh phone for socket closures
   const [phone, setPhone]             = useState('');
   const [otp, setOtp]                 = useState('');
   const [otpSent, setOtpSent]         = useState('');
@@ -516,11 +517,6 @@ export default function App() {
   const [hourlyTimerSec, setHourlyTimerSec] = useState(0);
   const [hOtpInput, setHOtpInput]       = useState('');
   const hourlyTimerRef = useRef<any>(null);
-  // Scheduling
-  const [hScheduled, setHScheduled]     = useState(false);
-  const [hScheduleDate, setHScheduleDate] = useState('');
-  const [hScheduleHour, setHScheduleHour] = useState('');
-  const [hScheduleMin, setHScheduleMin]   = useState('00');
   // Hourly chat
   const [hChatOpen, setHChatOpen]         = useState(false);
   const [hChatMsgs, setHChatMsgs]         = useState<any[]>([]);
@@ -761,8 +757,10 @@ export default function App() {
             AsyncStorage.removeItem('activeStdRideId').catch(() => {});
             const nd = await apiGet(`/api/notifications/latest?phone=${phone}`);
             setResult('❌ ' + (nd?.notification?.body || 'Ride cancel ho gayi'));
-            setScreen('home'); setTab('home'); setRideData(null); setPickup(''); setDrop(''); setEta('');
+            setScreen('home'); setTab('home'); setRideData(null);
+            setPickup(''); setDrop(''); setPickupCoords(null); setDropCoords(null); setEta('');
             setUnreadChat(0); setDriverLoc(null); setDriverEta(''); setDriverDist('');
+            setAltSuggest(null);
             ride.clearRide();
           }
         }
@@ -981,6 +979,25 @@ export default function App() {
   const loadWallet = async (ph: string) => {
     try { const r = await fetch(`${API}/api/wallet/balance?phone=${ph}`); const d = await r.json(); setWalletBalance(d.balance || 0); } catch (_e) {}
   };
+
+  // Keep phoneRef fresh for socket closures; add AppState listener for live refresh on resume
+  useEffect(() => {
+    phoneRef.current = phone;
+  }, [phone]);
+  useEffect(() => {
+    if (!phone) return;
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        loadWallet(phone);
+        loadHistory(phone);
+        // Reconnect socket if it dropped while app was in background
+        if (socketRef.current && !socketRef.current.connected) {
+          socketRef.current.connect();
+        }
+      }
+    });
+    return () => sub.remove();
+  }, [phone]);
   const loadWalletDetail = async (ph: string) => {
     try {
       const r = await fetch(`${API}/api/wallet/customer/detail?phone=${ph}`);
@@ -1432,8 +1449,12 @@ export default function App() {
   };
 
   const connectSocket = (userPhone: string) => {
-    if (socketRef.current?.connected) return;
-    const s = io(API, { transports: ['websocket', 'polling'], reconnection: true, reconnectionAttempts: 20, reconnectionDelay: 2000 });
+    // Disconnect dead/old socket before creating new one — prevents listener leak
+    if (socketRef.current) {
+      if (socketRef.current.connected) return;
+      socketRef.current.disconnect();
+    }
+    const s = io(API, { transports: ['polling', 'websocket'], reconnection: true, reconnectionAttempts: Infinity, reconnectionDelay: 2000, reconnectionDelayMax: 10000, timeout: 10000 });
     s.on('connect', () => {
       // Re-join hourly room on reconnect so we don't miss events
       if (activeHourlyIdRef.current) s.emit('joinHourly', { bookingId: activeHourlyIdRef.current });
@@ -1477,12 +1498,13 @@ export default function App() {
           AsyncStorage.removeItem('activeStdRideId').catch(() => {});
           useRideStore.setState({ rideStatus: 'completed' });
           setScreen((cur: Screen) => (cur === 'payment' || cur === 'postride') ? cur : 'payment');
-          loadWallet(userPhone);
+          loadWallet(phoneRef.current || userPhone);
         }
         if (st === 'cancelled' || st === 'no_driver') {
           AsyncStorage.removeItem('activeStdRideId').catch(() => {});
           ride.clearRide();
-          setRideData(null); setAltSuggest(null);
+          setRideData(null); setAltSuggest(null); setDriverLoc(null);
+          setPickup(''); setDrop(''); setPickupCoords(null); setDropCoords(null); setEta('');
           setScreen('home');
           setResult(st === 'no_driver' ? '😔 Abhi driver available nahi — thodi der baad try karo' : '❌ Ride cancel ho gayi');
         }
@@ -3854,7 +3876,9 @@ export default function App() {
                   ride.clearRide();
                   AsyncStorage.removeItem('activeStdRideId').catch(() => {});
                 }
-                setShowCancelModal(false); setScreen('home'); setRideData(null); setPickup(''); setDrop(''); setEta('');
+                setShowCancelModal(false); setScreen('home'); setRideData(null);
+                setPickup(''); setDrop(''); setPickupCoords(null); setDropCoords(null); setEta('');
+                setAltSuggest(null); setDriverLoc(null);
               }}>
               <Text style={{ fontSize: 14, color: '#333' }}>{reason}</Text>
             </TouchableOpacity>
