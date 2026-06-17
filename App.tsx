@@ -456,15 +456,6 @@ export default function App() {
   const [review, setReview]           = useState('');
   const [paymentDone, setPaymentDone] = useState(false);
   const [showUpiQr, setShowUpiQr] = useState(false);
-  // Ride Extension (same driver, new drop)
-  const [extReq, setExtReq]           = useState<any>(null);   // { id, driver_name, estimated_fare }
-  const [extStep, setExtStep]         = useState<'idle'|'form'|'waiting'|'done'>('idle');
-  const [extDrop, setExtDrop]         = useState('');
-  const [extDropCoords, setExtDropCoords] = useState<any>(null);
-  const [extDropSugg, setExtDropSugg] = useState<any[]>([]);
-  const [extRespSec, setExtRespSec]   = useState(60);
-  const [extWindowSec, setExtWindowSec] = useState(900); // 15-min window
-  const [extMsg, setExtMsg]           = useState('');
   const [historyRides, setHistoryRides] = useState<any[]>([]);
   const [driverLoc, setDriverLoc]     = useState<any>(null);
   const [walletBalance, setWalletBalance] = useState(0);
@@ -494,7 +485,6 @@ export default function App() {
   const [referralInput, setReferralInput] = useState('');
   const [savedPlaces, setSavedPlaces] = useState<any[]>([]);
   const scratchAnim = useRef(new Animated.Value(1)).current;
-  const [showExtInfo, setShowExtInfo] = useState(false);
   const starAnims   = useRef([0,1,2,3,4].map(() => new Animated.Value(1))).current;
 
   // ── Hourly Booking State ──────────────────────
@@ -541,7 +531,6 @@ export default function App() {
   // Debounce refs for place search (prevents API spam on every keystroke)
   const pickupDebounceRef = useRef<any>(null);
   const dropDebounceRef   = useRef<any>(null);
-  const extDropDebounceRef = useRef<any>(null);
   const hPickupDebounceRef = useRef<any>(null);
   const hDropDebounceRef   = useRef<any>(null);
 
@@ -695,7 +684,7 @@ export default function App() {
               const LIVE = ['requested','matched','arrived','started','completed'];
               if (rs.ride && LIVE.includes(rs.ride.status)) {
                 const r = rs.ride;
-                const driverObj = r.driver_name ? { name: r.driver_name, phone: r.driver_phone, vehicle_no: r.vehicle_no, vehicle_brand: r.vehicle_brand, vehicle_model: r.vehicle_model, upi_id: r.driver_upi_id, verified: r.driver_verification_status === 'approved', rating: r.driver_rating } : null;
+                const driverObj = r.driver_name ? { name: r.driver_name, phone: r.driver_phone, vehicle_no: r.vehicle_no, vehicle_brand: r.vehicle_brand, vehicle_model: r.vehicle_model, upi_id: r.driver_upi_id, verified: r.driver_verification_status === 'approved', rating: r.driver_rating, photo: r.driver_photo || null } : null;
                 setRideData({ ride_id: savedRideId, fare: '₹' + Math.round(parseFloat(r.fare) || 0), startOtp: r.start_otp || '', driver: driverObj });
                 setPickup(r.pickup || ''); setDrop(r.drop_location || '');
                 if (r.pickup_lat) setPickupCoords({ lat: parseFloat(r.pickup_lat), lng: parseFloat(r.pickup_lng) });
@@ -730,7 +719,7 @@ export default function App() {
           const st = data.ride.status;
 
           if (st === 'matched' || st === 'arrived') {
-            setRideData((p: any) => p ? { ...p, startOtp: data.ride.start_otp, driver: { name: data.ride.driver_name, phone: data.ride.driver_phone, vehicle_no: data.ride.vehicle_no, vehicle_brand: data.ride.vehicle_brand, vehicle_model: data.ride.vehicle_model, upi_id: data.ride.driver_upi_id, verified: data.ride.driver_verification_status === 'approved', rating: data.ride.driver_rating } } : p);
+            setRideData((p: any) => p ? { ...p, startOtp: data.ride.start_otp, driver: { name: data.ride.driver_name, phone: data.ride.driver_phone, vehicle_no: data.ride.vehicle_no, vehicle_brand: data.ride.vehicle_brand, vehicle_model: data.ride.vehicle_model, upi_id: data.ride.driver_upi_id, verified: data.ride.driver_verification_status === 'approved', rating: data.ride.driver_rating, photo: data.ride.driver_photo || null } } : p);
             const ld = await apiGet(`/api/rides/driver-location/${rid}`);
             if (!ld._error && ld.location) {
               setDriverLoc(ld.location);
@@ -933,41 +922,6 @@ export default function App() {
     return () => clearInterval(iv);
   }, [screen, rideData?.ride_id]);
 
-  // Extension polling — customer waits for driver to accept/reject
-  useEffect(() => {
-    if (screen !== 'postride' || extStep !== 'waiting' || !extReq?.id) return;
-    const iv = setInterval(async () => {
-      try {
-        const d = await apiGet(`/api/rides/extension-status/${extReq.id}`);
-        setExtRespSec(d.seconds_left ?? 0);
-        if (d.status === 'accepted' && d.new_ride_id) {
-          clearInterval(iv);
-          const ride = await apiGet(`/api/rides/status/${d.new_ride_id}`);
-          if (ride.ride) {
-            setRideData({ ride_id: d.new_ride_id, fare: `₹${Math.round(extReq.estimated_fare)}`, driver: ride.ride.driver, vehicle_type: ride.ride.ride_type, payment_method: ride.ride.payment_method });
-            AsyncStorage.setItem('activeStdRideId', String(d.new_ride_id)).catch(() => {});
-            setPickup(extReq.extPickup || drop); setDrop(extDrop);
-            setPaymentDone(false); setExtStep('done'); setExtReq(null);
-            setScreen('matching');
-          }
-        } else if (d.status === 'rejected') {
-          clearInterval(iv); setExtStep('idle'); setExtMsg('Driver ne reject kiya — naya ride book karo ya koi aur driver try karo');
-        } else if (d.status === 'expired' || (d.seconds_left !== undefined && d.seconds_left <= 0)) {
-          clearInterval(iv); setExtStep('idle'); setExtMsg('Driver ne respond nahi kiya — naya ride book karo');
-        }
-      } catch (_e) {}
-    }, 2000);
-    return () => clearInterval(iv);
-  }, [screen, extStep, extReq?.id]);
-
-  // Extension 15-min window countdown on postride screen
-  useEffect(() => {
-    if (screen !== 'postride') return;
-    setExtWindowSec(900); setExtMsg('');
-    const iv = setInterval(() => setExtWindowSec(s => { if (s <= 1) { clearInterval(iv); return 0; } return s - 1; }), 1000);
-    return () => clearInterval(iv);
-  }, [screen]);
-
   const loadHistory = async (ph: string) => {
     try { const r = await fetch(`${API}/api/rides/history?phone=${ph}`); const d = await r.json(); setHistoryRides(d.rides || []); } catch (_e) {}
   };
@@ -1074,50 +1028,6 @@ export default function App() {
       const loc  = data.results?.[0]?.geometry?.location;
       if (loc) { type === 'pickup' ? setPickupCoords({ lat: loc.lat, lng: loc.lng }) : setDropCoords({ lat: loc.lat, lng: loc.lng }); }
     } catch (_e) {}
-  };
-
-  const searchExtDrop = (text: string) => {
-    if (text.length < 3) { setExtDropSugg([]); return; }
-    if (extDropDebounceRef.current) clearTimeout(extDropDebounceRef.current);
-    extDropDebounceRef.current = setTimeout(async () => {
-      try {
-        const res = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${MAPS_KEY}&components=country:in&location=26.8467,80.9462&radius=50000`);
-        const data = await res.json();
-        setExtDropSugg(data.predictions?.map((p: any) => ({ id: p.place_id, text: p.description })) || []);
-      } catch (_e) {}
-    }, 400);
-  };
-
-  const geocodeExtDrop = async (address: string) => {
-    try {
-      const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${MAPS_KEY}`);
-      const data = await res.json();
-      const loc = data.results?.[0]?.geometry?.location;
-      if (loc) setExtDropCoords({ lat: loc.lat, lng: loc.lng });
-    } catch (_e) {}
-  };
-
-  const sendExtensionRequest = async () => {
-    if (!extDrop || !rideData?.ride_id) return;
-    setLoading(true);
-    try {
-      const data = await apiPost('/api/rides/extension-request', {
-        original_ride_id: rideData.ride_id,
-        customer_phone: phone,
-        new_drop: extDrop,
-        new_drop_lat: extDropCoords?.lat || null,
-        new_drop_lng: extDropCoords?.lng || null,
-      });
-      if (data.success) {
-        setExtReq({ id: data.extension_id, driver_name: data.driver_name, driver_phone: data.driver_phone, estimated_fare: data.estimated_fare, extPickup: drop });
-        setExtRespSec(60);
-        setExtStep('waiting');
-      } else {
-        setExtMsg(data.error || 'Request nahi bheji ja saki');
-        if (data.expired || data.busy) setExtStep('idle');
-      }
-    } catch (_e) { setExtMsg('Network error — retry karo'); }
-    setLoading(false);
   };
 
   const fetchEta = async (origin: string, dest: string) => {
@@ -1467,6 +1377,14 @@ export default function App() {
       s.on('hourlyTripCompleted', (data: any) => {
         setHourlyBooking((p: any) => p ? { ...p, status: 'completed', driver_earning: data.driver_earning } : p);
         setHourlyStep('done');
+      });
+      s.on('hourlyChatMessage', (msg: any) => {
+        setHChatMsgs((prev: any[]) => [...prev, msg]);
+        setHChatUnread((prev: number) => prev + 1);
+      });
+      s.on('chatMessage', (msg: any) => {
+        setChatMsgs((prev: any[]) => [...prev, msg]);
+        setUnreadChat((prev: number) => prev + 1);
       });
       // Live ride status updates via socket
       s.on('rideUpdate', (data: any) => {
@@ -3630,38 +3548,6 @@ export default function App() {
             </View>
           ) : null}
 
-          {/* Ride Extension Info Card */}
-          <TouchableOpacity onPress={() => setShowExtInfo(v => !v)} style={{ backgroundColor: '#fff', borderRadius: 14, marginBottom: 14, overflow: 'hidden', borderWidth: 1.5, borderColor: '#bbdefb' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 10 }}>
-              <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#e3f2fd', alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ fontSize: 20 }}>🔄</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, fontWeight: '800', color: '#1565C0' }}>New: Ride Extension Feature</Text>
-                <Text style={{ fontSize: 11, color: '#888', marginTop: 1 }}>Trip ke baad same driver ko dobara use karo</Text>
-              </View>
-              <Text style={{ fontSize: 14, color: '#1565C0', fontWeight: '700' }}>{showExtInfo ? '▲' : '▼'}</Text>
-            </View>
-            {showExtInfo ? (
-              <View style={{ backgroundColor: '#e3f2fd', padding: 14, gap: 8 }}>
-                {[
-                  ['⏱️', 'Trip complete hone ke 15 minute tak available'],
-                  ['🚗', 'Same driver — already aapke saath hai'],
-                  ['📍', 'New drop location dalo, fare auto-calculate hoga'],
-                  ['⚡', 'Driver ko 60 seconds ka response time milta hai'],
-                  ['✅', 'Accept hote hi driver assign — koi wait nahi'],
-                  ['❌', 'Driver free hona chahiye (no active ride)'],
-                  ['🕒', '15 min baad feature expire — fresh ride book karo'],
-                ].map(([icon, rule], i) => (
-                  <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
-                    <Text style={{ fontSize: 14 }}>{icon}</Text>
-                    <Text style={{ fontSize: 12, color: '#1565C0', flex: 1, fontWeight: '500', lineHeight: 18 }}>{rule}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : null}
-          </TouchableOpacity>
-
           {result ? <Text style={s.err}>{result}</Text> : null}
 
           {/* Book Button */}
@@ -3698,7 +3584,10 @@ export default function App() {
               <Text style={{ textAlign: 'center', fontSize: 16, fontWeight: 'bold', color: '#4CAF50', marginBottom: 12 }}>Driver Mil Gaya! 🎉</Text>
               <View style={s.driverCard}>
                 <View style={{ position: 'relative' }}>
-                  <View style={s.driverAvatar}><Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>{(rideData.driver.name||'D')[0].toUpperCase()}</Text></View>
+                  {rideData.driver.photo
+                    ? <Image source={{ uri: rideData.driver.photo }} style={{ width: 50, height: 50, borderRadius: 25 }} />
+                    : <View style={s.driverAvatar}><Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>{(rideData.driver.name||'D')[0].toUpperCase()}</Text></View>
+                  }
                   {rideData.driver.verified && (
                     <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: '#4CAF50', borderRadius: 10, width: 20, height: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff' }}>
                       <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>✓</Text>
@@ -4075,76 +3964,13 @@ export default function App() {
             </TouchableOpacity>
           ))}
         </View>
-        {/* ── Ride Extension ── */}
-        {extWindowSec > 0 && extStep === 'idle' && (
-          <View style={{ backgroundColor: '#1a1a2e', borderRadius: 16, padding: 16, marginTop: 8, marginBottom: 4 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-              <Text style={{ fontSize: 22, marginRight: 10 }}>🔄</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>Same Driver — Naya Destination?</Text>
-                <Text style={{ color: '#aaa', fontSize: 11, marginTop: 2 }}>Yahi driver aapko aur kahin le ja sakta hai • {Math.floor(extWindowSec / 60)}:{String(extWindowSec % 60).padStart(2,'0')} bacha hai</Text>
-              </View>
-            </View>
-            {extMsg ? <Text style={{ color: '#e94560', fontSize: 12, marginBottom: 8 }}>{extMsg}</Text> : null}
-            <Bouncy style={{ backgroundColor: '#e94560', borderRadius: 12, padding: 12, alignItems: 'center' }} onPress={() => { setExtStep('form'); setExtMsg(''); }}>
-              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>➕ Extend Ride — Naya Location</Text>
-            </Bouncy>
-          </View>
-        )}
-
-        {extStep === 'form' && (
-          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginTop: 8, marginBottom: 4, elevation: 3 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-              <Text style={{ fontSize: 20, marginRight: 8 }}>📍</Text>
-              <Text style={{ fontWeight: 'bold', fontSize: 15, color: '#1a1a2e', flex: 1 }}>Naya Drop Location</Text>
-              <TouchableOpacity onPress={() => { setExtStep('idle'); setExtDrop(''); setExtDropSugg([]); }}><Text style={{ color: '#999', fontSize: 18 }}>✕</Text></TouchableOpacity>
-            </View>
-            <TextInput
-              style={{ borderWidth: 1.5, borderColor: '#e94560', borderRadius: 10, padding: 12, fontSize: 14, color: '#1a1a2e', marginBottom: 6 }}
-              placeholder="Kahan jana hai? Location likhein..." placeholderTextColor="#bbb"
-              value={extDrop} onChangeText={t => { setExtDrop(t); searchExtDrop(t); }}
-            />
-            {extDropSugg.length > 0 && (
-              <View style={{ backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: '#eee', marginBottom: 8, maxHeight: 180, overflow: 'hidden' }}>
-                {extDropSugg.slice(0, 4).map((sg: any, i: number) => (
-                  <TouchableOpacity key={i} style={{ padding: 12, borderBottomWidth: i < extDropSugg.length - 1 ? 1 : 0, borderColor: '#f5f5f5', flexDirection: 'row', alignItems: 'center' }}
-                    onPress={() => { setExtDrop(sg.text); setExtDropSugg([]); geocodeExtDrop(sg.text); }}>
-                    <Text style={{ fontSize: 14, marginRight: 8 }}>📍</Text>
-                    <Text style={{ fontSize: 13, color: '#1a1a2e', flex: 1 }} numberOfLines={2}>{sg.text}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-            {extMsg ? <Text style={{ color: '#e94560', fontSize: 12, marginBottom: 8 }}>{extMsg}</Text> : null}
-            <Bouncy style={[s.btn, { marginTop: 4 }]} onPress={sendExtensionRequest} disabled={!extDrop || loading}>
-              <Text style={s.btnTxt}>{loading ? '⏳ Bhej rahe hain...' : '📤 Driver ko Request Bhejo'}</Text>
-            </Bouncy>
-          </View>
-        )}
-
-        {extStep === 'waiting' && extReq && (
-          <View style={{ backgroundColor: '#fff3e0', borderRadius: 16, padding: 18, marginTop: 8, marginBottom: 4, alignItems: 'center', borderWidth: 2, borderColor: '#ff9800' }}>
-            <Text style={{ fontSize: 32, marginBottom: 6 }}>⏳</Text>
-            <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#e65100', marginBottom: 4 }}>Driver se Confirmation Ka Intezaar...</Text>
-            <Text style={{ color: '#555', fontSize: 13, marginBottom: 2 }}>{extReq.driver_name} ko request bheji — {extDrop}</Text>
-            <Text style={{ color: '#e94560', fontSize: 22, fontWeight: 'bold', marginTop: 4 }}>₹{extReq.estimated_fare}</Text>
-            <View style={{ backgroundColor: '#ffe0b2', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6, marginTop: 10, marginBottom: 12 }}>
-              <Text style={{ color: '#bf360c', fontWeight: 'bold', fontSize: 16 }}>{extRespSec}s</Text>
-            </View>
-            <TouchableOpacity onPress={() => { setExtStep('idle'); setExtMsg('Request cancel kar di'); }} style={{ borderWidth: 1, borderColor: '#bbb', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8 }}>
-              <Text style={{ color: '#888', fontSize: 13 }}>Cancel Request</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        <Bouncy style={[s.btn, { marginTop: extWindowSec > 0 ? 8 : 0 }]} onPress={async () => {
+        <Bouncy style={[s.btn, { marginTop: 8 }]} onPress={async () => {
           if (rating > 0 && rideData?.ride_id) {
             try { await fetch(`${API}/api/rides/rate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, rating, review, tip }) }); } catch (_e) {}
           }
           setScreen('home'); setPickup(''); setDrop(''); setRating(0); setTab('home');
           setRideData(null); setPaymentDone(false); setResult(''); setScratchCard(null); setScratched(false); setEta(''); setPromoDiscount(0); setPromoCode(''); setUnreadChat(0);
           setDriverLoc(null); setDriverEta(''); setDriverDist('');
-          setExtStep('idle'); setExtReq(null); setExtDrop(''); setExtDropSugg([]); setExtMsg(''); setExtWindowSec(0);
           ride.clearRide();
           AsyncStorage.removeItem('activeStdRideId').catch(() => {});
           loadHistory(phone); loadWallet(phone);
