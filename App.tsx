@@ -9,7 +9,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import * as Clipboard from 'expo-clipboard';
 import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
 import { apiGet, apiPost } from './api';
 import { useRideStore } from './store';
 import { WebView } from 'react-native-webview';
@@ -469,7 +468,6 @@ export default function App() {
   const [historyRides, setHistoryRides] = useState<any[]>([]);
   const [driverLoc, setDriverLoc]     = useState<any>(null);
   const [walletBalance, setWalletBalance] = useState(0);
-  const [showWallet, setShowWallet]   = useState(false);
   const [walletTxns, setWalletTxns]   = useState<any[]>([]);
   const [walletStats, setWalletStats] = useState<any>({});
   const [walletTxnTab, setWalletTxnTab] = useState<'all'|'earn'|'spend'|'reward'>('all');
@@ -482,7 +480,6 @@ export default function App() {
   const [pickupSugg, setPickupSugg]   = useState<any[]>([]);
   const [dropSugg, setDropSugg]       = useState<any[]>([]);
   const [fareEstimates, setFareEstimates] = useState<any>({});
-  const [estDistance, setEstDistance] = useState(0);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelTimer, setCancelTimer] = useState(60);
   const [freeCancelsLeft, setFreeCancelsLeft] = useState(3);
@@ -607,7 +604,6 @@ export default function App() {
 // ── FCM Token Register ────────────────────────
   const registerFCM = async (userPhone: string) => {
     try {
-      // if (!Device.isDevice) return;
       const { status: existing } = await Notifications.getPermissionsAsync();
       let finalStatus = existing;
       if (existing !== 'granted') {
@@ -718,7 +714,6 @@ export default function App() {
     }, 2600);
     return () => clearTimeout(timer);
   }, []);
-
 
   // ─── RIDE POLLING — screen-agnostic, overlap guard, AsyncStorage sync ───
   useEffect(() => {
@@ -1141,7 +1136,6 @@ export default function App() {
         const dist = el.distance.text;
         const km = el.distance.value / 1000;
         setEta(`🕐 ${duration} · 📍 ${dist}`);
-        setEstDistance(km);
         loadFareEstimates(km);
         return km;
       } else {
@@ -1257,7 +1251,6 @@ export default function App() {
               const dist = el.distance.text;
               const km = el.distance.value / 1000;
               setEta(`🕐 ${duration} · 📍 ${dist}`);
-              setEstDistance(km);
               loadFareEstimates(km);
             }
           }
@@ -1587,7 +1580,6 @@ export default function App() {
     { id: 'eriksha', icon: '🛵', label: 'E-Riksha',      base: 20, rate: 10, eta: '4-6 min', tag: 'ECO',     tagColor: '#4CAF50', desc: 'Eco-friendly ride' },
     { id: 'luxury',  icon: '🚙', label: 'Ultra Luxury',  base: 80, rate: 25, eta: '7-10 min', tag: 'PREMIUM', tagColor: '#9C27B0', desc: 'Premium SUV experience' },
   ];
-
 
   // ═══ SPLASH ═══
   if (screen === 'splash') return (
@@ -2455,7 +2447,6 @@ export default function App() {
     </ScreenIn>
   );
 
-
   // ═══ SAVED PLACES ═══
   if (screen === 'saved') return (
     <ScreenIn style={s.screen}>
@@ -2506,15 +2497,6 @@ export default function App() {
     const hHourLabel = (h: number) => h >= 24 ? `${h/24} Day${h > 24 ? 's' : ''}` : h === 8 ? 'Full Day (8h)' : `${h} Hours`;
     const hHourEmoji = (h: number) => h >= 72 ? '🗓️' : h >= 48 ? '📅' : h >= 24 ? '🌙' : h === 2 ? '⏱️' : h === 4 ? '🕐' : h === 6 ? '🕕' : '☀️';
     const fmtTime = (sec: number) => `${String(Math.floor(sec/3600)).padStart(2,'0')}:${String(Math.floor((sec%3600)/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`;
-
-    // Haversine kept for future use (round-trip ETA estimate)
-    const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number) => {
-      const R = 6371;
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLng = (lng2 - lng1) * Math.PI / 180;
-      const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    };
 
     const useCurrentLocationPickup = async () => {
       try {
@@ -3331,7 +3313,7 @@ export default function App() {
             )}
           </View>
 
-          <Bouncy style={[s.btn, { opacity: walletBalance >= (pkg?.fare || 0) ? 1 : 0.5 }]} onPress={walletBalance >= (pkg?.fare || 0) ? bookHourly : () => setShowWallet(true)}>
+          <Bouncy style={[s.btn, { opacity: walletBalance >= (pkg?.fare || 0) ? 1 : 0.5 }]} onPress={walletBalance >= (pkg?.fare || 0) ? bookHourly : () => { loadWalletDetail(phone); loadLoyalty(phone); setScreen('wallet'); }}>
             <Text style={s.btnTxt}>{walletBalance >= (pkg?.fare || 0) ? `✅ Book — ₹${pkg?.fare} Wallet Se` : `💳 Wallet Mein ₹${pkg?.fare} Add Karo`}</Text>
           </Bouncy>
         </ScrollView>
@@ -3892,7 +3874,6 @@ export default function App() {
     </View>
   );}
 
-
 // ═══ IN-RIDE — Map fit on top ═══
   if (screen === 'inride') return (
     <View style={s.screen}>
@@ -4211,16 +4192,9 @@ export default function App() {
 
 const s = StyleSheet.create({
   screen:        { flex: 1, backgroundColor: '#f5f5f5' },
-  mapFull:       { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   mapFit:        { height: 260, width: '100%', backgroundColor: '#e8eaed' },
-  topOverlay:    { position: 'absolute', top: 0, left: 0, right: 0, paddingTop: 44, paddingHorizontal: 14 },
-  topGlass:      { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.95)', borderRadius: 16, padding: 12, elevation: 6, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8 },
-  greetingDark:  { color: '#1a1a2e', fontSize: 15, fontWeight: 'bold' },
-  subTxtDark:    { color: '#666', fontSize: 11, marginTop: 2 },
   greeting:      { color: '#fff', fontSize: 15, fontWeight: 'bold' },
   subTxt:        { color: '#aaa', fontSize: 11, marginTop: 2 },
-  backCircle:    { width: 38, height: 38, borderRadius: 19, backgroundColor: '#f0f0f0', alignItems: 'center', justifyContent: 'center' },
-  bottomSheet:   { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 16, paddingTop: 8, elevation: 12, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 12, maxHeight: '60%' },
   sheetHandle:   { width: 40, height: 4, borderRadius: 2, backgroundColor: '#ddd', alignSelf: 'center', marginBottom: 12 },
   navFloat:      { position: 'absolute', bottom: 0, left: 0, right: 0 },
   hero:          { backgroundColor: '#1a1a2e', alignItems: 'center', paddingVertical: 40, paddingHorizontal: 20 },
@@ -4233,10 +4207,8 @@ const s = StyleSheet.create({
   btn:           { backgroundColor: '#e94560', borderRadius: 14, padding: 17, alignItems: 'center', marginTop: 6, marginBottom: 6, elevation: 5, shadowColor: '#e94560', shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
   btnTxt:        { color: '#fff', fontSize: 15, fontWeight: 'bold' },
   err:           { textAlign: 'center', color: '#e94560', fontWeight: '600', marginBottom: 8 },
-  hint:          { color: '#888', fontSize: 12, textAlign: 'center', marginBottom: 10 },
   back:          { textAlign: 'center', color: '#e94560', marginTop: 14, fontSize: 13 },
   terms:         { textAlign: 'center', color: '#bbb', fontSize: 11, marginTop: 10 },
-  otpInput:      { fontSize: 24, letterSpacing: 10, textAlign: 'center', fontWeight: 'bold' },
   row:           { flexDirection: 'row', alignItems: 'center' },
   flag:          { fontSize: 13, padding: 12, backgroundColor: '#f5f5f5', borderRadius: 10, borderWidth: 1.5, borderColor: '#efefef', marginRight: 8 },
   topBar:        { backgroundColor: '#1a1a2e', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, paddingTop: 46 },
@@ -4271,20 +4243,11 @@ const s = StyleSheet.create({
   profilePhone:  { color: '#aaa', fontSize: 13, marginTop: 3 },
   badge:         { backgroundColor: '#f0a500', borderRadius: 10, paddingVertical: 4, paddingHorizontal: 12, marginTop: 8 },
   walletCard:    { backgroundColor: '#e94560', borderRadius: 16, padding: 20, marginBottom: 12, elevation: 4 },
-  walletBox:     { backgroundColor: '#fff', borderRadius: 14, padding: 18, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#f0f0f0' },
-  amtBtn:        { flex: 1, minWidth: 68, padding: 12, borderRadius: 10, borderWidth: 1.5, borderColor: '#e94560', alignItems: 'center', backgroundColor: '#fff8f8' },
   menuItem:      { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 8, elevation: 2, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4 },
   menuIconBox:   { width: 36, height: 36, borderRadius: 10, backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
   logoutBtn:     { borderWidth: 1.5, borderColor: '#e94560', borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 6, marginBottom: 24 },
-  locBox:        { backgroundColor: '#f9f9f9', borderRadius: 14, padding: 14, marginBottom: 10 },
-  dotGreen:      { width: 10, height: 10, borderRadius: 5, backgroundColor: '#4CAF50', marginRight: 10 },
-  dotRed:        { width: 10, height: 10, borderRadius: 5, backgroundColor: '#e94560', marginRight: 10 },
-  locDivider:    { height: 1, backgroundColor: '#e8e8e8', marginVertical: 8, marginLeft: 20 },
-  locationBtn:   { backgroundColor: '#e8f5e9', borderRadius: 10, padding: 12, marginBottom: 12, alignItems: 'center', borderWidth: 1, borderColor: '#c8e6c9' },
   suggBox:       { backgroundColor: '#fff', borderRadius: 10, marginTop: 4, elevation: 20, borderWidth: 1, borderColor: '#f0f0f0', zIndex: 99 },
   suggItem:      { flexDirection: 'row', alignItems: 'center', padding: 10, borderBottomWidth: 1, borderBottomColor: '#f5f5f5' },
-  rideCard:      { backgroundColor: '#f9f9f9', borderRadius: 12, padding: 12, marginRight: 8, alignItems: 'center', minWidth: 82, borderWidth: 2, borderColor: 'transparent' },
-  rideCardActive:{ backgroundColor: '#1a1a2e', borderColor: '#e94560' },
   applyBtn:      { padding: 12, borderWidth: 1.5, borderColor: '#e94560', borderRadius: 10, justifyContent: 'center', marginLeft: 8 },
   driverCard:    { backgroundColor: '#f9f9f9', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   driverAvatar:  { width: 50, height: 50, borderRadius: 25, backgroundColor: '#1a1a2e', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
