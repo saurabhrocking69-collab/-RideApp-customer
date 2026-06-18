@@ -4088,9 +4088,11 @@ export default function App() {
               {searchElapsed >= 100 && surgeCount < 3 && (() => {
                 const baseFare = parseInt((surgeFare || rideData?.fare || '0').replace(/[^0-9]/g, '')) || 0;
                 const opts = [
-                  { label: '+₹15', amount: 15, newFare: baseFare + 15, emoji: '🟡', bg: '#FFFDE7', border: '#FFC107', btnBg: '#FFC107' },
-                  { label: '+₹25', amount: 25, newFare: baseFare + 25, emoji: '🟠', bg: '#FFF3E0', border: '#FF9800', btnBg: '#FF9800' },
-                  { label: '+₹40', amount: 40, newFare: baseFare + 40, emoji: '🔴', bg: '#FFEBEE', border: '#F44336', btnBg: '#F44336' },
+                  { label: '+₹15',  amount: 15,  newFare: baseFare + 15,  emoji: '🟢', bg: '#F1F8E9', border: '#8BC34A', btnBg: '#8BC34A' },
+                  { label: '+₹25',  amount: 25,  newFare: baseFare + 25,  emoji: '🟡', bg: '#FFFDE7', border: '#FFC107', btnBg: '#FFC107' },
+                  { label: '+₹40',  amount: 40,  newFare: baseFare + 40,  emoji: '🟠', bg: '#FFF3E0', border: '#FF9800', btnBg: '#FF9800' },
+                  { label: '+₹65',  amount: 65,  newFare: baseFare + 65,  emoji: '🔴', bg: '#FFEBEE', border: '#F44336', btnBg: '#F44336' },
+                  { label: '+₹100', amount: 100, newFare: baseFare + 100, emoji: '🔥', bg: '#F3E5F5', border: '#9C27B0', btnBg: '#9C27B0' },
                 ];
                 return (
                   <SlideUp>
