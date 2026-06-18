@@ -651,6 +651,10 @@ export default function App() {
   const [cancelTimer, setCancelTimer] = useState(60);
   const [freeCancelsLeft, setFreeCancelsLeft] = useState(3);
   const [bookTime, setBookTime] = useState(0);
+  const [searchElapsed, setSearchElapsed] = useState(0);
+  const [surgeCount, setSurgeCount]       = useState(0);
+  const [surgeFare, setSurgeFare]         = useState('');
+  const [surging, setSurging]             = useState(false);
   const [chatMsgs, setChatMsgs]       = useState<any[]>([]);
   const [chatInput, setChatInput]     = useState('');
   const [unreadChat, setUnreadChat]   = useState(0);
@@ -662,6 +666,8 @@ export default function App() {
   const [savedPlaces, setSavedPlaces] = useState<any[]>([]);
   const scratchAnim = useRef(new Animated.Value(1)).current;
   const starAnims   = useRef([0,1,2,3,4].map(() => new Animated.Value(1))).current;
+  const surgeBarAnim    = useRef(new Animated.Value(0)).current;
+  const surgeBarAnimRef = useRef<Animated.CompositeAnimation | null>(null);
 
   // ── Favourite Buddy State ─────────────────────
   const [favouriteBuddy, setFavouriteBuddy]     = useState<any>(null);
@@ -1059,6 +1065,28 @@ export default function App() {
     return () => clearInterval(iv);
   }, [screen, bookTime]);
 
+  // Search progress bar animation (0→100s) + surge trigger countdown
+  useEffect(() => {
+    if (screen !== 'matching' || !!rideData?.driver || !bookTime) {
+      surgeBarAnimRef.current?.stop();
+      return;
+    }
+    setSearchElapsed(0);
+    surgeBarAnim.setValue(0);
+    surgeBarAnimRef.current?.stop();
+    const anim = Animated.timing(surgeBarAnim, {
+      toValue: 1, duration: 100000, useNativeDriver: false,
+    });
+    surgeBarAnimRef.current = anim;
+    anim.start();
+    const iv = setInterval(() => {
+      const secs = Math.floor((Date.now() - bookTime) / 1000);
+      setSearchElapsed(Math.min(secs, 100));
+      if (secs >= 100) clearInterval(iv);
+    }, 1000);
+    return () => { clearInterval(iv); surgeBarAnimRef.current?.stop(); };
+  }, [screen, bookTime, rideData?.driver]);
+
   // Background chat — unread badge during ride (8s, overlap guard)
   useEffect(() => {
     if (!['matching','inride'].includes(screen) || !rideData?.ride_id) return;
@@ -1417,10 +1445,32 @@ export default function App() {
       ride.setRide(data); // Store mein naya ride — purana stale data auto-clear
       ride.startPolling(phone || '9999999999'); // fallback polling in case socket drops
       setBookTime(Date.now()); setCancelTimer(60);
+      setSurgeCount(0); setSurgeFare(''); setSearchElapsed(0);
       // Free cancels load
       try { const cs = await fetch(`${API}/api/customer/cancel-status?phone=${phone || '9999999999'}`); const csd = await cs.json(); setFreeCancelsLeft(csd.free_cancels_left ?? 3); } catch (_e) {}
     } catch { setResult('❌ Server connect nahi hua!'); }
     setLoading(false);
+  };
+
+  const surgeFareNow = async (amount: number) => {
+    if (!rideData?.ride_id || surging || surgeCount >= 3) return;
+    setSurging(true);
+    try {
+      const res = await apiPost('/api/rides/surge-fare', {
+        ride_id: rideData.ride_id,
+        customer_phone: phone || '9999999999',
+        surge_amount: amount,
+      });
+      if (res.success) {
+        setSurgeFare(res.new_fare);
+        setSurgeCount(res.surge_count);
+        setBookTime(Date.now());  // restarts the 100s timer
+        setRideData((prev: any) => ({ ...prev, fare: res.new_fare }));
+      } else {
+        setResult('❌ ' + (res.error || 'Surge failed'));
+      }
+    } catch (_e) { setResult('❌ Network error'); }
+    setSurging(false);
   };
 
   const switchVehicle = async (newType: string) => {
@@ -3970,62 +4020,187 @@ export default function App() {
               <Text style={{ textAlign: 'center', color: '#bbb', fontSize: 12, marginTop: 8 }}>⏳ Driver OTP daalkar trip shuru karega...</Text>
             </>
           ) : (
-            <SlideUp>
-              <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+            <View style={{ paddingBottom: 24 }}>
+              {/* Header */}
+              <View style={{ alignItems: 'center', paddingTop: 4, paddingBottom: 10 }}>
+                <Text style={{ fontSize: 17, fontWeight: '800', color: '#1a1a2e' }}>Driver Dhundh Rahe Hain</Text>
+                <Text style={{ fontSize: 12, color: '#aaa', marginTop: 4, textAlign: 'center', paddingHorizontal: 28 }} numberOfLines={1}>{pickup} → {drop}</Text>
+              </View>
+
+              {/* Fare + vehicle pill */}
+              <View style={{ alignItems: 'center', marginBottom: 14 }}>
+                <View style={{ backgroundColor: '#1a1a2e', borderRadius: 28, paddingHorizontal: 22, paddingVertical: 11, flexDirection: 'row', alignItems: 'center', gap: 10, elevation: 6, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 8 }}>
+                  <Text style={{ fontSize: 27, fontWeight: '900', color: '#fff' }}>{surgeFare || rideData?.fare}</Text>
+                  <View style={{ width: 1, height: 26, backgroundColor: 'rgba(255,255,255,0.2)' }} />
+                  <Text style={{ fontSize: 20 }}>{rideIcon(rideType)}</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#e94560', textTransform: 'uppercase', letterSpacing: 0.5 }}>{(rideType || '').replace('_', ' ')}</Text>
+                  {surgeCount > 0 && (
+                    <View style={{ backgroundColor: '#FF9800', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
+                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>⚡ SURGE {surgeCount}x</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              {/* Radar animation */}
+              <View style={{ alignItems: 'center', marginBottom: 16 }}>
                 <RadarView />
                 <FloatingDots />
-                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1a1a2e', marginTop: 14 }}>Driver dhundh rahe hain...</Text>
-                <Text style={{ fontSize: 13, color: '#999', marginTop: 5, textAlign: 'center', paddingHorizontal: 20 }} numberOfLines={2}>{pickup} → {drop}</Text>
+              </View>
 
-                {/* Fare badge */}
-                <View style={{ backgroundColor: '#1a1a2e', borderRadius: 20, paddingHorizontal: 20, paddingVertical: 8, marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#e94560' }}>{rideData?.fare}</Text>
-                  {eta ? <Text style={{ fontSize: 12, color: '#4CAF50' }}>{eta.replace('🕐 ', '')}</Text> : null}
+              {/* ── Search Progress Bar ── */}
+              <View style={{ paddingHorizontal: 20, marginBottom: 14 }}>
+                {/* Labels */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
+                  <Text style={{ fontSize: 11, color: '#ccc', fontWeight: '600' }}>0s</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3 }}>
+                    <Text style={{ fontSize: 26, fontWeight: '900', color: searchElapsed >= 80 ? '#FF5722' : searchElapsed >= 60 ? '#FF9800' : '#1a1a2e' }}>
+                      {searchElapsed}
+                    </Text>
+                    <Text style={{ fontSize: 12, color: '#aaa' }}>/ 100s</Text>
+                  </View>
+                  <Text style={{ fontSize: 11, color: '#ccc', fontWeight: '600' }}>100s</Text>
                 </View>
 
-                {/* Cancel info */}
-                <View style={{ backgroundColor: cancelTimer > 0 ? '#e8f5e9' : '#fff3e0', borderRadius: 14, padding: 14, marginTop: 16, width: '100%', borderWidth: 1, borderColor: cancelTimer > 0 ? '#c8e6c9' : '#ffe0b2' }}>
-                  <Text style={{ fontSize: 13, color: cancelTimer > 0 ? '#2e7d32' : '#e65100', fontWeight: '700', textAlign: 'center' }}>
-                    {cancelTimer > 0 ? `✅ ${cancelTimer}s tak FREE cancellation` : '⚠️ Ab cancel pe ₹10 fee lagega'}
-                  </Text>
-                  <Text style={{ fontSize: 11, color: '#888', textAlign: 'center', marginTop: 4 }}>Aaj {freeCancelsLeft} free cancels bache hain</Text>
+                {/* Track */}
+                <View style={{ height: 10, backgroundColor: '#f0f0f0', borderRadius: 5, overflow: 'hidden' }}>
+                  <Animated.View style={{
+                    height: '100%', borderRadius: 5,
+                    width: surgeBarAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
+                    backgroundColor: surgeBarAnim.interpolate({
+                      inputRange: [0, 0.6, 0.8, 1],
+                      outputRange: ['#4CAF50', '#FFC107', '#FF9800', '#FF5722'],
+                    }),
+                  }} />
                 </View>
 
-                {/* Alternative vehicle suggestion banner */}
-                {altSuggest && altSuggest.alternatives.length > 0 && (
-                  <View style={{ backgroundColor: '#fff8e1', borderRadius: 16, padding: 16, marginTop: 16, width: '100%', borderWidth: 1.5, borderColor: '#ffd54f' }}>
+                {/* Status message */}
+                <Text style={{ textAlign: 'center', fontSize: 12, color: '#999', marginTop: 7, fontStyle: 'italic' }}>
+                  {searchElapsed < 25 ? '🔍 Nearby drivers dhundh rahe hain...' :
+                   searchElapsed < 50 ? '📡 Aur drivers ko ping kar rahe hain...' :
+                   searchElapsed < 75 ? '🌐 10km radius tak dhundh rahe hain...' :
+                   searchElapsed < 100 ? '⚡ 15km tak dhundh rahe — thodi der aur' :
+                   '🔴 Nahi mila — Fare badhao aur attract karo?'}
+                </Text>
+              </View>
+
+              {/* ── SURGE PANEL (slides in after 100s) ── */}
+              {searchElapsed >= 100 && surgeCount < 3 && (() => {
+                const baseFare = parseInt((surgeFare || rideData?.fare || '0').replace(/[^0-9]/g, '')) || 0;
+                const opts = [
+                  { label: '+₹15', amount: 15, newFare: baseFare + 15, emoji: '🟡', bg: '#FFFDE7', border: '#FFC107', btnBg: '#FFC107' },
+                  { label: '+₹25', amount: 25, newFare: baseFare + 25, emoji: '🟠', bg: '#FFF3E0', border: '#FF9800', btnBg: '#FF9800' },
+                  { label: '+₹40', amount: 40, newFare: baseFare + 40, emoji: '🔴', bg: '#FFEBEE', border: '#F44336', btnBg: '#F44336' },
+                ];
+                return (
+                  <SlideUp>
+                    <View style={{ paddingHorizontal: 20, marginBottom: 14 }}>
+                      <View style={{ backgroundColor: '#1a1a2e', borderRadius: 20, padding: 18, borderWidth: 1.5, borderColor: '#FF5722' }}>
+                        {/* Header */}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#FF5722', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                            <Text style={{ fontSize: 20 }}>⚡</Text>
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '900' }}>100 Seconds Ho Gaye!</Text>
+                            <Text style={{ color: '#FF9800', fontSize: 12, marginTop: 1 }}>Fare badhao — zyada drivers attract karo</Text>
+                          </View>
+                          <View style={{ backgroundColor: '#FF5722', borderRadius: 10, paddingHorizontal: 9, paddingVertical: 4 }}>
+                            <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900' }}>{3 - surgeCount}/3</Text>
+                          </View>
+                        </View>
+
+                        <Text style={{ color: '#888', fontSize: 12, marginBottom: 14 }}>
+                          Abhi: <Text style={{ color: '#fff', fontWeight: '700' }}>{surgeFare || rideData?.fare}</Text>
+                          {'  '}·{'  '}Badhao aur fresh driver search shuru hoga
+                        </Text>
+
+                        {/* Options */}
+                        <View style={{ gap: 10 }}>
+                          {opts.map((opt) => (
+                            <Bouncy key={opt.amount}
+                              onPress={() => surgeFareNow(opt.amount)}
+                              disabled={surging}
+                              style={{
+                                backgroundColor: surging ? '#2a2a4a' : opt.bg,
+                                borderRadius: 14, padding: 14,
+                                flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                                borderWidth: 1.5, borderColor: surging ? '#3a3a5a' : opt.border,
+                                opacity: surging ? 0.6 : 1,
+                              }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                                <Text style={{ fontSize: 26 }}>{opt.emoji}</Text>
+                                <View>
+                                  <Text style={{ fontSize: 20, fontWeight: '900', color: surging ? '#666' : '#1a1a2e' }}>{opt.label}</Text>
+                                  <Text style={{ fontSize: 11, color: surging ? '#555' : '#777' }}>Naya fare: ₹{opt.newFare}</Text>
+                                </View>
+                              </View>
+                              <View style={{ backgroundColor: surging ? '#555' : opt.btnBg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8 }}>
+                                <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>₹{opt.newFare}</Text>
+                              </View>
+                            </Bouncy>
+                          ))}
+                        </View>
+
+                        {surging && (
+                          <View style={{ alignItems: 'center', marginTop: 14 }}>
+                            <FloatingDots color="#FF9800" />
+                            <Text style={{ color: '#FF9800', fontSize: 13, fontWeight: '700', marginTop: 6 }}>⚡ Fare update ho raha hai...</Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  </SlideUp>
+                );
+              })()}
+
+              {/* Alt vehicle suggestion */}
+              {altSuggest && altSuggest.alternatives.length > 0 && (
+                <View style={{ paddingHorizontal: 20, marginBottom: 14 }}>
+                  <View style={{ backgroundColor: '#fff8e1', borderRadius: 16, padding: 16, borderWidth: 1.5, borderColor: '#ffd54f' }}>
                     <Text style={{ fontSize: 14, fontWeight: '700', color: '#e65100', textAlign: 'center', marginBottom: 4 }}>
-                      😕 {altSuggest.current_type.toUpperCase()} driver nahi mila
+                      😕 {(altSuggest.current_type || '').toUpperCase()} driver nahi mila
                     </Text>
                     <Text style={{ fontSize: 12, color: '#666', textAlign: 'center', marginBottom: 12 }}>
                       Kya hum aapke liye doosra vehicle dhundhe?
                     </Text>
                     <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
-                      {altSuggest.alternatives.map((alt) => {
-                        const icons: Record<string, string> = { auto: '🛺', car: '🚕', bike: '🏍️', eriksha: '🛵', luxury: '🚙' };
-                        const labels: Record<string, string> = { auto: 'Auto', car: 'Car', bike: 'Bike', eriksha: 'E-Riksha', luxury: 'Luxury' };
+                      {altSuggest.alternatives.map((alt: string) => {
+                        const aicons: Record<string, string> = { auto: '🛺', car: '🚕', bike: '🏍️', eriksha: '🛵', luxury: '🚙', green_bike: '⚡', electric_auto: '🌿' };
+                        const alabels: Record<string, string> = { auto: 'Auto', car: 'Car', bike: 'Bike', eriksha: 'E-Riksha', luxury: 'Luxury', green_bike: 'Green Bike', electric_auto: 'E-Auto' };
                         return (
                           <Bouncy key={alt} onPress={() => switchVehicle(alt)} disabled={switchingVehicle}
                             style={{ backgroundColor: switchingVehicle ? '#ccc' : '#1a1a2e', borderRadius: 12, paddingHorizontal: 18, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <Text style={{ fontSize: 18 }}>{icons[alt] || '🚗'}</Text>
-                            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>{labels[alt] || alt}</Text>
+                            <Text style={{ fontSize: 18 }}>{aicons[alt] || '🚗'}</Text>
+                            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>{alabels[alt] || alt}</Text>
                           </Bouncy>
                         );
                       })}
                     </View>
                   </View>
-                )}
+                </View>
+              )}
 
-                <View style={{ flexDirection: 'row', gap: 12, marginTop: 14, width: '100%' }}>
-                  <Bouncy onPress={() => setShowCancelModal(true)} style={{ flex: 1, backgroundColor: '#fff', borderRadius: 12, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: '#e94560' }}>
-                    <Text style={{ color: '#e94560', fontWeight: 'bold', fontSize: 14 }}>✕ Cancel {cancelTimer > 0 ? '(Free)' : '(₹10)'}</Text>
-                  </Bouncy>
-                  <Bouncy onPress={() => { setRideData(null); bookRide(); }} style={{ flex: 1, backgroundColor: '#1a1a2e', borderRadius: 12, padding: 14, alignItems: 'center' }}>
-                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>🔄 Retry</Text>
-                  </Bouncy>
+              {/* Cancel info */}
+              <View style={{ paddingHorizontal: 20, marginBottom: 14 }}>
+                <View style={{ backgroundColor: cancelTimer > 0 ? '#e8f5e9' : '#fff3e0', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: cancelTimer > 0 ? '#c8e6c9' : '#ffe0b2' }}>
+                  <Text style={{ fontSize: 12, color: cancelTimer > 0 ? '#2e7d32' : '#e65100', fontWeight: '700', textAlign: 'center' }}>
+                    {cancelTimer > 0 ? `✅ ${cancelTimer}s tak FREE cancellation` : '⚠️ Ab cancel pe ₹10 fee lagega'}
+                  </Text>
+                  <Text style={{ fontSize: 11, color: '#888', textAlign: 'center', marginTop: 3 }}>Aaj {freeCancelsLeft} free cancels bache hain</Text>
                 </View>
               </View>
-            </SlideUp>
+
+              {/* Action buttons */}
+              <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 20 }}>
+                <Bouncy onPress={() => setShowCancelModal(true)} style={{ flex: 1, backgroundColor: '#fff', borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: '#e94560' }}>
+                  <Text style={{ color: '#e94560', fontWeight: 'bold', fontSize: 14 }}>✕ Cancel {cancelTimer > 0 ? '(Free)' : '(₹10)'}</Text>
+                </Bouncy>
+                <Bouncy onPress={() => { setRideData(null); bookRide(); }} style={{ flex: 1, backgroundColor: '#1a1a2e', borderRadius: 14, padding: 14, alignItems: 'center' }}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>🔄 Retry</Text>
+                </Bouncy>
+              </View>
+            </View>
           )}
         </ScrollView>
       </View>
