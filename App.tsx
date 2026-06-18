@@ -673,6 +673,10 @@ export default function App() {
   const [buddyBookLoading, setBuddyBookLoading]   = useState(false);
   const [buddyBookMsg, setBuddyBookMsg]           = useState('');
   const [buddyWaiting, setBuddyWaiting]           = useState(false);
+  const [buddyPUSugg, setBuddyPUSugg]             = useState<any[]>([]);
+  const [buddyDRSugg, setBuddyDRSugg]             = useState<any[]>([]);
+  const buddyPUDebRef = useRef<any>(null);
+  const buddyDRDebRef = useRef<any>(null);
 
   // ── Hourly Booking State ──────────────────────
   const [hourlyStep, setHourlyStep]     = useState<'book'|'waiting'|'active'|'done'>('book');
@@ -4296,8 +4300,51 @@ export default function App() {
   function BuddyBookModal() {
     if (!showBuddyBook || !favouriteBuddy) return null;
 
+    const isOffline = !favouriteBuddy.is_online;
+
+    const searchBuddyPlaces = (text: string, type: 'pickup' | 'drop') => {
+      if (text.length < 3) { type === 'pickup' ? setBuddyPUSugg([]) : setBuddyDRSugg([]); return; }
+      const ref = type === 'pickup' ? buddyPUDebRef : buddyDRDebRef;
+      if (ref.current) clearTimeout(ref.current);
+      ref.current = setTimeout(async () => {
+        try {
+          const res = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${MAPS_KEY}&components=country:in&location=26.8467,80.9462&radius=50000`);
+          const data = await res.json();
+          const sugg = data.predictions?.map((p: any) => ({ id: p.place_id, text: p.description })) || [];
+          type === 'pickup' ? setBuddyPUSugg(sugg) : setBuddyDRSugg(sugg);
+        } catch (_e) {}
+      }, 380);
+    };
+
+    const geocodeBuddyPlace = async (address: string, type: 'pickup' | 'drop') => {
+      try {
+        const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${MAPS_KEY}`);
+        const data = await res.json();
+        const loc = data.results?.[0]?.geometry?.location;
+        if (loc) type === 'pickup' ? setBuddyBookPUCoords({ lat: loc.lat, lng: loc.lng }) : setBuddyBookDRCoords({ lat: loc.lat, lng: loc.lng });
+      } catch (_e) {}
+    };
+
+    const useMyLocation = async () => {
+      if (!userCoords) { setBuddyBookMsg('📍 Location unavailable — manually enter pickup'); return; }
+      setBuddyBookMsg('📍 Detect kar rahe hain...');
+      try {
+        const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${userCoords.latitude},${userCoords.longitude}&key=${MAPS_KEY}`);
+        const data = await res.json();
+        const addr = data.results?.[0]?.formatted_address || '';
+        if (addr) {
+          setBuddyBookPU(addr);
+          setBuddyBookPUCoords({ lat: userCoords.latitude, lng: userCoords.longitude });
+          setBuddyPUSugg([]);
+          setBuddyBookMsg('');
+        } else setBuddyBookMsg('📍 Address nahi mila — manually likhao');
+      } catch (_e) { setBuddyBookMsg('❌ Location fetch failed'); }
+    };
+
     const bookWithBuddy = async () => {
-      if (!buddyBookPU || !buddyBookDR) { setBuddyBookMsg('⚠️ Pickup aur drop location daalo'); return; }
+      if (isOffline) { setBuddyBookMsg('⛔ Driver offline hai — request nahi bhej sakte'); return; }
+      if (!buddyBookPU.trim()) { setBuddyBookMsg('⚠️ Pickup location daalo'); return; }
+      if (!buddyBookDR.trim()) { setBuddyBookMsg('⚠️ Drop location daalo'); return; }
       setBuddyBookLoading(true); setBuddyBookMsg('');
       try {
         const res = await apiPost('/api/favourites/book', {
@@ -4317,111 +4364,189 @@ export default function App() {
           joinRideSocket(res.ride_id);
           AsyncStorage.setItem('activeStdRideId', String(res.ride_id)).catch(() => {});
           setBuddyWaiting(true);
-          setBuddyBookMsg(`✅ Request bheji gayi! ${favouriteBuddy.driver_name} ke respond karne ka wait kar rahe hain...`);
+          setBuddyBookMsg('');
         } else if (res.reason === 'offline') {
-          setBuddyBookMsg(`😔 ${res.driver_name} abhi offline hai. Baad mein try karo ya kisi aur se book karo.`);
+          setBuddyBookMsg(`⛔ ${res.driver_name || favouriteBuddy.driver_name} abhi offline hai — request cancel. Baad mein try karo.`);
         } else if (res.reason === 'busy') {
-          setBuddyBookMsg(`🚗 ${res.driver_name} abhi doosri ride pe hai. Thodi der baad try karo.`);
+          setBuddyBookMsg(`🚗 ${res.driver_name || favouriteBuddy.driver_name} abhi kisi aur ride mein busy hai — request cancel. Thodi der mein dobara try karo.`);
         } else {
-          setBuddyBookMsg('❌ ' + (res.error || 'Kuch galat hua'));
+          setBuddyBookMsg('❌ ' + (res.error || 'Kuch galat hua — dobara try karo'));
         }
       } catch (_e) { setBuddyBookMsg('❌ Network error — dobara try karo'); }
       setBuddyBookLoading(false);
     };
 
+    const closeModal = () => {
+      if (buddyWaiting) return;
+      setShowBuddyBook(false); setBuddyBookMsg('');
+      setBuddyPUSugg([]); setBuddyDRSugg([]);
+    };
+
     const goToMatching = () => {
       setShowBuddyBook(false); setBuddyWaiting(false); setBuddyBookMsg('');
       setBuddyBookPU(''); setBuddyBookDR('');
+      setBuddyPUSugg([]); setBuddyDRSugg([]);
       setScreen('matching');
     };
 
     return (
-      <Modal visible={showBuddyBook} animationType="slide" transparent statusBarTranslucent onRequestClose={() => { if (!buddyWaiting) { setShowBuddyBook(false); setBuddyBookMsg(''); } }}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
-          <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36 }}>
-            {/* Header */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 18 }}>
-              <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#e94560', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                {favouriteBuddy.face_photo
-                  ? <Image source={{ uri: favouriteBuddy.face_photo }} style={{ width: 48, height: 48, borderRadius: 24 }} />
-                  : <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 18 }}>{(favouriteBuddy.driver_name||'D')[0].toUpperCase()}</Text>}
-              </View>
-              <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 12 }}>⭐ </Text>
-                  <Text style={{ fontWeight: '800', fontSize: 16, color: '#1a1a2e' }}>{favouriteBuddy.driver_name}</Text>
-                </View>
-                <Text style={{ color: '#666', fontSize: 12, marginTop: 2 }}>
-                  {rideIcon(favouriteBuddy.vehicle_type)} {(favouriteBuddy.vehicle_type||'').replace('_',' ').toUpperCase()}
-                  {favouriteBuddy.rating ? ` · ★ ${parseFloat(favouriteBuddy.rating).toFixed(1)}` : ''}
-                  {favouriteBuddy.is_online ? ' · 🟢 Online' : ' · ⚫ Offline'}
-                </Text>
-              </View>
-              {!buddyWaiting && (
-                <TouchableOpacity onPress={() => { setShowBuddyBook(false); setBuddyBookMsg(''); }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                  <Text style={{ fontSize: 22, color: '#bbb' }}>✕</Text>
-                </TouchableOpacity>
-              )}
-            </View>
+      <Modal visible={showBuddyBook} animationType="slide" transparent statusBarTranslucent onRequestClose={closeModal}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeModal} />
+          <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 6, paddingHorizontal: 20, paddingBottom: 30, maxHeight: '88%', shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 20, elevation: 24 }}>
+            {/* Drag handle */}
+            <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#e0e0e0', alignSelf: 'center', marginBottom: 14 }} />
 
-            {/* Waiting state */}
-            {buddyWaiting ? (
-              <View style={{ alignItems: 'center', paddingVertical: 20 }}>
-                <Text style={{ fontSize: 40, marginBottom: 12 }}>⏳</Text>
-                <Text style={{ fontWeight: '800', fontSize: 16, color: '#1a1a2e', textAlign: 'center' }}>Request Bheji Gayi!</Text>
-                <Text style={{ color: '#666', fontSize: 13, textAlign: 'center', marginTop: 6 }}>
-                  {favouriteBuddy.driver_name} accept karne ka wait kar rahe hain...
-                </Text>
-                {buddyBookMsg.startsWith('⚠️') && (
-                  <>
-                    <Text style={{ color: '#e65100', fontSize: 13, textAlign: 'center', marginTop: 10 }}>{buddyBookMsg}</Text>
-                    <TouchableOpacity onPress={goToMatching} style={{ marginTop: 14, backgroundColor: '#1a1a2e', borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12 }}>
-                      <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Kisi bhi driver se book karo →</Text>
-                    </TouchableOpacity>
-                  </>
-                )}
-                {!buddyBookMsg.startsWith('⚠️') && (
-                  <TouchableOpacity onPress={goToMatching} style={{ marginTop: 14, backgroundColor: '#e94560', borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12 }}>
-                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Ride Track Karo →</Text>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="always" contentContainerStyle={{ paddingBottom: 12 }}>
+              {/* ── Header: driver info ── */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+                <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#e94560', alignItems: 'center', justifyContent: 'center', marginRight: 12, overflow: 'hidden' }}>
+                  {favouriteBuddy.face_photo
+                    ? <Image source={{ uri: favouriteBuddy.face_photo }} style={{ width: 48, height: 48, borderRadius: 24 }} />
+                    : <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 18 }}>{(favouriteBuddy.driver_name || 'D')[0].toUpperCase()}</Text>}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 11, marginRight: 3 }}>⭐</Text>
+                    <Text style={{ fontWeight: '800', fontSize: 16, color: '#1a1a2e' }}>{favouriteBuddy.driver_name}</Text>
+                  </View>
+                  <Text style={{ color: '#666', fontSize: 12, marginTop: 2 }}>
+                    {rideIcon(favouriteBuddy.vehicle_type)} {(favouriteBuddy.vehicle_type || '').replace('_', ' ').toUpperCase()}
+                    {favouriteBuddy.rating ? ` · ★ ${parseFloat(favouriteBuddy.rating).toFixed(1)}` : ''}
+                  </Text>
+                  <Text style={{ fontSize: 11, marginTop: 2 }}>
+                    {favouriteBuddy.is_online
+                      ? <Text style={{ color: '#2e7d32', fontWeight: '700' }}>🟢 Online — request bhej sakte ho</Text>
+                      : <Text style={{ color: '#c62828', fontWeight: '700' }}>⛔ Offline — abhi unavailable</Text>}
+                  </Text>
+                </View>
+                {!buddyWaiting && (
+                  <TouchableOpacity onPress={closeModal} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                    <Text style={{ fontSize: 22, color: '#bbb' }}>✕</Text>
                   </TouchableOpacity>
                 )}
               </View>
-            ) : (
-              <>
-                {/* Pickup */}
-                <Text style={{ fontWeight: '700', fontSize: 13, color: '#1a1a2e', marginBottom: 6 }}>📍 Pickup</Text>
-                <TextInput
-                  style={{ borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 12, padding: 12, fontSize: 14, marginBottom: 12, color: '#1a1a2e', backgroundColor: '#fafafa' }}
-                  placeholder="Pickup location likhao..."
-                  value={buddyBookPU}
-                  onChangeText={setBuddyBookPU}
-                />
-                {/* Drop */}
-                <Text style={{ fontWeight: '700', fontSize: 13, color: '#1a1a2e', marginBottom: 6 }}>🎯 Drop</Text>
-                <TextInput
-                  style={{ borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 12, padding: 12, fontSize: 14, marginBottom: 16, color: '#1a1a2e', backgroundColor: '#fafafa' }}
-                  placeholder="Drop location likhao..."
-                  value={buddyBookDR}
-                  onChangeText={setBuddyBookDR}
-                />
-                {/* Message */}
-                {!!buddyBookMsg && (
-                  <Text style={{ textAlign: 'center', marginBottom: 10, fontSize: 13, color: buddyBookMsg.startsWith('✅') ? '#2e7d32' : '#c62828', fontWeight: '600' }}>{buddyBookMsg}</Text>
-                )}
-                {/* Book button */}
-                <TouchableOpacity
-                  onPress={bookWithBuddy}
-                  disabled={buddyBookLoading}
-                  style={{ backgroundColor: '#e94560', borderRadius: 14, padding: 16, alignItems: 'center', opacity: buddyBookLoading ? 0.6 : 1 }}>
-                  <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>{buddyBookLoading ? '⏳ Bhej rahe hain...' : `⭐ ${favouriteBuddy.driver_name} ko Request Bhejo`}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setScreen('booking')} style={{ alignItems: 'center', marginTop: 12 }}>
-                  <Text style={{ color: '#999', fontSize: 13 }}>Kisi bhi driver se book karo →</Text>
-                </TouchableOpacity>
-              </>
-            )}
+
+              {/* ── Offline alert banner ── */}
+              {isOffline && !buddyWaiting && (
+                <View style={{ backgroundColor: '#ffebee', borderRadius: 12, padding: 12, marginBottom: 14, borderWidth: 1.5, borderColor: '#ef9a9a', flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 20, marginRight: 10 }}>⛔</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#b71c1c', fontSize: 13, fontWeight: '800' }}>{favouriteBuddy.driver_name} abhi offline hai</Text>
+                    <Text style={{ color: '#c62828', fontSize: 11, marginTop: 2 }}>Request nahi bhejI jayegi. Baad mein try karo ya kisi aur driver se book karo.</Text>
+                  </View>
+                </View>
+              )}
+
+              {/* ── WAITING STATE ── */}
+              {buddyWaiting ? (
+                <View style={{ alignItems: 'center', paddingVertical: 24 }}>
+                  <Text style={{ fontSize: 48, marginBottom: 12 }}>⏳</Text>
+                  <Text style={{ fontWeight: '800', fontSize: 17, color: '#1a1a2e', textAlign: 'center' }}>Request Bheji Gayi!</Text>
+                  <Text style={{ color: '#666', fontSize: 13, textAlign: 'center', marginTop: 6, lineHeight: 20 }}>
+                    {favouriteBuddy.driver_name} ke accept karne ka intezaar kar rahe hain...{'\n'}30 seconds ka time diya gaya hai.
+                  </Text>
+                  {buddyBookMsg.startsWith('⚠️') || buddyBookMsg.startsWith('⛔') ? (
+                    <>
+                      <View style={{ backgroundColor: '#fff3e0', borderRadius: 12, padding: 12, marginTop: 14, borderWidth: 1, borderColor: '#ffb74d', width: '100%' }}>
+                        <Text style={{ color: '#e65100', fontSize: 13, textAlign: 'center', fontWeight: '700' }}>{buddyBookMsg}</Text>
+                      </View>
+                      <TouchableOpacity onPress={goToMatching} style={{ marginTop: 14, backgroundColor: '#1a1a2e', borderRadius: 14, paddingHorizontal: 28, paddingVertical: 14, width: '100%', alignItems: 'center' }}>
+                        <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>Kisi bhi driver se book karo →</Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    <TouchableOpacity onPress={goToMatching} style={{ marginTop: 14, backgroundColor: '#e94560', borderRadius: 14, paddingHorizontal: 28, paddingVertical: 14, width: '100%', alignItems: 'center' }}>
+                      <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>Live Track Karo →</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ) : (
+                <>
+                  {/* ── PICKUP ── */}
+                  <Text style={{ fontWeight: '700', fontSize: 13, color: '#1a1a2e', marginBottom: 6 }}>📍 Pickup Location</Text>
+
+                  {/* Current location button */}
+                  <TouchableOpacity onPress={useMyLocation}
+                    style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#e3f2fd', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, marginBottom: 8, borderWidth: 1, borderColor: '#90caf9' }}>
+                    <Text style={{ fontSize: 15, marginRight: 8 }}>🎯</Text>
+                    <Text style={{ color: '#1565c0', fontSize: 13, fontWeight: '700' }}>Meri current location use karo</Text>
+                  </TouchableOpacity>
+
+                  <TextInput
+                    style={{ borderWidth: 1.5, borderColor: buddyBookPU ? '#4CAF50' : '#e0e0e0', borderRadius: 12, padding: 12, fontSize: 14, color: '#1a1a2e', backgroundColor: '#fafafa' }}
+                    placeholder="Pickup location likhao ya search karo..."
+                    placeholderTextColor="#bbb"
+                    value={buddyBookPU}
+                    onChangeText={(t) => { setBuddyBookPU(t); searchBuddyPlaces(t, 'pickup'); }}
+                    returnKeyType="next"
+                  />
+                  {buddyPUSugg.length > 0 && (
+                    <View style={{ backgroundColor: '#fff', borderRadius: 12, marginTop: 4, marginBottom: 4, borderWidth: 1, borderColor: '#e8e8e8', elevation: 8, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8 }}>
+                      {buddyPUSugg.slice(0, 5).map((sg: any, i: number) => (
+                        <TouchableOpacity key={i}
+                          style={{ flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: i < Math.min(buddyPUSugg.length, 5) - 1 ? 1 : 0, borderBottomColor: '#f5f5f5' }}
+                          onPress={() => { setBuddyBookPU(sg.text); setBuddyPUSugg([]); geocodeBuddyPlace(sg.text, 'pickup'); }}>
+                          <Text style={{ fontSize: 14, marginRight: 10 }}>📍</Text>
+                          <Text style={{ fontSize: 13, color: '#1a1a2e', flex: 1, fontWeight: '500' }} numberOfLines={2}>{sg.text}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* ── DROP ── */}
+                  <Text style={{ fontWeight: '700', fontSize: 13, color: '#1a1a2e', marginBottom: 6, marginTop: 12 }}>🎯 Drop Location</Text>
+                  <TextInput
+                    style={{ borderWidth: 1.5, borderColor: buddyBookDR ? '#e94560' : '#e0e0e0', borderRadius: 12, padding: 12, fontSize: 14, color: '#1a1a2e', backgroundColor: '#fafafa' }}
+                    placeholder="Drop location likhao ya search karo..."
+                    placeholderTextColor="#bbb"
+                    value={buddyBookDR}
+                    onChangeText={(t) => { setBuddyBookDR(t); searchBuddyPlaces(t, 'drop'); }}
+                    returnKeyType="done"
+                  />
+                  {buddyDRSugg.length > 0 && (
+                    <View style={{ backgroundColor: '#fff', borderRadius: 12, marginTop: 4, marginBottom: 4, borderWidth: 1, borderColor: '#e8e8e8', elevation: 8, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8 }}>
+                      {buddyDRSugg.slice(0, 5).map((sg: any, i: number) => (
+                        <TouchableOpacity key={i}
+                          style={{ flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: i < Math.min(buddyDRSugg.length, 5) - 1 ? 1 : 0, borderBottomColor: '#f5f5f5' }}
+                          onPress={() => { setBuddyBookDR(sg.text); setBuddyDRSugg([]); geocodeBuddyPlace(sg.text, 'drop'); }}>
+                          <Text style={{ fontSize: 14, marginRight: 10 }}>🎯</Text>
+                          <Text style={{ fontSize: 13, color: '#1a1a2e', flex: 1, fontWeight: '500' }} numberOfLines={2}>{sg.text}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* ── Status message ── */}
+                  {!!buddyBookMsg && (
+                    <View style={{ borderRadius: 10, padding: 10, marginTop: 10,
+                      backgroundColor: buddyBookMsg.startsWith('✅') ? '#e8f5e9' : buddyBookMsg.startsWith('📍') ? '#e3f2fd' : '#ffebee',
+                      borderWidth: 1, borderColor: buddyBookMsg.startsWith('✅') ? '#a5d6a7' : buddyBookMsg.startsWith('📍') ? '#90caf9' : '#ef9a9a' }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', textAlign: 'center',
+                        color: buddyBookMsg.startsWith('✅') ? '#2e7d32' : buddyBookMsg.startsWith('📍') ? '#1565c0' : '#b71c1c' }}>
+                        {buddyBookMsg}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* ── Book button ── */}
+                  <TouchableOpacity
+                    onPress={bookWithBuddy}
+                    disabled={buddyBookLoading || isOffline}
+                    style={{ backgroundColor: isOffline ? '#bdbdbd' : '#e94560', borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 14, elevation: isOffline ? 0 : 5, shadowColor: '#e94560', shadowOpacity: isOffline ? 0 : 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } }}>
+                    <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>
+                      {buddyBookLoading ? '⏳ Request bhej rahe hain...' : isOffline ? '⛔ Driver Offline — Unavailable' : `⭐ ${favouriteBuddy.driver_name} ko Request Bhejo`}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity onPress={() => { closeModal(); setScreen('booking'); }} style={{ alignItems: 'center', marginTop: 12, paddingVertical: 6 }}>
+                    <Text style={{ color: '#999', fontSize: 13 }}>Kisi bhi driver se book karo →</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     );
   }
