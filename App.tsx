@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import RazorpayCheckout from 'react-native-razorpay';
 import {
-  View, Text, TextInput, TouchableOpacity, Image, Alert, AppState,
+  View, Text, TextInput, TouchableOpacity, Image, Alert, AppState, Modal,
   StyleSheet, ScrollView, Switch, Animated, KeyboardAvoidingView, Platform, Linking, Share, BackHandler
 } from 'react-native';
 import * as Location from 'expo-location';
@@ -21,11 +21,13 @@ type Screen = 'splash' | 'login' | 'otp' | 'onboarding' | 'home' | 'booking' | '
 
 // Default fares — used for instant render while API loads
 const DEFAULT_hourlyPackages: any = {
-  auto:         { 2:{fare:180,km:20}, 4:{fare:320,km:40}, 6:{fare:460,km:60}, 8:{fare:580,km:80},  24:{fare:1500,km:200}, 48:{fare:2800,km:400}, 72:{fare:4000,km:600}, extra:8  },
-  bike:         { 2:{fare:120,km:20}, 4:{fare:210,km:40}, 6:{fare:300,km:60}, 8:{fare:380,km:80},  24:{fare:1000,km:200}, 48:{fare:1800,km:400}, 72:{fare:2600,km:600}, extra:5  },
-  car:          { 2:{fare:260,km:20}, 4:{fare:460,km:40}, 6:{fare:660,km:60}, 8:{fare:840,km:80},  24:{fare:2200,km:200}, 48:{fare:4000,km:400}, 72:{fare:5800,km:600}, extra:12 },
-  eriksha:      { 2:{fare:150,km:20}, 4:{fare:270,km:40}, 6:{fare:390,km:60}, 8:{fare:490,km:80},  24:{fare:1200,km:200}, 48:{fare:2200,km:400}, 72:{fare:3200,km:600}, extra:7  },
-  ultra_luxury: { 2:{fare:800,km:20}, 4:{fare:1400,km:40}, 6:{fare:2000,km:60}, 8:{fare:2600,km:80}, 24:{fare:6000,km:200}, 48:{fare:10000,km:400}, 72:{fare:14000,km:600}, extra:25 },
+  auto:          { 2:{fare:180,km:20}, 4:{fare:320,km:40}, 6:{fare:460,km:60}, 8:{fare:580,km:80},  24:{fare:1500,km:200}, 48:{fare:2800,km:400}, 72:{fare:4000,km:600}, extra:8  },
+  bike:          { 2:{fare:120,km:20}, 4:{fare:210,km:40}, 6:{fare:300,km:60}, 8:{fare:380,km:80},  24:{fare:1000,km:200}, 48:{fare:1800,km:400}, 72:{fare:2600,km:600}, extra:5  },
+  car:           { 2:{fare:260,km:20}, 4:{fare:460,km:40}, 6:{fare:660,km:60}, 8:{fare:840,km:80},  24:{fare:2200,km:200}, 48:{fare:4000,km:400}, 72:{fare:5800,km:600}, extra:12 },
+  eriksha:       { 2:{fare:150,km:20}, 4:{fare:270,km:40}, 6:{fare:390,km:60}, 8:{fare:490,km:80},  24:{fare:1200,km:200}, 48:{fare:2200,km:400}, 72:{fare:3200,km:600}, extra:7  },
+  ultra_luxury:  { 2:{fare:800,km:20}, 4:{fare:1400,km:40}, 6:{fare:2000,km:60}, 8:{fare:2600,km:80}, 24:{fare:6000,km:200}, 48:{fare:10000,km:400}, 72:{fare:14000,km:600}, extra:25 },
+  green_bike:    { 2:{fare:100,km:20}, 4:{fare:180,km:40}, 6:{fare:260,km:60}, 8:{fare:330,km:80},  24:{fare:850,km:200},  48:{fare:1500,km:400}, 72:{fare:2200,km:600}, extra:4  },
+  electric_auto: { 2:{fare:130,km:20}, 4:{fare:240,km:40}, 6:{fare:350,km:60}, 8:{fare:440,km:80},  24:{fare:1100,km:200}, 48:{fare:2000,km:400}, 72:{fare:2900,km:600}, extra:6  },
 };
 const PulseView = ({ children, style }: any) => {
   const anim = useRef(new Animated.Value(1)).current;
@@ -487,6 +489,17 @@ export default function App() {
   const scratchAnim = useRef(new Animated.Value(1)).current;
   const starAnims   = useRef([0,1,2,3,4].map(() => new Animated.Value(1))).current;
 
+  // ── Favourite Buddy State ─────────────────────
+  const [favouriteBuddy, setFavouriteBuddy]     = useState<any>(null);
+  const [showBuddyBook, setShowBuddyBook]         = useState(false);
+  const [buddyBookPU, setBuddyBookPU]             = useState('');
+  const [buddyBookDR, setBuddyBookDR]             = useState('');
+  const [buddyBookPUCoords, setBuddyBookPUCoords] = useState<any>(null);
+  const [buddyBookDRCoords, setBuddyBookDRCoords] = useState<any>(null);
+  const [buddyBookLoading, setBuddyBookLoading]   = useState(false);
+  const [buddyBookMsg, setBuddyBookMsg]           = useState('');
+  const [buddyWaiting, setBuddyWaiting]           = useState(false);
+
   // ── Hourly Booking State ──────────────────────
   const [hourlyStep, setHourlyStep]     = useState<'book'|'waiting'|'active'|'done'>('book');
   const [hourlyBooking, setHourlyBooking] = useState<any>(null);
@@ -661,7 +674,7 @@ export default function App() {
           const sp = await AsyncStorage.getItem('userPhone');
           const sn = await AsyncStorage.getItem('userName');
           if (!sp) { setScreen('login'); return; }
-          setPhone(sp); setUserName(sn || ''); loadHistory(sp); loadWallet(sp); registerFCM(sp); loadOffers(); loadHourlyPackages();
+          setPhone(sp); setUserName(sn || ''); loadHistory(sp); loadWallet(sp); registerFCM(sp); loadOffers(); loadHourlyPackages(); loadFavouriteBuddy(sp);
 
           // Active hourly ride check
           const savedHourlyId = await AsyncStorage.getItem('activeHourlyId');
@@ -924,6 +937,25 @@ export default function App() {
 
   const loadHistory = async (ph: string) => {
     try { const r = await fetch(`${API}/api/rides/history?phone=${ph}`); const d = await r.json(); setHistoryRides(d.rides || []); } catch (_e) {}
+  };
+  const loadFavouriteBuddy = async (ph: string) => {
+    try { const r = await fetch(`${API}/api/favourites?phone=${ph}`); const d = await r.json(); setFavouriteBuddy(d.buddy || null); } catch (_e) {}
+  };
+  const removeFavouriteBuddy = async () => {
+    if (!phone) return;
+    try {
+      await fetch(`${API}/api/favourites`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customer_phone: phone }) });
+      setFavouriteBuddy(null);
+    } catch (_e) {}
+  };
+  const addFavouriteBuddy = async (driverPhone: string) => {
+    if (!phone || !driverPhone) return;
+    try {
+      const r = await fetch(`${API}/api/favourites`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customer_phone: phone, driver_phone: driverPhone }) });
+      const d = await r.json();
+      if (d.success) setFavouriteBuddy(d.buddy);
+      return d;
+    } catch (_e) { return { error: 'Network error' }; }
   };
   const loadWallet = async (ph: string) => {
     try { const r = await fetch(`${API}/api/wallet/balance?phone=${ph}`); const d = await r.json(); setWalletBalance(d.balance || 0); } catch (_e) {}
@@ -1411,11 +1443,16 @@ export default function App() {
           setScreen((cur: Screen) => (cur === 'payment' || cur === 'postride') ? cur : 'payment');
           loadWallet(phoneRef.current || userPhone);
         }
+        if (st === 'buddy_declined') {
+          setBuddyWaiting(false);
+          setBuddyBookMsg('⚠️ Buddy ne abhi accept nahi kiya. Ab doosre drivers dhundh rahe hain...');
+        }
         if (st === 'cancelled' || st === 'no_driver') {
           AsyncStorage.removeItem('activeStdRideId').catch(() => {});
           ride.clearRide();
           setRideData(null); setAltSuggest(null); setDriverLoc(null);
           setPickup(''); setDrop(''); setPickupCoords(null); setDropCoords(null); setEta('');
+          setBuddyWaiting(false); setBuddyBookMsg('');
           setScreen('home');
           setResult(st === 'no_driver' ? '😔 Abhi driver available nahi — thodi der baad try karo' : '❌ Ride cancel ho gayi');
         }
@@ -1489,14 +1526,16 @@ export default function App() {
     ]).start();
   };
 
-  const rideIcon = (type: string) => type === 'auto' ? '🛺' : type === 'bike' ? '🏍️' : type === 'eriksha' ? '🛵' : type === 'luxury' ? '🚙' : '🚕';
+  const rideIcon = (type: string) => type === 'auto' ? '🛺' : type === 'bike' ? '🏍️' : type === 'eriksha' ? '🛵' : type === 'luxury' ? '🚙' : type === 'green_bike' ? '⚡' : type === 'electric_auto' ? '🌿' : '🚕';
 
   const RIDES = [
-    { id: 'bike',    icon: '🏍️', label: 'Bike',        base: 15, rate: 8,  eta: '2-3 min', tag: 'FASTEST', tagColor: '#FF6B35', desc: 'Traffic cut karo fast' },
-    { id: 'auto',    icon: '🛺', label: 'Auto',         base: 25, rate: 12, eta: '3-5 min', tag: null,      tagColor: '',        desc: 'Budget friendly ride' },
-    { id: 'car',     icon: '🚕', label: 'Car',           base: 40, rate: 15, eta: '5-7 min', tag: 'POPULAR', tagColor: '#2196F3', desc: 'AC • Comfortable' },
-    { id: 'eriksha', icon: '🛵', label: 'E-Riksha',      base: 20, rate: 10, eta: '4-6 min', tag: 'ECO',     tagColor: '#4CAF50', desc: 'Eco-friendly ride' },
-    { id: 'luxury',  icon: '🚙', label: 'Ultra Luxury',  base: 80, rate: 25, eta: '7-10 min', tag: 'PREMIUM', tagColor: '#9C27B0', desc: 'Premium SUV experience' },
+    { id: 'bike',          icon: '🏍️', label: 'Bike',          base: 15, rate: 8,  eta: '2-3 min',  tag: 'FASTEST',  tagColor: '#FF6B35', desc: 'Traffic cut karo fast' },
+    { id: 'auto',          icon: '🛺', label: 'Auto',           base: 25, rate: 12, eta: '3-5 min',  tag: null,       tagColor: '',        desc: 'Budget friendly ride' },
+    { id: 'car',           icon: '🚕', label: 'Car',            base: 40, rate: 15, eta: '5-7 min',  tag: 'POPULAR',  tagColor: '#2196F3', desc: 'AC • Comfortable' },
+    { id: 'eriksha',       icon: '🛵', label: 'E-Riksha',       base: 20, rate: 10, eta: '4-6 min',  tag: 'ECO',      tagColor: '#4CAF50', desc: 'Eco-friendly ride' },
+    { id: 'green_bike',    icon: '⚡', label: 'Green Bike',     base: 12, rate: 6,  eta: '2-4 min',  tag: 'GREEN',    tagColor: '#2e7d32', desc: 'Electric Bike • Zero Emission' },
+    { id: 'electric_auto', icon: '🌿', label: 'Electric Auto',  base: 20, rate: 9,  eta: '3-5 min',  tag: 'GREEN',    tagColor: '#2e7d32', desc: 'Electric Auto • Eco Ride' },
+    { id: 'luxury',        icon: '🚙', label: 'Ultra Luxury',   base: 80, rate: 25, eta: '7-10 min', tag: 'PREMIUM',  tagColor: '#9C27B0', desc: 'Premium SUV experience' },
   ];
 
   // ═══ SPLASH ═══
@@ -1747,6 +1786,48 @@ export default function App() {
             </View>
           </SlideUp>
 
+          {/* ─── Favourite Sppero Buddy Card ─────────────────────── */}
+          {favouriteBuddy && (
+            <SlideUp delay={70}>
+              <View style={{ backgroundColor: '#fff', borderRadius: 16, marginBottom: 10, borderWidth: 2, borderColor: '#f0a500', overflow: 'hidden', elevation: 3, shadowColor: '#f0a500', shadowOpacity: 0.15, shadowRadius: 6 }}>
+                <View style={{ backgroundColor: '#fff8e1', paddingHorizontal: 14, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 16 }}>⭐</Text>
+                    <Text style={{ marginLeft: 6, fontWeight: '800', fontSize: 13, color: '#b8860b' }}>Mera Sppero Buddy</Text>
+                  </View>
+                  <TouchableOpacity onPress={removeFavouriteBuddy} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Text style={{ fontSize: 12, color: '#bbb', fontWeight: '700' }}>✕ Remove</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', padding: 14 }}>
+                  <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: '#e94560', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                    {favouriteBuddy.face_photo
+                      ? <Image source={{ uri: favouriteBuddy.face_photo }} style={{ width: 52, height: 52, borderRadius: 26 }} />
+                      : <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 20 }}>{(favouriteBuddy.driver_name || 'D')[0].toUpperCase()}</Text>}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontWeight: '800', fontSize: 16, color: '#1a1a2e' }}>{favouriteBuddy.driver_name}</Text>
+                    <Text style={{ color: '#666', fontSize: 12, marginTop: 2 }}>
+                      {rideIcon(favouriteBuddy.vehicle_type)} {(favouriteBuddy.vehicle_type || '').replace('_', ' ').toUpperCase()}
+                      {favouriteBuddy.vehicle_no ? ` · ${favouriteBuddy.vehicle_no}` : ''}
+                      {favouriteBuddy.rating ? ` · ★ ${parseFloat(favouriteBuddy.rating).toFixed(1)}` : ''}
+                    </Text>
+                    <Text style={{ color: '#4CAF50', fontSize: 11, marginTop: 3, fontWeight: '600' }}>
+                      ✅ {favouriteBuddy.rides_together || 0} rides saath kiye
+                      {favouriteBuddy.is_online ? ' · 🟢 Online' : ' · ⚫ Offline'}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => { setBuddyBookMsg(''); setBuddyWaiting(false); setShowBuddyBook(true); }}
+                    style={{ backgroundColor: '#1a1a2e', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 18 }}>🚗</Text>
+                    <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700', marginTop: 2 }}>Book</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </SlideUp>
+          )}
+
           {/* Active marketing campaign banners */}
           {activeOffers.filter(o => !offerDismissed.has(o.id)).map((offer: any) => (
             <SlideUp key={offer.id} delay={80}>
@@ -1878,6 +1959,7 @@ export default function App() {
         </ScrollView>
       </View>
       <View style={s.navFloat}><NavBarInner /></View>
+      <BuddyBookModal />
     </View>
   );
 
@@ -1904,7 +1986,7 @@ export default function App() {
     const hTimerStr  = hh2 > 0 ? `${hh2}h ${mm2}m ${ss2}s` : `${mm2}m ${ss2}s`;
     const hStatus    = hourlyStep === 'active' ? 'Ride chal rahi hai' : hourlyBooking?.status === 'matched' ? 'Driver aa raha hai' : 'Driver dhoondh rahe hain...';
     const hColor     = hourlyStep === 'active' ? '#7b1fa2' : hourlyBooking?.status === 'matched' ? '#1565C0' : '#f57c00';
-    const vEmoji: any = { auto:'🛺', bike:'🏍️', car:'🚕', eriksha:'🛵', ultra_luxury:'🚙' };
+    const vEmoji: any = { auto:'🛺', bike:'🏍️', car:'🚕', eriksha:'🛵', ultra_luxury:'🚙', green_bike:'⚡', electric_auto:'🌿' };
 
     return (
       <View style={s.screen}>
@@ -2094,8 +2176,26 @@ export default function App() {
                 <View style={{ flex: 1 }}>
                   <Text style={s.recentRoute} numberOfLines={1}>{h.pickup} → {h.drop_location}</Text>
                   <Text style={s.recentDate}>{new Date(h.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · <Text style={{ color: h.status === 'completed' ? '#4CAF50' : h.status === 'cancelled' ? '#e94560' : '#f0a500' }}>{h.status}</Text></Text>
+                  {h.driver_name && <Text style={{ fontSize: 11, color: '#999', marginTop: 1 }}>Driver: {h.driver_name}</Text>}
                 </View>
-                <Text style={s.recentFare}>₹{h.fare}</Text>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={s.recentFare}>₹{h.fare}</Text>
+                  {h.status === 'completed' && h.driver_phone && (
+                    <TouchableOpacity
+                      onPress={async () => {
+                        const alreadyBuddy = favouriteBuddy?.driver_phone === h.driver_phone;
+                        if (alreadyBuddy) { alert('⭐ Yeh aapka Sppero Buddy pehle se hai!'); return; }
+                        const res = await addFavouriteBuddy(h.driver_phone);
+                        if (res?.success) alert(`⭐ ${h.driver_name} ab aapka Sppero Buddy hai!`);
+                        else alert('⚠️ ' + (res?.error || 'Error'));
+                      }}
+                      style={{ marginTop: 5, backgroundColor: favouriteBuddy?.driver_phone === h.driver_phone ? '#e8f5e9' : '#fff8e1', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: favouriteBuddy?.driver_phone === h.driver_phone ? '#4CAF50' : '#f0a500' }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: favouriteBuddy?.driver_phone === h.driver_phone ? '#2e7d32' : '#b8860b' }}>
+                        {favouriteBuddy?.driver_phone === h.driver_phone ? '✅ Buddy' : '⭐ Buddy?'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
             </View>
           ))
@@ -2411,7 +2511,7 @@ export default function App() {
   // ═══ HOURLY BOOKING ═══
   if (screen === 'hourly') {
     const pkg = hourlyPackages[hVehicle]?.[hPackageHours];
-    const hVehicleIcons: any = { auto: '🛺', bike: '🏍️', car: '🚕', eriksha: '🛵', ultra_luxury: '💎' };
+    const hVehicleIcons: any = { auto: '🛺', bike: '🏍️', car: '🚕', eriksha: '🛵', ultra_luxury: '💎', green_bike: '⚡', electric_auto: '🌿' };
     const hHourLabel = (h: number) => h >= 24 ? `${h/24} Day${h > 24 ? 's' : ''}` : h === 8 ? 'Full Day (8h)' : `${h} Hours`;
     const hHourEmoji = (h: number) => h >= 72 ? '🗓️' : h >= 48 ? '📅' : h >= 24 ? '🌙' : h === 2 ? '⏱️' : h === 4 ? '🕐' : h === 6 ? '🕕' : '☀️';
     const fmtTime = (sec: number) => `${String(Math.floor(sec/3600)).padStart(2,'0')}:${String(Math.floor((sec%3600)/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`;
@@ -3097,6 +3197,16 @@ export default function App() {
               <Bouncy key={v.id} style={{ flex: 1, backgroundColor: hVehicle === v.id ? '#1a1a2e' : '#f5f5f5', borderRadius: 12, padding: 10, alignItems: 'center', borderWidth: 2, borderColor: hVehicle === v.id ? '#e94560' : 'transparent' }} onPress={() => setHVehicle(v.id)}>
                 <Text style={{ fontSize: 22 }}>{v.icon}</Text>
                 <Text style={{ fontSize: 10, fontWeight: '600', marginTop: 3, color: hVehicle === v.id ? '#fff' : '#333' }}>{v.label}</Text>
+              </Bouncy>
+            ))}
+          </View>
+          {/* Green vehicles row */}
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+            {[{id:'green_bike',icon:'⚡',label:'Green Bike'},{id:'electric_auto',icon:'🌿',label:'Elec. Auto'}].map(v => (
+              <Bouncy key={v.id} style={{ flex: 1, backgroundColor: hVehicle === v.id ? '#1b5e20' : '#e8f5e9', borderRadius: 12, padding: 10, alignItems: 'center', borderWidth: 2, borderColor: hVehicle === v.id ? '#66bb6a' : '#a5d6a7' }} onPress={() => setHVehicle(v.id)}>
+                <Text style={{ fontSize: 22 }}>{v.icon}</Text>
+                <Text style={{ fontSize: 10, fontWeight: '600', marginTop: 3, color: hVehicle === v.id ? '#fff' : '#2e7d32' }}>{v.label}</Text>
+                <Text style={{ fontSize: 9, color: hVehicle === v.id ? '#a5d6a7' : '#66bb6a', marginTop: 1 }}>ECO</Text>
               </Bouncy>
             ))}
           </View>
@@ -3956,6 +4066,29 @@ export default function App() {
           ))}
         </View>
         <TextInput style={[s.input, { height: 70, textAlignVertical: 'top' }]} placeholder="Comment (optional)..." multiline value={review} onChangeText={setReview} />
+
+        {/* ── Make Favourite Buddy ── */}
+        {rideData?.driver?.phone && (() => {
+          const alreadyBuddy = favouriteBuddy?.driver_phone === rideData.driver.phone;
+          return (
+            <TouchableOpacity
+              onPress={async () => {
+                if (alreadyBuddy) return;
+                const res = await addFavouriteBuddy(rideData.driver.phone);
+                if (res?.error) alert('⚠️ ' + res.error);
+              }}
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: alreadyBuddy ? '#e8f5e9' : '#fff8e1', borderRadius: 12, padding: 12, marginVertical: 10, borderWidth: 1.5, borderColor: alreadyBuddy ? '#4CAF50' : '#f0a500' }}>
+              <Text style={{ fontSize: 18, marginRight: 8 }}>{alreadyBuddy ? '✅' : '⭐'}</Text>
+              <View>
+                <Text style={{ fontWeight: '800', fontSize: 13, color: alreadyBuddy ? '#2e7d32' : '#b8860b' }}>
+                  {alreadyBuddy ? 'Yeh aapka Sppero Buddy hai!' : `${rideData.driver.name} ko Sppero Buddy banao`}
+                </Text>
+                {!alreadyBuddy && <Text style={{ fontSize: 11, color: '#999', marginTop: 2 }}>Seedha inhe request bhej sakoge</Text>}
+              </View>
+            </TouchableOpacity>
+          );
+        })()}
+
         <Text style={s.secTitle}>💰 Tip do (optional)</Text>
         <View style={[s.row, { gap: 8, marginBottom: 14 }]}>
           {[0,10,20,50].map(t => (
@@ -3984,6 +4117,140 @@ export default function App() {
   );
 
   return <View />;
+
+  // ═══ FAVOURITE BUDDY DIRECT BOOKING MODAL ═══
+  function BuddyBookModal() {
+    if (!showBuddyBook || !favouriteBuddy) return null;
+
+    const bookWithBuddy = async () => {
+      if (!buddyBookPU || !buddyBookDR) { setBuddyBookMsg('⚠️ Pickup aur drop location daalo'); return; }
+      setBuddyBookLoading(true); setBuddyBookMsg('');
+      try {
+        const res = await apiPost('/api/favourites/book', {
+          customer_phone: phone,
+          pickup: buddyBookPU,
+          drop_location: buddyBookDR,
+          pickup_lat: buddyBookPUCoords?.lat,
+          pickup_lng: buddyBookPUCoords?.lng,
+          drop_lat: buddyBookDRCoords?.lat,
+          drop_lng: buddyBookDRCoords?.lng,
+        });
+        if (res.success) {
+          setRideData({ ride_id: res.ride_id, fare: res.fare, startOtp: '', driver: null });
+          setPickup(buddyBookPU); setDrop(buddyBookDR);
+          if (buddyBookPUCoords) setPickupCoords(buddyBookPUCoords);
+          if (buddyBookDRCoords) setDropCoords(buddyBookDRCoords);
+          joinRideSocket(res.ride_id);
+          AsyncStorage.setItem('activeStdRideId', String(res.ride_id)).catch(() => {});
+          setBuddyWaiting(true);
+          setBuddyBookMsg(`✅ Request bheji gayi! ${favouriteBuddy.driver_name} ke respond karne ka wait kar rahe hain...`);
+        } else if (res.reason === 'offline') {
+          setBuddyBookMsg(`😔 ${res.driver_name} abhi offline hai. Baad mein try karo ya kisi aur se book karo.`);
+        } else if (res.reason === 'busy') {
+          setBuddyBookMsg(`🚗 ${res.driver_name} abhi doosri ride pe hai. Thodi der baad try karo.`);
+        } else {
+          setBuddyBookMsg('❌ ' + (res.error || 'Kuch galat hua'));
+        }
+      } catch (_e) { setBuddyBookMsg('❌ Network error — dobara try karo'); }
+      setBuddyBookLoading(false);
+    };
+
+    const goToMatching = () => {
+      setShowBuddyBook(false); setBuddyWaiting(false); setBuddyBookMsg('');
+      setBuddyBookPU(''); setBuddyBookDR('');
+      setScreen('matching');
+    };
+
+    return (
+      <Modal visible={showBuddyBook} animationType="slide" transparent statusBarTranslucent onRequestClose={() => { if (!buddyWaiting) { setShowBuddyBook(false); setBuddyBookMsg(''); } }}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36 }}>
+            {/* Header */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 18 }}>
+              <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#e94560', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                {favouriteBuddy.face_photo
+                  ? <Image source={{ uri: favouriteBuddy.face_photo }} style={{ width: 48, height: 48, borderRadius: 24 }} />
+                  : <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 18 }}>{(favouriteBuddy.driver_name||'D')[0].toUpperCase()}</Text>}
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 12 }}>⭐ </Text>
+                  <Text style={{ fontWeight: '800', fontSize: 16, color: '#1a1a2e' }}>{favouriteBuddy.driver_name}</Text>
+                </View>
+                <Text style={{ color: '#666', fontSize: 12, marginTop: 2 }}>
+                  {rideIcon(favouriteBuddy.vehicle_type)} {(favouriteBuddy.vehicle_type||'').replace('_',' ').toUpperCase()}
+                  {favouriteBuddy.rating ? ` · ★ ${parseFloat(favouriteBuddy.rating).toFixed(1)}` : ''}
+                  {favouriteBuddy.is_online ? ' · 🟢 Online' : ' · ⚫ Offline'}
+                </Text>
+              </View>
+              {!buddyWaiting && (
+                <TouchableOpacity onPress={() => { setShowBuddyBook(false); setBuddyBookMsg(''); }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <Text style={{ fontSize: 22, color: '#bbb' }}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Waiting state */}
+            {buddyWaiting ? (
+              <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+                <Text style={{ fontSize: 40, marginBottom: 12 }}>⏳</Text>
+                <Text style={{ fontWeight: '800', fontSize: 16, color: '#1a1a2e', textAlign: 'center' }}>Request Bheji Gayi!</Text>
+                <Text style={{ color: '#666', fontSize: 13, textAlign: 'center', marginTop: 6 }}>
+                  {favouriteBuddy.driver_name} accept karne ka wait kar rahe hain...
+                </Text>
+                {buddyBookMsg.startsWith('⚠️') && (
+                  <>
+                    <Text style={{ color: '#e65100', fontSize: 13, textAlign: 'center', marginTop: 10 }}>{buddyBookMsg}</Text>
+                    <TouchableOpacity onPress={goToMatching} style={{ marginTop: 14, backgroundColor: '#1a1a2e', borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12 }}>
+                      <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Kisi bhi driver se book karo →</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+                {!buddyBookMsg.startsWith('⚠️') && (
+                  <TouchableOpacity onPress={goToMatching} style={{ marginTop: 14, backgroundColor: '#e94560', borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12 }}>
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Ride Track Karo →</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              <>
+                {/* Pickup */}
+                <Text style={{ fontWeight: '700', fontSize: 13, color: '#1a1a2e', marginBottom: 6 }}>📍 Pickup</Text>
+                <TextInput
+                  style={{ borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 12, padding: 12, fontSize: 14, marginBottom: 12, color: '#1a1a2e', backgroundColor: '#fafafa' }}
+                  placeholder="Pickup location likhao..."
+                  value={buddyBookPU}
+                  onChangeText={setBuddyBookPU}
+                />
+                {/* Drop */}
+                <Text style={{ fontWeight: '700', fontSize: 13, color: '#1a1a2e', marginBottom: 6 }}>🎯 Drop</Text>
+                <TextInput
+                  style={{ borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 12, padding: 12, fontSize: 14, marginBottom: 16, color: '#1a1a2e', backgroundColor: '#fafafa' }}
+                  placeholder="Drop location likhao..."
+                  value={buddyBookDR}
+                  onChangeText={setBuddyBookDR}
+                />
+                {/* Message */}
+                {!!buddyBookMsg && (
+                  <Text style={{ textAlign: 'center', marginBottom: 10, fontSize: 13, color: buddyBookMsg.startsWith('✅') ? '#2e7d32' : '#c62828', fontWeight: '600' }}>{buddyBookMsg}</Text>
+                )}
+                {/* Book button */}
+                <TouchableOpacity
+                  onPress={bookWithBuddy}
+                  disabled={buddyBookLoading}
+                  style={{ backgroundColor: '#e94560', borderRadius: 14, padding: 16, alignItems: 'center', opacity: buddyBookLoading ? 0.6 : 1 }}>
+                  <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>{buddyBookLoading ? '⏳ Bhej rahe hain...' : `⭐ ${favouriteBuddy.driver_name} ko Request Bhejo`}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setScreen('booking')} style={{ alignItems: 'center', marginTop: 12 }}>
+                  <Text style={{ color: '#999', fontSize: 13 }}>Kisi bhi driver se book karo →</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+    );
+  }
 
   function NavBarInner() {
     const hasLive = (!!rideData?.ride_id && storeStatus !== 'cancelled') ||
