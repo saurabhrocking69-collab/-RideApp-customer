@@ -673,6 +673,7 @@ export default function App() {
   const [buddyBookLoading, setBuddyBookLoading]   = useState(false);
   const [buddyBookMsg, setBuddyBookMsg]           = useState('');
   const [buddyWaiting, setBuddyWaiting]           = useState(false);
+  const buddyWaitingRef                           = useRef(false);
   const [buddyPUSugg, setBuddyPUSugg]             = useState<any[]>([]);
   const [buddyDRSugg, setBuddyDRSugg]             = useState<any[]>([]);
   const buddyPUDebRef = useRef<any>(null);
@@ -1622,17 +1623,35 @@ export default function App() {
           loadWallet(phoneRef.current || userPhone);
         }
         if (st === 'buddy_declined') {
+          buddyWaitingRef.current = false;
           setBuddyWaiting(false);
           setBuddyBookMsg('⚠️ Buddy ne abhi accept nahi kiya. Ab doosre drivers dhundh rahe hain...');
         }
-        if (st === 'cancelled' || st === 'no_driver') {
+        if (st === 'cancelled') {
           AsyncStorage.removeItem('activeStdRideId').catch(() => {});
           ride.clearRide();
           setRideData(null); setAltSuggest(null); setDriverLoc(null);
           setPickup(''); setDrop(''); setPickupCoords(null); setDropCoords(null); setEta('');
+          buddyWaitingRef.current = false;
           setBuddyWaiting(false); setBuddyBookMsg('');
           setScreen('home');
-          setResult(st === 'no_driver' ? '😔 Abhi driver available nahi — thodi der baad try karo' : '❌ Ride cancel ho gayi');
+          setResult('❌ Ride cancel ho gayi');
+        }
+        if (st === 'no_driver') {
+          AsyncStorage.removeItem('activeStdRideId').catch(() => {});
+          ride.clearRide();
+          setRideData(null); setAltSuggest(null); setDriverLoc(null);
+          setPickup(''); setDrop(''); setPickupCoords(null); setDropCoords(null); setEta('');
+          if (buddyWaitingRef.current) {
+            // Buddy direct ride timed out — keep modal open with specific message
+            buddyWaitingRef.current = false;
+            setBuddyWaiting(false);
+            setBuddyBookMsg('⏰ Driver ne 25 seconds mein respond nahi kiya — naya ride try karo');
+          } else {
+            setBuddyWaiting(false); setBuddyBookMsg('');
+            setScreen('home');
+            setResult('😔 Abhi driver available nahi — thodi der baad try karo');
+          }
         }
       });
       // Alternative vehicle suggestion from backend
@@ -2137,7 +2156,7 @@ export default function App() {
         </ScrollView>
       </View>
       <View style={s.navFloat}><NavBarInner /></View>
-      <BuddyBookModal />
+      {BuddyBookModal()}
     </View>
   );
 
@@ -4363,6 +4382,7 @@ export default function App() {
           if (buddyBookDRCoords) setDropCoords(buddyBookDRCoords);
           joinRideSocket(res.ride_id);
           AsyncStorage.setItem('activeStdRideId', String(res.ride_id)).catch(() => {});
+          buddyWaitingRef.current = true;
           setBuddyWaiting(true);
           setBuddyBookMsg('');
         } else if (res.reason === 'offline') {
@@ -4383,6 +4403,7 @@ export default function App() {
     };
 
     const goToMatching = () => {
+      buddyWaitingRef.current = false;
       setShowBuddyBook(false); setBuddyWaiting(false); setBuddyBookMsg('');
       setBuddyBookPU(''); setBuddyBookDR('');
       setBuddyPUSugg([]); setBuddyDRSugg([]);
@@ -4391,8 +4412,8 @@ export default function App() {
 
     return (
       <Modal visible={showBuddyBook} animationType="slide" transparent statusBarTranslucent onRequestClose={closeModal}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}>
-          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeModal} />
+        <TouchableOpacity style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} activeOpacity={1} onPress={closeModal} />
+        <KeyboardAvoidingView style={{ flex: 1, justifyContent: 'flex-end' }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 6, paddingHorizontal: 20, paddingBottom: 30, maxHeight: '88%', shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 20, elevation: 24 }}>
             {/* Drag handle */}
             <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#e0e0e0', alignSelf: 'center', marginBottom: 14 }} />
@@ -4444,7 +4465,7 @@ export default function App() {
                   <Text style={{ fontSize: 48, marginBottom: 12 }}>⏳</Text>
                   <Text style={{ fontWeight: '800', fontSize: 17, color: '#1a1a2e', textAlign: 'center' }}>Request Bheji Gayi!</Text>
                   <Text style={{ color: '#666', fontSize: 13, textAlign: 'center', marginTop: 6, lineHeight: 20 }}>
-                    {favouriteBuddy.driver_name} ke accept karne ka intezaar kar rahe hain...{'\n'}30 seconds ka time diya gaya hai.
+                    {favouriteBuddy.driver_name} ke accept karne ka intezaar kar rahe hain...{'\n'}25 seconds ka time diya gaya hai.
                   </Text>
                   {buddyBookMsg.startsWith('⚠️') || buddyBookMsg.startsWith('⛔') ? (
                     <>
