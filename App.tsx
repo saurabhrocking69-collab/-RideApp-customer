@@ -17,7 +17,7 @@ import { io, Socket } from 'socket.io-client';
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 const API = 'https://rideapp-backend-production-5e1c.up.railway.app';
 
-type Screen = 'splash' | 'login' | 'otp' | 'onboarding' | 'home' | 'booking' | 'matching' | 'inride' | 'payment' | 'postride' | 'chat' | 'referral' | 'saved' | 'policy' | 'hourly' | 'wallet' | 'hourly-info';
+type Screen = 'splash' | 'login' | 'otp' | 'onboarding' | 'home' | 'booking' | 'matching' | 'inride' | 'payment' | 'postride' | 'chat' | 'referral' | 'saved' | 'policy' | 'hourly' | 'wallet' | 'hourly-info' | 'promo' | 'support' | 'safety';
 
 // Default fares — used for instant render while API loads
 const DEFAULT_hourlyPackages: any = {
@@ -628,6 +628,10 @@ export default function App() {
   const [tab, setTab]                 = useState('home');
   const [promoCode, setPromoCode]     = useState('');
   const [promoDiscount, setPromoDiscount] = useState(0);
+  const [customerRating, setCustomerRating] = useState<any>(null);
+  const [availablePromos, setAvailablePromos] = useState<any[]>([]);
+  const [promoScreenCode, setPromoScreenCode] = useState('');
+  const [promoScreenMsg, setPromoScreenMsg]   = useState('');
   const [tip, setTip]                 = useState(0);
   const [review, setReview]           = useState('');
   const [paymentDone, setPaymentDone] = useState(false);
@@ -1047,6 +1051,18 @@ export default function App() {
     }, 5000);
     return () => clearInterval(iv);
   }, [screen, hChatOpen, hourlyStep, hourlyBooking?.id]);
+
+  // Load customer rating + available promos when profile tab opens
+  useEffect(() => {
+    if (screen === 'home' && tab === 'profile' && phone) {
+      fetch(`${API}/api/customer/rating?phone=${phone}`)
+        .then(r => r.json()).then(d => setCustomerRating(d)).catch(() => {});
+    }
+    if (screen === 'promo' && availablePromos.length === 0) {
+      fetch(`${API}/api/promo/list`)
+        .then(r => r.json()).then(d => setAvailablePromos(d.promos || [])).catch(() => {});
+    }
+  }, [screen, tab, phone]);
 
   // Auto-fill GPS location when booking screen opens and pickup is empty
   useEffect(() => {
@@ -2461,7 +2477,7 @@ export default function App() {
           <View style={s.profileAvatar}><Text style={{ color: '#fff', fontSize: 34, fontWeight: 'bold' }}>{(userName||'R')[0].toUpperCase()}</Text></View>
           <Text style={s.profileName}>{userName || 'Rider'}</Text>
           <Text style={s.profilePhone}>+91 {phone}</Text>
-          <View style={s.badge}><Text style={{ color: '#fff', fontWeight: 'bold' }}>⭐ 4.9 Rating</Text></View>
+          <View style={s.badge}><Text style={{ color: '#fff', fontWeight: 'bold' }}>⭐ {customerRating?.rating ? parseFloat(customerRating.rating).toFixed(1) : '5.0'} Rating{customerRating?.count > 0 ? ` · ${customerRating.count} rides` : ''}</Text></View>
         </View>
         <TouchableOpacity style={s.walletCard} onPress={() => { loadWalletDetail(phone); loadLoyalty(phone); setScreen('wallet'); }}>
           <View style={s.row}>
@@ -2501,19 +2517,224 @@ export default function App() {
           <View style={{ flex: 1 }}><Text style={{ fontSize: 14, color: '#1a1a2e', fontWeight: '600' }}>Cancellation Policy</Text><Text style={{ fontSize: 11, color: '#999' }}>Cancel rules aur fees</Text></View>
           <Text style={{ fontSize: 18, color: '#ddd' }}>›</Text>
         </Bouncy>
-        {[['🎫','Promo Codes','RIDE50, FLAT20'],['🔔','Notifications','Alerts'],['🛡️','Safety','Emergency'],['📞','Support','24x7 help']].map(([icon,title,sub],i) => (
-          <Bouncy key={i} style={s.menuItem} onPress={() => {}}>
-            <View style={s.menuIconBox}><Text style={{ fontSize: 18 }}>{icon}</Text></View>
-            <View style={{ flex: 1 }}><Text style={{ fontSize: 14, color: '#1a1a2e', fontWeight: '600' }}>{title}</Text><Text style={{ fontSize: 11, color: '#999' }}>{sub}</Text></View>
-            <Text style={{ fontSize: 18, color: '#ddd' }}>›</Text>
-          </Bouncy>
-        ))}
+        <Bouncy style={s.menuItem} onPress={() => { setPromoScreenCode(''); setPromoScreenMsg(''); setScreen('promo'); }}>
+          <View style={s.menuIconBox}><Text style={{ fontSize: 18 }}>🎫</Text></View>
+          <View style={{ flex: 1 }}><Text style={{ fontSize: 14, color: '#1a1a2e', fontWeight: '600' }}>Promo Codes</Text><Text style={{ fontSize: 11, color: '#999' }}>Discount codes apply karo</Text></View>
+          <Text style={{ fontSize: 18, color: '#ddd' }}>›</Text>
+        </Bouncy>
+        <Bouncy style={s.menuItem} onPress={() => Alert.alert('🔔 Notifications', 'Aapki sabhi ride notifications, wallet alerts aur offers automatically enable hain.\n\nNew rides, driver updates aur promo alerts aapko push notification ke through milenge.')}>
+          <View style={s.menuIconBox}><Text style={{ fontSize: 18 }}>🔔</Text></View>
+          <View style={{ flex: 1 }}><Text style={{ fontSize: 14, color: '#1a1a2e', fontWeight: '600' }}>Notifications</Text><Text style={{ fontSize: 11, color: '#999' }}>Alerts — Enabled ✓</Text></View>
+          <Text style={{ fontSize: 18, color: '#ddd' }}>›</Text>
+        </Bouncy>
+        <Bouncy style={s.menuItem} onPress={() => setScreen('safety')}>
+          <View style={s.menuIconBox}><Text style={{ fontSize: 18 }}>🛡️</Text></View>
+          <View style={{ flex: 1 }}><Text style={{ fontSize: 14, color: '#1a1a2e', fontWeight: '600' }}>Safety</Text><Text style={{ fontSize: 11, color: '#999' }}>Emergency contacts & SOS</Text></View>
+          <Text style={{ fontSize: 18, color: '#ddd' }}>›</Text>
+        </Bouncy>
+        <Bouncy style={s.menuItem} onPress={() => setScreen('support')}>
+          <View style={s.menuIconBox}><Text style={{ fontSize: 18 }}>📞</Text></View>
+          <View style={{ flex: 1 }}><Text style={{ fontSize: 14, color: '#1a1a2e', fontWeight: '600' }}>Support</Text><Text style={{ fontSize: 11, color: '#999' }}>24x7 help</Text></View>
+          <Text style={{ fontSize: 18, color: '#ddd' }}>›</Text>
+        </Bouncy>
         <Bouncy style={s.logoutBtn} onPress={async () => { await AsyncStorage.removeItem('userPhone'); await AsyncStorage.removeItem('userName'); setScreen('login'); setTab('home'); setPhone(''); setOtp(''); setOtpDigits(['','','','','','']); setUserName(''); setGender(''); setWalletBalance(0); }}>
           <Text style={{ color: '#e94560', fontWeight: 'bold', fontSize: 14 }}>🚪 Logout</Text>
         </Bouncy>
       </ScrollView>
       <View style={s.navFloat}><NavBarInner /></View>
     </View>
+  );
+
+  // ═══ PROMO CODES SCREEN ═══
+  if (screen === 'promo') return (
+    <ScreenIn style={s.screen}>
+      <View style={s.topBar}>
+        <TouchableOpacity onPress={() => { setScreen('home'); setTab('profile'); }} style={{ padding: 4 }}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
+        <Text style={s.topTitle}>🎫 Promo Codes</Text>
+        <View style={{ width: 40 }} />
+      </View>
+      <ScrollView style={{ flex: 1, padding: 16 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+        {/* Apply code */}
+        <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 18, marginBottom: 16, elevation: 2 }}>
+          <Text style={{ fontSize: 15, fontWeight: '800', color: '#1a1a2e', marginBottom: 4 }}>Code Apply Karo</Text>
+          <Text style={{ fontSize: 12, color: '#888', marginBottom: 14 }}>Booking se pehle code daalo — discount automatically lagega</Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TextInput
+              style={{ flex: 1, borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 11, fontSize: 15, color: '#1a1a2e', fontWeight: '700', letterSpacing: 1 }}
+              placeholder="RIDE50, FLAT20..."
+              placeholderTextColor="#ccc"
+              autoCapitalize="characters"
+              value={promoScreenCode}
+              onChangeText={t => { setPromoScreenCode(t.toUpperCase()); setPromoScreenMsg(''); }}
+            />
+            <TouchableOpacity
+              onPress={async () => {
+                if (!promoScreenCode.trim()) return;
+                setPromoScreenMsg('Checking...');
+                try {
+                  const res = await fetch(`${API}/api/promo/validate`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: promoScreenCode, fare: 100, phone }),
+                  });
+                  const d = await res.json();
+                  if (d.valid) {
+                    setPromoCode(promoScreenCode);
+                    setPromoScreenMsg(`✅ ${d.message} — Booking pe apply hoga`);
+                  } else {
+                    setPromoScreenMsg('❌ ' + (d.message || 'Invalid code'));
+                  }
+                } catch (_e) { setPromoScreenMsg('❌ Network error'); }
+              }}
+              style={{ backgroundColor: '#1a1a2e', borderRadius: 10, paddingHorizontal: 18, paddingVertical: 11, justifyContent: 'center' }}>
+              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>Apply</Text>
+            </TouchableOpacity>
+          </View>
+          {promoCode ? <Text style={{ fontSize: 12, color: '#2e7d32', marginTop: 6 }}>✅ Code saved: <Text style={{ fontWeight: '800' }}>{promoCode}</Text> — next booking pe lagega</Text> : null}
+          {promoScreenMsg ? <Text style={{ fontSize: 12, color: promoScreenMsg.startsWith('✅') ? '#2e7d32' : '#e94560', marginTop: 6 }}>{promoScreenMsg}</Text> : null}
+        </View>
+
+        {/* Available promos */}
+        <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 10 }}>Available Offers</Text>
+        {availablePromos.length === 0 ? (
+          <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 20, alignItems: 'center', elevation: 1 }}>
+            <Text style={{ fontSize: 28, marginBottom: 8 }}>🎫</Text>
+            <Text style={{ color: '#999', fontSize: 13 }}>Abhi koi active promo nahi — jaldi aayenge!</Text>
+          </View>
+        ) : availablePromos.map((p, i) => (
+          <View key={i} style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 10, elevation: 2, borderLeftWidth: 4, borderLeftColor: '#e94560' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <Text style={{ fontSize: 16, fontWeight: '900', color: '#1a1a2e', letterSpacing: 1 }}>{p.code}</Text>
+              <View style={{ backgroundColor: '#e94560', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '800' }}>
+                  {p.discount_type === 'percent' ? `${p.discount_value}% OFF` : `₹${p.discount_value} OFF`}
+                </Text>
+              </View>
+            </View>
+            {p.description ? <Text style={{ fontSize: 12, color: '#555', marginBottom: 4 }}>{p.description}</Text> : null}
+            <Text style={{ fontSize: 11, color: '#999' }}>
+              Max discount: ₹{p.max_discount} · Min ride: ₹{p.min_fare}
+              {p.expires_at ? ` · Expires: ${new Date(p.expires_at).toLocaleDateString('en-IN')}` : ''}
+            </Text>
+            <TouchableOpacity
+              onPress={() => { setPromoCode(p.code); setPromoScreenCode(p.code); setPromoScreenMsg(`✅ ${p.code} saved — next booking pe lagega`); }}
+              style={{ marginTop: 10, backgroundColor: '#1a1a2e', borderRadius: 8, padding: 10, alignItems: 'center' }}>
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>Use This Code</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+      </ScrollView>
+    </ScreenIn>
+  );
+
+  // ═══ SAFETY SCREEN ═══
+  if (screen === 'safety') return (
+    <ScreenIn style={s.screen}>
+      <View style={s.topBar}>
+        <TouchableOpacity onPress={() => { setScreen('home'); setTab('profile'); }} style={{ padding: 4 }}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
+        <Text style={s.topTitle}>🛡️ Safety</Text>
+        <View style={{ width: 40 }} />
+      </View>
+      <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 40 }}>
+        {/* SOS Button */}
+        <View style={{ backgroundColor: '#e94560', borderRadius: 20, padding: 24, alignItems: 'center', marginBottom: 16, elevation: 4 }}>
+          <Text style={{ fontSize: 40, marginBottom: 8 }}>🆘</Text>
+          <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900', marginBottom: 4 }}>Emergency SOS</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, textAlign: 'center', marginBottom: 16 }}>Police, ambulance aur Sppero team ko alert bhejo</Text>
+          <TouchableOpacity
+            onPress={() => triggerSOS()}
+            style={{ backgroundColor: '#fff', borderRadius: 14, paddingHorizontal: 32, paddingVertical: 14 }}>
+            <Text style={{ color: '#e94560', fontWeight: '900', fontSize: 16 }}>🆘 SOS Alert Bhejo</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Emergency Numbers */}
+        <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 10 }}>Emergency Numbers</Text>
+        {[
+          { label: '🚓 Police', number: '100', color: '#1a1a2e' },
+          { label: '🚑 Ambulance', number: '108', color: '#e94560' },
+          { label: '🚒 Fire Brigade', number: '101', color: '#FF5722' },
+          { label: '👩 Women Helpline', number: '1091', color: '#9C27B0' },
+          { label: '📞 National Emergency', number: '112', color: '#2196F3' },
+        ].map((item, i) => (
+          <TouchableOpacity key={i} onPress={() => Linking.openURL(`tel:${item.number}`)}
+            style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', elevation: 2 }}>
+            <View>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#1a1a2e' }}>{item.label}</Text>
+              <Text style={{ fontSize: 22, fontWeight: '900', color: item.color, marginTop: 2 }}>{item.number}</Text>
+            </View>
+            <View style={{ backgroundColor: item.color, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10 }}>
+              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>Call Now</Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+
+        {/* Safety Tips */}
+        <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginTop: 8, marginBottom: 10 }}>Safety Tips</Text>
+        <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, elevation: 1 }}>
+          {[
+            '✅ Driver ka naam aur vehicle number verify karo boarding se pehle',
+            '✅ Ride share — family ko location share karo',
+            '✅ Raat ko front seat pe mat baitho, back seat prefer karo',
+            '✅ Trip end hone se pehle payment mat karo',
+            '✅ Kisi bhi problem pe SOS button press karo — help milegi',
+          ].map((tip, i) => (
+            <Text key={i} style={{ fontSize: 13, color: '#444', paddingVertical: 8, borderBottomWidth: i < 4 ? 1 : 0, borderBottomColor: '#f5f5f5' }}>{tip}</Text>
+          ))}
+        </View>
+      </ScrollView>
+    </ScreenIn>
+  );
+
+  // ═══ SUPPORT SCREEN ═══
+  if (screen === 'support') return (
+    <ScreenIn style={s.screen}>
+      <View style={s.topBar}>
+        <TouchableOpacity onPress={() => { setScreen('home'); setTab('profile'); }} style={{ padding: 4 }}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
+        <Text style={s.topTitle}>📞 Support</Text>
+        <View style={{ width: 40 }} />
+      </View>
+      <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 40 }}>
+        <View style={{ backgroundColor: '#1a1a2e', borderRadius: 20, padding: 20, marginBottom: 16, alignItems: 'center' }}>
+          <Text style={{ fontSize: 36, marginBottom: 8 }}>🎧</Text>
+          <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900' }}>Sppero Support</Text>
+          <Text style={{ color: '#aaa', fontSize: 12, marginTop: 4, textAlign: 'center' }}>24x7 help ke liye humse contact karo</Text>
+        </View>
+
+        {/* Contact Options */}
+        {[
+          { icon: '💬', label: 'WhatsApp', sub: 'Sabse fast response', color: '#25D366', action: () => Linking.openURL('https://wa.me/919999999999?text=Hi%20Sppero%20Support') },
+          { icon: '📞', label: 'Helpline Call', sub: '24x7 available', color: '#2196F3', action: () => Linking.openURL('tel:9999999999') },
+          { icon: '📧', label: 'Email Support', sub: 'Response in 24 hrs', color: '#e94560', action: () => Linking.openURL('mailto:support@sppero.com') },
+        ].map((item, i) => (
+          <TouchableOpacity key={i} onPress={item.action}
+            style={{ backgroundColor: '#fff', borderRadius: 16, padding: 18, marginBottom: 12, flexDirection: 'row', alignItems: 'center', elevation: 2 }}>
+            <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: item.color, alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+              <Text style={{ fontSize: 24 }}>{item.icon}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#1a1a2e' }}>{item.label}</Text>
+              <Text style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{item.sub}</Text>
+            </View>
+            <Text style={{ fontSize: 20, color: '#ddd' }}>›</Text>
+          </TouchableOpacity>
+        ))}
+
+        {/* FAQ */}
+        <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginTop: 8, marginBottom: 10 }}>Aksar Pooche Jane Wale Sawaal</Text>
+        {[
+          ['Ride cancel kaise karein?', 'Matching screen pe "Cancel" button press karo. 60 seconds tak free cancellation milti hai.'],
+          ['Payment kaise karein?', 'Cash, Wallet ya UPI — driver aapke saath settle karega trip end pe.'],
+          ['Driver nahi mila?', '100 seconds baad "Surge" option aata hai — fare badhao aur zyada drivers attract karo.'],
+          ['Wallet recharge kaise karein?', 'Profile → Wallet → "+₹100/200/500" buttons pe tap karo.'],
+          ['Apna account kaise delete karein?', 'support@sppero.com pe email karo — 7 din me delete ho jayega.'],
+        ].map(([q, a], i) => (
+          <View key={i} style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 10, elevation: 1 }}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#1a1a2e', marginBottom: 6 }}>❓ {q}</Text>
+            <Text style={{ fontSize: 12, color: '#666', lineHeight: 18 }}>{a}</Text>
+          </View>
+        ))}
+      </ScrollView>
+    </ScreenIn>
   );
 
   // ═══ WALLET SCREEN ═══
