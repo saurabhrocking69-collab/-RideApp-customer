@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import RazorpayCheckout from 'react-native-razorpay';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   View, Text, TextInput, TouchableOpacity, Image, Alert, AppState, Modal,
   StyleSheet, ScrollView, Switch, Animated, KeyboardAvoidingView, Platform, Linking, Share, BackHandler, StatusBar
@@ -1847,6 +1848,14 @@ export default function App() {
 
   const rideIcon = (type: string) => type === 'auto' ? '🛺' : type === 'bike' ? '🏍️' : type === 'eriksha' ? '🛵' : type === 'luxury' ? '🚙' : type === 'green_bike' ? '⚡' : type === 'electric_auto' ? '🌿' : '🚕';
 
+  const RideVehicleIcon = ({ id, size = 26, color = '#1a1a2e' }: { id: string; size?: number; color?: string }) => {
+    if (id === 'bike' || id === 'green_bike') return <MaterialCommunityIcons name="motorbike" size={size} color={id === 'green_bike' ? '#2e7d32' : color} />;
+    if (id === 'auto' || id === 'eriksha') return <MaterialCommunityIcons name="rickshaw" size={size} color={id === 'eriksha' ? '#4CAF50' : color} />;
+    if (id === 'electric_auto') return <Ionicons name="leaf" size={size} color="#2e7d32" />;
+    if (id === 'luxury') return <Ionicons name="diamond" size={size - 4} color={color} />;
+    return <Ionicons name="car-sport" size={size} color={color} />;
+  };
+
   const RIDES = [
     { id: 'bike',          icon: '🏍️', label: 'Bike',          base: 15, rate: 8,  eta: '2-3 min',  tag: 'FASTEST',  tagColor: '#FF6B35', desc: 'Traffic cut karo fast' },
     { id: 'auto',          icon: '🛺', label: 'Auto',           base: 25, rate: 12, eta: '3-5 min',  tag: null,       tagColor: '',        desc: 'Budget friendly ride' },
@@ -1897,7 +1906,7 @@ export default function App() {
           <View style={{ position: 'absolute', top: 30, right: -40, width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(147,51,234,0.07)', borderWidth: 1, borderColor: 'rgba(147,51,234,0.14)' }} />
           <Animated.View style={{ transform: [{ translateY: onboardSlide.interpolate({ inputRange: [0, 60], outputRange: [0, 60] }) }] }}>
             <View style={{ width: 90, height: 90, borderRadius: 28, backgroundColor: 'rgba(233,69,96,0.15)', borderWidth: 1.5, borderColor: 'rgba(233,69,96,0.35)', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
-              <Text style={{ fontSize: 44 }}>🎉</Text>
+              <Ionicons name="happy" size={44} color="#e94560" />
             </View>
           </Animated.View>
           <Animated.View style={{ transform: [{ translateY: onboardSlide.interpolate({ inputRange: [0, 60], outputRange: [0, 40] }) }], alignItems: 'center' }}>
@@ -1981,7 +1990,7 @@ export default function App() {
         <Animated.View style={{ alignItems: 'center', paddingTop: 68, paddingBottom: 36, opacity: loginHeroAnim, transform: [{ translateY: loginHeroAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
           {/* Glowing logo ring */}
           <View style={{ width: 100, height: 100, borderRadius: 30, backgroundColor: 'rgba(233,69,96,0.12)', borderWidth: 1.5, borderColor: 'rgba(233,69,96,0.3)', alignItems: 'center', justifyContent: 'center', marginBottom: 22, elevation: 0, shadowColor: '#e94560', shadowOpacity: 0.4, shadowRadius: 20 }}>
-            <Text style={{ fontSize: 50 }}>🚖</Text>
+            <Ionicons name="car" size={50} color="#e94560" />
           </View>
 
           {/* Brand name */}
@@ -2061,7 +2070,7 @@ export default function App() {
         {/* Dark hero */}
         <View style={{ alignItems: 'center', paddingTop: 64, paddingBottom: 32 }}>
           <Animated.View style={{ width: 90, height: 90, borderRadius: 28, backgroundColor: 'rgba(233,69,96,0.12)', borderWidth: 1.5, borderColor: 'rgba(233,69,96,0.3)', alignItems: 'center', justifyContent: 'center', marginBottom: 20, transform: [{ scale: otpSuccessAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.18] }) }] }}>
-            <Text style={{ fontSize: 46 }}>🔐</Text>
+            <Ionicons name="shield-checkmark" size={46} color="#e94560" />
           </Animated.View>
           <Text style={{ fontSize: 28, fontWeight: '900', color: '#fff', letterSpacing: -0.5 }}>OTP Verify Karo</Text>
           <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13.5, marginTop: 8, textAlign: 'center', lineHeight: 22 }}>
@@ -2167,7 +2176,7 @@ export default function App() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 90 }}>
           <SlideUp delay={0}>
             <Bouncy onPress={() => setScreen('booking')} style={s.searchBox}>
-              <Text style={s.searchIcon}>🔍</Text>
+              <Ionicons name="search" size={18} color="#aaa" style={{ marginRight: 10 }} />
               <Text style={s.searchPh}>Kahan jaana hai?</Text>
               <View style={{ marginLeft: 'auto', backgroundColor: '#e94560', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
                 <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>Book</Text>
@@ -2461,7 +2470,7 @@ export default function App() {
                     </View>
                     {driverInfo?.name ? (
                       <TouchableOpacity onPress={callDriver} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#e8f5e9', alignItems: 'center', justifyContent: 'center' }}>
-                        <Text style={{ fontSize: 18 }}>📞</Text>
+                        <Ionicons name="call" size={18} color="#2e7d32" />
                       </TouchableOpacity>
                     ) : null}
                   </View>
@@ -2531,7 +2540,7 @@ export default function App() {
                     </View>
                     {hourlyBooking?.driver?.name ? (
                       <TouchableOpacity onPress={() => initiateCall(null, hourlyBooking.id)} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#f3e5f5', alignItems: 'center', justifyContent: 'center' }}>
-                        <Text style={{ fontSize: 18 }}>📞</Text>
+                        <Ionicons name="call" size={18} color="#7b1fa2" />
                       </TouchableOpacity>
                     ) : null}
                   </View>
@@ -2645,37 +2654,37 @@ export default function App() {
           </View>
         </TouchableOpacity>
         <Bouncy style={s.menuItem} onPress={() => { loadReferral(); setScreen('referral'); }}>
-          <View style={s.menuIconBox}><Text style={{ fontSize: 18 }}>🎁</Text></View>
+          <View style={s.menuIconBox}><Ionicons name="gift" size={18} color="#e94560" /></View>
           <View style={{ flex: 1 }}><Text style={{ fontSize: 14, color: '#1a1a2e', fontWeight: '600' }}>Refer & Earn</Text><Text style={{ fontSize: 11, color: '#999' }}>Dost ko bulao, ₹50 pao</Text></View>
           <Text style={{ fontSize: 18, color: '#ddd' }}>›</Text>
         </Bouncy>
         <Bouncy style={s.menuItem} onPress={() => { loadSaved(); setScreen('saved'); }}>
-          <View style={s.menuIconBox}><Text style={{ fontSize: 18 }}>📍</Text></View>
+          <View style={s.menuIconBox}><Ionicons name="bookmark" size={18} color="#e94560" /></View>
           <View style={{ flex: 1 }}><Text style={{ fontSize: 14, color: '#1a1a2e', fontWeight: '600' }}>Saved Places</Text><Text style={{ fontSize: 11, color: '#999' }}>Home, Office save karo</Text></View>
           <Text style={{ fontSize: 18, color: '#ddd' }}>›</Text>
         </Bouncy>
         <Bouncy style={s.menuItem} onPress={() => setScreen('policy')}>
-          <View style={s.menuIconBox}><Text style={{ fontSize: 18 }}>📋</Text></View>
+          <View style={s.menuIconBox}><Ionicons name="receipt" size={18} color="#e94560" /></View>
           <View style={{ flex: 1 }}><Text style={{ fontSize: 14, color: '#1a1a2e', fontWeight: '600' }}>Cancellation Policy</Text><Text style={{ fontSize: 11, color: '#999' }}>Cancel rules aur fees</Text></View>
           <Text style={{ fontSize: 18, color: '#ddd' }}>›</Text>
         </Bouncy>
         <Bouncy style={s.menuItem} onPress={() => { setPromoScreenCode(''); setPromoScreenMsg(''); setScreen('promo'); }}>
-          <View style={s.menuIconBox}><Text style={{ fontSize: 18 }}>🎫</Text></View>
+          <View style={s.menuIconBox}><Ionicons name="pricetag" size={18} color="#e94560" /></View>
           <View style={{ flex: 1 }}><Text style={{ fontSize: 14, color: '#1a1a2e', fontWeight: '600' }}>Promo Codes</Text><Text style={{ fontSize: 11, color: '#999' }}>Discount codes apply karo</Text></View>
           <Text style={{ fontSize: 18, color: '#ddd' }}>›</Text>
         </Bouncy>
         <Bouncy style={s.menuItem} onPress={() => Alert.alert('🔔 Notifications', 'Aapki sabhi ride notifications, wallet alerts aur offers automatically enable hain.\n\nNew rides, driver updates aur promo alerts aapko push notification ke through milenge.')}>
-          <View style={s.menuIconBox}><Text style={{ fontSize: 18 }}>🔔</Text></View>
+          <View style={s.menuIconBox}><Ionicons name="notifications" size={18} color="#e94560" /></View>
           <View style={{ flex: 1 }}><Text style={{ fontSize: 14, color: '#1a1a2e', fontWeight: '600' }}>Notifications</Text><Text style={{ fontSize: 11, color: '#999' }}>Alerts — Enabled ✓</Text></View>
           <Text style={{ fontSize: 18, color: '#ddd' }}>›</Text>
         </Bouncy>
         <Bouncy style={s.menuItem} onPress={() => setScreen('safety')}>
-          <View style={s.menuIconBox}><Text style={{ fontSize: 18 }}>🛡️</Text></View>
+          <View style={s.menuIconBox}><Ionicons name="shield" size={18} color="#e94560" /></View>
           <View style={{ flex: 1 }}><Text style={{ fontSize: 14, color: '#1a1a2e', fontWeight: '600' }}>Safety</Text><Text style={{ fontSize: 11, color: '#999' }}>Emergency contacts & SOS</Text></View>
           <Text style={{ fontSize: 18, color: '#ddd' }}>›</Text>
         </Bouncy>
         <Bouncy style={s.menuItem} onPress={() => setScreen('support')}>
-          <View style={s.menuIconBox}><Text style={{ fontSize: 18 }}>📞</Text></View>
+          <View style={s.menuIconBox}><Ionicons name="call" size={18} color="#e94560" /></View>
           <View style={{ flex: 1 }}><Text style={{ fontSize: 14, color: '#1a1a2e', fontWeight: '600' }}>Support</Text><Text style={{ fontSize: 11, color: '#999' }}>24x7 help</Text></View>
           <Text style={{ fontSize: 18, color: '#ddd' }}>›</Text>
         </Bouncy>
@@ -2691,7 +2700,7 @@ export default function App() {
   if (screen === 'promo') return (
     <ScreenIn style={s.screen}>
       <View style={s.topBar}>
-        <TouchableOpacity onPress={() => { setScreen('home'); setTab('profile'); }} style={{ padding: 4 }}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => { setScreen('home'); setTab('profile'); }} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
         <Text style={s.topTitle}>🎫 Promo Codes</Text>
         <View style={{ width: 40 }} />
       </View>
@@ -2772,14 +2781,14 @@ export default function App() {
   if (screen === 'safety') return (
     <ScreenIn style={s.screen}>
       <View style={s.topBar}>
-        <TouchableOpacity onPress={() => { setScreen('home'); setTab('profile'); }} style={{ padding: 4 }}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => { setScreen('home'); setTab('profile'); }} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
         <Text style={s.topTitle}>🛡️ Safety</Text>
         <View style={{ width: 40 }} />
       </View>
       <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 40 }}>
         {/* SOS Button */}
         <View style={{ backgroundColor: '#e94560', borderRadius: 20, padding: 24, alignItems: 'center', marginBottom: 16, elevation: 4 }}>
-          <Text style={{ fontSize: 40, marginBottom: 8 }}>🆘</Text>
+          <Ionicons name="warning" size={40} color="#fff" style={{ marginBottom: 8 }} />
           <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900', marginBottom: 4 }}>Emergency SOS</Text>
           <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, textAlign: 'center', marginBottom: 16 }}>Police, ambulance aur Sppero team ko alert bhejo</Text>
           <TouchableOpacity
@@ -2831,7 +2840,7 @@ export default function App() {
   if (screen === 'support') return (
     <ScreenIn style={s.screen}>
       <View style={s.topBar}>
-        <TouchableOpacity onPress={() => { setScreen('home'); setTab('profile'); }} style={{ padding: 4 }}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => { setScreen('home'); setTab('profile'); }} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
         <Text style={s.topTitle}>📞 Support</Text>
         <View style={{ width: 40 }} />
       </View>
@@ -2895,7 +2904,7 @@ export default function App() {
         <View style={{ backgroundColor: '#1a1a2e', paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 14 : 52, paddingBottom: 20, paddingHorizontal: 18 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 18 }}>
             <TouchableOpacity onPress={() => { setScreen('home'); setTab('profile'); }} style={{ marginRight: 14, padding: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10 }}>
-              <Text style={{ color: '#fff', fontSize: 20 }}>←</Text>
+              <Ionicons name="arrow-back" size={20} color="#fff" />
             </TouchableOpacity>
             <Text style={{ color: '#fff', fontSize: 20, fontWeight: '800', flex: 1 }}>My Wallet</Text>
             <TouchableOpacity onPress={() => loadWalletDetail(phone)} style={{ padding: 8 }}>
@@ -3000,7 +3009,7 @@ export default function App() {
   if (screen === 'referral') return (
     <ScreenIn style={s.screen}>
       <View style={s.topBar}>
-        <TouchableOpacity onPress={() => setScreen('home')} style={s.backBtn}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => setScreen('home')} style={s.backBtn}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
         <Text style={s.topTitle}>🎁 Refer & Earn</Text>
         <View style={{ width: 36 }} />
       </View>
@@ -3036,7 +3045,7 @@ export default function App() {
   if (screen === 'policy') return (
     <ScreenIn style={s.screen}>
       <View style={s.topBar}>
-        <TouchableOpacity onPress={() => setScreen('home')} style={s.backBtn}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => setScreen('home')} style={s.backBtn}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
         <Text style={s.topTitle}>📋 Cancellation Policy</Text>
         <View style={{ width: 36 }} />
       </View>
@@ -3079,7 +3088,7 @@ export default function App() {
   if (screen === 'saved') return (
     <ScreenIn style={s.screen}>
       <View style={s.topBar}>
-        <TouchableOpacity onPress={() => setScreen('home')} style={s.backBtn}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => setScreen('home')} style={s.backBtn}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
         <Text style={s.topTitle}>📍 Saved Places</Text>
         <View style={{ width: 36 }} />
       </View>
@@ -3395,7 +3404,7 @@ export default function App() {
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <Bouncy style={{ backgroundColor: '#e8f5e9', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, alignItems: 'center' }}
                   onPress={() => initiateCall(null, hourlyBooking?.id)}>
-                  <Text style={{ fontSize: 18 }}>📞</Text>
+                  <Ionicons name="call" size={18} color="#2e7d32" />
                   <Text style={{ fontSize: 9, color: '#2e7d32', fontWeight: '600', marginTop: 2 }}>Call</Text>
                 </Bouncy>
                 <Bouncy style={{ backgroundColor: hChatOpen ? '#1a1a2e' : '#f3e5f5', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, alignItems: 'center' }}
@@ -3405,7 +3414,7 @@ export default function App() {
                       <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>{hChatUnread}</Text>
                     </View>
                   )}
-                  <Text style={{ fontSize: 18 }}>💬</Text>
+                  <Ionicons name="chatbubble" size={18} color={hChatOpen ? '#fff' : '#7b1fa2'} />
                   <Text style={{ fontSize: 9, color: hChatOpen ? '#fff' : '#7b1fa2', fontWeight: '600', marginTop: 2 }}>Chat</Text>
                 </Bouncy>
               </View>
@@ -3794,7 +3803,7 @@ export default function App() {
     return (
       <ScreenIn style={s.screen}>
         <View style={s.topBar}>
-          <TouchableOpacity onPress={() => setScreen('home')} style={s.backBtn}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => setScreen('home')} style={s.backBtn}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
           <Text style={s.topTitle}>⏱️ Book by Hour</Text>
           <TouchableOpacity onPress={() => setScreen('hourly-info')} style={{ width: 36, alignItems: 'flex-end' }}><Text style={{ fontSize: 20 }}>ℹ️</Text></TouchableOpacity>
         </View>
@@ -3803,18 +3812,18 @@ export default function App() {
           {/* Vehicle Selector */}
           <Text style={s.secTitle}>Vehicle Type</Text>
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-            {[{id:'auto',icon:'🛺',label:'Auto'},{id:'bike',icon:'🏍️',label:'Bike'},{id:'car',icon:'🚕',label:'Car'},{id:'eriksha',icon:'🛵',label:'E-Riksha'}].map(v => (
+            {[{id:'auto',label:'Auto'},{id:'bike',label:'Bike'},{id:'car',label:'Car'},{id:'eriksha',label:'E-Riksha'}].map(v => (
               <Bouncy key={v.id} style={{ flex: 1, backgroundColor: hVehicle === v.id ? '#1a1a2e' : '#f5f5f5', borderRadius: 12, padding: 10, alignItems: 'center', borderWidth: 2, borderColor: hVehicle === v.id ? '#e94560' : 'transparent' }} onPress={() => setHVehicle(v.id)}>
-                <Text style={{ fontSize: 22 }}>{v.icon}</Text>
+                <RideVehicleIcon id={v.id} size={22} color={hVehicle === v.id ? '#fff' : '#333'} />
                 <Text style={{ fontSize: 10, fontWeight: '600', marginTop: 3, color: hVehicle === v.id ? '#fff' : '#333' }}>{v.label}</Text>
               </Bouncy>
             ))}
           </View>
           {/* Green vehicles row */}
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-            {[{id:'green_bike',icon:'⚡',label:'Green Bike'},{id:'electric_auto',icon:'🌿',label:'Elec. Auto'}].map(v => (
+            {[{id:'green_bike',label:'Green Bike'},{id:'electric_auto',label:'Elec. Auto'}].map(v => (
               <Bouncy key={v.id} style={{ flex: 1, backgroundColor: hVehicle === v.id ? '#1b5e20' : '#e8f5e9', borderRadius: 12, padding: 10, alignItems: 'center', borderWidth: 2, borderColor: hVehicle === v.id ? '#66bb6a' : '#a5d6a7' }} onPress={() => setHVehicle(v.id)}>
-                <Text style={{ fontSize: 22 }}>{v.icon}</Text>
+                <RideVehicleIcon id={v.id} size={22} color={hVehicle === v.id ? '#fff' : '#2e7d32'} />
                 <Text style={{ fontSize: 10, fontWeight: '600', marginTop: 3, color: hVehicle === v.id ? '#fff' : '#2e7d32' }}>{v.label}</Text>
                 <Text style={{ fontSize: 9, color: hVehicle === v.id ? '#a5d6a7' : '#66bb6a', marginTop: 1 }}>ECO</Text>
               </Bouncy>
@@ -3824,7 +3833,7 @@ export default function App() {
           <Bouncy
             onPress={() => setHVehicle('ultra_luxury')}
             style={{ backgroundColor: hVehicle === 'ultra_luxury' ? '#1a1a2e' : '#fff8e1', borderRadius: 12, padding: 14, marginBottom: 18, borderWidth: 2, borderColor: hVehicle === 'ultra_luxury' ? '#ffd700' : '#ffe082', flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={{ fontSize: 26, marginRight: 12 }}>💎</Text>
+            <Ionicons name="diamond" size={26} color={hVehicle === 'ultra_luxury' ? '#ffd700' : '#b8860b'} style={{ marginRight: 12 }} />
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 13, fontWeight: 'bold', color: hVehicle === 'ultra_luxury' ? '#ffd700' : '#b8860b' }}>Ultra Luxury</Text>
               <Text style={{ fontSize: 11, color: hVehicle === 'ultra_luxury' ? '#aaa' : '#999', marginTop: 2 }}>BMW · Mercedes · Audi · Land Rover · Lexus</Text>
@@ -3963,7 +3972,7 @@ export default function App() {
   if (screen === 'hourly-info') return (
     <ScreenIn style={s.screen}>
       <View style={s.topBar}>
-        <TouchableOpacity onPress={() => setScreen('home')} style={s.backBtn}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => setScreen('home')} style={s.backBtn}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
         <Text style={s.topTitle}>⏱️ Book by Hour — Guide</Text>
         <View style={{ width: 36 }} />
       </View>
@@ -4106,9 +4115,9 @@ export default function App() {
   if (screen === 'chat') return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
       <View style={s.topBar}>
-        <TouchableOpacity onPress={() => setScreen('matching')} style={s.backBtn}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => setScreen('matching')} style={s.backBtn}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
         <Text style={s.topTitle}>💬 {rideData?.driver?.name || 'Driver'}</Text>
-        <TouchableOpacity onPress={callDriver} style={{ width: 36, alignItems: 'flex-end' }}><Text style={{ fontSize: 20 }}>📞</Text></TouchableOpacity>
+        <TouchableOpacity onPress={callDriver} style={{ width: 36, alignItems: 'flex-end' }}><Ionicons name="call" size={20} color="#fff" /></TouchableOpacity>
       </View>
       <ScrollView style={{ flex: 1, padding: 14 }} contentContainerStyle={{ paddingBottom: 10 }}>
         {chatMsgs.length === 0 ? (
@@ -4130,7 +4139,7 @@ export default function App() {
   if (screen === 'booking') return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={s.topBar}>
-        <TouchableOpacity onPress={() => { setScreen('home'); setPickupSugg([]); setDropSugg([]); setEta(''); setPromoCode(''); setPromoDiscount(0); }} style={s.backBtn}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => { setScreen('home'); setPickupSugg([]); setDropSugg([]); setEta(''); setPromoCode(''); setPromoDiscount(0); }} style={s.backBtn}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
         <View style={{ flex: 1, alignItems: 'center' }}>
           <Text style={s.topTitle}>Ride Book Karo</Text>
           <Text style={{ color: '#9ba5b7', fontSize: 11, marginTop: 1 }}>Live fares • Lucknow</Text>
@@ -4147,7 +4156,7 @@ export default function App() {
           {/* GPS Button */}
           <TouchableOpacity onPress={useMyLocation} style={{ backgroundColor: '#1a1a2e', borderRadius: 14, padding: 13, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#e94560', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 18 }}>📍</Text>
+              <Ionicons name="location" size={18} color="#fff" />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Current Location Use Karo</Text>
@@ -4166,7 +4175,7 @@ export default function App() {
               <View style={[s.suggBox, { zIndex: 100 }]}>
                 {pickupSugg.slice(0, 5).map((sg, i) => (
                   <TouchableOpacity key={i} style={[s.suggItem, { paddingVertical: 12 }]} onPress={() => { setPickup(sg.text); setPickupSugg([]); geocodePlace(sg.text, 'pickup'); }}>
-                    <Text style={{ fontSize: 15, marginRight: 8 }}>📍</Text>
+                    <Ionicons name="location" size={15} color="#e94560" style={{ marginRight: 8 }} />
                     <Text style={{ fontSize: 13, color: '#1a1a2e', flex: 1, fontWeight: '500' }} numberOfLines={2}>{sg.text}</Text>
                   </TouchableOpacity>
                 ))}
@@ -4181,7 +4190,7 @@ export default function App() {
               <View style={[s.suggBox, { zIndex: 100 }]}>
                 {dropSugg.slice(0, 5).map((sg, i) => (
                   <TouchableOpacity key={i} style={[s.suggItem, { paddingVertical: 12 }]} onPress={() => { setDrop(sg.text); setDropSugg([]); geocodePlace(sg.text, 'drop'); }}>
-                    <Text style={{ fontSize: 15, marginRight: 8 }}>🎯</Text>
+                    <Ionicons name="flag" size={15} color="#1a1a2e" style={{ marginRight: 8 }} />
                     <Text style={{ fontSize: 13, color: '#1a1a2e', flex: 1, fontWeight: '500' }} numberOfLines={2}>{sg.text}</Text>
                   </TouchableOpacity>
                 ))}
@@ -4205,7 +4214,7 @@ export default function App() {
               return (
                 <TouchableOpacity key={r.id} onPress={() => setRideType(r.id)} style={{ width: '47.5%', backgroundColor: isSel ? '#1a1a2e' : '#fff', borderRadius: 16, padding: 14, borderWidth: 2, borderColor: isSel ? '#e94560' : '#f0f0f0', shadowColor: '#000', shadowOpacity: isSel ? 0.15 : 0.04, shadowRadius: 8, elevation: isSel ? 4 : 1 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <Text style={{ fontSize: 28 }}>{r.icon}</Text>
+                    <RideVehicleIcon id={r.id} size={26} color={isSel ? '#fff' : '#1a1a2e'} />
                     {r.tag ? <View style={{ backgroundColor: r.tagColor || '#4CAF50', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}><Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{r.tag}</Text></View> : null}
                   </View>
                   <Text style={{ fontSize: 14, fontWeight: '800', marginTop: 8, color: isSel ? '#fff' : '#1a1a2e' }}>{r.label}</Text>
@@ -4227,7 +4236,7 @@ export default function App() {
               <TouchableOpacity onPress={() => setRideType('luxury')} style={{ backgroundColor: isSel ? '#1a1a2e' : '#fff', borderRadius: 18, padding: 16, marginBottom: 14, borderWidth: 2, borderColor: isSel ? '#9C27B0' : '#e8d5f5', shadowColor: '#9C27B0', shadowOpacity: isSel ? 0.3 : 0.08, shadowRadius: 12, elevation: isSel ? 6 : 2 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
                   <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: isSel ? '#7B1FA2' : '#f3e5f5', alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ fontSize: 30 }}>{lux.icon}</Text>
+                    <Ionicons name="diamond" size={26} color={isSel ? '#e0b3ff' : '#9C27B0'} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
@@ -4355,13 +4364,13 @@ export default function App() {
               <View style={s.actionRow}>
                 <Bouncy style={s.actionBtn} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
                   <View>
-                    <Text style={{ fontSize: 22 }}>💬</Text>
+                    <Ionicons name="chatbubble" size={22} color="#555" />
                     {unreadChat > 0 && <View style={s.chatBadge}><Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>{unreadChat}</Text></View>}
                   </View>
                   <Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>Chat</Text>
                 </Bouncy>
-                <Bouncy style={s.actionBtn} onPress={callDriver}><Text style={{ fontSize: 22 }}>📞</Text><Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>Call</Text></Bouncy>
-                <Bouncy style={s.actionBtn} onPress={triggerSOS}><Text style={{ fontSize: 22 }}>🆘</Text><Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>SOS</Text></Bouncy>
+                <Bouncy style={s.actionBtn} onPress={callDriver}><Ionicons name="call" size={22} color="#555" /><Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>Call</Text></Bouncy>
+                <Bouncy style={s.actionBtn} onPress={triggerSOS}><Ionicons name="warning" size={22} color="#555" /><Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>SOS</Text></Bouncy>
               </View>
               {unreadChat > 0 && (
                 <TouchableOpacity style={s.chatAlert} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
@@ -4635,13 +4644,13 @@ export default function App() {
           <View style={s.actionRow}>
             <TouchableOpacity style={s.actionBtn} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
               <View>
-                <Text style={{ fontSize: 22 }}>💬</Text>
+                <Ionicons name="chatbubble" size={22} color="#555" />
                 {unreadChat > 0 && <View style={s.chatBadge}><Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>{unreadChat}</Text></View>}
               </View>
               <Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>Chat</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={s.actionBtn} onPress={callDriver}><Text style={{ fontSize: 22 }}>📞</Text><Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>Call</Text></TouchableOpacity>
-            <TouchableOpacity style={s.actionBtn} onPress={triggerSOS}><Text style={{ fontSize: 22 }}>🆘</Text><Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>SOS</Text></TouchableOpacity>
+            <TouchableOpacity style={s.actionBtn} onPress={callDriver}><Ionicons name="call" size={22} color="#555" /><Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>Call</Text></TouchableOpacity>
+            <TouchableOpacity style={s.actionBtn} onPress={triggerSOS}><Ionicons name="warning" size={22} color="#555" /><Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>SOS</Text></TouchableOpacity>
           </View>
           {unreadChat > 0 && (
             <TouchableOpacity style={s.chatAlert} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
@@ -4678,7 +4687,7 @@ export default function App() {
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#fff', zIndex: 999, justifyContent: 'space-between' }}>
           <View style={{ backgroundColor: '#1a1a2e', paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 14 : 52, paddingBottom: 18, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center' }}>
             <TouchableOpacity onPress={() => setShowUpiQr(false)} style={{ marginRight: 14, padding: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10 }}>
-              <Text style={{ color: '#fff', fontSize: 20 }}>←</Text>
+              <Ionicons name="arrow-back" size={20} color="#fff" />
             </TouchableOpacity>
             <Text style={{ color: '#fff', fontSize: 18, fontWeight: '800', flex: 1 }}>UPI QR Se Pay Karo</Text>
           </View>
@@ -5115,20 +5124,21 @@ export default function App() {
   function NavBarInner() {
     const hasLive = (!!rideData?.ride_id && storeStatus !== 'cancelled') ||
                     (!!hourlyBooking && ['pending','matched','active'].includes(hourlyBooking?.status));
-    const navTabs = [
-      { t: 'home',    icon: '🏠', lbl: 'Home'    },
-      { t: 'live',    icon: '🔴', lbl: 'Live'    },
-      { t: 'history', icon: '🕐', lbl: 'Trips'   },
-      { t: 'profile', icon: '👤', lbl: 'Profile' },
+    const navTabs: { t: string; ion: string; lbl: string }[] = [
+      { t: 'home',    ion: 'home',        lbl: 'Home'   },
+      { t: 'live',    ion: 'navigate',    lbl: 'Live'   },
+      { t: 'history', ion: 'time',        lbl: 'Trips'  },
+      { t: 'profile', ion: 'person',      lbl: 'Profile'},
     ];
     return (
       <View style={s.nav}>
-        {navTabs.map(({ t, icon, lbl }) => {
+        {navTabs.map(({ t, ion, lbl }) => {
           const active = tab === t && screen === 'home';
+          const col = active ? '#e94560' : '#bbb';
           return (
             <TouchableOpacity key={t} style={s.navItem} onPress={() => { setScreen('home'); setTab(t); if(t==='history') loadHistory(phone); }} activeOpacity={0.65}>
               <View style={{ position: 'relative', alignItems: 'center' }}>
-                <Text style={[s.navIcon, active && { color: '#e94560' }]}>{icon}</Text>
+                <Ionicons name={(active ? ion : `${ion}-outline`) as any} size={24} color={col} />
                 {t === 'live' && hasLive && !active && (
                   <View style={{ position: 'absolute', top: -2, right: -6, width: 9, height: 9, borderRadius: 5, backgroundColor: '#e94560', borderWidth: 1.5, borderColor: '#fff' }} />
                 )}
