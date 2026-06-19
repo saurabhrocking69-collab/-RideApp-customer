@@ -651,6 +651,7 @@ export default function App() {
   const [pickupSugg, setPickupSugg]   = useState<any[]>([]);
   const [dropSugg, setDropSugg]       = useState<any[]>([]);
   const [fareEstimates, setFareEstimates] = useState<any>({});
+  const [fareLoading, setFareLoading]     = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelTimer, setCancelTimer] = useState(60);
   const [freeCancelsLeft, setFreeCancelsLeft] = useState(3);
@@ -733,6 +734,7 @@ export default function App() {
   // Debounce refs for place search (prevents API spam on every keystroke)
   const pickupDebounceRef = useRef<any>(null);
   const dropDebounceRef   = useRef<any>(null);
+  const lastFetchKey      = useRef('');
   const hPickupDebounceRef = useRef<any>(null);
   const hDropDebounceRef   = useRef<any>(null);
 
@@ -1069,6 +1071,15 @@ export default function App() {
     if (screen === 'booking' && !pickup) useMyLocation();
   }, [screen]);
 
+  // Reactively recalculate ETA + fares whenever pickup or drop coords change
+  useEffect(() => {
+    if (!pickupCoords?.lat || !dropCoords?.lat || screen !== 'booking') return;
+    const key = `${pickupCoords.lat.toFixed(4)},${pickupCoords.lng.toFixed(4)}-${dropCoords.lat.toFixed(4)},${dropCoords.lng.toFixed(4)}`;
+    if (lastFetchKey.current === key) return;
+    lastFetchKey.current = key;
+    fetchEtaByCoords(pickupCoords, dropCoords);
+  }, [pickupCoords?.lat, pickupCoords?.lng, dropCoords?.lat, dropCoords?.lng, screen]);
+
   // Cancel countdown timer (60 sec free)
   useEffect(() => {
     if (screen !== 'matching' || !bookTime) return;
@@ -1286,7 +1297,7 @@ export default function App() {
   };
 
   const fetchEta = async (origin: string, dest: string) => {
-    if (!origin || !drop) return 5;
+    if (!origin || !dest) return 5;
     setEta('⏳ Calculate ho raha hai...');
     try {
       const res = await fetch(
@@ -1324,16 +1335,43 @@ export default function App() {
     } catch (_e) {}
   };
 
+  const fetchEtaByCoords = async (pc: any, dc: any) => {
+    if (!pc?.lat || !dc?.lat) return;
+    setEta('⏳ Calculate ho raha hai...');
+    setFareEstimates({});
+    try {
+      const res = await fetch(
+        `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${pc.lat},${pc.lng}&destinations=${dc.lat},${dc.lng}&key=${MAPS_KEY}&mode=driving&departure_time=now`,
+        { cache: 'no-store' } as any
+      );
+      const data = await res.json();
+      const el = data.rows?.[0]?.elements?.[0];
+      if (el?.status === 'OK') {
+        const duration = el.duration_in_traffic?.text || el.duration.text;
+        const dist = el.distance.text;
+        const km = el.distance.value / 1000;
+        setEta(`🕐 ${duration} · 📍 ${dist}`);
+        loadFareEstimates(km);
+      } else setEta('');
+    } catch { setEta(''); }
+  };
+
   const loadFareEstimates = async (km: number) => {
+    setFareLoading(true);
     const est: any = {};
     await Promise.all(RIDES.map(async (r) => {
       try {
-        const res = await fetch(`${API}/api/fare-estimate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_type: r.id, distance: km }) });
+        const res = await fetch(`${API}/api/fare-estimate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
+          body: JSON.stringify({ ride_type: r.id, distance: km }),
+        });
         const d = await res.json();
-        est[r.id] = d.fare;
+        if (d.fare) est[r.id] = d.fare;
       } catch (_e) {}
     }));
     setFareEstimates(est);
+    setFareLoading(false);
   };
 
   const applyPromo = async () => {
@@ -4018,12 +4056,12 @@ export default function App() {
           <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#4CAF50', borderWidth: 2, borderColor: '#a5d6a7' }} />
-              <TextInput style={{ flex: 1, fontSize: 14, color: '#1a1a2e', fontWeight: '500', paddingVertical: 6 }} placeholder="Pickup location..." placeholderTextColor="#bbb" value={pickup} onChangeText={(t) => { setPickup(t); searchPlaces(t, 'pickup'); }} returnKeyType="next" />
+              <TextInput style={{ flex: 1, fontSize: 14, color: '#1a1a2e', fontWeight: '500', paddingVertical: 6 }} placeholder="Pickup location..." placeholderTextColor="#bbb" value={pickup} onChangeText={(t) => { setPickup(t); searchPlaces(t, 'pickup'); if (!t) { setPickupCoords(null); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; } }} returnKeyType="next" />
             </View>
             {pickupSugg.length > 0 && (
               <View style={[s.suggBox, { zIndex: 100 }]}>
                 {pickupSugg.slice(0, 5).map((sg, i) => (
-                  <TouchableOpacity key={i} style={[s.suggItem, { paddingVertical: 12 }]} onPress={() => { setPickup(sg.text); setPickupSugg([]); geocodePlace(sg.text, 'pickup'); if(drop) fetchEta(sg.text, drop); }}>
+                  <TouchableOpacity key={i} style={[s.suggItem, { paddingVertical: 12 }]} onPress={() => { setPickup(sg.text); setPickupSugg([]); geocodePlace(sg.text, 'pickup'); }}>
                     <Text style={{ fontSize: 15, marginRight: 8 }}>📍</Text>
                     <Text style={{ fontSize: 13, color: '#1a1a2e', flex: 1, fontWeight: '500' }} numberOfLines={2}>{sg.text}</Text>
                   </TouchableOpacity>
@@ -4033,12 +4071,12 @@ export default function App() {
             <View style={{ height: 1, backgroundColor: '#f0f0f0', marginVertical: 8, marginLeft: 20 }} />
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: '#e94560' }} />
-              <TextInput style={{ flex: 1, fontSize: 14, color: '#1a1a2e', fontWeight: '500', paddingVertical: 6 }} placeholder="Drop location..." placeholderTextColor="#bbb" value={drop} onChangeText={(t) => { setDrop(t); searchPlaces(t, 'drop'); }} returnKeyType="done" />
+              <TextInput style={{ flex: 1, fontSize: 14, color: '#1a1a2e', fontWeight: '500', paddingVertical: 6 }} placeholder="Drop location..." placeholderTextColor="#bbb" value={drop} onChangeText={(t) => { setDrop(t); searchPlaces(t, 'drop'); if (dropCoords) { setDropCoords(null); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; } }} returnKeyType="done" />
             </View>
             {dropSugg.length > 0 && (
               <View style={[s.suggBox, { zIndex: 100 }]}>
                 {dropSugg.slice(0, 5).map((sg, i) => (
-                  <TouchableOpacity key={i} style={[s.suggItem, { paddingVertical: 12 }]} onPress={() => { setDrop(sg.text); setDropSugg([]); geocodePlace(sg.text, 'drop'); if(pickup) fetchEta(pickup, sg.text); }}>
+                  <TouchableOpacity key={i} style={[s.suggItem, { paddingVertical: 12 }]} onPress={() => { setDrop(sg.text); setDropSugg([]); geocodePlace(sg.text, 'drop'); }}>
                     <Text style={{ fontSize: 15, marginRight: 8 }}>🎯</Text>
                     <Text style={{ fontSize: 13, color: '#1a1a2e', flex: 1, fontWeight: '500' }} numberOfLines={2}>{sg.text}</Text>
                   </TouchableOpacity>
@@ -4069,7 +4107,7 @@ export default function App() {
                   <Text style={{ fontSize: 14, fontWeight: '800', marginTop: 8, color: isSel ? '#fff' : '#1a1a2e' }}>{r.label}</Text>
                   <Text style={{ fontSize: 11, color: isSel ? '#9ba5b7' : '#999', marginTop: 2 }}>{r.desc}</Text>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '800', color: '#e94560' }}>{fareEstimates[r.id] ? `₹${fareEstimates[r.id]}` : `₹${r.base}+`}</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: fareLoading ? '#bbb' : '#e94560' }}>{fareLoading ? '⌛ ...' : fareEstimates[r.id] ? `₹${fareEstimates[r.id]}` : `₹${r.base}+`}</Text>
                     <Text style={{ fontSize: 10, color: isSel ? '#777' : '#bbb' }}>⏱ {r.eta}</Text>
                   </View>
                 </TouchableOpacity>
@@ -4103,7 +4141,7 @@ export default function App() {
                     </View>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={{ fontSize: 16, fontWeight: '800', color: '#9C27B0' }}>{fareEstimates['luxury'] ? `₹${fareEstimates['luxury']}` : `₹${lux.base}+`}</Text>
+                    <Text style={{ fontSize: 16, fontWeight: '800', color: fareLoading ? '#bbb' : '#9C27B0' }}>{fareLoading ? '⌛ ...' : fareEstimates['luxury'] ? `₹${fareEstimates['luxury']}` : `₹${lux.base}+`}</Text>
                     <Text style={{ fontSize: 10, color: isSel ? '#9ba5b7' : '#aaa', marginTop: 3 }}>⏱ {lux.eta}</Text>
                   </View>
                 </View>
@@ -4132,7 +4170,7 @@ export default function App() {
           <Bouncy style={[{ borderRadius: 16, overflow: 'hidden' }, loading && { opacity: 0.7 }]} onPress={bookRide} disabled={loading}>
             <View style={{ backgroundColor: loading ? '#aaa' : '#e94560', padding: 18, alignItems: 'center', borderRadius: 16 }}>
               <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16, letterSpacing: 0.3 }}>
-                {loading ? '🔍 Driver dhundh raha hai...' : `🚀 Ride Book Karo${fareEstimates[rideType] ? '  •  ₹' + fareEstimates[rideType] : ''}`}
+                {loading ? '🔍 Driver dhundh raha hai...' : fareLoading ? '⏳ Fare calculate ho raha hai...' : `🚀 Ride Book Karo${fareEstimates[rideType] ? '  •  ₹' + fareEstimates[rideType] : ''}`}
               </Text>
             </View>
           </Bouncy>
