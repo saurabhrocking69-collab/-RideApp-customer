@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import RazorpayCheckout from 'react-native-razorpay';
 import {
   View, Text, TextInput, TouchableOpacity, Image, Alert, AppState, Modal,
-  StyleSheet, ScrollView, Switch, Animated, KeyboardAvoidingView, Platform, Linking, Share, BackHandler
+  StyleSheet, ScrollView, Switch, Animated, KeyboardAvoidingView, Platform, Linking, Share, BackHandler, StatusBar
 } from 'react-native';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -2892,7 +2892,7 @@ export default function App() {
     return (
       <ScreenIn style={s.screen}>
         {/* Header */}
-        <View style={{ backgroundColor: '#1a1a2e', paddingTop: 52, paddingBottom: 20, paddingHorizontal: 18 }}>
+        <View style={{ backgroundColor: '#1a1a2e', paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 14 : 52, paddingBottom: 20, paddingHorizontal: 18 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 18 }}>
             <TouchableOpacity onPress={() => { setScreen('home'); setTab('profile'); }} style={{ marginRight: 14, padding: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10 }}>
               <Text style={{ color: '#fff', fontSize: 20 }}>←</Text>
@@ -4676,7 +4676,7 @@ export default function App() {
       {/* UPI QR Fullscreen */}
       {showUpiQr && (
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#fff', zIndex: 999, justifyContent: 'space-between' }}>
-          <View style={{ backgroundColor: '#1a1a2e', paddingTop: 52, paddingBottom: 18, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ backgroundColor: '#1a1a2e', paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 14 : 52, paddingBottom: 18, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center' }}>
             <TouchableOpacity onPress={() => setShowUpiQr(false)} style={{ marginRight: 14, padding: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10 }}>
               <Text style={{ color: '#fff', fontSize: 20 }}>←</Text>
             </TouchableOpacity>
@@ -5164,7 +5164,7 @@ const s = StyleSheet.create({
   terms:         { textAlign: 'center', color: '#bbb', fontSize: 11, marginTop: 10 },
   row:           { flexDirection: 'row', alignItems: 'center' },
   flag:          { fontSize: 13, padding: 12, backgroundColor: '#f5f5f5', borderRadius: 10, borderWidth: 1.5, borderColor: '#efefef', marginRight: 8 },
-  topBar:        { backgroundColor: '#1a1a2e', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, paddingTop: 46 },
+  topBar:        { backgroundColor: '#1a1a2e', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 12 : 46 },
   topTitle:      { color: '#fff', fontSize: 17, fontWeight: 'bold' },
   backBtn:       { width: 36, alignItems: 'flex-start' },
   avatar:        { width: 40, height: 40, borderRadius: 20, backgroundColor: '#e94560', alignItems: 'center', justifyContent: 'center' },
@@ -5183,7 +5183,7 @@ const s = StyleSheet.create({
   recentFare:    { fontSize: 14, fontWeight: 'bold', color: '#e94560' },
   promoBanner:   { backgroundColor: '#1a1a2e', borderRadius: 16, padding: 14, marginBottom: 14, elevation: 4, shadowColor: '#1a1a2e', shadowOpacity: 0.25, shadowRadius: 8 },
   promoTxt:      { color: '#fff', fontSize: 13, textAlign: 'center', fontWeight: '500' },
-  nav:           { flexDirection: 'row', backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f0f0f0', paddingBottom: 16, paddingTop: 8, elevation: 16, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12 },
+  nav:           { flexDirection: 'row', backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f0f0f0', paddingBottom: Platform.OS === 'android' ? 44 : 16, paddingTop: 8, elevation: 16, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12 },
   navItem:       { flex: 1, alignItems: 'center', justifyContent: 'center' },
   navIcon:       { fontSize: 22, color: '#ccc' },
   navLbl:        { fontSize: 10, color: '#bbb', marginTop: 3, letterSpacing: 0.3 },
