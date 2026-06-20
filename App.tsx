@@ -1675,9 +1675,9 @@ export default function App() {
   };
 
   const completeOnboarding = async () => {
+    if (!userName.trim()) { setResult('❌ Naam likhna zaroori hai'); return; }
     setLoading(true);
-    // Use 'Sppero User' (not 'Rider') when skipping — 'Rider' would trigger isNew=true on next login
-    const finalName = userName.trim() || 'Sppero User';
+    const finalName = userName.trim();
     try {
       await fetch(`${API}/api/auth/update-name`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1926,18 +1926,19 @@ export default function App() {
 
         {/* White card sliding up */}
         <Animated.View style={{ backgroundColor: '#fff', borderTopLeftRadius: 36, borderTopRightRadius: 36, flex: 1, padding: 28, transform: [{ translateY: onboardSlide }] }}>
-          {/* Name — optional */}
-          <Text style={{ fontSize: 11, fontWeight: '800', color: '#bbb', marginBottom: 10, letterSpacing: 1.4 }}>AAPKA NAAM (OPTIONAL)</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: userName ? '#e94560' : '#ebebeb', borderRadius: 18, paddingHorizontal: 16, backgroundColor: userName ? '#fff5f6' : '#fafafa', marginBottom: 28 }}>
+          {/* Name — required */}
+          <Text style={{ fontSize: 11, fontWeight: '800', color: '#e94560', marginBottom: 10, letterSpacing: 1.4 }}>AAPKA NAAM *</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: userName.trim() ? '#e94560' : '#ebebeb', borderRadius: 18, paddingHorizontal: 16, backgroundColor: userName.trim() ? '#fff5f6' : '#fafafa', marginBottom: 28 }}>
             <Text style={{ fontSize: 20, marginRight: 10 }}>✍️</Text>
             <TextInput
               style={{ flex: 1, fontSize: 16, fontWeight: '600', color: '#1a1a2e', paddingVertical: 16 }}
-              placeholder="Naam likho... (skip kar sakte ho)"
+              placeholder="Apna naam likho..."
               placeholderTextColor="#ccc"
               value={userName}
-              onChangeText={setUserName}
+              onChangeText={t => { setUserName(t); if (result) setResult(''); }}
+              autoCapitalize="words"
             />
-            {userName ? <Text style={{ fontSize: 18 }}>✅</Text> : null}
+            {userName.trim() ? <Text style={{ fontSize: 18 }}>✅</Text> : null}
           </View>
 
           {/* Gender — optional */}
@@ -1973,18 +1974,13 @@ export default function App() {
           {result ? <Text style={{ color: '#e94560', fontSize: 13, marginBottom: 12, textAlign: 'center', fontWeight: '600' }}>{result}</Text> : null}
 
           {/* Continue button */}
-          <Bouncy onPress={completeOnboarding} disabled={loading} style={{ borderRadius: 18, overflow: 'hidden', marginBottom: 12, elevation: 6, shadowColor: '#e94560', shadowOpacity: 0.3, shadowRadius: 10 }}>
-            <View style={{ backgroundColor: '#e94560', paddingVertical: 18, alignItems: 'center', borderRadius: 18 }}>
+          <Bouncy onPress={completeOnboarding} disabled={loading || !userName.trim()} style={{ borderRadius: 18, overflow: 'hidden', marginBottom: 12, elevation: 6, shadowColor: '#e94560', shadowOpacity: 0.3, shadowRadius: 10 }}>
+            <View style={{ backgroundColor: userName.trim() ? '#e94560' : '#ccc', paddingVertical: 18, alignItems: 'center', borderRadius: 18 }}>
               <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900', letterSpacing: 0.3 }}>
                 {loading ? '⏳ Saving...' : '✨ Chalte Hain!'}
               </Text>
             </View>
           </Bouncy>
-
-          {/* Skip */}
-          <TouchableOpacity onPress={completeOnboarding} disabled={loading} style={{ alignItems: 'center', paddingVertical: 12 }}>
-            <Text style={{ color: '#bbb', fontSize: 13, fontWeight: '600' }}>Skip → Baad mein bharna hai</Text>
-          </TouchableOpacity>
         </Animated.View>
       </ScrollView>
     </Animated.View>
