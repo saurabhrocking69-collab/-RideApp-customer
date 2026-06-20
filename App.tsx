@@ -1646,9 +1646,12 @@ export default function App() {
       const data = await res.json();
       if (data.token) {
         await AsyncStorage.setItem('userPhone', phone);
-        // Use server's stored name as source of truth — local userName state can be stale after logout
         const serverName = data.user?.name || '';
-        const isNew = !serverName || serverName === 'User' || serverName === 'Rider';
+        // onboardingCompleted flag is set once after the user finishes (or skips) the
+        // onboarding screen. It persists across logouts so they never see it twice.
+        const onboardingDone = await AsyncStorage.getItem('onboardingCompleted');
+        const nameIsDefault = !serverName || serverName === 'User' || serverName === 'Rider';
+        const isNew = !onboardingDone && nameIsDefault;
         if (isNew) {
           onboardFade.setValue(0); onboardSlide.setValue(60);
           setScreen('onboarding'); setResult('');
@@ -1657,8 +1660,8 @@ export default function App() {
             Animated.spring(onboardSlide, { toValue: 0, tension: 50, friction: 8, useNativeDriver: true }),
           ]).start();
         } else {
-          setUserName(serverName);
-          await AsyncStorage.setItem('userName', serverName);
+          setUserName(serverName || 'Rider');
+          await AsyncStorage.setItem('userName', serverName || 'Rider');
           setScreen('home'); setResult(''); loadHistory(phone); loadWallet(phone);
           registerFCM(phone); loadOffers(); loadHourlyPackages(); connectSocket(phone);
         }
@@ -1673,7 +1676,8 @@ export default function App() {
 
   const completeOnboarding = async () => {
     setLoading(true);
-    const finalName = userName.trim() || 'Rider';
+    // Use 'Sppero User' (not 'Rider') when skipping — 'Rider' would trigger isNew=true on next login
+    const finalName = userName.trim() || 'Sppero User';
     try {
       await fetch(`${API}/api/auth/update-name`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1681,11 +1685,12 @@ export default function App() {
       });
     } catch (_e) {}
     await AsyncStorage.setItem('userName', finalName);
+    await AsyncStorage.setItem('onboardingCompleted', 'true');
     if (gender) await AsyncStorage.setItem('userGender', gender);
     setUserName(finalName);
     setResult('');
-    setScreen('home'); loadHistory(phone); loadWallet(phone); registerFCM(phone); loadOffers();
-    connectSocket(phone);
+    setScreen('home'); loadHistory(phone); loadWallet(phone); registerFCM(phone);
+    loadOffers(); loadHourlyPackages(); connectSocket(phone);
     setLoading(false);
   };
 
