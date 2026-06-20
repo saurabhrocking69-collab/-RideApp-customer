@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import RazorpayCheckout from 'react-native-razorpay';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+// Safe dynamic require: react-native-razorpay calls new NativeEventEmitter() at module
+// evaluation time which crashes in RN 0.81+ bridgeless mode if the TurboModule isn't
+// registered yet. The try/catch prevents this from killing the app on startup.
+let RazorpayCheckout: any = null;
+try { RazorpayCheckout = require('react-native-razorpay'); } catch (_e) {}
 import {
   View, Text, TextInput, TouchableOpacity, Image, Alert, AppState, Modal,
   StyleSheet, ScrollView, Switch, Animated, KeyboardAvoidingView, Platform, Linking, Share, BackHandler, StatusBar
