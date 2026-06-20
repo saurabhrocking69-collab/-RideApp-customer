@@ -22,7 +22,7 @@ import { io, Socket } from 'socket.io-client';
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 const API = 'https://rideapp-backend-production-5e1c.up.railway.app';
 
-type Screen = 'splash' | 'login' | 'otp' | 'onboarding' | 'home' | 'booking' | 'matching' | 'inride' | 'payment' | 'postride' | 'chat' | 'referral' | 'saved' | 'policy' | 'hourly' | 'wallet' | 'hourly-info' | 'promo' | 'support' | 'safety';
+type Screen = 'splash' | 'login' | 'otp' | 'onboarding' | 'home' | 'booking' | 'matching' | 'inride' | 'payment' | 'postride' | 'chat' | 'referral' | 'saved' | 'policy' | 'hourly' | 'wallet' | 'hourly-info' | 'promo' | 'support' | 'safety' | 'complaints' | 'complaint-new' | 'complaint-detail';
 
 // Default fares — used for instant render while API loads
 const DEFAULT_hourlyPackages: any = {
@@ -735,6 +735,15 @@ export default function App() {
   const [loyaltyCashback, setLoyaltyCashback] = useState(0);
   const [activeOffers, setActiveOffers]   = useState<any[]>([]);
   const [offerDismissed, setOfferDismissed] = useState<Set<number>>(new Set());
+  // Complaint system state
+  const [complaints, setComplaints]         = useState<any[]>([]);
+  const [activeComplaint, setActiveComplaint] = useState<any>(null);
+  const [cmpType, setCmpType]               = useState('');
+  const [cmpTitle, setCmpTitle]             = useState('');
+  const [cmpDesc, setCmpDesc]               = useState('');
+  const [cmpMsg, setCmpMsg]                 = useState('');
+  const [cmpLoading, setCmpLoading]         = useState(false);
+  const [cmpDetail, setCmpDetail]           = useState<any>(null);
 
   // Hourly packages — fetched from server so admin fare changes reflect immediately
   const [hourlyPackages, setHourlyPackages] = useState<any>(DEFAULT_hourlyPackages);
@@ -2858,6 +2867,7 @@ export default function App() {
 
         {/* Contact Options */}
         {[
+          { icon: '📋', label: 'My Complaints', sub: 'File or track complaints', color: '#e94560', action: async () => { setCmpLoading(true); try { const r = await apiGet('/api/complaints'); setComplaints(r.complaints||[]); } catch{} setCmpLoading(false); setScreen('complaints'); } },
           { icon: '💬', label: 'WhatsApp', sub: 'Sabse fast response', color: '#25D366', action: () => Linking.openURL('https://wa.me/919999999999?text=Hi%20Sppero%20Support') },
           { icon: '📞', label: 'Helpline Call', sub: '24x7 available', color: '#2196F3', action: () => Linking.openURL('tel:9999999999') },
           { icon: '📧', label: 'Email Support', sub: 'Response in 24 hrs', color: '#e94560', action: () => Linking.openURL('mailto:support@sppero.com') },
@@ -4848,6 +4858,13 @@ export default function App() {
             </TouchableOpacity>
           ))}
         </View>
+        {/* File Complaint */}
+        <TouchableOpacity onPress={() => { setCmpType(''); setCmpTitle(''); setCmpDesc(''); setScreen('complaint-new'); }}
+          style={{ backgroundColor: '#fff8f8', borderRadius: 12, padding: 14, marginTop: 10, marginHorizontal: 0, borderWidth: 1.5, borderColor: '#e94560', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          <Text style={{ fontSize: 18 }}>⚠️</Text>
+          <Text style={{ color: '#e94560', fontWeight: '700', fontSize: 14 }}>Ride Issue? Complaint File Karo</Text>
+        </TouchableOpacity>
+
         <Bouncy style={[s.btn, { marginTop: 8 }]} onPress={async () => {
           if (rating > 0 && rideData?.ride_id) {
             try { await fetch(`${API}/api/rides/rate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, rating, review, tip }) }); } catch (_e) {}
@@ -4866,6 +4883,275 @@ export default function App() {
       </ScrollView>
     </ScreenIn>
   );
+
+  // ═══ COMPLAINTS LIST SCREEN ═══
+  if (screen === 'complaints') {
+    const statusColor: any = { open:'#ff9800', under_review:'#2196F3', awaiting_response:'#9c27b0', evidence_requested:'#ff5722', resolved:'#4CAF50', closed:'#9e9e9e', appealed:'#e91e63', escalated:'#f44336' };
+    const priorityColor: any = { urgent:'#f44336', high:'#ff9800', normal:'#2196F3', low:'#9e9e9e' };
+    return (
+      <ScreenIn style={s.screen}>
+        <View style={s.topBar}>
+          <TouchableOpacity onPress={() => setScreen('support')} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
+          <Text style={s.topTitle}>📋 My Complaints</Text>
+          <TouchableOpacity onPress={() => { setCmpType(''); setCmpTitle(''); setCmpDesc(''); setScreen('complaint-new'); }} style={{ padding: 4 }}>
+            <Text style={{ color: '#e94560', fontWeight: '800', fontSize: 13 }}>+ New</Text>
+          </TouchableOpacity>
+        </View>
+        <ScrollView style={{ flex: 1, padding: 14 }} contentContainerStyle={{ paddingBottom: 40 }}>
+          {complaints.length === 0 && (
+            <View style={{ alignItems: 'center', paddingTop: 60 }}>
+              <Text style={{ fontSize: 48 }}>📭</Text>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#1a1a2e', marginTop: 12 }}>Koi complaint nahi</Text>
+              <Text style={{ fontSize: 13, color: '#888', marginTop: 6, textAlign: 'center' }}>Koi ride issue tha? Complaint file karo</Text>
+              <TouchableOpacity onPress={() => { setCmpType(''); setCmpTitle(''); setCmpDesc(''); setScreen('complaint-new'); }}
+                style={{ backgroundColor: '#e94560', borderRadius: 12, padding: 14, paddingHorizontal: 24, marginTop: 20 }}>
+                <Text style={{ color: '#fff', fontWeight: '800' }}>Complaint File Karo</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {complaints.map((c: any) => (
+            <TouchableOpacity key={c.id} onPress={async () => {
+              setCmpLoading(true);
+              try { const r = await apiGet(`/api/complaints/${c.id}`); setCmpDetail(r); setScreen('complaint-detail'); } catch{}
+              setCmpLoading(false);
+            }} style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 12, elevation: 2 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#1a1a2e', flex: 1, marginRight: 8 }}>{c.title}</Text>
+                <View style={{ backgroundColor: statusColor[c.status] || '#999', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
+                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{c.status.replace('_',' ').toUpperCase()}</Text>
+                </View>
+              </View>
+              <Text style={{ fontSize: 12, color: '#888', marginTop: 4 }}>{c.complaint_type.replace(/_/g,' ')} · {new Date(c.created_at).toLocaleDateString('en-IN')}</Text>
+              {c.priority !== 'normal' && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 4 }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: priorityColor[c.priority] }} />
+                  <Text style={{ fontSize: 11, color: priorityColor[c.priority], fontWeight: '600' }}>{c.priority.toUpperCase()} PRIORITY</Text>
+                </View>
+              )}
+              {c.resolution && <Text style={{ fontSize: 12, color: '#4CAF50', marginTop: 4, fontWeight: '600' }}>✅ {c.resolution.replace(/_/g,' ')}</Text>}
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </ScreenIn>
+    );
+  }
+
+  // ═══ NEW COMPLAINT SCREEN ═══
+  if (screen === 'complaint-new') {
+    const customerTypes = [
+      { id: 'reckless_driving', label: '🚗 Reckless Driving', desc: 'Dangerous driving, over-speeding' },
+      { id: 'route_deviation', label: '🗺️ Route Deviation', desc: 'Longer/wrong route liya' },
+      { id: 'overcharging', label: '💸 Overcharging', desc: 'Extra fare mang raha tha' },
+      { id: 'unprofessional', label: '😤 Unprofessional Behavior', desc: 'Rude ya unprofessional tha' },
+      { id: 'vehicle_condition', label: '🚙 Vehicle Condition', desc: 'Dirty ya unsafe vehicle' },
+      { id: 'driver_no_show', label: '🚫 Driver No Show', desc: 'Driver pickup pe nahi aaya' },
+      { id: 'harassment', label: '⚠️ Harassment', desc: 'Verbal ya physical harassment' },
+      { id: 'other', label: '📝 Other Issue', desc: 'Koi aur problem' },
+    ];
+    return (
+      <ScreenIn style={s.screen}>
+        <View style={s.topBar}>
+          <TouchableOpacity onPress={() => setScreen('complaints')} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
+          <Text style={s.topTitle}>⚠️ File Complaint</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <ScrollView style={{ flex: 1, padding: 14 }} contentContainerStyle={{ paddingBottom: 40 }}>
+          <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 12 }}>Issue type select karo</Text>
+          {customerTypes.map(t => (
+            <TouchableOpacity key={t.id} onPress={() => setCmpType(t.id)}
+              style={{ backgroundColor: cmpType === t.id ? '#1a1a2e' : '#fff', borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 2, borderColor: cmpType === t.id ? '#e94560' : '#f0f0f0', flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={{ fontSize: 16, marginRight: 10 }}>{t.label.split(' ')[0]}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontWeight: '700', fontSize: 13, color: cmpType === t.id ? '#fff' : '#1a1a2e' }}>{t.label.substring(t.label.indexOf(' ')+1)}</Text>
+                <Text style={{ fontSize: 11, color: cmpType === t.id ? '#aaa' : '#888', marginTop: 2 }}>{t.desc}</Text>
+              </View>
+              {cmpType === t.id && <Text style={{ color: '#e94560', fontSize: 18 }}>✓</Text>}
+            </TouchableOpacity>
+          ))}
+          <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginTop: 14, marginBottom: 8 }}>Title (summary)</Text>
+          <TextInput value={cmpTitle} onChangeText={setCmpTitle} placeholder="Complaint ka short title..."
+            style={[s.input, { fontSize: 14 }]} maxLength={200} />
+          <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginTop: 14, marginBottom: 8 }}>Details</Text>
+          <TextInput value={cmpDesc} onChangeText={setCmpDesc} placeholder="Kya hua — puri detail mein batao (kam se kam 20 characters)..."
+            multiline style={[s.input, { height: 110, textAlignVertical: 'top', fontSize: 13 }]} maxLength={2000} />
+          {rideData?.ride_id && (
+            <View style={{ backgroundColor: '#e3f2fd', borderRadius: 10, padding: 12, marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={{ fontSize: 16 }}>🔗</Text>
+              <Text style={{ fontSize: 13, color: '#1565c0', flex: 1 }}>Linked Ride: {rideData.pickup} → {rideData.drop}</Text>
+            </View>
+          )}
+          <TouchableOpacity
+            onPress={async () => {
+              if (!cmpType) return Alert.alert('Issue Type', 'Complaint type select karo');
+              if (!cmpTitle.trim()) return Alert.alert('Title', 'Title daalo');
+              if (cmpDesc.trim().length < 20) return Alert.alert('Description', 'Kam se kam 20 characters likho');
+              setCmpLoading(true);
+              try {
+                const token = await AsyncStorage.getItem('userToken');
+                const res = await fetch(`${API}/api/complaints`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                  body: JSON.stringify({ ride_id: rideData?.ride_id || null, complaint_type: cmpType, title: cmpTitle.trim(), description: cmpDesc.trim() }),
+                });
+                const data = await res.json();
+                if (data.complaint) {
+                  const listRes = await apiGet('/api/complaints');
+                  setComplaints(listRes.complaints || []);
+                  Alert.alert('✅ Submitted', 'Aapki complaint submit ho gayi. Hum 24-48 ghante mein review karenge.', [{ text: 'OK', onPress: () => setScreen('complaints') }]);
+                } else Alert.alert('Error', data.error || 'Submit failed');
+              } catch { Alert.alert('Error', 'Network error'); }
+              setCmpLoading(false);
+            }}
+            style={[s.btn, { marginTop: 20, opacity: cmpLoading ? 0.6 : 1 }]}
+            disabled={cmpLoading}>
+            <Text style={s.btnTxt}>{cmpLoading ? 'Submitting...' : '📤 Submit Complaint'}</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </ScreenIn>
+    );
+  }
+
+  // ═══ COMPLAINT DETAIL SCREEN ═══
+  if (screen === 'complaint-detail' && cmpDetail) {
+    const c = cmpDetail.complaint;
+    const msgs = cmpDetail.messages || [];
+    const evidence = cmpDetail.evidence || [];
+    const timeline = cmpDetail.timeline || [];
+    const statusColor: any = { open:'#ff9800', under_review:'#2196F3', awaiting_response:'#9c27b0', evidence_requested:'#ff5722', resolved:'#4CAF50', closed:'#9e9e9e', appealed:'#e91e63', escalated:'#f44336' };
+    const isClosed = ['resolved','closed'].includes(c?.status);
+    return (
+      <ScreenIn style={s.screen}>
+        <View style={s.topBar}>
+          <TouchableOpacity onPress={() => setScreen('complaints')} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
+          <Text style={s.topTitle}>Complaint Detail</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, paddingBottom: 40 }}>
+          {/* Status banner */}
+          <View style={{ backgroundColor: statusColor[c.status] || '#999', borderRadius: 12, padding: 14, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Text style={{ fontSize: 24 }}>{c.status === 'resolved' ? '✅' : c.status === 'closed' ? '📁' : '🔍'}</Text>
+            <View>
+              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>{c.status.replace(/_/g,' ').toUpperCase()}</Text>
+              {c.assigned_admin && <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 2 }}>Assigned: {c.assigned_admin}</Text>}
+            </View>
+          </View>
+          {/* Complaint Info */}
+          <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 14, elevation: 2 }}>
+            <Text style={{ fontSize: 17, fontWeight: '800', color: '#1a1a2e' }}>{c.title}</Text>
+            <Text style={{ fontSize: 12, color: '#e94560', fontWeight: '600', marginTop: 4 }}>{c.complaint_type?.replace(/_/g,' ')} · Filed: {new Date(c.created_at).toLocaleDateString('en-IN')}</Text>
+            <Text style={{ fontSize: 13, color: '#555', marginTop: 10, lineHeight: 20 }}>{c.description}</Text>
+            {c.filed_against_name && <Text style={{ fontSize: 12, color: '#888', marginTop: 8 }}>Against: {c.filed_against_name}</Text>}
+            {c.pickup && <Text style={{ fontSize: 12, color: '#888', marginTop: 4 }}>Ride: {c.pickup} → {c.drop_location}</Text>}
+          </View>
+          {/* Resolution */}
+          {c.resolution && (
+            <View style={{ backgroundColor: '#e8f5e9', borderRadius: 14, padding: 16, marginBottom: 14 }}>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#2e7d32', marginBottom: 6 }}>✅ Resolution</Text>
+              <Text style={{ fontSize: 13, color: '#1b5e20', fontWeight: '600' }}>{c.resolution?.replace(/_/g,' ')}</Text>
+              {c.resolution_note && <Text style={{ fontSize: 13, color: '#2e7d32', marginTop: 6, lineHeight: 18 }}>{c.resolution_note}</Text>}
+              {c.action_taken && <Text style={{ fontSize: 12, color: '#388e3c', marginTop: 4 }}>Action: {c.action_taken}</Text>}
+            </View>
+          )}
+          {/* Evidence */}
+          {evidence.length > 0 && (
+            <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 14, elevation: 2 }}>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 10 }}>📎 Evidence ({evidence.length})</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {evidence.map((e: any, i: number) => (
+                  <Image key={i} source={{ uri: e.file_url }} style={{ width: 90, height: 90, borderRadius: 10, marginRight: 10 }} />
+                ))}
+              </ScrollView>
+            </View>
+          )}
+          {/* Messages */}
+          <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 14, elevation: 2 }}>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 10 }}>💬 Messages ({msgs.length})</Text>
+            {msgs.length === 0 && <Text style={{ fontSize: 12, color: '#aaa', textAlign: 'center', paddingVertical: 10 }}>Koi message nahi abhi</Text>}
+            {msgs.map((m: any, i: number) => (
+              <View key={i} style={{ marginBottom: 12, padding: 12, backgroundColor: m.sender_role === 'admin' ? '#e3f2fd' : m.sender_role === 'customer' ? '#f3e5f5' : '#fff8e1', borderRadius: 10 }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: m.sender_role === 'admin' ? '#1565c0' : '#6a1b9a', marginBottom: 4 }}>{m.sender_name || m.sender_role} · {new Date(m.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</Text>
+                <Text style={{ fontSize: 13, color: '#333', lineHeight: 18 }}>{m.message}</Text>
+              </View>
+            ))}
+          </View>
+          {/* Reply + Actions */}
+          {!isClosed && (
+            <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 14, elevation: 2 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#1a1a2e', marginBottom: 8 }}>Reply karein</Text>
+              <TextInput value={cmpMsg} onChangeText={setCmpMsg} placeholder="Message type karo..." multiline
+                style={[s.input, { height: 80, textAlignVertical: 'top', fontSize: 13 }]} />
+              <TouchableOpacity onPress={async () => {
+                if (!cmpMsg.trim()) return;
+                try {
+                  const token = await AsyncStorage.getItem('userToken');
+                  await fetch(`${API}/api/complaints/${c.id}/messages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ message: cmpMsg.trim() }),
+                  });
+                  setCmpMsg('');
+                  const r = await apiGet(`/api/complaints/${c.id}`);
+                  setCmpDetail(r);
+                } catch { Alert.alert('Error', 'Message nahi bheja'); }
+              }} style={[s.btn, { marginTop: 10, paddingVertical: 12 }]}>
+                <Text style={s.btnTxt}>📤 Bhejo</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {/* Timeline */}
+          {timeline.length > 0 && (
+            <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 14, elevation: 2 }}>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 10 }}>📅 Timeline</Text>
+              {timeline.map((t: any, i: number) => (
+                <View key={i} style={{ flexDirection: 'row', marginBottom: 10 }}>
+                  <View style={{ width: 28, alignItems: 'center' }}>
+                    <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#e94560', marginTop: 3 }} />
+                    {i < timeline.length - 1 && <View style={{ width: 2, flex: 1, backgroundColor: '#f0f0f0', marginTop: 4 }} />}
+                  </View>
+                  <View style={{ flex: 1, paddingLeft: 10 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#1a1a2e' }}>{t.description}</Text>
+                    <Text style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>{new Date(t.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+          {/* Appeal button if resolved */}
+          {c.status === 'resolved' && (
+            <TouchableOpacity onPress={() => Alert.prompt('Appeal', 'Aap kyun disagree karte hain? (20+ characters)', async (reason) => {
+              if (!reason || reason.length < 20) { Alert.alert('Too short', 'Reason 20+ characters ka likho'); return; }
+              try {
+                const token = await AsyncStorage.getItem('userToken');
+                await fetch(`${API}/api/complaints/${c.id}/appeal`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ reason }) });
+                const r = await apiGet(`/api/complaints/${c.id}`);
+                setCmpDetail(r);
+                Alert.alert('Appeal Submit', 'Dobara review hoga');
+              } catch {}
+            })} style={{ backgroundColor: '#fff3e0', borderRadius: 12, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: '#ff9800', alignItems: 'center' }}>
+              <Text style={{ color: '#e65100', fontWeight: '700' }}>⚖️ Resolution se Disagree? Appeal Karo</Text>
+            </TouchableOpacity>
+          )}
+          {/* Withdraw if open */}
+          {!isClosed && c.status !== 'resolved' && (
+            <TouchableOpacity onPress={() => Alert.alert('Withdraw', 'Complaint withdraw karna chahte ho?', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Withdraw', style: 'destructive', onPress: async () => {
+                try {
+                  const token = await AsyncStorage.getItem('userToken');
+                  await fetch(`${API}/api/complaints/${c.id}/withdraw`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+                  const listRes = await apiGet('/api/complaints');
+                  setComplaints(listRes.complaints || []);
+                  setScreen('complaints');
+                } catch {}
+              }},
+            ])} style={{ backgroundColor: '#ffebee', borderRadius: 12, padding: 14, marginBottom: 14, alignItems: 'center', borderWidth: 1, borderColor: '#ef9a9a' }}>
+              <Text style={{ color: '#c62828', fontWeight: '700' }}>🗑️ Complaint Withdraw Karo</Text>
+            </TouchableOpacity>
+          )}
+        </ScrollView>
+      </ScreenIn>
+    );
+  }
 
   return <View />;
 
