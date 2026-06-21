@@ -14,7 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import * as Clipboard from 'expo-clipboard';
 import * as Notifications from 'expo-notifications';
-import { apiGet, apiPost, apiAuthGet, apiAuthPost } from './api';
+import { apiGet, apiPost } from './api';
 import { useRideStore } from './store';
 import { WebView } from 'react-native-webview';
 import { io, Socket } from 'socket.io-client';
@@ -739,7 +739,6 @@ export default function App() {
   const [complaints, setComplaints]         = useState<any[]>([]);
   const [activeComplaint, setActiveComplaint] = useState<any>(null);
   const [cmpType, setCmpType]               = useState('');
-  const [cmpTitle, setCmpTitle]             = useState('');
   const [cmpDesc, setCmpDesc]               = useState('');
   const [cmpMsg, setCmpMsg]                 = useState('');
   const [cmpLoading, setCmpLoading]         = useState(false);
@@ -1658,6 +1657,7 @@ export default function App() {
       const data = await res.json();
       if (data.token) {
         await AsyncStorage.setItem('userPhone', phone);
+        await AsyncStorage.setItem('userToken', data.token);
         const serverName = data.user?.name || '';
         // onboardingCompleted flag is set once after the user finishes (or skips) the
         // onboarding screen. It persists across logouts so they never see it twice.
@@ -2870,7 +2870,7 @@ export default function App() {
 
         {/* Contact Options */}
         {[
-          { icon: '📋', label: 'My Complaints', sub: 'File or track complaints', color: '#e94560', action: async () => { setCmpLoading(true); try { const tok = await AsyncStorage.getItem('userToken'); const r = await apiAuthGet('/api/complaints', tok||''); setComplaints(r.complaints||[]); } catch{} setCmpLoading(false); setScreen('complaints'); } },
+          { icon: '📋', label: 'My Complaints', sub: 'File or track complaints', color: '#e94560', action: async () => { setCmpLoading(true); try { const r = await apiGet(`/api/complaints?phone=${encodeURIComponent(phone)}`); setComplaints(r.complaints||[]); } catch{} setCmpLoading(false); setScreen('complaints'); } },
           { icon: '💬', label: 'WhatsApp', sub: 'Sabse fast response', color: '#25D366', action: () => Linking.openURL('https://wa.me/919999999999?text=Hi%20Sppero%20Support') },
           { icon: '📞', label: 'Helpline Call', sub: '24x7 available', color: '#2196F3', action: () => Linking.openURL('tel:9999999999') },
           { icon: '📧', label: 'Email Support', sub: 'Response in 24 hrs', color: '#e94560', action: () => Linking.openURL('mailto:support@sppero.com') },
@@ -4862,7 +4862,7 @@ export default function App() {
           ))}
         </View>
         {/* File Complaint */}
-        <TouchableOpacity onPress={() => { setCmpType(''); setCmpTitle(''); setCmpDesc(''); setScreen('complaint-new'); }}
+        <TouchableOpacity onPress={() => { setCmpType(''); setCmpDesc(''); setScreen('complaint-new'); }}
           style={{ backgroundColor: '#fff8f8', borderRadius: 12, padding: 14, marginTop: 10, marginHorizontal: 0, borderWidth: 1.5, borderColor: '#e94560', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
           <Text style={{ fontSize: 18 }}>⚠️</Text>
           <Text style={{ color: '#e94560', fontWeight: '700', fontSize: 14 }}>Ride Issue? Complaint File Karo</Text>
@@ -4896,7 +4896,7 @@ export default function App() {
         <View style={s.topBar}>
           <TouchableOpacity onPress={() => setScreen('support')} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
           <Text style={s.topTitle}>📋 My Complaints</Text>
-          <TouchableOpacity onPress={() => { setCmpType(''); setCmpTitle(''); setCmpDesc(''); setScreen('complaint-new'); }} style={{ padding: 4 }}>
+          <TouchableOpacity onPress={() => { setCmpType(''); setCmpDesc(''); setScreen('complaint-new'); }} style={{ padding: 4 }}>
             <Text style={{ color: '#e94560', fontWeight: '800', fontSize: 13 }}>+ New</Text>
           </TouchableOpacity>
         </View>
@@ -4906,7 +4906,7 @@ export default function App() {
               <Text style={{ fontSize: 48 }}>📭</Text>
               <Text style={{ fontSize: 16, fontWeight: '700', color: '#1a1a2e', marginTop: 12 }}>Koi complaint nahi</Text>
               <Text style={{ fontSize: 13, color: '#888', marginTop: 6, textAlign: 'center' }}>Koi ride issue tha? Complaint file karo</Text>
-              <TouchableOpacity onPress={() => { setCmpType(''); setCmpTitle(''); setCmpDesc(''); setScreen('complaint-new'); }}
+              <TouchableOpacity onPress={() => { setCmpType(''); setCmpDesc(''); setScreen('complaint-new'); }}
                 style={{ backgroundColor: '#e94560', borderRadius: 12, padding: 14, paddingHorizontal: 24, marginTop: 20 }}>
                 <Text style={{ color: '#fff', fontWeight: '800' }}>Complaint File Karo</Text>
               </TouchableOpacity>
@@ -4915,7 +4915,7 @@ export default function App() {
           {complaints.map((c: any) => (
             <TouchableOpacity key={c.id} onPress={async () => {
               setCmpLoading(true);
-              try { const tok = await AsyncStorage.getItem('userToken'); const r = await apiAuthGet(`/api/complaints/${c.id}`, tok||''); setCmpDetail(r); setScreen('complaint-detail'); } catch{}
+              try { const r = await apiGet(`/api/complaints/${c.id}?phone=${encodeURIComponent(phone)}`); setCmpDetail(r); setScreen('complaint-detail'); } catch{}
               setCmpLoading(false);
             }} style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 12, elevation: 2 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -5032,10 +5032,7 @@ export default function App() {
 
           <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 12 }}>Issue type select karo</Text>
           {customerTypes.map(t => (
-            <TouchableOpacity key={t.id} onPress={() => {
-              setCmpType(t.id);
-              if (t.id === 'early_trip_end' && !cmpTitle) setCmpTitle('Driver ne drop location se pehle trip complete kiya');
-            }}
+            <TouchableOpacity key={t.id} onPress={() => setCmpType(t.id)}
               style={{ backgroundColor: cmpType === t.id ? '#1a1a2e' : '#fff', borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 2, borderColor: cmpType === t.id ? '#e94560' : '#f0f0f0', flexDirection: 'row', alignItems: 'center' }}>
               <Text style={{ fontSize: 16, marginRight: 10 }}>{t.label.split(' ')[0]}</Text>
               <View style={{ flex: 1 }}>
@@ -5046,9 +5043,6 @@ export default function App() {
             </TouchableOpacity>
           ))}
 
-          <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginTop: 14, marginBottom: 8 }}>Title (summary)</Text>
-          <TextInput value={cmpTitle} onChangeText={setCmpTitle} placeholder="Complaint ka short title..."
-            style={[s.input, { fontSize: 14 }]} maxLength={200} />
           <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginTop: 14, marginBottom: 8 }}>Details (puri baat batao)</Text>
           <TextInput value={cmpDesc} onChangeText={setCmpDesc} placeholder="Kya hua, kahan hua, kitne baje hua — puri detail mein batao (kam se kam 20 characters)..."
             multiline style={[s.input, { height: 130, textAlignVertical: 'top', fontSize: 13 }]} maxLength={2000} />
@@ -5059,22 +5053,19 @@ export default function App() {
               const linked = cmpLinkedRide || (rideData?.ride_id ? rideData : null);
               if (!linked) return Alert.alert('Ride Required', 'Pehle ride select karo jis pe problem aayi');
               if (!cmpType) return Alert.alert('Issue Type', 'Complaint type select karo');
-              if (!cmpTitle.trim()) return Alert.alert('Title', 'Title daalo');
               if (cmpDesc.trim().length < 20) return Alert.alert('Description', 'Kam se kam 20 characters likho');
               setCmpLoading(true);
-              const token = await AsyncStorage.getItem('userToken');
-              if (!token) { Alert.alert('Error', 'Please login dobara karo'); setCmpLoading(false); return; }
-              const data = await apiAuthPost('/api/complaints', {
+              const data = await apiPost('/api/complaints', {
+                phone,
                 ride_id: linked.id || linked.ride_id || null,
                 complaint_type: cmpType,
-                title: cmpTitle.trim(),
                 description: cmpDesc.trim(),
-              }, token);
+              });
               setCmpLoading(false);
               if (data.complaint) {
-                const listData = await apiAuthGet('/api/complaints', token);
+                const listData = await apiGet(`/api/complaints?phone=${encodeURIComponent(phone)}`);
                 setComplaints(listData.complaints || []);
-                setCmpLinkedRide(null); setCmpType(''); setCmpTitle(''); setCmpDesc('');
+                setCmpLinkedRide(null); setCmpType(''); setCmpDesc('');
                 Alert.alert('✅ Complaint Submit Ho Gayi', 'Sppero team 24-48 ghante mein review karegi. Complaint ID: ' + data.complaint.id.slice(0, 8).toUpperCase(), [{ text: 'Track Karo', onPress: () => setScreen('complaints') }]);
               } else {
                 Alert.alert('❌ Error', data.error || data.message || 'Submit fail hua — dobara try karo');
@@ -5161,10 +5152,9 @@ export default function App() {
               <TouchableOpacity onPress={async () => {
                 if (!cmpMsg.trim()) return;
                 try {
-                  const token = await AsyncStorage.getItem('userToken');
-                  await apiAuthPost(`/api/complaints/${c.id}/messages`, { message: cmpMsg.trim() }, token);
+                  await apiPost(`/api/complaints/${c.id}/messages`, { phone, message: cmpMsg.trim() });
                   setCmpMsg('');
-                  const r = await apiAuthGet(`/api/complaints/${c.id}`, token);
+                  const r = await apiGet(`/api/complaints/${c.id}?phone=${encodeURIComponent(phone)}`);
                   setCmpDetail(r);
                 } catch { Alert.alert('Error', 'Message nahi bheja'); }
               }} style={[s.btn, { marginTop: 10, paddingVertical: 12 }]}>
@@ -5195,9 +5185,8 @@ export default function App() {
             <TouchableOpacity onPress={() => Alert.prompt('Appeal', 'Aap kyun disagree karte hain? (20+ characters)', async (reason) => {
               if (!reason || reason.length < 20) { Alert.alert('Too short', 'Reason 20+ characters ka likho'); return; }
               try {
-                const token = await AsyncStorage.getItem('userToken');
-                await apiAuthPost(`/api/complaints/${c.id}/appeal`, { reason }, token);
-                const r = await apiAuthGet(`/api/complaints/${c.id}`, token);
+                await apiPost(`/api/complaints/${c.id}/appeal`, { phone, reason });
+                const r = await apiGet(`/api/complaints/${c.id}?phone=${encodeURIComponent(phone)}`);
                 setCmpDetail(r);
                 Alert.alert('Appeal Submit', 'Dobara review hoga');
               } catch {}
@@ -5211,9 +5200,8 @@ export default function App() {
               { text: 'Cancel', style: 'cancel' },
               { text: 'Withdraw', style: 'destructive', onPress: async () => {
                 try {
-                  const token = await AsyncStorage.getItem('userToken');
-                  await apiAuthPost(`/api/complaints/${c.id}/withdraw`, {}, token);
-                  const listRes = await apiAuthGet('/api/complaints', token);
+                  await apiPost(`/api/complaints/${c.id}/withdraw`, { phone });
+                  const listRes = await apiGet(`/api/complaints?phone=${encodeURIComponent(phone)}`);
                   setComplaints(listRes.complaints || []);
                   setScreen('complaints');
                 } catch {}
