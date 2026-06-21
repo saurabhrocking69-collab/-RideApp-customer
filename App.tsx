@@ -1326,6 +1326,13 @@ export default function App() {
     } catch (_e) {}
   };
 
+  const swapLocations = () => {
+    const tempText = pickup; const tempCoords = pickupCoords;
+    setPickup(drop); setPickupCoords(dropCoords);
+    setDrop(tempText); setDropCoords(tempCoords);
+    setFareEstimates({}); setEta(''); lastFetchKey.current = '';
+  };
+
   const fetchEta = async (origin: string, dest: string) => {
     if (!origin || !dest) return 5;
     setEta('⏳ Calculate ho raha hai...');
@@ -4171,58 +4178,116 @@ export default function App() {
       <View style={{ flex: 1, backgroundColor: '#f5f6fa', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20 }}>
         <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets contentContainerStyle={{ paddingBottom: 32, paddingHorizontal: 16, paddingTop: 18 }}>
 
-          {/* GPS Button */}
-          <TouchableOpacity onPress={useMyLocation} style={{ backgroundColor: '#1a1a2e', borderRadius: 14, padding: 13, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#e94560', alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name="location" size={18} color="#fff" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Current Location Use Karo</Text>
-              <Text style={{ color: '#777', fontSize: 11, marginTop: 1 }}>GPS se pickup auto-fill hoga</Text>
-            </View>
-            <Text style={{ color: '#e94560', fontSize: 22, fontWeight: '300' }}>›</Text>
-          </TouchableOpacity>
-
-          {/* Location Card */}
-          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 10, elevation: 3 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#4CAF50', borderWidth: 2, borderColor: '#a5d6a7' }} />
-              <TextInput style={{ flex: 1, fontSize: 14, color: '#1a1a2e', fontWeight: '500', paddingVertical: 6 }} placeholder="Pickup location..." placeholderTextColor="#bbb" value={pickup} onChangeText={(t) => { setPickup(t); searchPlaces(t, 'pickup'); if (!t) { setPickupCoords(null); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; } }} returnKeyType="next" />
-            </View>
-            {pickupSugg.length > 0 && (
-              <View style={[s.suggBox, { zIndex: 100 }]}>
-                {pickupSugg.slice(0, 5).map((sg, i) => (
-                  <TouchableOpacity key={i} style={[s.suggItem, { paddingVertical: 12 }]} onPress={() => { setPickup(sg.text); setPickupSugg([]); geocodePlace(sg.text, 'pickup'); }}>
-                    <Ionicons name="location" size={15} color="#e94560" style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 13, color: '#1a1a2e', flex: 1, fontWeight: '500' }} numberOfLines={2}>{sg.text}</Text>
+          {/* ─── Rapido-style Location Section ─── */}
+          {pickupCoords && dropCoords ? (
+            /* LOCKED — confirmed route summary */
+            <View style={{ backgroundColor: '#fff', borderRadius: 16, marginBottom: 12, elevation: 3, overflow: 'hidden' }}>
+              <View style={{ padding: 14 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'stretch' }}>
+                  {/* Timeline dots + line */}
+                  <View style={{ width: 20, alignItems: 'center', marginRight: 12, paddingVertical: 2 }}>
+                    <View style={{ width: 11, height: 11, borderRadius: 5.5, backgroundColor: '#4CAF50', borderWidth: 2, borderColor: '#a5d6a7' }} />
+                    <View style={{ flex: 1, width: 2, backgroundColor: '#e0e0e0', marginVertical: 4 }} />
+                    <View style={{ width: 11, height: 11, borderRadius: 3, backgroundColor: '#e94560' }} />
+                  </View>
+                  {/* Location texts */}
+                  <View style={{ flex: 1, gap: 12 }}>
+                    <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: '700', color: '#1a1a2e' }}>{pickup}</Text>
+                    <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: '700', color: '#1a1a2e' }}>{drop}</Text>
+                  </View>
+                  {/* Swap button */}
+                  <TouchableOpacity onPress={swapLocations} style={{ marginLeft: 10, width: 36, height: 36, borderRadius: 18, backgroundColor: '#f5f6fa', alignItems: 'center', justifyContent: 'center', alignSelf: 'center' }}>
+                    <Ionicons name="swap-vertical" size={18} color="#555" />
                   </TouchableOpacity>
-                ))}
+                </View>
               </View>
-            )}
-            <View style={{ height: 1, backgroundColor: '#f0f0f0', marginVertical: 8, marginLeft: 20 }} />
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: '#e94560' }} />
-              <TextInput style={{ flex: 1, fontSize: 14, color: '#1a1a2e', fontWeight: '500', paddingVertical: 6 }} placeholder="Drop location..." placeholderTextColor="#bbb" value={drop} onChangeText={(t) => { setDrop(t); searchPlaces(t, 'drop'); if (dropCoords) { setDropCoords(null); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; } }} returnKeyType="done" />
-            </View>
-            {dropSugg.length > 0 && (
-              <View style={[s.suggBox, { zIndex: 100 }]}>
-                {dropSugg.slice(0, 5).map((sg, i) => (
-                  <TouchableOpacity key={i} style={[s.suggItem, { paddingVertical: 12 }]} onPress={() => { setDrop(sg.text); setDropSugg([]); geocodePlace(sg.text, 'drop'); }}>
-                    <Ionicons name="flag" size={15} color="#1a1a2e" style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 13, color: '#1a1a2e', flex: 1, fontWeight: '500' }} numberOfLines={2}>{sg.text}</Text>
-                  </TouchableOpacity>
-                ))}
+              {/* Edit / Cancel strip */}
+              <View style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#f0f0f0' }}>
+                <TouchableOpacity onPress={() => { setPickupCoords(null); setDropCoords(null); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; }}
+                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, gap: 6 }}>
+                  <Ionicons name="pencil" size={14} color="#1a1a2e" />
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#1a1a2e' }}>Edit</Text>
+                </TouchableOpacity>
+                <View style={{ width: 1, backgroundColor: '#f0f0f0' }} />
+                <TouchableOpacity onPress={() => { setPickup(''); setDrop(''); setPickupCoords(null); setDropCoords(null); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; }}
+                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, gap: 6 }}>
+                  <Ionicons name="close" size={16} color="#e94560" />
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#e94560' }}>Cancel</Text>
+                </TouchableOpacity>
               </View>
-            )}
-          </View>
-
-          {/* ETA / Distance chip */}
-          {eta ? (
-            <View style={{ backgroundColor: eta.includes('Calculate') ? '#fff3e0' : '#e8f5e9', borderRadius: 12, padding: 12, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Text style={{ fontSize: 18 }}>{eta.includes('Calculate') ? '🔄' : '🗺️'}</Text>
-              <Text style={{ color: eta.includes('Calculate') ? '#e65100' : '#2e7d32', fontWeight: '700', fontSize: 13, flex: 1 }}>{eta}</Text>
+              {/* ETA chip inside locked card */}
+              {eta && !eta.includes('Calculate') && (
+                <View style={{ backgroundColor: '#e8f5e9', paddingHorizontal: 14, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={{ fontSize: 13 }}>🗺️</Text>
+                  <Text style={{ color: '#2e7d32', fontWeight: '700', fontSize: 12, flex: 1 }}>{eta}</Text>
+                </View>
+              )}
             </View>
-          ) : null}
+          ) : (
+            /* EDITING — location inputs */
+            <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 12, elevation: 3 }}>
+              {/* Pickup row */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={{ width: 11, height: 11, borderRadius: 5.5, backgroundColor: '#4CAF50', borderWidth: 2, borderColor: '#a5d6a7' }} />
+                <TextInput
+                  style={{ flex: 1, fontSize: 14, color: '#1a1a2e', fontWeight: '500', paddingVertical: 7 }}
+                  placeholder="Pickup location..." placeholderTextColor="#bbb"
+                  value={pickup}
+                  onChangeText={(t) => { setPickup(t); searchPlaces(t, 'pickup'); if (!t) { setPickupCoords(null); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; } }}
+                  returnKeyType="next"
+                />
+                <TouchableOpacity onPress={useMyLocation} style={{ padding: 6, borderRadius: 20, backgroundColor: '#f5f6fa' }}>
+                  <Ionicons name="navigate" size={16} color="#e94560" />
+                </TouchableOpacity>
+              </View>
+              {pickupSugg.length > 0 && (
+                <View style={[s.suggBox, { zIndex: 100 }]}>
+                  {pickupSugg.slice(0, 5).map((sg, i) => (
+                    <TouchableOpacity key={i} style={[s.suggItem, { paddingVertical: 12 }]} onPress={() => { setPickup(sg.text); setPickupSugg([]); geocodePlace(sg.text, 'pickup'); }}>
+                      <Ionicons name="location" size={15} color="#e94560" style={{ marginRight: 8 }} />
+                      <Text style={{ fontSize: 13, color: '#1a1a2e', flex: 1, fontWeight: '500' }} numberOfLines={2}>{sg.text}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+              {/* Divider with swap */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 4 }}>
+                <View style={{ width: 1, height: 22, backgroundColor: '#e0e0e0', marginLeft: 5, marginRight: 0 }} />
+                <View style={{ flex: 1, height: 1, backgroundColor: 'transparent', marginLeft: 10 }} />
+                <TouchableOpacity onPress={swapLocations} style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#f5f6fa', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#e8e8e8' }}>
+                  <Ionicons name="swap-vertical" size={15} color="#888" />
+                </TouchableOpacity>
+              </View>
+              {/* Drop row */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={{ width: 11, height: 11, borderRadius: 3, backgroundColor: '#e94560' }} />
+                <TextInput
+                  style={{ flex: 1, fontSize: 14, color: '#1a1a2e', fontWeight: '500', paddingVertical: 7 }}
+                  placeholder="Drop location..." placeholderTextColor="#bbb"
+                  value={drop}
+                  onChangeText={(t) => { setDrop(t); searchPlaces(t, 'drop'); if (dropCoords) { setDropCoords(null); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; } }}
+                  returnKeyType="done"
+                />
+              </View>
+              {dropSugg.length > 0 && (
+                <View style={[s.suggBox, { zIndex: 100 }]}>
+                  {dropSugg.slice(0, 5).map((sg, i) => (
+                    <TouchableOpacity key={i} style={[s.suggItem, { paddingVertical: 12 }]} onPress={() => { setDrop(sg.text); setDropSugg([]); geocodePlace(sg.text, 'drop'); }}>
+                      <Ionicons name="flag" size={15} color="#1a1a2e" style={{ marginRight: 8 }} />
+                      <Text style={{ fontSize: 13, color: '#1a1a2e', flex: 1, fontWeight: '500' }} numberOfLines={2}>{sg.text}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
+          {/* Calculating ETA spinner (shown during API call in editing state) */}
+          {eta && eta.includes('Calculate') && (
+            <View style={{ backgroundColor: '#fff3e0', borderRadius: 12, padding: 10, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={{ fontSize: 16 }}>🔄</Text>
+              <Text style={{ color: '#e65100', fontWeight: '700', fontSize: 13 }}>{eta}</Text>
+            </View>
+          )}
 
           {/* Ride Type — 2-column grid */}
           <Text style={{ fontSize: 15, fontWeight: '800', color: '#1a1a2e', marginBottom: 12 }}>Ride Type Chuniye</Text>
