@@ -210,166 +210,270 @@ const MapWebView = ({ pickup, drop, pickupCoords, dropCoords, driverLat, driverL
   return <WebView source={{ html }} style={{ height, width: '100%' }} scrollEnabled={false} javaScriptEnabled domStorageEnabled />;
 };
 
-// ─── CityMapView — animated UP landmarks graphic map ───
+// ─── CityMapView — light city map with animated vehicles + landmarks ───
 const CITY_MAP_HTML = `<!DOCTYPE html>
 <html>
 <head>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<style>
-* { margin:0; padding:0; }
-html,body { width:100%; height:100%; overflow:hidden; background:#070c24; }
-</style>
+<style>*{margin:0;padding:0;}html,body{width:100%;height:100%;overflow:hidden;background:#f0f2f5;}</style>
 </head>
 <body>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 260" preserveAspectRatio="xMidYMid slice" style="width:100%;height:100%;display:block">
 <defs>
-  <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-    <stop offset="0%" stop-color="#070c24"/><stop offset="100%" stop-color="#0f1540"/>
-  </linearGradient>
-  <radialGradient id="ga" cx="50%" cy="50%" r="50%">
-    <stop offset="0%" stop-color="#e94560" stop-opacity="0.6"/>
-    <stop offset="100%" stop-color="#e94560" stop-opacity="0"/>
-  </radialGradient>
-  <radialGradient id="gl" cx="50%" cy="50%" r="50%">
-    <stop offset="0%" stop-color="#f0a500" stop-opacity="0.6"/>
-    <stop offset="100%" stop-color="#f0a500" stop-opacity="0"/>
-  </radialGradient>
-  <radialGradient id="gv" cx="50%" cy="50%" r="50%">
-    <stop offset="0%" stop-color="#4CAF50" stop-opacity="0.6"/>
-    <stop offset="100%" stop-color="#4CAF50" stop-opacity="0"/>
-  </radialGradient>
-  <path id="r1"  d="M62,155 C102,128 162,122 200,135"/>
-  <path id="r1r" d="M200,135 C162,122 102,128 62,155"/>
-  <path id="r2"  d="M200,135 C238,128 270,140 302,158"/>
-  <path id="r2r" d="M302,158 C270,140 238,128 200,135"/>
+  <!-- Road route paths — vehicles follow these exactly -->
+  <path id="rA"  d="M44,128 L155,128"/>
+  <path id="rAr" d="M155,128 L44,128"/>
+  <path id="rB"  d="M155,128 L155,70 L255,70"/>
+  <path id="rBr" d="M255,70 L155,70 L155,128"/>
+  <path id="rC"  d="M36,190 L76,190 L76,128 L155,128"/>
+  <path id="rD"  d="M155,128 L255,128 L255,150"/>
+  <path id="rDr" d="M255,150 L255,128 L155,128"/>
 </defs>
 
-<!-- Background -->
-<rect width="360" height="260" fill="url(#bg)"/>
+<!-- ══ BASE FILL ══ -->
+<rect width="360" height="260" fill="#f0f2f5"/>
 
-<!-- Map grid (subtle) -->
-<g stroke="rgba(255,255,255,0.033)" stroke-width="0.8">
-  <line x1="0" y1="52" x2="360" y2="52"/><line x1="0" y1="104" x2="360" y2="104"/>
-  <line x1="0" y1="156" x2="360" y2="156"/><line x1="0" y1="208" x2="360" y2="208"/>
-  <line x1="72" y1="0" x2="72" y2="260"/><line x1="144" y1="0" x2="144" y2="260"/>
-  <line x1="216" y1="0" x2="216" y2="260"/><line x1="288" y1="0" x2="288" y2="260"/>
-</g>
+<!-- ══ CITY BLOCKS — neighbourhood zones ══ -->
+<rect x="0"   y="0"   width="76"  height="70"  fill="#e6e9e3" opacity="0.75"/>
+<rect x="76"  y="0"   width="79"  height="70"  fill="#eaecec" opacity="0.6"/>
+<rect x="155" y="0"   width="100" height="70"  fill="#e8ecf0" opacity="0.65"/>
+<rect x="255" y="0"   width="105" height="70"  fill="#e4e9f0" opacity="0.7"/>
+<rect x="0"   y="128" width="76"  height="62"  fill="#eceae6" opacity="0.65"/>
+<rect x="76"  y="128" width="79"  height="62"  fill="#e8eaec" opacity="0.55"/>
+<rect x="155" y="128" width="100" height="62"  fill="#eaeced" opacity="0.55"/>
+<rect x="255" y="128" width="105" height="62"  fill="#e6eaf0" opacity="0.6"/>
+<rect x="0"   y="190" width="76"  height="70"  fill="#ede9e4" opacity="0.7"/>
+<rect x="76"  y="190" width="79"  height="70"  fill="#edeae6" opacity="0.65"/>
+<rect x="155" y="190" width="100" height="70"  fill="#edebe6" opacity="0.65"/>
+<rect x="255" y="190" width="105" height="70"  fill="#eaecf0" opacity="0.65"/>
 
-<!-- Stars -->
-<g fill="white">
-  <circle cx="18" cy="18" r="1" opacity="0.5"/><circle cx="52" cy="10" r="0.8" opacity="0.45"/>
-  <circle cx="105" cy="16" r="1.1" opacity="0.65"/><circle cx="165" cy="8" r="0.8" opacity="0.5"/>
-  <circle cx="245" cy="14" r="1" opacity="0.55"/><circle cx="296" cy="10" r="0.8" opacity="0.45"/>
-  <circle cx="348" cy="30" r="1" opacity="0.6"/><circle cx="14" cy="72" r="0.8" opacity="0.38"/>
-  <circle cx="350" cy="88" r="0.9" opacity="0.48"/><circle cx="38" cy="200" r="0.8" opacity="0.3"/>
-  <circle cx="340" cy="208" r="0.9" opacity="0.38"/><circle cx="88" cy="242" r="0.8" opacity="0.28"/>
-  <circle cx="282" cy="236" r="0.8" opacity="0.32"/>
-</g>
+<!-- ══ GOMTI RIVER — wavy across upper section ══ -->
+<path d="M0,38 C28,30 48,46 76,36 C104,26 126,42 155,34 C178,27 200,22 228,29 C252,35 268,25 295,19 C318,14 342,24 360,17"
+  stroke="#90bcd6" stroke-width="13" fill="none" stroke-linecap="round" opacity="0.38"/>
+<path d="M0,38 C28,30 48,46 76,36 C104,26 126,42 155,34 C178,27 200,22 228,29 C252,35 268,25 295,19 C318,14 342,24 360,17"
+  stroke="#b4d2e8" stroke-width="7" fill="none" stroke-linecap="round" opacity="0.55"/>
+<path d="M0,38 C28,30 48,46 76,36 C104,26 126,42 155,34 C178,27 200,22 228,29 C252,35 268,25 295,19 C318,14 342,24 360,17"
+  stroke="#d4e8f4" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.85"/>
+<!-- Ripple lines on river -->
+<path d="M60,33 C70,30 80,36 90,32" stroke="#a0c8e0" stroke-width="0.8" fill="none" opacity="0.5"/>
+<path d="M190,26 C202,23 214,28 226,25" stroke="#a0c8e0" stroke-width="0.8" fill="none" opacity="0.5"/>
+<text x="310" y="16" text-anchor="middle" fill="#4888aa" font-size="6" font-family="sans-serif" font-style="italic" opacity="0.85">Gomti River</text>
 
-<!-- Yamuna river (Agra area) -->
-<path d="M8,218 C22,208 30,226 46,216 C58,208 64,224 80,216 C90,209 96,224 110,218"
-  stroke="#1e6bbf" stroke-width="1.8" fill="none" opacity="0.55" stroke-linecap="round"/>
-<text x="55" y="234" text-anchor="middle" fill="rgba(30,107,191,0.55)" font-size="6.5" font-family="sans-serif">Yamuna</text>
+<!-- ══ PARK — Ambedkar Park ══ -->
+<rect x="85" y="8" width="58" height="56" rx="10" fill="#c6e2bc" opacity="0.85"/>
+<rect x="85" y="8" width="58" height="56" rx="10" fill="none" stroke="#86be7a" stroke-width="0.9" opacity="0.6"/>
+<!-- Park walkways -->
+<line x1="114" y1="8"  x2="114" y2="64" stroke="#b0d4a8" stroke-width="1.4" stroke-dasharray="3 4" opacity="0.55"/>
+<line x1="85"  y1="36" x2="143" y2="36" stroke="#b0d4a8" stroke-width="1.4" stroke-dasharray="3 4" opacity="0.55"/>
+<!-- Fountain (center circle) -->
+<circle cx="114" cy="36" r="4" fill="#a4cce0" opacity="0.7"/>
+<circle cx="114" cy="36" r="2" fill="#c8e4f0" opacity="0.9"/>
+<!-- Trees -->
+<circle cx="98"  cy="20" r="5.5" fill="#72b068" opacity="0.85"/>
+<circle cx="114" cy="16" r="4.5" fill="#82c078" opacity="0.8"/>
+<circle cx="130" cy="21" r="5"   fill="#6aaa60" opacity="0.85"/>
+<circle cx="96"  cy="38" r="4"   fill="#7cba70" opacity="0.8"/>
+<circle cx="132" cy="38" r="4.5" fill="#74b26a" opacity="0.8"/>
+<circle cx="98"  cy="55" r="4"   fill="#78b46c" opacity="0.8"/>
+<circle cx="118" cy="57" r="4.5" fill="#6aaa60" opacity="0.8"/>
+<circle cx="133" cy="54" r="3.5" fill="#7cbf72" opacity="0.75"/>
 
-<!-- Ganga river (Varanasi area) -->
-<path d="M268,244 C282,233 292,248 306,238 C318,229 326,244 340,235 C348,228 354,242 362,235"
-  stroke="#1e6bbf" stroke-width="2" fill="none" opacity="0.6" stroke-linecap="round"/>
-<text x="316" y="256" text-anchor="middle" fill="rgba(30,107,191,0.55)" font-size="6.5" font-family="sans-serif">Ganga</text>
+<!-- ══ SECONDARY ROADS (y=70, y=190, x=76, x=255) ══ -->
+<rect x="0"   y="66" width="360" height="7" fill="#fafafa" opacity="0.9"/>
+<line x1="0" y1="66"  x2="360" y2="66"  stroke="#cdd0d5" stroke-width="0.5"/>
+<line x1="0" y1="73"  x2="360" y2="73"  stroke="#cdd0d5" stroke-width="0.5"/>
+<rect x="0"   y="187" width="360" height="7" fill="#fafafa" opacity="0.9"/>
+<line x1="0" y1="187" x2="360" y2="187" stroke="#cdd0d5" stroke-width="0.5"/>
+<line x1="0" y1="194" x2="360" y2="194" stroke="#cdd0d5" stroke-width="0.5"/>
+<rect x="72"  y="0"   width="7"   height="260" fill="#fafafa" opacity="0.9"/>
+<line x1="72" y1="0"  x2="72"  y2="260" stroke="#cdd0d5" stroke-width="0.5"/>
+<line x1="79" y1="0"  x2="79"  y2="260" stroke="#cdd0d5" stroke-width="0.5"/>
+<rect x="252" y="0"   width="7"   height="260" fill="#fafafa" opacity="0.9"/>
+<line x1="252" y1="0" x2="252" y2="260" stroke="#cdd0d5" stroke-width="0.5"/>
+<line x1="259" y1="0" x2="259" y2="260" stroke="#cdd0d5" stroke-width="0.5"/>
 
-<!-- Route glow (soft blur under lines) -->
-<path d="M62,155 C102,128 162,122 200,135" stroke="#e94560" stroke-width="7" fill="none" opacity="0.09" stroke-linecap="round"/>
-<path d="M200,135 C238,128 270,140 302,158" stroke="#f0a500" stroke-width="7" fill="none" opacity="0.09" stroke-linecap="round"/>
+<!-- ══ MAIN ROADS (y=124–132, x=151–159) ══ -->
+<!-- Horizontal main — Hazratganj Road -->
+<rect x="0"   y="124" width="360" height="8" fill="#ffffff" opacity="0.97"/>
+<line x1="0"   y1="124" x2="360" y2="124" stroke="#c4c8ce" stroke-width="0.6"/>
+<line x1="0"   y1="132" x2="360" y2="132" stroke="#c4c8ce" stroke-width="0.6"/>
+<line x1="0"   y1="128" x2="360" y2="128" stroke="#e2bc38" stroke-width="0.9" stroke-dasharray="16 9" opacity="0.4"/>
+<!-- Vertical main — MG Marg -->
+<rect x="151" y="0"   width="8"   height="260" fill="#ffffff" opacity="0.97"/>
+<line x1="151" y1="0"  x2="151" y2="260" stroke="#c4c8ce" stroke-width="0.6"/>
+<line x1="159" y1="0"  x2="159" y2="260" stroke="#c4c8ce" stroke-width="0.6"/>
+<line x1="155" y1="0"  x2="155" y2="260" stroke="#e2bc38" stroke-width="0.9" stroke-dasharray="16 9" opacity="0.4"/>
 
-<!-- Animated dashes — forward Agra→Lucknow -->
-<path d="M62,155 C102,128 162,122 200,135" stroke="#e94560" stroke-width="1.8" fill="none"
-  opacity="0.88" stroke-dasharray="9 6" stroke-linecap="round">
-  <animate attributeName="stroke-dashoffset" from="0" to="-150" dur="1.8s" repeatCount="indefinite"/>
+<!-- ══ TERTIARY STREETS ══ -->
+<line x1="0"   y1="105" x2="151" y2="105" stroke="#fff" stroke-width="3.5" opacity="0.8"/>
+<line x1="159" y1="105" x2="252" y2="105" stroke="#fff" stroke-width="3.5" opacity="0.75"/>
+<line x1="259" y1="105" x2="360" y2="105" stroke="#fff" stroke-width="3"   opacity="0.7"/>
+<line x1="0"   y1="155" x2="72"  y2="155" stroke="#fff" stroke-width="3"   opacity="0.75"/>
+<line x1="79"  y1="155" x2="151" y2="155" stroke="#fff" stroke-width="3"   opacity="0.75"/>
+<line x1="159" y1="155" x2="252" y2="155" stroke="#fff" stroke-width="3"   opacity="0.7"/>
+<line x1="259" y1="155" x2="360" y2="155" stroke="#fff" stroke-width="3"   opacity="0.7"/>
+<line x1="0"   y1="215" x2="72"  y2="215" stroke="#fff" stroke-width="3"   opacity="0.7"/>
+<line x1="79"  y1="215" x2="151" y2="215" stroke="#fff" stroke-width="3"   opacity="0.7"/>
+<line x1="159" y1="215" x2="252" y2="215" stroke="#fff" stroke-width="3"   opacity="0.7"/>
+<line x1="259" y1="215" x2="360" y2="215" stroke="#fff" stroke-width="3"   opacity="0.7"/>
+<line x1="38"  y1="0"   x2="38"  y2="66"  stroke="#fff" stroke-width="3.5" opacity="0.75"/>
+<line x1="38"  y1="73"  x2="38"  y2="124" stroke="#fff" stroke-width="3.5" opacity="0.75"/>
+<line x1="38"  y1="132" x2="38"  y2="187" stroke="#fff" stroke-width="3"   opacity="0.7"/>
+<line x1="38"  y1="194" x2="38"  y2="260" stroke="#fff" stroke-width="3"   opacity="0.7"/>
+<line x1="113" y1="73"  x2="113" y2="124" stroke="#fff" stroke-width="3"   opacity="0.7"/>
+<line x1="113" y1="132" x2="113" y2="187" stroke="#fff" stroke-width="3"   opacity="0.65"/>
+<line x1="113" y1="194" x2="113" y2="260" stroke="#fff" stroke-width="3"   opacity="0.65"/>
+<line x1="210" y1="73"  x2="210" y2="124" stroke="#fff" stroke-width="3"   opacity="0.7"/>
+<line x1="210" y1="132" x2="210" y2="187" stroke="#fff" stroke-width="3"   opacity="0.7"/>
+<line x1="210" y1="194" x2="210" y2="260" stroke="#fff" stroke-width="3"   opacity="0.65"/>
+<line x1="302" y1="73"  x2="302" y2="124" stroke="#fff" stroke-width="3"   opacity="0.7"/>
+<line x1="302" y1="132" x2="302" y2="187" stroke="#fff" stroke-width="3"   opacity="0.7"/>
+<line x1="302" y1="194" x2="302" y2="260" stroke="#fff" stroke-width="3"   opacity="0.65"/>
+
+<!-- ══ RAILWAY TRACK — to Railway Station ══ -->
+<path d="M0,106 L38,106 L38,124" stroke="#c8b0d8" stroke-width="3.5" fill="none" opacity="0.55" stroke-linecap="round"/>
+<path d="M0,106 L38,106 L38,124" stroke="#fff" stroke-width="1.5" fill="none" stroke-dasharray="5 4" opacity="0.65"/>
+<line x1="5"  y1="106" x2="5"  y2="109" stroke="#c8b0d8" stroke-width="1.5" opacity="0.45"/>
+<line x1="12" y1="106" x2="12" y2="109" stroke="#c8b0d8" stroke-width="1.5" opacity="0.45"/>
+<line x1="19" y1="106" x2="19" y2="109" stroke="#c8b0d8" stroke-width="1.5" opacity="0.45"/>
+<line x1="26" y1="106" x2="26" y2="109" stroke="#c8b0d8" stroke-width="1.5" opacity="0.45"/>
+
+<!-- ══ ANIMATED ROUTE OVERLAYS ══ -->
+<path d="M44,128 L155,128" stroke="#e94560" stroke-width="2.5" fill="none" opacity="0.28"
+  stroke-dasharray="10 7" stroke-linecap="round">
+  <animate attributeName="stroke-dashoffset" from="0" to="-51" dur="1.4s" repeatCount="indefinite"/>
 </path>
-<!-- Animated dashes — forward Lucknow→Varanasi -->
-<path d="M200,135 C238,128 270,140 302,158" stroke="#f0a500" stroke-width="1.8" fill="none"
-  opacity="0.88" stroke-dasharray="9 6" stroke-linecap="round">
-  <animate attributeName="stroke-dashoffset" from="0" to="-150" dur="1.6s" repeatCount="indefinite"/>
+<path d="M155,128 L155,70 L255,70" stroke="#1a73e8" stroke-width="2" fill="none" opacity="0.24"
+  stroke-dasharray="9 6" stroke-linecap="round">
+  <animate attributeName="stroke-dashoffset" from="0" to="-60" dur="1.8s" repeatCount="indefinite"/>
 </path>
-<!-- Faint return dash (Lucknow→Agra) -->
-<path d="M62,155 C102,128 162,122 200,135" stroke="rgba(233,69,96,0.25)" stroke-width="1"
-  fill="none" stroke-dasharray="4 12">
-  <animate attributeName="stroke-dashoffset" from="-150" to="0" dur="3.2s" repeatCount="indefinite"/>
+<path d="M36,190 L76,190 L76,128 L155,128" stroke="#34a853" stroke-width="2" fill="none" opacity="0.24"
+  stroke-dasharray="9 6" stroke-linecap="round">
+  <animate attributeName="stroke-dashoffset" from="0" to="-60" dur="2s" repeatCount="indefinite"/>
+</path>
+<path d="M155,128 L255,128 L255,150" stroke="#f0a500" stroke-width="2" fill="none" opacity="0.24"
+  stroke-dasharray="9 6" stroke-linecap="round">
+  <animate attributeName="stroke-dashoffset" from="0" to="-45" dur="1.6s" repeatCount="indefinite"/>
 </path>
 
-<!-- VEHICLES -->
-<!-- 🚗 Car: Agra → Lucknow -->
-<text font-size="17" text-anchor="middle" dominant-baseline="central">
-  <animateMotion dur="5s" repeatCount="indefinite" rotate="auto"><mpath href="#r1"/></animateMotion>🚗
-</text>
-<!-- 🏍️ Bike: Lucknow → Varanasi -->
-<text font-size="15" text-anchor="middle" dominant-baseline="central">
-  <animateMotion dur="4s" repeatCount="indefinite" rotate="auto"><mpath href="#r2"/></animateMotion>🏍️
-</text>
-<!-- 🛺 Auto: Varanasi → Lucknow (returning) -->
+<!-- ══ VEHICLES ══ -->
 <text font-size="14" text-anchor="middle" dominant-baseline="central">
-  <animateMotion dur="5.5s" repeatCount="indefinite" rotate="auto"><mpath href="#r2r"/></animateMotion>🛺
+  <animateMotion dur="5s" repeatCount="indefinite" rotate="auto"><mpath href="#rA"/></animateMotion>🚗
+</text>
+<text font-size="12" text-anchor="middle" dominant-baseline="central">
+  <animateMotion dur="5s" begin="-2.5s" repeatCount="indefinite" rotate="auto"><mpath href="#rAr"/></animateMotion>🚕
+</text>
+<text font-size="12" text-anchor="middle" dominant-baseline="central">
+  <animateMotion dur="6.5s" repeatCount="indefinite" rotate="auto"><mpath href="#rB"/></animateMotion>🏍️
+</text>
+<text font-size="13" text-anchor="middle" dominant-baseline="central">
+  <animateMotion dur="6.5s" begin="-3.2s" repeatCount="indefinite" rotate="auto"><mpath href="#rBr"/></animateMotion>🚗
+</text>
+<text font-size="11" text-anchor="middle" dominant-baseline="central">
+  <animateMotion dur="7s" repeatCount="indefinite" rotate="auto"><mpath href="#rC"/></animateMotion>🛺
+</text>
+<text font-size="12" text-anchor="middle" dominant-baseline="central">
+  <animateMotion dur="4.5s" begin="-1s" repeatCount="indefinite" rotate="auto"><mpath href="#rD"/></animateMotion>🚕
+</text>
+<text font-size="11" text-anchor="middle" dominant-baseline="central">
+  <animateMotion dur="4.5s" begin="-3s" repeatCount="indefinite" rotate="auto"><mpath href="#rDr"/></animateMotion>🏍️
 </text>
 
-<!-- ── AGRA ── -->
-<circle cx="62" cy="155" r="26" fill="url(#ga)">
-  <animate attributeName="r" values="20;29;20" dur="3.5s" repeatCount="indefinite"/>
-  <animate attributeName="opacity" values="0.7;1;0.7" dur="3.5s" repeatCount="indefinite"/>
-</circle>
-<circle cx="62" cy="155" r="7" fill="#e94560"/>
-<circle cx="62" cy="155" r="4" fill="white" opacity="0.92"/>
-<text x="62" y="133" text-anchor="middle" font-size="20">&#x1F54C;</text>
-<text x="62" y="173" text-anchor="middle" fill="white" font-size="10" font-weight="bold" font-family="sans-serif" letter-spacing="1">AGRA</text>
-<text x="62" y="183" text-anchor="middle" fill="rgba(233,69,96,0.95)" font-size="7" font-family="sans-serif">Taj Mahal</text>
+<!-- ══ INTERSECTION DOTS ══ -->
+<circle cx="76"  cy="70"  r="3.5" fill="#bec2c8" opacity="0.9"/>
+<circle cx="155" cy="70"  r="3.5" fill="#bec2c8" opacity="0.9"/>
+<circle cx="255" cy="70"  r="3.5" fill="#bec2c8" opacity="0.9"/>
+<circle cx="76"  cy="128" r="3.5" fill="#bec2c8" opacity="0.9"/>
+<circle cx="255" cy="128" r="3.5" fill="#bec2c8" opacity="0.9"/>
+<circle cx="76"  cy="190" r="3"   fill="#bec2c8" opacity="0.8"/>
+<circle cx="155" cy="190" r="3"   fill="#bec2c8" opacity="0.8"/>
+<circle cx="255" cy="190" r="3"   fill="#bec2c8" opacity="0.8"/>
 
-<!-- ── LUCKNOW ── -->
-<circle cx="200" cy="135" r="26" fill="url(#gl)">
-  <animate attributeName="r" values="20;29;20" dur="3.5s" begin="1.2s" repeatCount="indefinite"/>
-  <animate attributeName="opacity" values="0.7;1;0.7" dur="3.5s" begin="1.2s" repeatCount="indefinite"/>
-</circle>
-<circle cx="200" cy="135" r="7" fill="#f0a500"/>
-<circle cx="200" cy="135" r="4" fill="white" opacity="0.92"/>
-<text x="200" y="113" text-anchor="middle" font-size="20">&#x1F3DB;&#xFE0F;</text>
-<text x="200" y="153" text-anchor="middle" fill="white" font-size="10" font-weight="bold" font-family="sans-serif" letter-spacing="0.5">LUCKNOW</text>
-<text x="200" y="163" text-anchor="middle" fill="rgba(240,165,0,0.95)" font-size="7" font-family="sans-serif">Rumi Darwaza</text>
+<!-- ══ LANDMARKS ══ -->
 
-<!-- ── VARANASI ── -->
-<circle cx="302" cy="158" r="26" fill="url(#gv)">
-  <animate attributeName="r" values="20;29;20" dur="3.5s" begin="2.4s" repeatCount="indefinite"/>
-  <animate attributeName="opacity" values="0.7;1;0.7" dur="3.5s" begin="2.4s" repeatCount="indefinite"/>
-</circle>
-<circle cx="302" cy="158" r="7" fill="#4CAF50"/>
-<circle cx="302" cy="158" r="4" fill="white" opacity="0.92"/>
-<text x="302" y="136" text-anchor="middle" font-size="20">&#x1F6D5;</text>
-<text x="302" y="176" text-anchor="middle" fill="white" font-size="10" font-weight="bold" font-family="sans-serif" letter-spacing="0.5">VARANASI</text>
-<text x="302" y="186" text-anchor="middle" fill="rgba(76,175,80,0.95)" font-size="7" font-family="sans-serif">Kashi Vishwanath</text>
+<!-- 🚉 Railway Station -->
+<rect x="4"   y="110" width="60" height="30" rx="7" fill="#fff" opacity="0.95" stroke="#c0b0d4" stroke-width="0.9"/>
+<text x="19"  y="126" font-size="14" text-anchor="middle" dominant-baseline="central">🚉</text>
+<text x="44"  y="120" text-anchor="middle" fill="#5540a0" font-size="6.5" font-weight="bold" font-family="sans-serif">Railway</text>
+<text x="44"  y="131" text-anchor="middle" fill="#8878c0" font-size="5.5" font-family="sans-serif">Station</text>
 
-<!-- Intermediate towns -->
-<circle cx="130" cy="133" r="2.8" fill="rgba(255,255,255,0.42)" stroke="rgba(255,255,255,0.6)" stroke-width="0.8"/>
-<text x="130" y="147" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="6.5" font-family="sans-serif">Kanpur</text>
+<!-- 🎓 University -->
+<rect x="4"   y="43"  width="60" height="30" rx="7" fill="#fff" opacity="0.95" stroke="#a8c4a8" stroke-width="0.9"/>
+<text x="19"  y="59"  font-size="14" text-anchor="middle" dominant-baseline="central">🎓</text>
+<text x="44"  y="53"  text-anchor="middle" fill="#2a5e2a" font-size="6.5" font-weight="bold" font-family="sans-serif">University</text>
+<text x="44"  y="64"  text-anchor="middle" fill="#508050" font-size="5.5" font-family="sans-serif">City Campus</text>
 
-<circle cx="253" cy="143" r="2.8" fill="rgba(255,255,255,0.42)" stroke="rgba(255,255,255,0.6)" stroke-width="0.8"/>
-<text x="253" y="157" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="6.5" font-family="sans-serif">Prayagraj</text>
+<!-- 🏢 IT Hub / Office Park -->
+<rect x="262" y="76"  width="62" height="30" rx="7" fill="#fff" opacity="0.95" stroke="#a0bcd4" stroke-width="0.9"/>
+<text x="278" y="92"  font-size="14" text-anchor="middle" dominant-baseline="central">🏢</text>
+<text x="306" y="87"  text-anchor="middle" fill="#20467a" font-size="6.5" font-weight="bold" font-family="sans-serif">IT Hub</text>
+<text x="306" y="98"  text-anchor="middle" fill="#5080b0" font-size="5.5" font-family="sans-serif">Office Park</text>
 
-<!-- Distance labels -->
-<rect x="90" y="99" width="38" height="13" rx="6.5" fill="rgba(233,69,96,0.18)" stroke="rgba(233,69,96,0.38)" stroke-width="0.7"/>
-<text x="109" y="108.5" text-anchor="middle" fill="#e94560" font-size="7.5" font-family="sans-serif">~350 km</text>
+<!-- 🏥 City Hospital -->
+<rect x="262" y="136" width="62" height="30" rx="7" fill="#fff" opacity="0.95" stroke="#d4a8a8" stroke-width="0.9"/>
+<text x="278" y="152" font-size="14" text-anchor="middle" dominant-baseline="central">🏥</text>
+<text x="306" y="147" text-anchor="middle" fill="#841818" font-size="6.5" font-weight="bold" font-family="sans-serif">City Hospital</text>
+<text x="306" y="158" text-anchor="middle" fill="#c05050" font-size="5.5" font-family="sans-serif">24x7 Emergency</text>
 
-<rect x="228" y="113" width="38" height="13" rx="6.5" fill="rgba(240,165,0,0.18)" stroke="rgba(240,165,0,0.38)" stroke-width="0.7"/>
-<text x="247" y="122.5" text-anchor="middle" fill="#f0a500" font-size="7.5" font-family="sans-serif">~300 km</text>
+<!-- 🏠 Home / Gomti Nagar -->
+<rect x="4"   y="197" width="62" height="30" rx="7" fill="#fff" opacity="0.95" stroke="#c8bca8" stroke-width="0.9"/>
+<text x="20"  y="213" font-size="14" text-anchor="middle" dominant-baseline="central">🏠</text>
+<text x="46"  y="207" text-anchor="middle" fill="#604020" font-size="6.5" font-weight="bold" font-family="sans-serif">Gomti Nagar</text>
+<text x="46"  y="218" text-anchor="middle" fill="#907050" font-size="5.5" font-family="sans-serif">Residential</text>
 
-<!-- SPPERO brand pill -->
-<rect x="125" y="10" width="110" height="28" rx="14" fill="rgba(233,69,96,0.11)" stroke="rgba(233,69,96,0.22)" stroke-width="0.8"/>
-<text x="180" y="21" text-anchor="middle" fill="#e94560" font-size="12" font-weight="bold" font-family="sans-serif">&#x2B50; SPPERO</text>
-<text x="180" y="32" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="7.5" font-family="sans-serif">Trusted Rides Across UP</text>
+<!-- 🛍️ City Mall -->
+<rect x="84"  y="197" width="62" height="30" rx="7" fill="#fff" opacity="0.95" stroke="#aabcd0" stroke-width="0.9"/>
+<text x="100" y="213" font-size="14" text-anchor="middle" dominant-baseline="central">🛍️</text>
+<text x="126" y="207" text-anchor="middle" fill="#304070" font-size="6.5" font-weight="bold" font-family="sans-serif">City Mall</text>
+<text x="126" y="218" text-anchor="middle" fill="#7888b0" font-size="5.5" font-family="sans-serif">Shopping</text>
 
-<!-- Compass (bottom-left) -->
-<circle cx="22" cy="238" r="10" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.18)" stroke-width="0.8"/>
-<text x="22" y="234" text-anchor="middle" fill="rgba(255,255,255,0.55)" font-size="7.5" font-family="sans-serif" font-weight="bold">N</text>
-<line x1="22" y1="236" x2="22" y2="244" stroke="rgba(255,255,255,0.28)" stroke-width="0.8"/>
-<text x="22" y="249" text-anchor="middle" fill="rgba(255,255,255,0.28)" font-size="5.5" font-family="sans-serif">S</text>
-<line x1="14" y1="240" x2="30" y2="240" stroke="rgba(255,255,255,0.2)" stroke-width="0.8"/>
-<text x="9" y="242" text-anchor="middle" fill="rgba(255,255,255,0.28)" font-size="5.5" font-family="sans-serif">W</text>
-<text x="35" y="242" text-anchor="middle" fill="rgba(255,255,255,0.28)" font-size="5.5" font-family="sans-serif">E</text>
+<!-- 🕌 Bara Imambara -->
+<rect x="168" y="197" width="62" height="30" rx="7" fill="#fff" opacity="0.95" stroke="#d4bc88" stroke-width="0.9"/>
+<text x="184" y="213" font-size="14" text-anchor="middle" dominant-baseline="central">🕌</text>
+<text x="210" y="207" text-anchor="middle" fill="#7a5010" font-size="6" font-weight="bold" font-family="sans-serif">Bara Imambara</text>
+<text x="210" y="218" text-anchor="middle" fill="#b08030" font-size="5.5" font-family="sans-serif">Heritage Site</text>
+
+<!-- ⛽ Petrol Pump -->
+<rect x="262" y="197" width="62" height="30" rx="7" fill="#fff" opacity="0.95" stroke="#c8d0a8" stroke-width="0.9"/>
+<text x="278" y="213" font-size="14" text-anchor="middle" dominant-baseline="central">⛽</text>
+<text x="306" y="207" text-anchor="middle" fill="#305828" font-size="6.5" font-weight="bold" font-family="sans-serif">Petrol Pump</text>
+<text x="306" y="218" text-anchor="middle" fill="#608848" font-size="5.5" font-family="sans-serif">HP / IndianOil</text>
+
+<!-- 🛒 HAZRATGANJ — center hub (prominent circle) -->
+<circle cx="155" cy="128" r="17" fill="#fff" opacity="0.97" stroke="#e0b840" stroke-width="1.8"/>
+<circle cx="155" cy="128" r="14" fill="#fff9ee" opacity="0.6"/>
+<text x="155" y="123" font-size="14" text-anchor="middle" dominant-baseline="central">🛒</text>
+<text x="155" y="150" text-anchor="middle" fill="#7a5010" font-size="6" font-weight="bold" font-family="sans-serif">Hazratganj</text>
+
+<!-- Park label -->
+<text x="114" y="70" text-anchor="middle" fill="#3a7030" font-size="5.5" font-family="sans-serif" font-style="italic">Ambedkar Park</text>
+
+<!-- ══ ROAD LABELS ══ -->
+<text x="105" y="120" text-anchor="middle" fill="#b4b8c0" font-size="4.8" font-family="sans-serif">← Hazratganj Rd →</text>
+<text x="145" y="48"  text-anchor="middle" fill="#b4b8c0" font-size="4.8" font-family="sans-serif" transform="rotate(-90,145,48)">MG Marg</text>
+<text x="210" y="64"  text-anchor="middle" fill="#b4b8c0" font-size="4.8" font-family="sans-serif">Vibhuti Khand Rd</text>
+<text x="36"  y="64"  text-anchor="middle" fill="#b4b8c0" font-size="4.8" font-family="sans-serif">Ring Rd</text>
+
+<!-- ══ SPPERO BRAND PILL ══ -->
+<rect x="108" y="6" width="120" height="26" rx="13" fill="rgba(233,69,96,0.08)" stroke="rgba(233,69,96,0.30)" stroke-width="0.9"/>
+<text x="168" y="16" text-anchor="middle" fill="#e94560" font-size="10" font-weight="bold" font-family="sans-serif">&#x26A1; SPPERO</text>
+<text x="168" y="26" text-anchor="middle" fill="#c09098" font-size="5.5" font-family="sans-serif">Trusted Rides · Lucknow</text>
+
+<!-- ══ COMPASS ══ -->
+<circle cx="24" cy="242" r="12" fill="rgba(0,0,0,0.04)" stroke="#c4c8ce" stroke-width="0.8"/>
+<text x="24"  y="237" text-anchor="middle" fill="#888" font-size="7.5" font-family="sans-serif" font-weight="bold">N</text>
+<line x1="24" y1="238" x2="24" y2="247" stroke="#bbb" stroke-width="0.9"/>
+<text x="24"  y="254" text-anchor="middle" fill="#bbb" font-size="5" font-family="sans-serif">S</text>
+<line x1="15" y1="242" x2="33" y2="242" stroke="#bbb" stroke-width="0.7"/>
+<text x="10"  y="244" text-anchor="middle" fill="#bbb" font-size="5" font-family="sans-serif">W</text>
+<text x="38"  y="244" text-anchor="middle" fill="#bbb" font-size="5" font-family="sans-serif">E</text>
+
+<!-- ══ SCALE BAR ══ -->
+<line x1="296" y1="249" x2="350" y2="249" stroke="#c0c4ca" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+<line x1="296" y1="246" x2="296" y2="252" stroke="#c0c4ca" stroke-width="1.5" opacity="0.7"/>
+<line x1="350" y1="246" x2="350" y2="252" stroke="#c0c4ca" stroke-width="1.5" opacity="0.7"/>
+<text x="323" y="258" text-anchor="middle" fill="#aaa" font-size="5.5" font-family="sans-serif">1 km</text>
+
 </svg>
 </body>
 </html>`;
@@ -377,7 +481,7 @@ html,body { width:100%; height:100%; overflow:hidden; background:#070c24; }
 const CityMapView = ({ height = 260 }: { height?: number }) => (
   <WebView
     source={{ html: CITY_MAP_HTML }}
-    style={{ height, width: '100%', backgroundColor: '#070c24' }}
+    style={{ height, width: '100%', backgroundColor: '#f0f2f5' }}
     scrollEnabled={false}
     javaScriptEnabled
     domStorageEnabled
