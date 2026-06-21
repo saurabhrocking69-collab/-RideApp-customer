@@ -14,7 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import * as Clipboard from 'expo-clipboard';
 import * as Notifications from 'expo-notifications';
-import { apiGet, apiPost } from './api';
+import { apiGet, apiPost, apiAuthGet, apiAuthPost } from './api';
 import { useRideStore } from './store';
 import { WebView } from 'react-native-webview';
 import { io, Socket } from 'socket.io-client';
@@ -744,6 +744,9 @@ export default function App() {
   const [cmpMsg, setCmpMsg]                 = useState('');
   const [cmpLoading, setCmpLoading]         = useState(false);
   const [cmpDetail, setCmpDetail]           = useState<any>(null);
+  const [cmpLinkedRide, setCmpLinkedRide]   = useState<any>(null); // ride selected for complaint
+  const [cmpHistoryRides, setCmpHistoryRides] = useState<any[]>([]); // recent rides for picker
+  const [cmpShowRidePicker, setCmpShowRidePicker] = useState(false);
 
   // Hourly packages — fetched from server so admin fare changes reflect immediately
   const [hourlyPackages, setHourlyPackages] = useState<any>(DEFAULT_hourlyPackages);
@@ -2867,7 +2870,7 @@ export default function App() {
 
         {/* Contact Options */}
         {[
-          { icon: '📋', label: 'My Complaints', sub: 'File or track complaints', color: '#e94560', action: async () => { setCmpLoading(true); try { const r = await apiGet('/api/complaints'); setComplaints(r.complaints||[]); } catch{} setCmpLoading(false); setScreen('complaints'); } },
+          { icon: '📋', label: 'My Complaints', sub: 'File or track complaints', color: '#e94560', action: async () => { setCmpLoading(true); try { const tok = await AsyncStorage.getItem('userToken'); const r = await apiAuthGet('/api/complaints', tok||''); setComplaints(r.complaints||[]); } catch{} setCmpLoading(false); setScreen('complaints'); } },
           { icon: '💬', label: 'WhatsApp', sub: 'Sabse fast response', color: '#25D366', action: () => Linking.openURL('https://wa.me/919999999999?text=Hi%20Sppero%20Support') },
           { icon: '📞', label: 'Helpline Call', sub: '24x7 available', color: '#2196F3', action: () => Linking.openURL('tel:9999999999') },
           { icon: '📧', label: 'Email Support', sub: 'Response in 24 hrs', color: '#e94560', action: () => Linking.openURL('mailto:support@sppero.com') },
@@ -4912,7 +4915,7 @@ export default function App() {
           {complaints.map((c: any) => (
             <TouchableOpacity key={c.id} onPress={async () => {
               setCmpLoading(true);
-              try { const r = await apiGet(`/api/complaints/${c.id}`); setCmpDetail(r); setScreen('complaint-detail'); } catch{}
+              try { const tok = await AsyncStorage.getItem('userToken'); const r = await apiAuthGet(`/api/complaints/${c.id}`, tok||''); setCmpDetail(r); setScreen('complaint-detail'); } catch{}
               setCmpLoading(false);
             }} style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 12, elevation: 2 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -4939,6 +4942,7 @@ export default function App() {
   // ═══ NEW COMPLAINT SCREEN ═══
   if (screen === 'complaint-new') {
     const customerTypes = [
+      { id: 'early_trip_end', label: '🛑 Trip Beech Mein Band', desc: 'Driver ne drop se pehle trip complete kiya' },
       { id: 'reckless_driving', label: '🚗 Reckless Driving', desc: 'Dangerous driving, over-speeding' },
       { id: 'route_deviation', label: '🗺️ Route Deviation', desc: 'Longer/wrong route liya' },
       { id: 'overcharging', label: '💸 Overcharging', desc: 'Extra fare mang raha tha' },
@@ -4946,19 +4950,92 @@ export default function App() {
       { id: 'vehicle_condition', label: '🚙 Vehicle Condition', desc: 'Dirty ya unsafe vehicle' },
       { id: 'driver_no_show', label: '🚫 Driver No Show', desc: 'Driver pickup pe nahi aaya' },
       { id: 'harassment', label: '⚠️ Harassment', desc: 'Verbal ya physical harassment' },
+      { id: 'physical_abuse', label: '🆘 Physical Abuse', desc: 'Physical harm ya attack' },
       { id: 'other', label: '📝 Other Issue', desc: 'Koi aur problem' },
     ];
+    // effective linked ride: postride rideData OR manually picked
+    const effectiveRide = cmpLinkedRide || (rideData?.ride_id ? rideData : null);
+
     return (
       <ScreenIn style={s.screen}>
         <View style={s.topBar}>
-          <TouchableOpacity onPress={() => setScreen('complaints')} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
+          <TouchableOpacity onPress={() => { setCmpShowRidePicker(false); setScreen('complaints'); }} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
           <Text style={s.topTitle}>⚠️ File Complaint</Text>
           <View style={{ width: 40 }} />
         </View>
+
+        {/* ── Ride Picker Modal ── */}
+        {cmpShowRidePicker && (
+          <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 99, justifyContent: 'flex-end' }}>
+            <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '70%' }}>
+              <View style={{ padding: 16, borderBottomWidth: 1, borderColor: '#f0f0f0', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text style={{ fontWeight: '800', fontSize: 15 }}>Ride Select Karo</Text>
+                <TouchableOpacity onPress={() => setCmpShowRidePicker(false)}><Text style={{ color: '#e94560', fontWeight: '700' }}>Cancel</Text></TouchableOpacity>
+              </View>
+              <ScrollView contentContainerStyle={{ padding: 12 }}>
+                {cmpHistoryRides.length === 0 && <Text style={{ color: '#aaa', textAlign: 'center', paddingVertical: 20 }}>Koi recent rides nahi milein</Text>}
+                {cmpHistoryRides.map((r: any) => (
+                  <TouchableOpacity key={r.id} onPress={() => { setCmpLinkedRide(r); setCmpShowRidePicker(false); }}
+                    style={{ backgroundColor: '#f8f9fa', borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 2, borderColor: cmpLinkedRide?.id === r.id ? '#e94560' : 'transparent' }}>
+                    <Text style={{ fontWeight: '700', fontSize: 13, color: '#1a1a2e' }}>#{r.id} · {r.driver_name || 'Unknown Driver'}</Text>
+                    <Text style={{ fontSize: 12, color: '#555', marginTop: 3 }} numberOfLines={1}>{r.pickup} → {r.drop_location}</Text>
+                    <Text style={{ fontSize: 11, color: '#888', marginTop: 3 }}>₹{r.fare} · {new Date(r.created_at).toLocaleDateString('en-IN')} · {r.ride_type?.toUpperCase()}</Text>
+                    {r.driver_phone && <Text style={{ fontSize: 11, color: '#e94560', marginTop: 2 }}>Driver: {r.driver_phone}</Text>}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        )}
+
         <ScrollView style={{ flex: 1, padding: 14 }} contentContainerStyle={{ paddingBottom: 40 }}>
+
+          {/* ── Ride Link Card ── */}
+          <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 16, elevation: 2 }}>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: '#1a1a2e', marginBottom: 10 }}>Ride Link karo (zaroori)</Text>
+            {effectiveRide ? (
+              <View style={{ backgroundColor: '#e8f5e9', borderRadius: 10, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={{ fontSize: 18 }}>🔗</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: '700', fontSize: 13, color: '#1a1a2e' }}>
+                    {effectiveRide.driver_name || 'Driver'} · Ride #{effectiveRide.id || effectiveRide.ride_id}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#555', marginTop: 2 }} numberOfLines={1}>
+                    {effectiveRide.pickup} → {effectiveRide.drop_location || effectiveRide.drop}
+                  </Text>
+                  {effectiveRide.driver_phone && <Text style={{ fontSize: 11, color: '#e94560', marginTop: 2 }}>{effectiveRide.driver_phone}</Text>}
+                </View>
+                {!rideData?.ride_id && (
+                  <TouchableOpacity onPress={() => { setCmpLinkedRide(null); }} style={{ padding: 4 }}>
+                    <Text style={{ color: '#c62828', fontSize: 18 }}>✕</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              <TouchableOpacity onPress={async () => {
+                setCmpLoading(true);
+                try {
+                  const d = await apiGet(`/api/rides/history?phone=${phone}`);
+                  setCmpHistoryRides((d.rides || []).filter((r: any) => r.status === 'completed'));
+                } catch {}
+                setCmpLoading(false);
+                setCmpShowRidePicker(true);
+              }} style={{ backgroundColor: '#f8f9fa', borderRadius: 10, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: '#e94560', borderStyle: 'dashed' }}>
+                <Text style={{ fontSize: 20 }}>🔍</Text>
+                <View>
+                  <Text style={{ fontWeight: '700', fontSize: 13, color: '#e94560' }}>{cmpLoading ? 'Loading rides...' : 'Ride Select Karo'}</Text>
+                  <Text style={{ fontSize: 11, color: '#888', marginTop: 2 }}>Pichli rides mein se jis pe problem aayi</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+          </View>
+
           <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 12 }}>Issue type select karo</Text>
           {customerTypes.map(t => (
-            <TouchableOpacity key={t.id} onPress={() => setCmpType(t.id)}
+            <TouchableOpacity key={t.id} onPress={() => {
+              setCmpType(t.id);
+              if (t.id === 'early_trip_end' && !cmpTitle) setCmpTitle('Driver ne drop location se pehle trip complete kiya');
+            }}
               style={{ backgroundColor: cmpType === t.id ? '#1a1a2e' : '#fff', borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 2, borderColor: cmpType === t.id ? '#e94560' : '#f0f0f0', flexDirection: 'row', alignItems: 'center' }}>
               <Text style={{ fontSize: 16, marginRight: 10 }}>{t.label.split(' ')[0]}</Text>
               <View style={{ flex: 1 }}>
@@ -4968,39 +5045,40 @@ export default function App() {
               {cmpType === t.id && <Text style={{ color: '#e94560', fontSize: 18 }}>✓</Text>}
             </TouchableOpacity>
           ))}
+
           <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginTop: 14, marginBottom: 8 }}>Title (summary)</Text>
           <TextInput value={cmpTitle} onChangeText={setCmpTitle} placeholder="Complaint ka short title..."
             style={[s.input, { fontSize: 14 }]} maxLength={200} />
-          <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginTop: 14, marginBottom: 8 }}>Details</Text>
-          <TextInput value={cmpDesc} onChangeText={setCmpDesc} placeholder="Kya hua — puri detail mein batao (kam se kam 20 characters)..."
-            multiline style={[s.input, { height: 110, textAlignVertical: 'top', fontSize: 13 }]} maxLength={2000} />
-          {rideData?.ride_id && (
-            <View style={{ backgroundColor: '#e3f2fd', borderRadius: 10, padding: 12, marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Text style={{ fontSize: 16 }}>🔗</Text>
-              <Text style={{ fontSize: 13, color: '#1565c0', flex: 1 }}>Linked Ride: {rideData.pickup} → {rideData.drop}</Text>
-            </View>
-          )}
+          <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginTop: 14, marginBottom: 8 }}>Details (puri baat batao)</Text>
+          <TextInput value={cmpDesc} onChangeText={setCmpDesc} placeholder="Kya hua, kahan hua, kitne baje hua — puri detail mein batao (kam se kam 20 characters)..."
+            multiline style={[s.input, { height: 130, textAlignVertical: 'top', fontSize: 13 }]} maxLength={2000} />
+          <Text style={{ fontSize: 11, color: cmpDesc.length < 20 ? '#c62828' : '#4CAF50', textAlign: 'right', marginTop: 4 }}>{cmpDesc.length}/2000</Text>
+
           <TouchableOpacity
             onPress={async () => {
+              const linked = cmpLinkedRide || (rideData?.ride_id ? rideData : null);
+              if (!linked) return Alert.alert('Ride Required', 'Pehle ride select karo jis pe problem aayi');
               if (!cmpType) return Alert.alert('Issue Type', 'Complaint type select karo');
               if (!cmpTitle.trim()) return Alert.alert('Title', 'Title daalo');
               if (cmpDesc.trim().length < 20) return Alert.alert('Description', 'Kam se kam 20 characters likho');
               setCmpLoading(true);
-              try {
-                const token = await AsyncStorage.getItem('userToken');
-                const res = await fetch(`${API}/api/complaints`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                  body: JSON.stringify({ ride_id: rideData?.ride_id || null, complaint_type: cmpType, title: cmpTitle.trim(), description: cmpDesc.trim() }),
-                });
-                const data = await res.json();
-                if (data.complaint) {
-                  const listRes = await apiGet('/api/complaints');
-                  setComplaints(listRes.complaints || []);
-                  Alert.alert('✅ Submitted', 'Aapki complaint submit ho gayi. Hum 24-48 ghante mein review karenge.', [{ text: 'OK', onPress: () => setScreen('complaints') }]);
-                } else Alert.alert('Error', data.error || 'Submit failed');
-              } catch { Alert.alert('Error', 'Network error'); }
+              const token = await AsyncStorage.getItem('userToken');
+              if (!token) { Alert.alert('Error', 'Please login dobara karo'); setCmpLoading(false); return; }
+              const data = await apiAuthPost('/api/complaints', {
+                ride_id: linked.id || linked.ride_id || null,
+                complaint_type: cmpType,
+                title: cmpTitle.trim(),
+                description: cmpDesc.trim(),
+              }, token);
               setCmpLoading(false);
+              if (data.complaint) {
+                const listData = await apiAuthGet('/api/complaints', token);
+                setComplaints(listData.complaints || []);
+                setCmpLinkedRide(null); setCmpType(''); setCmpTitle(''); setCmpDesc('');
+                Alert.alert('✅ Complaint Submit Ho Gayi', 'Sppero team 24-48 ghante mein review karegi. Complaint ID: ' + data.complaint.id.slice(0, 8).toUpperCase(), [{ text: 'Track Karo', onPress: () => setScreen('complaints') }]);
+              } else {
+                Alert.alert('❌ Error', data.error || data.message || 'Submit fail hua — dobara try karo');
+              }
             }}
             style={[s.btn, { marginTop: 20, opacity: cmpLoading ? 0.6 : 1 }]}
             disabled={cmpLoading}>
@@ -5084,13 +5162,9 @@ export default function App() {
                 if (!cmpMsg.trim()) return;
                 try {
                   const token = await AsyncStorage.getItem('userToken');
-                  await fetch(`${API}/api/complaints/${c.id}/messages`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                    body: JSON.stringify({ message: cmpMsg.trim() }),
-                  });
+                  await apiAuthPost(`/api/complaints/${c.id}/messages`, { message: cmpMsg.trim() }, token);
                   setCmpMsg('');
-                  const r = await apiGet(`/api/complaints/${c.id}`);
+                  const r = await apiAuthGet(`/api/complaints/${c.id}`, token);
                   setCmpDetail(r);
                 } catch { Alert.alert('Error', 'Message nahi bheja'); }
               }} style={[s.btn, { marginTop: 10, paddingVertical: 12 }]}>
@@ -5122,8 +5196,8 @@ export default function App() {
               if (!reason || reason.length < 20) { Alert.alert('Too short', 'Reason 20+ characters ka likho'); return; }
               try {
                 const token = await AsyncStorage.getItem('userToken');
-                await fetch(`${API}/api/complaints/${c.id}/appeal`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ reason }) });
-                const r = await apiGet(`/api/complaints/${c.id}`);
+                await apiAuthPost(`/api/complaints/${c.id}/appeal`, { reason }, token);
+                const r = await apiAuthGet(`/api/complaints/${c.id}`, token);
                 setCmpDetail(r);
                 Alert.alert('Appeal Submit', 'Dobara review hoga');
               } catch {}
@@ -5138,8 +5212,8 @@ export default function App() {
               { text: 'Withdraw', style: 'destructive', onPress: async () => {
                 try {
                   const token = await AsyncStorage.getItem('userToken');
-                  await fetch(`${API}/api/complaints/${c.id}/withdraw`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
-                  const listRes = await apiGet('/api/complaints');
+                  await apiAuthPost(`/api/complaints/${c.id}/withdraw`, {}, token);
+                  const listRes = await apiAuthGet('/api/complaints', token);
                   setComplaints(listRes.complaints || []);
                   setScreen('complaints');
                 } catch {}

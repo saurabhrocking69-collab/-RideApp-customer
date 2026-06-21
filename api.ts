@@ -51,6 +51,42 @@ export const apiPost = async (path: string, body: any, retries = 1): Promise<any
   return { _error: true, message: 'Network error — dobara try karo' };
 };
 
+// ─── Auth-aware helpers (include Bearer token from AsyncStorage) ───
+// Use these for JWT-protected endpoints like /api/complaints, /api/wallet, etc.
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+export const apiAuthGet = async (path: string, token: string, retries = 2): Promise<any> => {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const res = await fetchWithTimeout(`${API}${path}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }, 12000);
+      return await res.json();
+    } catch (err) {
+      if (i === retries) return { _error: true, message: 'Network error' };
+      await new Promise(r => setTimeout(r, 1000));
+    }
+  }
+  return { _error: true, message: 'Network error' };
+};
+
+export const apiAuthPost = async (path: string, body: any, token: string, retries = 2): Promise<any> => {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const res = await fetchWithTimeout(`${API}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      }, 12000);
+      return await res.json();
+    } catch (err) {
+      if (i === retries) return { _error: true, message: 'Network error — dobara try karo' };
+      await new Promise(r => setTimeout(r, 1000));
+    }
+  }
+  return { _error: true, message: 'Network error — dobara try karo' };
+};
+
 // ─── External API (Google Maps etc) with timeout ───
 export const externalGet = async (url: string): Promise<any> => {
   try {
