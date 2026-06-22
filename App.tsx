@@ -808,6 +808,7 @@ export default function App() {
   const [hourlyStep, setHourlyStep]     = useState<'book'|'waiting'|'active'|'done'>('book');
   const [hourlyBooking, setHourlyBooking] = useState<any>(null);
   const activeHourlyIdRef               = useRef<string|number|null>(null);
+  const activeRideIdRef                 = useRef<string|number|null>(null);
   const [hPackageHours, setHPackageHours] = useState(4);
   const [hVehicle, setHVehicle]         = useState('auto');
   const [hPickup, setHPickup]           = useState('');
@@ -1079,7 +1080,7 @@ export default function App() {
         }
       } catch (_e) {}
       busy = false;
-    }, 6000); // Socket handles real-time; polling is fallback
+    }, 3500); // Socket handles real-time; polling is fallback
     return () => { stopped = true; clearInterval(iv); };
   }, [rideData?.ride_id]);
 
@@ -1820,108 +1821,113 @@ export default function App() {
   };
 
   const connectSocket = (userPhone: string) => {
-    // Disconnect dead/old socket before creating new one — prevents listener leak
     if (socketRef.current) {
-      if (socketRef.current.connected) return;
+      if (socketRef.current.connected) {
+        // Already live — just re-join rooms in case we missed them
+        if (activeHourlyIdRef.current) socketRef.current.emit('joinHourly', { bookingId: activeHourlyIdRef.current });
+        if (activeRideIdRef.current) socketRef.current.emit('joinRide', { rideId: activeRideIdRef.current });
+        return;
+      }
       socketRef.current.disconnect();
     }
     const s = io(API, { transports: ['polling', 'websocket'], reconnection: true, reconnectionAttempts: Infinity, reconnectionDelay: 2000, reconnectionDelayMax: 10000, timeout: 10000 });
+
+    // Re-join rooms on every connect/reconnect — registered ONCE, fires each time socket connects
     s.on('connect', () => {
-      // Re-join hourly room on reconnect so we don't miss events
       if (activeHourlyIdRef.current) s.emit('joinHourly', { bookingId: activeHourlyIdRef.current });
-      s.on('hourlyExtensionResult', (data: any) => {
-        if (data.accepted) {
-          setHExtendResult('accepted');
-          setHourlyBooking((p: any) => p ? { ...p, extend_requested_hours: null, package_hours: data.new_hours ?? p.package_hours, km_included: data.new_km ?? p.km_included, base_fare: data.new_fare ?? p.base_fare } : p);
-        } else {
-          setHExtendResult('rejected');
-          setHourlyBooking((p: any) => p ? { ...p, extend_requested_hours: null } : p);
-          loadWallet(userPhone);
-        }
-        hExtendStepRef.current = 'idle';
-        setHExtendStep('idle');
-        setTimeout(() => setHExtendResult(null), 6000);
-      });
-      s.on('hourlyTripCompleted', (data: any) => {
-        setHourlyBooking((p: any) => p ? { ...p, status: 'completed', driver_earning: data.driver_earning } : p);
-        setHourlyStep('done');
-      });
-      s.on('hourlyChatMessage', (msg: any) => {
-        setHChatMsgs((prev: any[]) => [...prev, msg]);
-        setHChatUnread((prev: number) => prev + 1);
-      });
-      s.on('chatMessage', (msg: any) => {
-        setChatMsgs((prev: any[]) => [...prev, msg]);
-        setUnreadChat((prev: number) => prev + 1);
-      });
-      // Live ride status updates via socket
-      s.on('rideUpdate', (data: any) => {
-        const st = data.status;
-        if (st === 'matched' || st === 'arrived') {
-          setAltSuggest(null); // clear suggestion when driver found
-          setRideData((p: any) => p ? {
-            ...p,
-            startOtp: data.start_otp || p?.startOtp,
-            ...(data.driver ? { driver: data.driver } : {}),
-          } : p);
-          // Sync to Zustand store so live tab status updates too
-          useRideStore.setState({ rideStatus: st, startOtp: data.start_otp || '' });
-        }
-        if (st === 'searching') {
-          // Vehicle switched — update displayed fare/type
-          setRideData((p: any) => p ? { ...p, ...(data.new_fare ? { fare: data.new_fare } : {}), ...(data.new_vehicle_type ? { vehicle_type: data.new_vehicle_type } : {}) } : p);
-          useRideStore.setState({ rideStatus: 'requested' });
-        }
-        if (st === 'started') { setScreen('inride'); useRideStore.setState({ rideStatus: 'started', startOtp: '' }); }
-        if (st === 'completed') {
-          AsyncStorage.removeItem('activeStdRideId').catch(() => {});
-          useRideStore.setState({ rideStatus: 'completed' });
-          setScreen((cur: Screen) => (cur === 'payment' || cur === 'postride') ? cur : 'payment');
-          loadWallet(phoneRef.current || userPhone);
-        }
-        if (st === 'buddy_declined') {
+      if (activeRideIdRef.current) s.emit('joinRide', { rideId: activeRideIdRef.current });
+    });
+
+    // All event listeners registered ONCE on socket instance — never inside connect callback
+    s.on('hourlyExtensionResult', (data: any) => {
+      if (data.accepted) {
+        setHExtendResult('accepted');
+        setHourlyBooking((p: any) => p ? { ...p, extend_requested_hours: null, package_hours: data.new_hours ?? p.package_hours, km_included: data.new_km ?? p.km_included, base_fare: data.new_fare ?? p.base_fare } : p);
+      } else {
+        setHExtendResult('rejected');
+        setHourlyBooking((p: any) => p ? { ...p, extend_requested_hours: null } : p);
+        loadWallet(userPhone);
+      }
+      hExtendStepRef.current = 'idle';
+      setHExtendStep('idle');
+      setTimeout(() => setHExtendResult(null), 6000);
+    });
+    s.on('hourlyTripCompleted', (data: any) => {
+      setHourlyBooking((p: any) => p ? { ...p, status: 'completed', driver_earning: data.driver_earning } : p);
+      setHourlyStep('done');
+    });
+    s.on('hourlyChatMessage', (msg: any) => {
+      setHChatMsgs((prev: any[]) => [...prev, msg]);
+      setHChatUnread((prev: number) => prev + 1);
+    });
+    s.on('chatMessage', (msg: any) => {
+      setChatMsgs((prev: any[]) => [...prev, msg]);
+      setUnreadChat((prev: number) => prev + 1);
+    });
+    s.on('rideUpdate', (data: any) => {
+      const st = data.status;
+      if (st === 'matched' || st === 'arrived') {
+        setAltSuggest(null);
+        setRideData((p: any) => p ? {
+          ...p,
+          startOtp: data.start_otp || p?.startOtp,
+          ...(data.driver ? { driver: data.driver } : {}),
+        } : p);
+        useRideStore.setState({ rideStatus: st, startOtp: data.start_otp || '' });
+      }
+      if (st === 'searching') {
+        setRideData((p: any) => p ? { ...p, ...(data.new_fare ? { fare: data.new_fare } : {}), ...(data.new_vehicle_type ? { vehicle_type: data.new_vehicle_type } : {}) } : p);
+        useRideStore.setState({ rideStatus: 'requested' });
+      }
+      if (st === 'started') { setScreen('inride'); useRideStore.setState({ rideStatus: 'started', startOtp: '' }); }
+      if (st === 'completed') {
+        AsyncStorage.removeItem('activeStdRideId').catch(() => {});
+        useRideStore.setState({ rideStatus: 'completed' });
+        setScreen((cur: Screen) => (cur === 'payment' || cur === 'postride') ? cur : 'payment');
+        loadWallet(phoneRef.current || userPhone);
+      }
+      if (st === 'buddy_declined') {
+        buddyWaitingRef.current = false;
+        setBuddyWaiting(false);
+        setBuddyBookMsg('⚠️ Buddy ne abhi accept nahi kiya. Ab doosre drivers dhundh rahe hain...');
+      }
+      if (st === 'cancelled') {
+        AsyncStorage.removeItem('activeStdRideId').catch(() => {});
+        ride.clearRide();
+        setRideData(null); setAltSuggest(null); setDriverLoc(null);
+        setPickup(''); setDrop(''); setPickupCoords(null); setDropCoords(null); setEta('');
+        buddyWaitingRef.current = false;
+        setBuddyWaiting(false); setBuddyBookMsg('');
+        setScreen('home');
+        setResult('❌ Ride cancel ho gayi');
+      }
+      if (st === 'no_driver') {
+        AsyncStorage.removeItem('activeStdRideId').catch(() => {});
+        ride.clearRide();
+        setRideData(null); setAltSuggest(null); setDriverLoc(null);
+        setPickup(''); setDrop(''); setPickupCoords(null); setDropCoords(null); setEta('');
+        if (buddyWaitingRef.current) {
           buddyWaitingRef.current = false;
           setBuddyWaiting(false);
-          setBuddyBookMsg('⚠️ Buddy ne abhi accept nahi kiya. Ab doosre drivers dhundh rahe hain...');
-        }
-        if (st === 'cancelled') {
-          AsyncStorage.removeItem('activeStdRideId').catch(() => {});
-          ride.clearRide();
-          setRideData(null); setAltSuggest(null); setDriverLoc(null);
-          setPickup(''); setDrop(''); setPickupCoords(null); setDropCoords(null); setEta('');
-          buddyWaitingRef.current = false;
+          setBuddyBookMsg('⏰ Driver ne 25 seconds mein respond nahi kiya — naya ride try karo');
+        } else {
           setBuddyWaiting(false); setBuddyBookMsg('');
           setScreen('home');
-          setResult('❌ Ride cancel ho gayi');
+          setResult('😔 Abhi driver available nahi — thodi der baad try karo');
         }
-        if (st === 'no_driver') {
-          AsyncStorage.removeItem('activeStdRideId').catch(() => {});
-          ride.clearRide();
-          setRideData(null); setAltSuggest(null); setDriverLoc(null);
-          setPickup(''); setDrop(''); setPickupCoords(null); setDropCoords(null); setEta('');
-          if (buddyWaitingRef.current) {
-            // Buddy direct ride timed out — keep modal open with specific message
-            buddyWaitingRef.current = false;
-            setBuddyWaiting(false);
-            setBuddyBookMsg('⏰ Driver ne 25 seconds mein respond nahi kiya — naya ride try karo');
-          } else {
-            setBuddyWaiting(false); setBuddyBookMsg('');
-            setScreen('home');
-            setResult('😔 Abhi driver available nahi — thodi der baad try karo');
-          }
-        }
-      });
-      // Alternative vehicle suggestion from backend
-      s.on('suggestAlternative', (data: any) => {
-        if (data.alternatives?.length > 0) {
-          setAltSuggest({ alternatives: data.alternatives, current_type: data.current_type });
-        }
-      });
+      }
     });
+    s.on('suggestAlternative', (data: any) => {
+      if (data.alternatives?.length > 0) {
+        setAltSuggest({ alternatives: data.alternatives, current_type: data.current_type });
+      }
+    });
+
     socketRef.current = s;
   };
 
   const joinRideSocket = (rideId: string | number) => {
+    activeRideIdRef.current = rideId;
     socketRef.current?.emit('joinRide', { rideId });
   };
 
