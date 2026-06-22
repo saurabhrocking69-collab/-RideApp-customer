@@ -4325,7 +4325,7 @@ export default function App() {
                   style={{ flex: 1, fontSize: 14, color: '#1a1a2e', fontWeight: '500', paddingVertical: 7 }}
                   placeholder="Pickup location..." placeholderTextColor="#bbb"
                   value={pickup}
-                  onChangeText={(t) => { setPickup(t); searchPlaces(t, 'pickup'); if (!t) { setPickupCoords(null); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; } }}
+                  onChangeText={(t) => { setPickup(t); searchPlaces(t, 'pickup'); if (pickupCoords || !t) { setPickupCoords(null); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; } }}
                   returnKeyType="next"
                 />
                 {pickup ? (
@@ -4362,7 +4362,7 @@ export default function App() {
                   style={{ flex: 1, fontSize: 14, color: '#1a1a2e', fontWeight: '500', paddingVertical: 7 }}
                   placeholder="Drop location..." placeholderTextColor="#bbb"
                   value={drop}
-                  onChangeText={(t) => { setDrop(t); searchPlaces(t, 'drop'); if (dropCoords) { setDropCoords(null); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; } }}
+                  onChangeText={(t) => { setDrop(t); searchPlaces(t, 'drop'); if (dropCoords || !t) { setDropCoords(null); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; } }}
                   returnKeyType="done"
                 />
                 {drop ? (
