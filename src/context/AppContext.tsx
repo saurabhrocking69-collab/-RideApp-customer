@@ -436,6 +436,55 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // EFFECTS
   // ═══════════════════════════════════════════════════════════════════════
 
+  // Splash init + auto-login
+  useEffect(() => {
+    Animated.sequence([
+      Animated.parallel([
+        Animated.spring(splashLogo, { toValue: 1, tension: 50, friction: 7, useNativeDriver: true }),
+        Animated.spring(splashScale, { toValue: 1, tension: 50, friction: 7, useNativeDriver: true }),
+      ]),
+      Animated.timing(splashTag, { toValue: 1, duration: 400, useNativeDriver: true }),
+    ]).start();
+
+    setTimeout(async () => {
+      const savedPhone = await AsyncStorage.getItem('userPhone').catch(() => null);
+      const savedName  = await AsyncStorage.getItem('userName').catch(() => null);
+
+      Animated.timing(splashFade, { toValue: 0, duration: 300, useNativeDriver: true }).start(async () => {
+        if (savedPhone) {
+          setPhone(savedPhone);
+          phoneRef.current = savedPhone;
+          if (savedName) setUserName(savedName);
+
+          const activeRideId = await AsyncStorage.getItem('activeStdRideId').catch(() => null);
+          if (activeRideId) {
+            try {
+              const r = await fetch(`${API}/api/rides/${activeRideId}`);
+              const d = await r.json();
+              const st = d.ride?.status || d.status;
+              if (st === 'searching' || st === 'matched' || st === 'arrived') {
+                setRideData(d.ride || d); setScreen('matching');
+              } else if (st === 'started') {
+                setRideData(d.ride || d); setScreen('inride');
+              } else if (st === 'completed' || st === 'payment') {
+                setScreen('payment');
+              } else {
+                setScreen('home');
+              }
+            } catch { setScreen('home'); }
+          } else {
+            setScreen('home');
+          }
+          loadHistory(savedPhone); loadWallet(savedPhone);
+          loadOffers(); loadHourlyPackages();
+          connectSocket(savedPhone); registerFCM(savedPhone);
+        } else {
+          setScreen('login');
+        }
+      });
+    }, 2000);
+  }, []);
+
   // Notifications setup
   useEffect(() => {
     if (Platform.OS === 'android') {
