@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -42,6 +43,22 @@ export function HourlyScreen() {
   } = useApp();
 
   const pkg = hourlyPackages[hVehicle]?.[hPackageHours];
+
+  // Poll booking status every 3s while waiting for driver (socket backup)
+  useEffect(() => {
+    if (hourlyStep !== 'waiting' || !hourlyBooking?.id || hourlyBooking?.status === 'matched') return;
+    const poll = async () => {
+      try {
+        const d = await apiGet(`/api/hourly/status/${hourlyBooking.id}`);
+        if (d.booking?.status === 'matched') {
+          setHourlyBooking((p: any) => ({ ...p, status: 'matched', driver_phone: d.booking.driver_phone }));
+        }
+      } catch (_e) {}
+    };
+    poll();
+    const iv = setInterval(poll, 3000);
+    return () => clearInterval(iv);
+  }, [hourlyStep, hourlyBooking?.id, hourlyBooking?.status]);
 
   const useCurrentLocationPickup = async () => {
     try {

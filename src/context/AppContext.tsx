@@ -732,6 +732,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       hExtendStepRef.current = 'idle'; setHExtendStep('idle');
       setTimeout(() => setHExtendResult(null), 6000);
     });
+    s.on('hourlyMatched', (data: any) => {
+      setHourlyBooking((p: any) => p ? { ...p, status: 'matched', driver_phone: data.driver_phone } : p);
+    });
+    s.on('hourlyDriverCancelled', () => {
+      setHourlyBooking((p: any) => p ? { ...p, status: 'pending', driver_phone: null } : p);
+    });
     s.on('hourlyTripCompleted', (data: any) => {
       setHourlyBooking((p: any) => p ? { ...p, status: 'completed', driver_earning: data.driver_earning } : p);
       setHourlyStep('done');

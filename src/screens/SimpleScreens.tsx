@@ -155,7 +155,7 @@ export function ChatScreen() {
   return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
       <View style={s.topBar}>
-        <TouchableOpacity onPress={() => setScreen('matching')} style={s.backBtn}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
+        <TouchableOpacity onPress={() => setScreen(rideData?.status === 'started' ? 'inride' : 'matching')} style={s.backBtn}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
         <Text style={s.topTitle}>💬 {rideData?.driver?.name || 'Driver'}</Text>
         <TouchableOpacity onPress={callDriver} style={{ width: 36, alignItems: 'flex-end' }}><Ionicons name="call" size={20} color="#fff" /></TouchableOpacity>
       </View>
