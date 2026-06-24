@@ -1,4 +1,4 @@
-import { Animated, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Animated, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useApp } from '../context/AppContext';
 import { Bouncy, Confetti, FadeIn, ScreenIn, TripSteps } from '../components/ui';
@@ -37,7 +37,7 @@ export function PostRideScreen() {
   return (
     <ScreenIn style={s.screen}>
       <Confetti />
-      <View style={{ flex: 1 }}>
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
         <View style={[s.hero, { paddingTop: 44 }]}>
           <Text style={{ fontSize: 50 }}>{paymentDone ? '✅' : '🎉'}</Text>
           <Text style={s.heroTitle}>{paymentDone ? 'Payment Done!' : 'Pahunch Gaye!'}</Text>
@@ -154,8 +154,7 @@ export function PostRideScreen() {
             <Text style={s.btnTxt}>Done 🏠 Home Jao</Text>
           </Bouncy>
         </View>
-        <View style={{ height: 24 }} />
-      </View>
+      </ScrollView>
     </ScreenIn>
   );
 }
