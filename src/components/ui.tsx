@@ -5,7 +5,7 @@ import { WebView } from 'react-native-webview';
 import { MAPS_KEY } from '../constants';
 
 // ─── RideVehicleIcon ─────────────────────────────────────────────────────────
-export const RideVehicleIcon = ({ id, size = 26, color = '#1a1a2e' }: { id: string; size?: number; color?: string }) => {
+export const RideVehicleIcon = ({ id, size = 26, color = '#fff' }: { id: string; size?: number; color?: string }) => {
   if (id === 'bike' || id === 'green_bike') return <MaterialCommunityIcons name="motorbike" size={size} color={id === 'green_bike' ? '#2e7d32' : color} />;
   if (id === 'auto' || id === 'eriksha') return <MaterialCommunityIcons name="rickshaw" size={size} color={id === 'eriksha' ? '#4CAF50' : color} />;
   if (id === 'electric_auto') return <Ionicons name="leaf" size={size} color="#2e7d32" />;
@@ -63,7 +63,7 @@ export const SuccessBurst = () => {
           {['🎉','✨','⭐','🎊'][i % 4]}
         </Animated.Text>
       ))}
-      <Animated.View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#4CAF50', alignItems: 'center', justifyContent: 'center', transform: [{ scale }], elevation: 8 }}>
+      <Animated.View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#00D9A0', alignItems: 'center', justifyContent: 'center', transform: [{ scale }], elevation: 8, shadowColor: '#00D9A0', shadowOpacity: 0.6, shadowRadius: 14 }}>
         <Text style={{ fontSize: 32, color: '#fff' }}>✓</Text>
       </Animated.View>
     </View>
@@ -93,12 +93,12 @@ export const RadarView = () => {
     <View style={{ width: 120, height: 120, alignItems: 'center', justifyContent: 'center' }}>
       {rings.map((r, i) => (
         <Animated.View key={i} style={{
-          position: 'absolute', width: 120, height: 120, borderRadius: 60, borderWidth: 2, borderColor: '#e94560',
-          opacity: r.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.8, 0.4, 0] }),
+          position: 'absolute', width: 120, height: 120, borderRadius: 60, borderWidth: 2, borderColor: '#FF2D78',
+          opacity: r.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.9, 0.45, 0] }),
           transform: [{ scale: r.interpolate({ inputRange: [0, 1], outputRange: [0.5, 2] }) }],
         }} />
       ))}
-      <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: '#e94560', alignItems: 'center', justifyContent: 'center', elevation: 6 }}>
+      <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: '#FF2D78', alignItems: 'center', justifyContent: 'center', elevation: 8, shadowColor: '#FF2D78', shadowOpacity: 0.6, shadowRadius: 12 }}>
         <Text style={{ fontSize: 28 }}>🚖</Text>
       </View>
     </View>
@@ -365,8 +365,8 @@ export const EmptyAnim = ({ icon, title, sub }: any) => {
   return (
     <Animated.View style={{ alignItems: 'center', marginTop: 60, paddingHorizontal: 30, opacity: fade }}>
       <Animated.Text style={{ fontSize: 72, transform: [{ translateY: bounce }] }}>{icon}</Animated.Text>
-      <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1a1a2e', marginTop: 22 }}>{title}</Text>
-      {sub ? <Text style={{ fontSize: 13, color: '#999', marginTop: 8, textAlign: 'center', lineHeight: 20 }}>{sub}</Text> : null}
+      <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff', marginTop: 22 }}>{title}</Text>
+      {sub ? <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 8, textAlign: 'center', lineHeight: 20 }}>{sub}</Text> : null}
     </Animated.View>
   );
 };
@@ -460,21 +460,24 @@ export const TripSteps = ({ step }: { step: 0 | 1 | 2 | 3 }) => {
   const steps = [{ icon: '🔍', label: 'Booking' }, { icon: '🚗', label: 'Driver' }, { icon: '🛣️', label: 'Ride' }, { icon: '✅', label: 'Done' }];
   return (
     <View style={{ paddingHorizontal: 6, paddingBottom: 14, paddingTop: 4 }}>
-      <View style={{ height: 4, backgroundColor: '#f0f0f0', borderRadius: 2, marginHorizontal: 14, marginBottom: 10, overflow: 'hidden' }}>
-        <Animated.View style={{ height: 4, backgroundColor: '#e94560', borderRadius: 2, width: anim.interpolate({ inputRange: [0, 3], outputRange: ['0%', '100%'] }) }} />
+      <View style={{ height: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 2, marginHorizontal: 14, marginBottom: 10, overflow: 'hidden' }}>
+        <Animated.View style={{ height: 4, backgroundColor: '#FF2D78', borderRadius: 2, width: anim.interpolate({ inputRange: [0, 3], outputRange: ['0%', '100%'] }), shadowColor: '#FF2D78', shadowOpacity: 0.8, shadowRadius: 4 }} />
       </View>
       <View style={{ flexDirection: 'row' }}>
         {steps.map((s, i) => (
           <View key={i} style={{ flex: 1, alignItems: 'center' }}>
             <Animated.View style={{
               width: 30, height: 30, borderRadius: 15,
-              backgroundColor: i <= step ? '#e94560' : '#efefef',
+              backgroundColor: i <= step ? '#FF2D78' : 'rgba(255,255,255,0.1)',
               alignItems: 'center', justifyContent: 'center',
-              transform: [{ scale: i === step ? 1.2 : 1 }], elevation: i === step ? 4 : 0,
+              transform: [{ scale: i === step ? 1.2 : 1 }],
+              elevation: i === step ? 6 : 0,
+              shadowColor: '#FF2D78', shadowOpacity: i === step ? 0.6 : 0, shadowRadius: 8,
+              borderWidth: i > step ? 1 : 0, borderColor: 'rgba(255,255,255,0.15)',
             }}>
               <Text style={{ fontSize: 13 }}>{i <= step ? s.icon : '·'}</Text>
             </Animated.View>
-            <Text style={{ fontSize: 9, marginTop: 4, color: i <= step ? '#e94560' : '#bbb', fontWeight: i === step ? 'bold' : 'normal' }}>{s.label}</Text>
+            <Text style={{ fontSize: 9, marginTop: 4, color: i <= step ? '#FF2D78' : 'rgba(255,255,255,0.3)', fontWeight: i === step ? '800' : 'normal' }}>{s.label}</Text>
           </View>
         ))}
       </View>
@@ -495,3 +498,99 @@ export const CountUp = ({ to, prefix = '', style }: any) => {
   }, [to]);
   return <Text style={style}>{prefix}{display}</Text>;
 };
+
+// ─── DotBG — subtle animated dot grid background ─────────────────────────────
+export const DotBG = ({ color = 'rgba(255,255,255,0.055)', spacing = 32, size = 3 }: any) => {
+  const cols = 13;
+  const rows = 28;
+  const dots: { x: number; y: number; key: number }[] = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      // Offset alternating rows for a hex-grid feel
+      const xOff = r % 2 === 0 ? 0 : spacing / 2;
+      dots.push({ x: c * spacing + xOff, y: r * spacing, key: r * cols + c });
+    }
+  }
+  return (
+    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' }} pointerEvents="none">
+      {dots.map(d => (
+        <View key={d.key} style={{ position: 'absolute', left: d.x, top: d.y, width: size, height: size, borderRadius: size / 2, backgroundColor: color }} />
+      ))}
+    </View>
+  );
+};
+
+// ─── GlowPulse — pulsing glow dot ─────────────────────────────────────────────
+export const GlowPulse = ({ color = '#FF2D78', size = 12 }: any) => {
+  const scale = useRef(new Animated.Value(1)).current;
+  const opacity = useRef(new Animated.Value(0.6)).current;
+  useEffect(() => {
+    Animated.loop(Animated.parallel([
+      Animated.sequence([
+        Animated.timing(scale, { toValue: 1.8, duration: 700, useNativeDriver: true }),
+        Animated.timing(scale, { toValue: 1, duration: 700, useNativeDriver: true }),
+      ]),
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 0.15, duration: 700, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.6, duration: 700, useNativeDriver: true }),
+      ]),
+    ])).start();
+  }, []);
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <Animated.View style={{ position: 'absolute', width: size, height: size, borderRadius: size / 2, backgroundColor: color, opacity, transform: [{ scale }] }} />
+      <View style={{ width: size * 0.5, height: size * 0.5, borderRadius: size / 4, backgroundColor: color }} />
+    </View>
+  );
+};
+
+// ─── ShineCard — card with sweeping shine animation ───────────────────────────
+export const ShineCard = ({ children, style }: any) => {
+  const shine = useRef(new Animated.Value(-100)).current;
+  useEffect(() => {
+    const loop = () => {
+      shine.setValue(-100);
+      Animated.sequence([
+        Animated.delay(2500),
+        Animated.timing(shine, { toValue: 500, duration: 900, useNativeDriver: true }),
+      ]).start(() => loop());
+    };
+    loop();
+  }, []);
+  return (
+    <View style={[{ overflow: 'hidden' }, style]}>
+      {children}
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: 'absolute', top: 0, bottom: 0, width: 70,
+          backgroundColor: 'rgba(255,255,255,0.07)',
+          transform: [{ translateX: shine }, { skewX: '-20deg' }],
+        }}
+      />
+    </View>
+  );
+};
+
+// ─── GradientBar — horizontal accent bar with glowing dot ─────────────────────
+export const GradientBar = ({ colors = ['#FF2D78', '#FFD700'], height = 3, style }: any) => {
+  const dot = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(dot, { toValue: 1, duration: 2000, useNativeDriver: false })
+    ).start();
+  }, []);
+  return (
+    <View style={[{ height, borderRadius: height / 2, overflow: 'hidden', flexDirection: 'row' }, style]}>
+      <View style={{ flex: 1, backgroundColor: colors[0], borderRadius: height / 2 }} />
+      <View style={{ flex: 1, backgroundColor: colors[1] || colors[0], borderRadius: height / 2 }} />
+    </View>
+  );
+};
+
+// ─── PinkBadge — colored label chip ──────────────────────────────────────────
+export const PinkBadge = ({ label, color = '#FF2D78' }: any) => (
+  <View style={{ backgroundColor: color + '22', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start', borderWidth: 1, borderColor: color + '55' }}>
+    <Text style={{ color, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>{label}</Text>
+  </View>
+);

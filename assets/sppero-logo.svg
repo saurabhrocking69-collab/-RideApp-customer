@@ -1,0 +1,156 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Background gradient -->
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0D0D26"/>
+      <stop offset="100%" stop-color="#08081A"/>
+    </linearGradient>
+
+    <!-- S tricolor gradient: Pink → Yellow → Green -->
+    <linearGradient id="sGrad" x1="360" y1="125" x2="148" y2="378" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#FF2D78"/>
+      <stop offset="48%"  stop-color="#FFD700"/>
+      <stop offset="100%" stop-color="#00D9A0"/>
+    </linearGradient>
+
+    <!-- Glow version of S (blurred, for bloom) -->
+    <linearGradient id="sGlow" x1="360" y1="125" x2="148" y2="378" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#FF2D78" stop-opacity="0.7"/>
+      <stop offset="48%"  stop-color="#FFD700" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#00D9A0" stop-opacity="0.7"/>
+    </linearGradient>
+
+    <!-- Dot glows -->
+    <radialGradient id="pinkBlob" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#FF2D78" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#FF2D78" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="yellowBlob" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#FFD700" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#FFD700" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="greenBlob" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#00D9A0" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#00D9A0" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Bloom filter for S -->
+    <filter id="bloom" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="14" result="b1"/>
+      <feGaussianBlur stdDeviation="6"  result="b2" in="SourceGraphic"/>
+      <feMerge>
+        <feMergeNode in="b1"/>
+        <feMergeNode in="b2"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Soft glow for terminal dots -->
+    <filter id="dotBloom" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Clip to rounded rect -->
+    <clipPath id="iconClip">
+      <rect width="512" height="512" rx="114"/>
+    </clipPath>
+  </defs>
+
+  <!-- ── Background ─────────────────────────────── -->
+  <rect width="512" height="512" rx="114" fill="url(#bgGrad)"/>
+
+  <g clip-path="url(#iconClip)">
+
+    <!-- ── Dot grid texture (hex pattern, subtle) ─ -->
+    <!-- Row 1 -->
+    <circle cx="80"  cy="72"  r="2" fill="rgba(255,255,255,0.045)"/>
+    <circle cx="144" cy="72"  r="2" fill="rgba(255,255,255,0.045)"/>
+    <circle cx="208" cy="72"  r="2" fill="rgba(255,255,255,0.045)"/>
+    <circle cx="272" cy="72"  r="2" fill="rgba(255,255,255,0.045)"/>
+    <circle cx="336" cy="72"  r="2" fill="rgba(255,255,255,0.045)"/>
+    <circle cx="400" cy="72"  r="2" fill="rgba(255,255,255,0.045)"/>
+    <circle cx="464" cy="72"  r="2" fill="rgba(255,255,255,0.045)"/>
+    <!-- Row 2 (offset) -->
+    <circle cx="112" cy="104" r="2" fill="rgba(255,255,255,0.035)"/>
+    <circle cx="176" cy="104" r="2" fill="rgba(255,255,255,0.035)"/>
+    <circle cx="240" cy="104" r="2" fill="rgba(255,255,255,0.035)"/>
+    <circle cx="304" cy="104" r="2" fill="rgba(255,255,255,0.035)"/>
+    <circle cx="368" cy="104" r="2" fill="rgba(255,255,255,0.035)"/>
+    <circle cx="432" cy="104" r="2" fill="rgba(255,255,255,0.035)"/>
+    <!-- Row 3 -->
+    <circle cx="80"  cy="136" r="2" fill="rgba(255,255,255,0.03)"/>
+    <circle cx="144" cy="136" r="2" fill="rgba(255,255,255,0.03)"/>
+    <!-- bottom rows -->
+    <circle cx="112" cy="408" r="2" fill="rgba(255,255,255,0.035)"/>
+    <circle cx="176" cy="408" r="2" fill="rgba(255,255,255,0.035)"/>
+    <circle cx="240" cy="408" r="2" fill="rgba(255,255,255,0.035)"/>
+    <circle cx="304" cy="408" r="2" fill="rgba(255,255,255,0.035)"/>
+    <circle cx="368" cy="408" r="2" fill="rgba(255,255,255,0.035)"/>
+    <circle cx="80"  cy="440" r="2" fill="rgba(255,255,255,0.025)"/>
+    <circle cx="144" cy="440" r="2" fill="rgba(255,255,255,0.025)"/>
+    <circle cx="208" cy="440" r="2" fill="rgba(255,255,255,0.025)"/>
+    <circle cx="272" cy="440" r="2" fill="rgba(255,255,255,0.025)"/>
+    <circle cx="336" cy="440" r="2" fill="rgba(255,255,255,0.025)"/>
+    <circle cx="400" cy="440" r="2" fill="rgba(255,255,255,0.025)"/>
+
+    <!-- ── Ambient glow blobs ───────────────────── -->
+    <!-- Pink glow behind upper S -->
+    <ellipse cx="310" cy="190" rx="155" ry="130" fill="url(#pinkBlob)"/>
+    <!-- Yellow glow in center -->
+    <ellipse cx="256" cy="260" rx="110" ry="90"  fill="url(#yellowBlob)"/>
+    <!-- Green glow behind lower S -->
+    <ellipse cx="200" cy="330" rx="140" ry="115" fill="url(#greenBlob)"/>
+
+    <!-- ── S glow layer (bloom backdrop) ──────── -->
+    <path d="M 362,125 C 364,68 162,64 150,143 C 138,222 358,270 349,340 C 340,410 152,422 146,378"
+          stroke="url(#sGlow)" stroke-width="80" fill="none"
+          stroke-linecap="round" opacity="0.55"
+          filter="url(#bloom)"/>
+
+    <!-- ── S main stroke ────────────────────────── -->
+    <path d="M 362,125 C 364,68 162,64 150,143 C 138,222 358,270 349,340 C 340,410 152,422 146,378"
+          stroke="url(#sGrad)" stroke-width="58" fill="none"
+          stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- ── S inner glass shine (white highlight) ── -->
+    <path d="M 362,125 C 364,68 162,64 150,143 C 138,222 358,270 349,340 C 340,410 152,422 146,378"
+          stroke="rgba(255,255,255,0.20)" stroke-width="16" fill="none"
+          stroke-linecap="round" stroke-dasharray="0"/>
+
+    <!-- ── Terminal dot — yellow (top of S) ─────── -->
+    <!-- Outer glow -->
+    <circle cx="362" cy="125" r="36" fill="#FFD700" opacity="0.18" filter="url(#dotBloom)"/>
+    <!-- Mid ring -->
+    <circle cx="362" cy="125" r="24" fill="#FFD700" opacity="0.35"/>
+    <!-- Core -->
+    <circle cx="362" cy="125" r="15" fill="#FFD700"/>
+    <!-- Specular -->
+    <circle cx="356" cy="119" r="5"  fill="rgba(255,255,255,0.65)"/>
+
+    <!-- ── Terminal dot — green (bottom of S) ────── -->
+    <circle cx="146" cy="378" r="36" fill="#00D9A0" opacity="0.18" filter="url(#dotBloom)"/>
+    <circle cx="146" cy="378" r="24" fill="#00D9A0" opacity="0.35"/>
+    <circle cx="146" cy="378" r="15" fill="#00D9A0"/>
+    <circle cx="140" cy="372" r="5"  fill="rgba(255,255,255,0.65)"/>
+
+    <!-- ── Speed / motion lines (left edge) ──────── -->
+    <line x1="58"  y1="244" x2="102" y2="244" stroke="#FF2D78" stroke-width="5"   stroke-linecap="round" opacity="0.55"/>
+    <line x1="44"  y1="264" x2="94"  y2="264" stroke="#FFD700" stroke-width="3.5" stroke-linecap="round" opacity="0.38"/>
+    <line cx="62"  y1="224" x2="98"  y2="224" stroke="#FF2D78" stroke-width="3"   stroke-linecap="round" opacity="0.22"/>
+    <line x1="62"  y1="224" x2="98"  y2="224" stroke="#FF2D78" stroke-width="3"   stroke-linecap="round" opacity="0.22"/>
+    <line x1="50"  y1="284" x2="90"  y2="284" stroke="#00D9A0" stroke-width="2.5" stroke-linecap="round" opacity="0.20"/>
+
+    <!-- ── Glass border ───────────────────────────── -->
+    <rect width="512" height="512" rx="114" fill="none"
+          stroke="rgba(255,255,255,0.07)" stroke-width="1.5"/>
+
+    <!-- ── Inner border highlight (top edge only) ── -->
+    <rect x="1" y="1" width="510" height="510" rx="113" fill="none"
+          stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+  </g>
+</svg>

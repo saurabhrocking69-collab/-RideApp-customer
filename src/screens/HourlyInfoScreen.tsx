@@ -1,22 +1,23 @@
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
-import { Bouncy, ScreenIn } from '../components/ui';
-import { s } from '../styles';
+import { Bouncy, DotBG, ScreenIn } from '../components/ui';
+import { s, C } from '../styles';
 
 export function HourlyInfoScreen() {
   const { setScreen } = useApp();
 
   return (
     <ScreenIn style={s.screen}>
+      <DotBG />
       <View style={s.topBar}>
         <TouchableOpacity onPress={() => setScreen('home')} style={s.backBtn}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
         <Text style={s.topTitle}>⏱️ Book by Hour — Guide</Text>
         <View style={{ width: 36 }} />
       </View>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 50 }}>
-        <View style={{ backgroundColor: '#1a1a2e', borderRadius: 16, padding: 18, marginBottom: 16 }}>
-          <Text style={{ color: '#e94560', fontSize: 16, fontWeight: 'bold', marginBottom: 12 }}>🚀 Kaise Kaam Karta Hai?</Text>
+        <View style={{ backgroundColor: C.bgCard, borderRadius: 18, padding: 18, marginBottom: 16, borderWidth: 1, borderColor: C.glassBorder }}>
+          <Text style={{ color: C.pink, fontSize: 16, fontWeight: '900', marginBottom: 14 }}>🚀 Kaise Kaam Karta Hai?</Text>
           {[
             ['1️⃣', 'Package select karo', '2h, 4h, 6h, 8h (same day) ya 1-3 din (multi-day)'],
             ['2️⃣', 'Pickup location daalo', 'Drop optional hai — driver aapke saath rahega'],
@@ -28,20 +29,20 @@ export function HourlyInfoScreen() {
             <View key={i} style={{ flexDirection: 'row', marginBottom: 14 }}>
               <Text style={{ fontSize: 20, marginRight: 12 }}>{num}</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>{title}</Text>
-                <Text style={{ color: '#aaa', fontSize: 12, marginTop: 2 }}>{desc}</Text>
+                <Text style={{ color: C.text, fontWeight: '700', fontSize: 14 }}>{title}</Text>
+                <Text style={{ color: C.textDim, fontSize: 12, marginTop: 2 }}>{desc}</Text>
               </View>
             </View>
           ))}
         </View>
 
-        <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 18, marginBottom: 16, elevation: 2 }}>
-          <Text style={{ color: '#1a1a2e', fontSize: 15, fontWeight: 'bold', marginBottom: 12 }}>💰 Packages & Fares</Text>
-          <View style={{ flexDirection: 'row', backgroundColor: '#f8f8f8', borderRadius: 8, padding: 8, marginBottom: 8 }}>
-            <Text style={{ flex: 1, color: '#666', fontSize: 12, fontWeight: '700' }}>Package</Text>
-            <Text style={{ width: 50, color: '#666', fontSize: 12, fontWeight: '700', textAlign: 'center' }}>Auto</Text>
-            <Text style={{ width: 50, color: '#666', fontSize: 12, fontWeight: '700', textAlign: 'center' }}>Car</Text>
-            <Text style={{ width: 50, color: '#666', fontSize: 12, fontWeight: '700', textAlign: 'center' }}>Bike</Text>
+        <View style={{ backgroundColor: C.glass, borderRadius: 18, padding: 18, marginBottom: 16, elevation: 2, borderWidth: 1, borderColor: C.glassBorder }}>
+          <Text style={{ color: C.text, fontSize: 15, fontWeight: '800', marginBottom: 12 }}>💰 Packages & Fares</Text>
+          <View style={{ flexDirection: 'row', backgroundColor: C.glassMid, borderRadius: 10, padding: 8, marginBottom: 8 }}>
+            <Text style={{ flex: 1, color: C.textMuted, fontSize: 12, fontWeight: '800' }}>Package</Text>
+            <Text style={{ width: 52, color: C.textMuted, fontSize: 12, fontWeight: '800', textAlign: 'center' }}>Auto</Text>
+            <Text style={{ width: 52, color: C.textMuted, fontSize: 12, fontWeight: '800', textAlign: 'center' }}>Car</Text>
+            <Text style={{ width: 52, color: C.textMuted, fontSize: 12, fontWeight: '800', textAlign: 'center' }}>Bike</Text>
           </View>
           {[
             ['2 Hours (20km)', 180, 260, 120],
@@ -52,18 +53,18 @@ export function HourlyInfoScreen() {
             ['2 Days (400km)', 2800, 4000, 1800],
             ['3 Days (600km)', 4000, 5800, 2600],
           ].map(([label, auto, car, bike], i) => (
-            <View key={i} style={{ flexDirection: 'row', paddingVertical: 8, borderBottomWidth: i < 6 ? 1 : 0, borderColor: '#f5f5f5' }}>
-              <Text style={{ flex: 1, color: '#333', fontSize: 12 }}>{label}</Text>
-              <Text style={{ width: 50, color: '#e94560', fontSize: 12, fontWeight: '600', textAlign: 'center' }}>₹{auto}</Text>
-              <Text style={{ width: 50, color: '#e94560', fontSize: 12, fontWeight: '600', textAlign: 'center' }}>₹{car}</Text>
-              <Text style={{ width: 50, color: '#e94560', fontSize: 12, fontWeight: '600', textAlign: 'center' }}>₹{bike}</Text>
+            <View key={i} style={{ flexDirection: 'row', paddingVertical: 8, borderBottomWidth: i < 6 ? 1 : 0, borderColor: C.glassBorder }}>
+              <Text style={{ flex: 1, color: C.textMuted, fontSize: 12 }}>{label}</Text>
+              <Text style={{ width: 52, color: C.yellow, fontSize: 12, fontWeight: '700', textAlign: 'center' }}>₹{auto}</Text>
+              <Text style={{ width: 52, color: C.yellow, fontSize: 12, fontWeight: '700', textAlign: 'center' }}>₹{car}</Text>
+              <Text style={{ width: 52, color: C.yellow, fontSize: 12, fontWeight: '700', textAlign: 'center' }}>₹{bike}</Text>
             </View>
           ))}
-          <Text style={{ color: '#999', fontSize: 11, marginTop: 10 }}>Extra KM: Auto ₹8/km · Car ₹12/km · Bike ₹5/km · E-Riksha ₹7/km</Text>
+          <Text style={{ color: C.textDim, fontSize: 11, marginTop: 10 }}>Extra KM: Auto ₹8/km · Car ₹12/km · Bike ₹5/km · E-Riksha ₹7/km</Text>
         </View>
 
-        <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 18, marginBottom: 14, elevation: 2 }}>
-          <Text style={{ color: '#1a1a2e', fontSize: 15, fontWeight: 'bold', marginBottom: 12 }}>📋 Important Rules</Text>
+        <View style={{ backgroundColor: C.glass, borderRadius: 18, padding: 18, marginBottom: 14, elevation: 2, borderWidth: 1, borderColor: C.glassBorder }}>
+          <Text style={{ color: C.text, fontSize: 15, fontWeight: '800', marginBottom: 14 }}>📋 Important Rules</Text>
           {[
             ['✅', 'Escrow Payment', 'Aapka paisa trip complete hone par hi driver ko milega — 100% safe, koi risk nahi'],
             ['⏱️', 'Timer', 'OTP confirm hone par timer start. Package time khatam hone par driver Complete button press kar sakta hai'],
@@ -75,15 +76,15 @@ export function HourlyInfoScreen() {
             <View key={i} style={{ flexDirection: 'row', marginBottom: 12 }}>
               <Text style={{ fontSize: 18, marginRight: 10, width: 30 }}>{icon}</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: '#1a1a2e', fontWeight: '700', fontSize: 13 }}>{title}</Text>
-                <Text style={{ color: '#666', fontSize: 12, marginTop: 2 }}>{desc}</Text>
+                <Text style={{ color: C.text, fontWeight: '700', fontSize: 13 }}>{title}</Text>
+                <Text style={{ color: C.textDim, fontSize: 12, marginTop: 2 }}>{desc}</Text>
               </View>
             </View>
           ))}
         </View>
 
-        <View style={{ backgroundColor: '#fff3e0', borderRadius: 16, padding: 18, marginBottom: 14, borderLeftWidth: 4, borderLeftColor: '#ff9800' }}>
-          <Text style={{ color: '#e65100', fontSize: 15, fontWeight: 'bold', marginBottom: 10 }}>⏹️ Early End — Kaise Kaam Karta Hai?</Text>
+        <View style={{ backgroundColor: C.yellowGlass, borderRadius: 18, padding: 18, marginBottom: 14, borderLeftWidth: 4, borderLeftColor: C.yellow, borderWidth: 1, borderColor: C.yellowBorder }}>
+          <Text style={{ color: C.yellow, fontSize: 15, fontWeight: '900', marginBottom: 12 }}>⏹️ Early End — Kaise Kaam Karta Hai?</Text>
           {[
             ['1️⃣', 'Request karo', 'Aap ya driver "Early End Request" bhejta hai app se'],
             ['2️⃣', 'Dono agree karein', 'Dusra party Accept kare — tabhi early end hoga'],
@@ -94,15 +95,15 @@ export function HourlyInfoScreen() {
             <View key={i} style={{ flexDirection: 'row', marginBottom: 10 }}>
               <Text style={{ fontSize: 16, marginRight: 10, width: 30 }}>{icon}</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: '#bf360c', fontWeight: '700', fontSize: 13 }}>{title}</Text>
-                <Text style={{ color: '#795548', fontSize: 12, marginTop: 2 }}>{desc}</Text>
+                <Text style={{ color: C.yellow, fontWeight: '800', fontSize: 13 }}>{title}</Text>
+                <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>{desc}</Text>
               </View>
             </View>
           ))}
         </View>
 
-        <View style={{ backgroundColor: '#e8eaf6', borderRadius: 16, padding: 18, marginBottom: 14, borderLeftWidth: 4, borderLeftColor: '#3f51b5' }}>
-          <Text style={{ color: '#283593', fontSize: 15, fontWeight: 'bold', marginBottom: 10 }}>🔄 Time Extension — Aur Time Chahiye?</Text>
+        <View style={{ backgroundColor: 'rgba(21,101,192,0.15)', borderRadius: 18, padding: 18, marginBottom: 14, borderLeftWidth: 4, borderLeftColor: '#90CAF9', borderWidth: 1, borderColor: 'rgba(21,101,192,0.35)' }}>
+          <Text style={{ color: '#90CAF9', fontSize: 15, fontWeight: '900', marginBottom: 12 }}>🔄 Time Extension — Aur Time Chahiye?</Text>
           {[
             ['⏱️', 'Extend request', 'Active ride mein "+1h / +2h / +3h" option se request bhejein'],
             ['✅ Driver', 'Driver accept/reject kar sakta hai', 'Agar driver agree kare to extra hours add ho jaate hain'],
@@ -112,15 +113,15 @@ export function HourlyInfoScreen() {
             <View key={i} style={{ flexDirection: 'row', marginBottom: 10 }}>
               <Text style={{ fontSize: 16, marginRight: 10, width: 30 }}>{icon}</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: '#1a237e', fontWeight: '700', fontSize: 13 }}>{title}</Text>
-                <Text style={{ color: '#5c6bc0', fontSize: 12, marginTop: 2 }}>{desc}</Text>
+                <Text style={{ color: '#90CAF9', fontWeight: '800', fontSize: 13 }}>{title}</Text>
+                <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>{desc}</Text>
               </View>
             </View>
           ))}
         </View>
 
-        <View style={{ backgroundColor: '#e8f5e9', borderRadius: 16, padding: 18, marginBottom: 16 }}>
-          <Text style={{ color: '#2e7d32', fontSize: 15, fontWeight: 'bold', marginBottom: 10 }}>💡 Pro Tips</Text>
+        <View style={{ backgroundColor: C.greenGlass, borderRadius: 18, padding: 18, marginBottom: 16, borderWidth: 1, borderColor: C.greenBorder }}>
+          <Text style={{ color: C.green, fontSize: 15, fontWeight: '900', marginBottom: 12 }}>💡 Pro Tips</Text>
           {[
             'Zyada trips plan ho to multi-day book karo — per-day cost kam padega',
             'Round trip toggle karo agar ek jagah rukna hai aur wapas aana hai',
@@ -130,8 +131,8 @@ export function HourlyInfoScreen() {
             'OTP sirf driver ko batao — trip start hone par hi share karo',
           ].map((tip, i) => (
             <View key={i} style={{ flexDirection: 'row', marginBottom: 8 }}>
-              <Text style={{ color: '#4CAF50', marginRight: 8, fontSize: 14, fontWeight: 'bold' }}>•</Text>
-              <Text style={{ color: '#1b5e20', fontSize: 13, flex: 1 }}>{tip}</Text>
+              <Text style={{ color: C.green, marginRight: 8, fontSize: 14, fontWeight: '900' }}>•</Text>
+              <Text style={{ color: C.textMuted, fontSize: 13, flex: 1 }}>{tip}</Text>
             </View>
           ))}
         </View>

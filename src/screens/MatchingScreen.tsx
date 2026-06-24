@@ -2,8 +2,8 @@ import { Animated, Image, ScrollView, Text, TouchableOpacity, View } from 'react
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
-import { Bouncy, FloatingDots, MapOverlay, MapWebView, PulseView, RadarView, SlideUp, SuccessBurst, TripSteps } from '../components/ui';
-import { s } from '../styles';
+import { Bouncy, DotBG, FloatingDots, MapOverlay, MapWebView, PulseView, RadarView, SlideUp, SuccessBurst, TripSteps } from '../components/ui';
+import { s, C } from '../styles';
 import { apiPost } from '../../api';
 
 export function MatchingScreen() {
@@ -47,13 +47,14 @@ export function MatchingScreen() {
         <MapWebView pickupCoords={pickupCoords} dropCoords={dropCoords} driverLat={driverLoc?.lat} driverLng={driverLoc?.lng} customerLat={userCoords?.latitude} customerLng={userCoords?.longitude} height={220} />
         <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} live={!!rideData?.driver} />
       </View>
-      <View style={{ flex: 1, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 16, paddingHorizontal: 16 }}>
+      <DotBG />
+      <View style={{ flex: 1, backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 16, paddingHorizontal: 16, borderTopWidth: 1, borderColor: C.glassBorder }}>
         <TripSteps step={rideData?.driver ? 1 : 0} />
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
           {rideData?.driver ? (
             <>
               <SuccessBurst />
-              <Text style={{ textAlign: 'center', fontSize: 16, fontWeight: 'bold', color: '#4CAF50', marginBottom: 12 }}>Driver Mil Gaya! 🎉</Text>
+              <Text style={{ textAlign: 'center', fontSize: 16, fontWeight: '800', color: C.green, marginBottom: 12 }}>Driver Mil Gaya! 🎉</Text>
               <View style={s.driverCard}>
                 <View style={{ position: 'relative' }}>
                   {rideData.driver.photo
@@ -61,8 +62,8 @@ export function MatchingScreen() {
                     : <View style={s.driverAvatar}><Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>{(rideData.driver.name||'D')[0].toUpperCase()}</Text></View>
                   }
                   {rideData.driver.verified && (
-                    <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: '#4CAF50', borderRadius: 10, width: 20, height: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff' }}>
-                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>✓</Text>
+                    <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: C.green, borderRadius: 10, width: 20, height: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.bg }}>
+                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>✓</Text>
                     </View>
                   )}
                 </View>
@@ -70,31 +71,31 @@ export function MatchingScreen() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                     <Text style={s.driverName}>{rideData.driver.name}</Text>
                     {rideData.driver.verified && (
-                      <View style={{ backgroundColor: '#e8f5e9', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2, flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                        <Text style={{ fontSize: 9, color: '#2e7d32', fontWeight: '800' }}>✓ VERIFIED</Text>
+                      <View style={{ backgroundColor: C.greenGlass, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: C.greenBorder }}>
+                        <Text style={{ fontSize: 9, color: C.green, fontWeight: '800' }}>✓ VERIFIED</Text>
                       </View>
                     )}
                   </View>
-                  <Text style={{ fontSize: 12, color: '#1a1a2e', fontWeight: '600', marginTop: 2 }}>
+                  <Text style={{ fontSize: 12, color: C.textMuted, fontWeight: '600', marginTop: 2 }}>
                     {rideData.driver.vehicle_brand ? `${rideData.driver.vehicle_brand} ` : ''}{rideData.driver.vehicle_model || ''}
                   </Text>
-                  <Text style={{ fontSize: 12, color: '#666', marginTop: 1 }}>🚗 {rideData.driver.vehicle_no}</Text>
-                  <Text style={{ fontSize: 12, color: '#f0a500', marginTop: 2 }}>⭐ {rideData.driver.rating ? parseFloat(rideData.driver.rating).toFixed(1) : '4.8'}</Text>
+                  <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 1 }}>🚗 {rideData.driver.vehicle_no}</Text>
+                  <Text style={{ fontSize: 12, color: C.yellow, marginTop: 2 }}>⭐ {rideData.driver.rating ? parseFloat(rideData.driver.rating).toFixed(1) : '4.8'}</Text>
                 </View>
                 <View style={{ alignItems: 'center' }}>
-                  <PulseView><Text style={{ fontSize: 18, fontWeight: 'bold', color: '#e94560' }}>{driverEta || (eta ? eta.split('·')[0].trim() : '...')}</Text></PulseView>
-                  <Text style={{ fontSize: 10, color: '#666' }}>arriving</Text>
-                  {driverDist ? <Text style={{ fontSize: 10, color: '#999', marginTop: 2 }}>{driverDist} door</Text> : null}
+                  <PulseView><Text style={{ fontSize: 18, fontWeight: '800', color: C.pink }}>{driverEta || (eta ? eta.split('·')[0].trim() : '...')}</Text></PulseView>
+                  <Text style={{ fontSize: 10, color: C.textMuted }}>arriving</Text>
+                  {driverDist ? <Text style={{ fontSize: 10, color: C.textDim, marginTop: 2 }}>{driverDist} door</Text> : null}
                 </View>
               </View>
               {driverEta ? (
-                <View style={{ backgroundColor: '#1a1a2e', borderRadius: 12, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ backgroundColor: C.greenGlass, borderRadius: 14, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: C.greenBorder }}>
                   <Text style={{ fontSize: 20, marginRight: 10 }}>🚗</Text>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Aapka driver aa raha hai!</Text>
-                    <Text style={{ color: '#4CAF50', fontSize: 13, marginTop: 2 }}>⏱️ {driverEta} mein pahunchega · {driverDist} door</Text>
+                    <Text style={{ color: C.text, fontWeight: '800', fontSize: 14 }}>Aapka driver aa raha hai!</Text>
+                    <Text style={{ color: C.green, fontSize: 13, marginTop: 2 }}>⏱️ {driverEta} mein pahunchega · {driverDist} door</Text>
                   </View>
-                  <PulseView><View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#4CAF50' }} /></PulseView>
+                  <PulseView><View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.green }} /></PulseView>
                 </View>
               ) : null}
               {rideData?.startOtp && (
@@ -106,49 +107,49 @@ export function MatchingScreen() {
               <View style={s.actionRow}>
                 <Bouncy style={s.actionBtn} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
                   <View>
-                    <Ionicons name="chatbubble" size={22} color="#555" />
-                    {unreadChat > 0 && <View style={s.chatBadge}><Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>{unreadChat}</Text></View>}
+                    <Ionicons name="chatbubble" size={22} color={C.textMuted} />
+                    {unreadChat > 0 && <View style={s.chatBadge}><Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{unreadChat}</Text></View>}
                   </View>
-                  <Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>Chat</Text>
+                  <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 3 }}>Chat</Text>
                 </Bouncy>
-                <Bouncy style={s.actionBtn} onPress={callDriver}><Ionicons name="call" size={22} color="#555" /><Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>Call</Text></Bouncy>
-                <Bouncy style={s.actionBtn} onPress={triggerSOS}><Ionicons name="warning" size={22} color="#555" /><Text style={{ fontSize: 10, color: '#555', marginTop: 3 }}>SOS</Text></Bouncy>
+                <Bouncy style={s.actionBtn} onPress={callDriver}><Ionicons name="call" size={22} color={C.green} /><Text style={{ fontSize: 10, color: C.textMuted, marginTop: 3 }}>Call</Text></Bouncy>
+                <Bouncy style={s.actionBtn} onPress={triggerSOS}><Ionicons name="warning" size={22} color={C.red} /><Text style={{ fontSize: 10, color: C.textMuted, marginTop: 3 }}>SOS</Text></Bouncy>
               </View>
               {unreadChat > 0 && (
                 <TouchableOpacity style={s.chatAlert} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
                   <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>💬 Driver ne {unreadChat} message bheja — dekho</Text>
                 </TouchableOpacity>
               )}
-              {sosActive && <View style={[s.infoBox, { backgroundColor: '#ffeeee' }]}><Text style={{ fontSize: 13, color: '#c62828', fontWeight: 'bold' }}>🆘 Alert bheja! Police: 100 · Ambulance: 108</Text></View>}
-              <TouchableOpacity style={{ backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#e94560', borderRadius: 12, padding: 14, alignItems: 'center', marginBottom: 10 }} onPress={() => setShowCancelModal(true)}>
-                <Text style={{ color: '#e94560', fontWeight: 'bold', fontSize: 14 }}>✕ Ride Cancel karein {cancelTimer > 0 ? '(Free)' : '(₹15)'}</Text>
+              {sosActive && <View style={[s.infoBox, { backgroundColor: C.redGlass, borderColor: C.redBorder }]}><Text style={{ fontSize: 13, color: C.red, fontWeight: '800' }}>🆘 Alert bheja! Police: 100 · Ambulance: 108</Text></View>}
+              <TouchableOpacity style={{ backgroundColor: C.pinkGlass, borderWidth: 1.5, borderColor: C.pinkBorder, borderRadius: 14, padding: 14, alignItems: 'center', marginBottom: 10 }} onPress={() => setShowCancelModal(true)}>
+                <Text style={{ color: C.pink, fontWeight: '800', fontSize: 14 }}>✕ Ride Cancel karein {cancelTimer > 0 ? '(Free)' : '(₹15)'}</Text>
               </TouchableOpacity>
               <View style={s.fareCard}>
-                {[['Distance',rideData.distance],['Total Fare',rideData.fare]].map(([lbl,val],i) => (
-                  <View key={i} style={[s.row, { justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: i<1 ? 1 : 0, borderBottomColor: '#f5f5f5' }]}>
-                    <Text style={{ fontSize: 13, color: '#666' }}>{lbl}</Text>
-                    <Text style={[{ fontSize: 13 }, i===1 && { fontWeight: 'bold', color: '#1a1a2e', fontSize: 15 }]}>{val}</Text>
+                {[['Distance',rideData.distance],['Total Fare',rideData.fare]].map(([lbl,val]: any,i: number) => (
+                  <View key={i} style={[s.row, { justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: i<1 ? 1 : 0, borderBottomColor: C.glassBorder }]}>
+                    <Text style={{ fontSize: 13, color: C.textMuted }}>{lbl}</Text>
+                    <Text style={[{ fontSize: 13, color: C.text }, i===1 && { fontWeight: '800', color: C.yellow, fontSize: 16 }]}>{val}</Text>
                   </View>
                 ))}
               </View>
-              <Text style={{ textAlign: 'center', color: '#bbb', fontSize: 12, marginTop: 8 }}>⏳ Driver OTP daalkar trip shuru karega...</Text>
+              <Text style={{ textAlign: 'center', color: C.textDim, fontSize: 12, marginTop: 8 }}>⏳ Driver OTP daalkar trip shuru karega...</Text>
             </>
           ) : (
             <View style={{ paddingBottom: 24 }}>
               <View style={{ alignItems: 'center', paddingTop: 4, paddingBottom: 10 }}>
-                <Text style={{ fontSize: 17, fontWeight: '800', color: '#1a1a2e' }}>Driver Dhundh Rahe Hain</Text>
-                <Text style={{ fontSize: 12, color: '#aaa', marginTop: 4, textAlign: 'center', paddingHorizontal: 28 }} numberOfLines={1}>{pickup} → {drop}</Text>
+                <Text style={{ fontSize: 17, fontWeight: '800', color: C.text }}>Driver Dhundh Rahe Hain</Text>
+                <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 4, textAlign: 'center', paddingHorizontal: 28 }} numberOfLines={1}>{pickup} → {drop}</Text>
               </View>
 
               <View style={{ alignItems: 'center', marginBottom: 14 }}>
-                <View style={{ backgroundColor: '#1a1a2e', borderRadius: 28, paddingHorizontal: 22, paddingVertical: 11, flexDirection: 'row', alignItems: 'center', gap: 10, elevation: 6, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 8 }}>
-                  <Text style={{ fontSize: 27, fontWeight: '900', color: '#fff' }}>{surgeFare || rideData?.fare}</Text>
-                  <View style={{ width: 1, height: 26, backgroundColor: 'rgba(255,255,255,0.2)' }} />
+                <View style={{ backgroundColor: C.bgCard, borderRadius: 28, paddingHorizontal: 22, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', gap: 10, elevation: 8, shadowColor: C.pink, shadowOpacity: 0.2, shadowRadius: 12, borderWidth: 1, borderColor: C.glassBorder }}>
+                  <Text style={{ fontSize: 27, fontWeight: '900', color: C.yellow }}>{surgeFare || rideData?.fare}</Text>
+                  <View style={{ width: 1, height: 26, backgroundColor: C.glassBorder }} />
                   <Text style={{ fontSize: 20 }}>{rideIcon(rideType)}</Text>
-                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#e94560', textTransform: 'uppercase', letterSpacing: 0.5 }}>{(rideType || '').replace('_', ' ')}</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: C.pink, textTransform: 'uppercase', letterSpacing: 0.5 }}>{(rideType || '').replace('_', ' ')}</Text>
                   {surgeCount > 0 && (
-                    <View style={{ backgroundColor: '#FF9800', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
-                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>⚡ SURGE {surgeCount}x</Text>
+                    <View style={{ backgroundColor: C.yellow, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
+                      <Text style={{ color: '#000', fontSize: 10, fontWeight: '900' }}>⚡ SURGE {surgeCount}x</Text>
                     </View>
                   )}
                 </View>
@@ -161,16 +162,16 @@ export function MatchingScreen() {
 
               <View style={{ paddingHorizontal: 20, marginBottom: 14 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
-                  <Text style={{ fontSize: 11, color: '#ccc', fontWeight: '600' }}>0s</Text>
+                  <Text style={{ fontSize: 11, color: C.textDim, fontWeight: '600' }}>0s</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3 }}>
-                    <Text style={{ fontSize: 26, fontWeight: '900', color: searchElapsed >= 80 ? '#FF5722' : searchElapsed >= 60 ? '#FF9800' : '#1a1a2e' }}>
+                    <Text style={{ fontSize: 26, fontWeight: '900', color: searchElapsed >= 80 ? C.red : searchElapsed >= 60 ? C.yellow : C.text }}>
                       {searchElapsed}
                     </Text>
-                    <Text style={{ fontSize: 12, color: '#aaa' }}>/ 100s</Text>
+                    <Text style={{ fontSize: 12, color: C.textMuted }}>/ 100s</Text>
                   </View>
-                  <Text style={{ fontSize: 11, color: '#ccc', fontWeight: '600' }}>100s</Text>
+                  <Text style={{ fontSize: 11, color: C.textDim, fontWeight: '600' }}>100s</Text>
                 </View>
-                <View style={{ height: 10, backgroundColor: '#f0f0f0', borderRadius: 5, overflow: 'hidden' }}>
+                <View style={{ height: 10, backgroundColor: C.glass, borderRadius: 5, overflow: 'hidden', borderWidth: 1, borderColor: C.glassBorder }}>
                   <Animated.View style={{
                     height: '100%', borderRadius: 5,
                     width: surgeBarAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
@@ -180,7 +181,7 @@ export function MatchingScreen() {
                     }),
                   }} />
                 </View>
-                <Text style={{ textAlign: 'center', fontSize: 12, color: '#999', marginTop: 7, fontStyle: 'italic' }}>
+                <Text style={{ textAlign: 'center', fontSize: 12, color: C.textMuted, marginTop: 7, fontStyle: 'italic' }}>
                   {searchElapsed < 25 ? '🔍 Nearby drivers dhundh rahe hain...' :
                    searchElapsed < 50 ? '📡 Aur drivers ko ping kar rahe hain...' :
                    searchElapsed < 75 ? '🌐 10km radius tak dhundh rahe hain...' :
@@ -233,8 +234,8 @@ export function MatchingScreen() {
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                                 <Text style={{ fontSize: 26 }}>{opt.emoji}</Text>
                                 <View>
-                                  <Text style={{ fontSize: 20, fontWeight: '900', color: surging ? '#666' : '#1a1a2e' }}>{opt.label}</Text>
-                                  <Text style={{ fontSize: 11, color: surging ? '#555' : '#777' }}>Naya fare: ₹{opt.newFare}</Text>
+                                  <Text style={{ fontSize: 20, fontWeight: '900', color: surging ? C.textDim : C.text }}>{opt.label}</Text>
+                                  <Text style={{ fontSize: 11, color: surging ? C.textDim : C.textMuted }}>Naya fare: ₹{opt.newFare}</Text>
                                 </View>
                               </View>
                               <View style={{ backgroundColor: surging ? '#555' : opt.btnBg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8 }}>
@@ -245,8 +246,8 @@ export function MatchingScreen() {
                         </View>
                         {surging && (
                           <View style={{ alignItems: 'center', marginTop: 14 }}>
-                            <FloatingDots color="#FF9800" />
-                            <Text style={{ color: '#FF9800', fontSize: 13, fontWeight: '700', marginTop: 6 }}>⚡ Fare update ho raha hai...</Text>
+                            <FloatingDots color={C.yellow} />
+                            <Text style={{ color: C.yellow, fontSize: 13, fontWeight: '700', marginTop: 6 }}>⚡ Fare update ho raha hai...</Text>
                           </View>
                         )}
                       </View>
@@ -257,11 +258,11 @@ export function MatchingScreen() {
 
               {altSuggest && altSuggest.alternatives.length > 0 && (
                 <View style={{ paddingHorizontal: 20, marginBottom: 14 }}>
-                  <View style={{ backgroundColor: '#fff8e1', borderRadius: 16, padding: 16, borderWidth: 1.5, borderColor: '#ffd54f' }}>
-                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#e65100', textAlign: 'center', marginBottom: 4 }}>
+                  <View style={{ backgroundColor: C.yellowGlass, borderRadius: 16, padding: 16, borderWidth: 1.5, borderColor: C.yellowBorder }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: C.yellow, textAlign: 'center', marginBottom: 4 }}>
                       😕 {(altSuggest.current_type || '').toUpperCase()} driver nahi mila
                     </Text>
-                    <Text style={{ fontSize: 12, color: '#666', textAlign: 'center', marginBottom: 12 }}>
+                    <Text style={{ fontSize: 12, color: C.textMuted, textAlign: 'center', marginBottom: 12 }}>
                       Kya hum aapke liye doosra vehicle dhundhe?
                     </Text>
                     <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -270,7 +271,7 @@ export function MatchingScreen() {
                         const alabels: Record<string, string> = { auto: 'Auto', car: 'Car', bike: 'Bike', eriksha: 'E-Riksha', luxury: 'Luxury', green_bike: 'Green Bike', electric_auto: 'E-Auto' };
                         return (
                           <Bouncy key={alt} onPress={() => switchVehicle(alt)} disabled={switchingVehicle}
-                            style={{ backgroundColor: switchingVehicle ? '#ccc' : '#1a1a2e', borderRadius: 12, paddingHorizontal: 18, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            style={{ backgroundColor: switchingVehicle ? C.glass : C.pink, borderRadius: 12, paddingHorizontal: 18, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 6, elevation: 6, shadowColor: C.pink, shadowOpacity: 0.4, shadowRadius: 8 }}>
                             <Text style={{ fontSize: 18 }}>{aicons[alt] || '🚗'}</Text>
                             <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>{alabels[alt] || alt}</Text>
                           </Bouncy>
@@ -282,20 +283,20 @@ export function MatchingScreen() {
               )}
 
               <View style={{ paddingHorizontal: 20, marginBottom: 14 }}>
-                <View style={{ backgroundColor: cancelTimer > 0 ? '#e8f5e9' : '#fff3e0', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: cancelTimer > 0 ? '#c8e6c9' : '#ffe0b2' }}>
-                  <Text style={{ fontSize: 12, color: cancelTimer > 0 ? '#2e7d32' : '#e65100', fontWeight: '700', textAlign: 'center' }}>
+                <View style={{ backgroundColor: cancelTimer > 0 ? C.greenGlass : C.yellowGlass, borderRadius: 14, padding: 12, borderWidth: 1, borderColor: cancelTimer > 0 ? C.greenBorder : C.yellowBorder }}>
+                  <Text style={{ fontSize: 12, color: cancelTimer > 0 ? C.green : C.yellow, fontWeight: '700', textAlign: 'center' }}>
                     {cancelTimer > 0 ? `✅ ${cancelTimer}s tak FREE cancellation` : '⚠️ Ab cancel pe ₹10 fee lagega'}
                   </Text>
-                  <Text style={{ fontSize: 11, color: '#888', textAlign: 'center', marginTop: 3 }}>Aaj {freeCancelsLeft} free cancels bache hain</Text>
+                  <Text style={{ fontSize: 11, color: C.textMuted, textAlign: 'center', marginTop: 3 }}>Aaj {freeCancelsLeft} free cancels bache hain</Text>
                 </View>
               </View>
 
               <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 20 }}>
-                <Bouncy onPress={() => setShowCancelModal(true)} style={{ flex: 1, backgroundColor: '#fff', borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: '#e94560' }}>
-                  <Text style={{ color: '#e94560', fontWeight: 'bold', fontSize: 14 }}>✕ Cancel {cancelTimer > 0 ? '(Free)' : '(₹10)'}</Text>
+                <Bouncy onPress={() => setShowCancelModal(true)} style={{ flex: 1, backgroundColor: C.pinkGlass, borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: C.pinkBorder }}>
+                  <Text style={{ color: C.pink, fontWeight: '800', fontSize: 14 }}>✕ Cancel {cancelTimer > 0 ? '(Free)' : '(₹10)'}</Text>
                 </Bouncy>
-                <Bouncy onPress={() => { setRideData(null); bookRide(); }} style={{ flex: 1, backgroundColor: '#1a1a2e', borderRadius: 14, padding: 14, alignItems: 'center' }}>
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>🔄 Retry</Text>
+                <Bouncy onPress={() => { setRideData(null); bookRide(); }} style={{ flex: 1, backgroundColor: C.glass, borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: C.glassBorder }}>
+                  <Text style={{ color: C.text, fontWeight: '800', fontSize: 14 }}>🔄 Retry</Text>
                 </Bouncy>
               </View>
             </View>
@@ -321,18 +322,18 @@ function CancelModal() {
 
   return (
     <View style={s.screen}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
-        <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 30 }}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' }}>
+        <View style={{ backgroundColor: C.bgCard, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 34, borderTopWidth: 1, borderColor: C.glassBorder }}>
           <View style={s.sheetHandle} />
-          <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1a1a2e', marginBottom: 6 }}>Ride Cancel karein?</Text>
-          <View style={{ backgroundColor: cancelTimer > 0 ? '#e8f5e9' : '#fff3e0', borderRadius: 10, padding: 12, marginBottom: 16 }}>
-            <Text style={{ fontSize: 13, color: cancelTimer > 0 ? '#2e7d32' : '#e65100', fontWeight: '600' }}>
+          <Text style={{ fontSize: 18, fontWeight: '800', color: C.text, marginBottom: 8 }}>Ride Cancel karein?</Text>
+          <View style={{ backgroundColor: cancelTimer > 0 ? C.greenGlass : C.yellowGlass, borderRadius: 12, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: cancelTimer > 0 ? C.greenBorder : C.yellowBorder }}>
+            <Text style={{ fontSize: 13, color: cancelTimer > 0 ? C.green : C.yellow, fontWeight: '700' }}>
               {cancelTimer > 0 ? `✅ Abhi cancel FREE hai (${cancelTimer}s bache)` : '⚠️ Cancel fee ₹10 lagega'}
             </Text>
           </View>
-          <Text style={{ fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 10 }}>Cancel ka reason?</Text>
+          <Text style={{ fontSize: 14, fontWeight: '700', color: C.textMuted, marginBottom: 10 }}>Cancel ka reason?</Text>
           {['Galti se book ho gaya', 'Bahut wait ho raha', 'Plan change ho gaya', 'Driver door hai', 'Koi aur reason'].map((reason, i) => (
-            <TouchableOpacity key={i} style={{ backgroundColor: '#f5f5f5', borderRadius: 10, padding: 14, marginBottom: 8 }}
+            <TouchableOpacity key={i} style={{ backgroundColor: C.glass, borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: C.glassBorder }}
               onPress={async () => {
                 if (rideData?.ride_id) {
                   const cd = await apiPost('/api/rides/cancel-smart', { ride_id: rideData.ride_id, cancelled_by: 'customer', reason, phone: phone || '9999999999' });
@@ -345,12 +346,12 @@ function CancelModal() {
                 setPickup(''); setDrop(''); setPickupCoords(null); setDropCoords(null); setEta('');
                 setAltSuggest(null); setDriverLoc(null);
               }}>
-              <Text style={{ fontSize: 14, color: '#333' }}>{reason}</Text>
+              <Text style={{ fontSize: 14, color: C.text, fontWeight: '500' }}>{reason}</Text>
             </TouchableOpacity>
           ))}
-          <TouchableOpacity style={{ borderWidth: 1.5, borderColor: '#1a1a2e', borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 8 }}
+          <TouchableOpacity style={{ borderWidth: 1.5, borderColor: C.glassBorder, borderRadius: 14, padding: 14, alignItems: 'center', marginTop: 8, backgroundColor: C.glass }}
             onPress={() => setShowCancelModal(false)}>
-            <Text style={{ color: '#1a1a2e', fontWeight: 'bold', fontSize: 14 }}>Nahi, ride rakhni hai</Text>
+            <Text style={{ color: C.text, fontWeight: '800', fontSize: 14 }}>Nahi, ride rakhni hai</Text>
           </TouchableOpacity>
         </View>
       </View>
