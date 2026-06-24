@@ -168,9 +168,16 @@ export function ChatScreen() {
           </View>
         ))}
       </ScrollView>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 44, borderTopWidth: 1, borderTopColor: '#f0f0f0', backgroundColor: '#fafafa' }} contentContainerStyle={{ paddingHorizontal: 10, paddingVertical: 7, gap: 8 }}>
+        {['Where are you? 🗺️', 'Please come fast 🙏', 'Main wait kar raha hun', 'Ok, aata hun', 'Kitni der lagegi?'].map(q => (
+          <TouchableOpacity key={q} onPress={() => sendChat(q)} style={{ backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#e94560', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4 }}>
+            <Text style={{ fontSize: 12, color: '#e94560', fontWeight: '600' }}>{q}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
       <View style={s.chatInputRow}>
-        <TextInput style={s.chatInput} placeholder="Message likho..." value={chatInput} onChangeText={setChatInput} onSubmitEditing={sendChat} />
-        <TouchableOpacity style={s.chatSend} onPress={sendChat}><Text style={{ color: '#fff', fontWeight: 'bold' }}>➤</Text></TouchableOpacity>
+        <TextInput style={s.chatInput} placeholder="Message likho..." value={chatInput} onChangeText={setChatInput} onSubmitEditing={() => sendChat()} />
+        <TouchableOpacity style={s.chatSend} onPress={() => sendChat()}><Text style={{ color: '#fff', fontWeight: 'bold' }}>➤</Text></TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );

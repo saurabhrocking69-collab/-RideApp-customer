@@ -229,7 +229,7 @@ interface AppContextType {
   savePlace: (label: string) => Promise<void>;
   deletePlace: (id: number) => Promise<void>;
   animateStar: (i: number) => void;
-  sendChat: () => Promise<void>;
+  sendChat: (text?: string) => Promise<void>;
   initiateCall: (rideId: string | null, bookingId?: string | null) => Promise<void>;
   callDriver: () => void;
   rideIcon: (type: string) => string;
@@ -1206,9 +1206,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       Animated.timing(starAnims[i], { toValue: 1, duration: 120, useNativeDriver: true }),
     ]).start();
   };
-  const sendChat = async () => {
-    if (!chatInput.trim() || !rideData?.ride_id) return;
-    const msg = chatInput; setChatInput('');
+  const sendChat = async (text?: string) => {
+    const msg = text ?? chatInput;
+    if (!msg.trim() || !rideData?.ride_id) return;
+    if (!text) setChatInput('');
     try { await fetch(`${API}/api/chat/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, sender: 'customer', message: msg }) }); const r = await fetch(`${API}/api/chat/${rideData.ride_id}`); const d = await r.json(); setChatMsgs(d.messages || []); } catch (_e) {}
   };
   const initiateCall = async (rideId: string | null, bookingId: string | null = null) => {
