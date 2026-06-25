@@ -308,6 +308,7 @@ function HomeTab() {
     setHourlyStep, setHPickup, setHDrop, setHPickupCoords, setHDropCoords,
     setHPickupSugg, setHDropSugg, setHRoundTrip, setHStayHours, setHourlyBooking,
     rideIcon, customerRating, walletBalance,
+    storeStatus, paymentDone,
   } = useApp();
 
   const GREETINGS = ['Namaste! 🙏', 'Chalein India ki sair? 🗺️', 'Safe Travels! 🛺', 'Sppero ke saath chalein! 🚀', 'Ride karo, India dekho! 🇮🇳'];
@@ -516,14 +517,21 @@ function HomeTab() {
             </TouchableOpacity>
           </SlideUp>
 
-          {rideData?.ride_id && (
+          {rideData?.ride_id && !paymentDone && storeStatus !== 'completed' && (
             <SlideUp delay={125}>
-              <TouchableOpacity onPress={() => setScreen('matching')} style={{ backgroundColor: C.pinkGlass, borderRadius: 16, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', elevation: 5, borderWidth: 1.5, borderColor: C.pinkBorder }}>
+              <TouchableOpacity
+                onPress={() => {
+                  if (storeStatus === 'started') setScreen('inride');
+                  else setScreen('matching');
+                }}
+                style={{ backgroundColor: C.pinkGlass, borderRadius: 16, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', elevation: 5, borderWidth: 1.5, borderColor: C.pinkBorder }}>
                 <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: C.bgCard, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1.5, borderColor: C.pinkBorder }}>
-                  <Text style={{ fontSize: 22 }}>🚗</Text>
+                  <Text style={{ fontSize: 22 }}>{storeStatus === 'started' ? '🛣️' : '🚗'}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: C.text, fontWeight: '800', fontSize: 15 }}>Active Ride In Progress!</Text>
+                  <Text style={{ color: C.text, fontWeight: '800', fontSize: 15 }}>
+                    {storeStatus === 'started' ? 'Ride Chal Rahi Hai!' : 'Active Ride In Progress!'}
+                  </Text>
                   <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>{drop ? `→ ${drop}` : 'Tap karo ride screen pe jao'}</Text>
                 </View>
                 <Text style={{ color: C.pink, fontSize: 24, fontWeight: '300' }}>›</Text>

@@ -279,6 +279,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return unsub;
   }, []);
 
+  // Polling-driven screen transitions — fallback if socket event was missed (e.g. app backgrounded)
+  useEffect(() => {
+    if (storeStatus === 'started') {
+      setScreen((cur: Screen) => (['matching', 'inride'].includes(cur) ? 'inride' : cur));
+    } else if (storeStatus === 'completed') {
+      setScreen((cur: Screen) => (['payment', 'postride'].includes(cur) ? cur : 'payment'));
+      AsyncStorage.removeItem('activeStdRideId').catch(() => {});
+    }
+  }, [storeStatus]);
+
   // ── Socket + phone ref ──────────────────────────────────────────────────
   const socketRef = useRef<Socket | null>(null);
   const phoneRef  = useRef<string>('');
@@ -756,6 +766,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setPaymentDone(true);
         setScreen('postride');
         createScratchCard();
+        AsyncStorage.removeItem('activeStdRideId').catch(() => {});
       }
     });
     s.on('rideUpdate', (data: any) => {
@@ -1079,6 +1090,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           await fetch(`${API}/api/payment/verify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, razorpay_payment_id: data.razorpay_payment_id, razorpay_order_id: data.razorpay_order_id, razorpay_signature: data.razorpay_signature, amount: fareNum, method: 'online' }) });
           await fetch(`${API}/api/rides/payment-complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, payment_method: 'online', phone: phone || '9999999999' }) });
           setPaymentDone(true); setScreen('postride'); createScratchCard();
+          AsyncStorage.removeItem('activeStdRideId').catch(() => {});
         }).catch((_e: any) => setResult('❌ Payment cancel ya fail hua'));
     } catch (e: any) { setResult('❌ ' + (e?.message || 'Payment error')); }
   };
@@ -1095,6 +1107,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const pcData = await pcRes.json().catch(() => ({}));
         if (pcData.cashbacks?.length) setCashbackEarned(pcData.cashbacks);
         setPaymentDone(true); setScreen('postride'); createScratchCard();
+        AsyncStorage.removeItem('activeStdRideId').catch(() => {});
       } else setResult('❌ ' + (data.message || 'Payment fail'));
     } catch (_e) { setResult('❌ Server error'); }
   };

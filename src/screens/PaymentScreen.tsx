@@ -36,14 +36,44 @@ export function PaymentScreen() {
     setPaymentDone(true); setScreen('postride'); createScratchCard();
   };
 
+  const walletSufficient = walletBalance >= fareNum;
+  const cashback = Math.max(5, Math.min(50, Math.round(fareNum * 0.05)));
+
   const payOptions = [
-    { color: C.pink, glassColor: C.pinkGlass, border: C.pinkBorder, icon: '💰', title: 'Wallet se Pay', sub: `Balance: ₹${walletBalance}`, fn: payWithWallet },
-    ...(driverUpiId ? [{ color: C.purple, glassColor: C.glassMid, border: C.glassBorder, icon: '📱', title: 'UPI QR Scan', sub: `Driver ka QR scan karo — ₹${fareNum}`, fn: () => setShowUpiQr(true) }] : []),
-    { color: C.bgCard, glassColor: C.glassMid, border: C.glassBorder, icon: '💳', title: 'Online Pay', sub: 'UPI / Card (Razorpay)', fn: handlePayment },
-    { color: C.green, glassColor: C.greenGlass, border: C.greenBorder, icon: '💵', title: 'Cash Pay', sub: 'Driver ko haath mein cash do', fn: async () => {
-      try { await fetch(`${API}/api/rides/payment-complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, payment_method: 'cash', phone: phone || '9999999999' }) }); } catch (_e) {}
-      setPaymentDone(true); setScreen('postride'); createScratchCard();
-    }},
+    {
+      color: C.pink, glassColor: C.pinkGlass, border: C.pinkBorder,
+      icon: '💰', title: 'Wallet se Pay',
+      sub: `Balance: ₹${walletBalance}${walletSufficient ? '' : ' (Balance kam hai)'}`,
+      badge: '🎁 Scratch card milega',
+      badgeColor: C.green,
+      recommended: walletSufficient,
+      disabled: !walletSufficient,
+      fn: payWithWallet,
+    },
+    ...(driverUpiId ? [{
+      color: C.purple, glassColor: C.glassMid, border: C.glassBorder,
+      icon: '📱', title: 'UPI QR Scan',
+      sub: `Driver ka QR scan karo — ₹${fareNum}`,
+      badge: null, badgeColor: null, recommended: false, disabled: false,
+      fn: () => setShowUpiQr(true),
+    }] : []),
+    {
+      color: C.bgCard, glassColor: C.glassMid, border: C.glassBorder,
+      icon: '💳', title: 'Online Pay',
+      sub: 'UPI / Card (Razorpay)',
+      badge: null, badgeColor: null, recommended: false, disabled: false,
+      fn: handlePayment,
+    },
+    {
+      color: C.green, glassColor: C.greenGlass, border: C.greenBorder,
+      icon: '💵', title: 'Cash Pay',
+      sub: 'Driver ko haath mein cash do',
+      badge: null, badgeColor: null, recommended: false, disabled: false,
+      fn: async () => {
+        try { await fetch(`${API}/api/rides/payment-complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, payment_method: 'cash', phone: phone || '9999999999' }) }); } catch (_e) {}
+        setPaymentDone(true); setScreen('postride'); createScratchCard();
+      },
+    },
   ];
 
   return (
@@ -99,23 +129,47 @@ export function PaymentScreen() {
 
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
         <ShineCard style={[s.hero, { paddingTop: 60, paddingBottom: 32, backgroundColor: C.bgDeep, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
-          <Text style={{ fontSize: 55 }}>🎉</Text>
+          <Text style={{ fontSize: 55 }}>🏁</Text>
           <Text style={[s.heroTitle, { color: C.text }]}>Trip Complete!</Text>
-          <Text style={[s.heroSub, { color: C.textMuted }]}>{pickup} → {drop}</Text>
-          <Animated.Text style={{ color: C.yellow, fontSize: 44, fontWeight: '900', marginTop: 8, textShadowColor: C.yellow, textShadowRadius: 12 }}>₹{fareCount}</Animated.Text>
+          <Text style={[s.heroSub, { color: C.textMuted }]} numberOfLines={1}>{pickup} → {drop}</Text>
+          <Animated.Text style={{ color: C.yellow, fontSize: 48, fontWeight: '900', marginTop: 8, letterSpacing: -1 }}>₹{fareCount}</Animated.Text>
+          {walletSufficient && (
+            <View style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(22,163,74,0.15)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(22,163,74,0.3)' }}>
+              <Text style={{ fontSize: 14 }}>🎁</Text>
+              <Text style={{ color: C.green, fontSize: 11, fontWeight: '700' }}>Wallet se pay karo — scratch card milega!</Text>
+            </View>
+          )}
         </ShineCard>
 
-        <View style={{ padding: 16, gap: 12 }}>
-          <Text style={{ fontSize: 13, fontWeight: '800', color: C.textMuted, letterSpacing: 1, marginBottom: 4, marginLeft: 2 }}>CHOOSE PAYMENT</Text>
+        <View style={{ padding: 16, gap: 10 }}>
+          <Text style={{ fontSize: 12, fontWeight: '800', color: C.textMuted, letterSpacing: 1, marginBottom: 2, marginLeft: 2 }}>PAYMENT CHOOSE KARO</Text>
           {payOptions.map((p, i) => (
-            <Bouncy key={i} onPress={p.fn}>
-              <View style={{ backgroundColor: p.glassColor, borderRadius: 18, padding: 16, flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: p.border, elevation: 4, shadowColor: p.color, shadowOpacity: 0.25, shadowRadius: 8 }}>
+            <Bouncy key={i} onPress={p.disabled ? undefined : p.fn} style={{ opacity: p.disabled ? 0.45 : 1 }}>
+              <View style={{
+                backgroundColor: p.glassColor, borderRadius: 18, padding: 16,
+                flexDirection: 'row', alignItems: 'center',
+                borderWidth: p.recommended ? 2 : 1.5, borderColor: p.recommended ? p.border : p.border,
+                elevation: p.recommended ? 6 : 3,
+                shadowColor: p.color, shadowOpacity: p.recommended ? 0.2 : 0.1, shadowRadius: 8,
+              }}>
                 <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: `${p.color}22`, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: p.border }}>
                   <Text style={{ fontSize: 22 }}>{p.icon}</Text>
                 </View>
                 <View style={{ flex: 1, marginLeft: 14 }}>
-                  <Text style={{ color: C.text, fontWeight: '800', fontSize: 15 }}>{p.title}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <Text style={{ color: C.text, fontWeight: '800', fontSize: 15 }}>{p.title}</Text>
+                    {p.recommended && (
+                      <View style={{ backgroundColor: C.greenGlass, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: C.greenBorder }}>
+                        <Text style={{ fontSize: 9, color: C.green, fontWeight: '900' }}>RECOMMENDED</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>{p.sub}</Text>
+                  {p.badge && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                      <Text style={{ fontSize: 11, color: p.badgeColor, fontWeight: '700' }}>{p.badge}</Text>
+                    </View>
+                  )}
                 </View>
                 <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: p.glassColor, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: p.border }}>
                   <Ionicons name="chevron-forward" size={16} color={C.textMuted} />
