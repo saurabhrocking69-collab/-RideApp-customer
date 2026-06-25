@@ -628,7 +628,7 @@ function HomeTab() {
 
 function LiveTab() {
   const {
-    rideData, storeStatus, hourlyBooking,
+    rideData, storeStatus, paymentDone, hourlyBooking,
     hourlyStep, hourlyTimerSec,
     pickup, drop,
     setScreen, setTab,
@@ -637,7 +637,7 @@ function LiveTab() {
   } = useApp();
   const ride = useRideStore();
 
-  const hasStd    = !!rideData?.ride_id && storeStatus !== 'cancelled';
+  const hasStd    = !!rideData?.ride_id && storeStatus !== 'cancelled' && !(paymentDone && storeStatus === 'completed');
   const hasHourly = !!hourlyBooking && ['pending','matched','active'].includes(hourlyBooking?.status);
   const stdStatus = storeStatus !== 'idle' ? storeStatus : (rideData?.ride_id ? 'requested' : 'idle');
   const stdStatusMap: any = {

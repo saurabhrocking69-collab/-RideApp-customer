@@ -44,7 +44,7 @@ export function PaymentScreen() {
       color: C.pink, glassColor: C.pinkGlass, border: C.pinkBorder,
       icon: '💰', title: 'Wallet se Pay',
       sub: `Balance: ₹${walletBalance}${walletSufficient ? '' : ' (Balance kam hai)'}`,
-      badge: '🎁 Scratch card milega',
+      badge: `🎁 ₹${cashback} scratch card milega`,
       badgeColor: C.green,
       recommended: walletSufficient,
       disabled: !walletSufficient,
