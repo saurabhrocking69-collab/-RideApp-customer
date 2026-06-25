@@ -613,7 +613,7 @@ export const LucknowCityCard = () => {
 
     Animated.loop(
       Animated.sequence([
-        Animated.timing(glow, { toValue: 1.55, duration: 750, useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 1.18, duration: 750, useNativeDriver: true }),
         Animated.timing(glow, { toValue: 1.0,  duration: 750, useNativeDriver: true }),
       ])
     ).start();
@@ -666,7 +666,7 @@ export const LucknowCityCard = () => {
         backgroundColor: C.pink,
         borderWidth: 3, borderColor: '#fff',
         elevation: 10,
-        shadowColor: C.pink, shadowOpacity: 0.9, shadowRadius: 8,
+        shadowColor: C.pink, shadowOpacity: 0.35, shadowRadius: 4,
         transform: [
           { translateX: dotX.interpolate({ inputRange: [0, 1], outputRange: [PAD - 8, W - PAD - 8] }) },
           { scale: glow },
@@ -689,7 +689,9 @@ export const LucknowCityCard = () => {
       <View style={{ position: 'absolute', bottom: 22, left: 0, right: 0, height: 1.5, backgroundColor: 'rgba(155,165,220,0.38)' }} />
 
       {/* Animated auto */}
-      <Animated.Text style={{ position: 'absolute', bottom: 13, fontSize: 17, transform: [{ translateX: autoX }] }}>🛺</Animated.Text>
+      <Animated.View style={{ position: 'absolute', bottom: 13, transform: [{ translateX: autoX }] }}>
+        <Text style={{ fontSize: 17, transform: [{ scaleX: -1 }] }}>🛺</Text>
+      </Animated.View>
 
       {/* Location dots — decorative */}
       <View style={{ position: 'absolute', top: '12%' as any, left: '7%' as any, width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(124,58,237,0.28)' }} />

@@ -32,7 +32,7 @@ export function SplashScreen() {
 
       {/* Tagline */}
       <Animated.View style={{ alignItems: 'center', marginTop: 18, opacity: splashTag, transform: [{ translateY: splashTag.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }}>
-        <Text style={{ color: C.textMuted, fontSize: 15, letterSpacing: 1, fontWeight: '500' }}>Lucknow ka smartest ride</Text>
+        <Text style={{ color: C.textMuted, fontSize: 15, letterSpacing: 1, fontWeight: '500' }}>India ka smartest ride</Text>
       </Animated.View>
 
       {/* Bottom indicator */}
@@ -44,7 +44,7 @@ export function SplashScreen() {
 
       {/* Bottom brand text */}
       <View style={{ position: 'absolute', bottom: 30 }}>
-        <Text style={{ color: C.textDim, fontSize: 11, letterSpacing: 2, textTransform: 'uppercase' }}>Lucknow · India</Text>
+        <Text style={{ color: C.textDim, fontSize: 11, letterSpacing: 2, textTransform: 'uppercase' }}>Sppero · India</Text>
       </View>
     </Animated.View>
   );

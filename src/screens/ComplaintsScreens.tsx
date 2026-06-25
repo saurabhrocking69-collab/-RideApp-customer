@@ -1,77 +1,165 @@
+import { useState } from 'react';
 import { Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
-import { DotBG, ScreenIn } from '../components/ui';
+import { DotBG, ScreenIn, SlideUp } from '../components/ui';
 import { s, C } from '../styles';
 import { apiGet, apiPost } from '../../api';
 
-const statusColor: any = { open:'#ff9800', under_review:'#2196F3', awaiting_response:'#9c27b0', evidence_requested:'#ff5722', resolved:'#4CAF50', closed:'#9e9e9e', appealed:'#e91e63', escalated:'#f44336' };
-const priorityColor: any = { urgent: C.red, high:'#ff9800', normal:'#2196F3', low:'#9e9e9e' };
+// ─── Status / priority display maps ──────────────────────────────────────────
+const STATUS_META: Record<string, { color: string; label: string; icon: string }> = {
+  open:               { color: '#F59E0B', label: 'Open',             icon: '📬' },
+  under_review:       { color: '#3B82F6', label: 'Under Review',     icon: '🔍' },
+  awaiting_response:  { color: '#8B5CF6', label: 'Awaiting Reply',   icon: '💬' },
+  evidence_requested: { color: '#EF4444', label: 'Evidence Needed',  icon: '📎' },
+  escalated:          { color: '#DC2626', label: 'Escalated',        icon: '🚨' },
+  resolved:           { color: '#059669', label: 'Resolved',         icon: '✅' },
+  closed:             { color: '#6B7280', label: 'Closed',           icon: '📁' },
+  appealed:           { color: '#EC4899', label: 'Appealed',         icon: '⚖️' },
+};
 
+const PRIORITY_COLOR: Record<string, string> = {
+  urgent: '#DC2626', high: '#F59E0B', normal: '#3B82F6', low: '#9CA3AF',
+};
+
+// ─── Rapido-style categories ──────────────────────────────────────────────────
+const CATEGORIES = [
+  {
+    id: 'safety', icon: '🛡️', label: 'Safety Issue',
+    color: '#DC2626', bg: 'rgba(220,38,38,0.08)', border: 'rgba(220,38,38,0.25)',
+    sla: '2–4 ghante',
+    types: [
+      { id: 'harassment',     label: 'Harassment',       desc: 'Verbal abuse ya threatening behavior' },
+      { id: 'physical_abuse', label: 'Physical Abuse',   desc: 'Physical harm ya attack' },
+      { id: 'reckless_driving', label: 'Reckless Driving', desc: 'Dangerous driving, over-speeding' },
+    ],
+  },
+  {
+    id: 'payment', icon: '💰', label: 'Payment Problem',
+    color: '#059669', bg: 'rgba(5,150,105,0.08)', border: 'rgba(5,150,105,0.28)',
+    sla: '24 ghante',
+    types: [
+      { id: 'overcharging', label: 'Extra Fare Manga', desc: 'Agreed fare se zyada charge kiya' },
+    ],
+  },
+  {
+    id: 'trip', icon: '🗺️', label: 'Trip Problem',
+    color: '#D97706', bg: 'rgba(217,119,6,0.08)', border: 'rgba(217,119,6,0.28)',
+    sla: '48 ghante',
+    types: [
+      { id: 'early_trip_end',  label: 'Drop se Pehle Trip Band', desc: 'Driver ne sahi jagah drop nahi kiya' },
+      { id: 'route_deviation', label: 'Wrong / Long Route',      desc: 'Lamba ya galat route liya' },
+      { id: 'driver_no_show',  label: 'Driver Nahi Aaya',        desc: 'Pickup pe nahi pahuncha' },
+    ],
+  },
+  {
+    id: 'behavior', icon: '😤', label: 'Driver Behavior',
+    color: '#7C3AED', bg: 'rgba(124,58,237,0.08)', border: 'rgba(124,58,237,0.25)',
+    sla: '48 ghante',
+    types: [
+      { id: 'unprofessional', label: 'Rude / Unprofessional', desc: 'Bura behavior ya attitude' },
+    ],
+  },
+  {
+    id: 'vehicle', icon: '🚗', label: 'Vehicle Issue',
+    color: '#FF2D78', bg: 'rgba(255,45,120,0.08)', border: 'rgba(255,45,120,0.25)',
+    sla: '72 ghante',
+    types: [
+      { id: 'vehicle_condition', label: 'Dirty / Unsafe Vehicle', desc: 'Gaanda ya unsafe gaadi' },
+    ],
+  },
+  {
+    id: 'other', icon: '📝', label: 'Kuch Aur',
+    color: '#6B7280', bg: 'rgba(107,114,128,0.08)', border: 'rgba(107,114,128,0.22)',
+    sla: '72 ghante',
+    types: [
+      { id: 'other', label: 'Koi Aur Problem', desc: 'Upar mein nahi aata' },
+    ],
+  },
+];
+
+// ─── ComplaintsScreen — list ──────────────────────────────────────────────────
 export function ComplaintsScreen() {
-  const {
-    phone,
-    setScreen,
-    complaints,
-    cmpLoading, setCmpLoading,
-    setCmpDetail,
-    setCmpType, setCmpDesc,
-  } = useApp();
+  const { phone, setScreen, complaints, cmpLoading, setCmpLoading, setCmpDetail, setCmpType, setCmpDesc } = useApp();
 
   return (
     <ScreenIn style={s.screen}>
       <DotBG />
       <View style={s.topBar}>
-        <TouchableOpacity onPress={() => setScreen('support')} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
+        <TouchableOpacity onPress={() => setScreen('support')} style={{ padding: 4 }}>
+          <Ionicons name="arrow-back" size={22} color="#fff" />
+        </TouchableOpacity>
         <Text style={s.topTitle}>📋 My Complaints</Text>
         <TouchableOpacity onPress={() => { setCmpType(''); setCmpDesc(''); setScreen('complaint-new'); }} style={{ padding: 4 }}>
-          <Text style={{ color: C.pink, fontWeight: '900', fontSize: 13 }}>+ New</Text>
+          <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12, backgroundColor: 'rgba(255,255,255,0.20)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>+ New</Text>
         </TouchableOpacity>
       </View>
+
       <ScrollView style={{ flex: 1, padding: 14 }} contentContainerStyle={{ paddingBottom: 40 }}>
         {complaints.length === 0 && (
           <View style={{ alignItems: 'center', paddingTop: 60 }}>
-            <Text style={{ fontSize: 48 }}>📭</Text>
-            <Text style={{ fontSize: 16, fontWeight: '800', color: C.text, marginTop: 12 }}>Koi complaint nahi</Text>
-            <Text style={{ fontSize: 13, color: C.textMuted, marginTop: 6, textAlign: 'center' }}>Koi ride issue tha? Complaint file karo</Text>
+            <Text style={{ fontSize: 52 }}>📭</Text>
+            <Text style={{ fontSize: 17, fontWeight: '900', color: C.text, marginTop: 14 }}>Koi complaint nahi</Text>
+            <Text style={{ fontSize: 13, color: C.textMuted, marginTop: 6, textAlign: 'center' }}>Ride mein koi problem aayi? Complaint file karo</Text>
             <TouchableOpacity onPress={() => { setCmpType(''); setCmpDesc(''); setScreen('complaint-new'); }}
-              style={{ backgroundColor: C.pink, borderRadius: 14, padding: 14, paddingHorizontal: 28, marginTop: 20, elevation: 6, shadowColor: C.pink, shadowOpacity: 0.4, shadowRadius: 10 }}>
-              <Text style={{ color: '#fff', fontWeight: '900' }}>Complaint File Karo</Text>
+              style={{ backgroundColor: C.pink, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 32, marginTop: 22, elevation: 6, shadowColor: C.pink, shadowOpacity: 0.4, shadowRadius: 10 }}>
+              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>Complaint File Karo</Text>
             </TouchableOpacity>
           </View>
         )}
-        {complaints.map((c: any) => (
-          <TouchableOpacity key={c.id} onPress={async () => {
-            setCmpLoading(true);
-            try { const r = await apiGet(`/api/complaints/${c.id}?phone=${encodeURIComponent(phone)}`); setCmpDetail(r); setScreen('complaint-detail'); } catch{}
-            setCmpLoading(false);
-          }} style={{ backgroundColor: C.glass, borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: C.glassBorder }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <Text style={{ fontSize: 14, fontWeight: '700', color: C.text, flex: 1, marginRight: 8 }}>{c.title}</Text>
-              <View style={{ backgroundColor: statusColor[c.status] || '#999', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
-                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>{c.status.replace('_',' ').toUpperCase()}</Text>
+
+        {complaints.map((c: any) => {
+          const sm = STATUS_META[c.status] || { color: '#999', label: c.status, icon: '❓' };
+          const isAuto = c.source === 'system_auto';
+          return (
+            <TouchableOpacity key={c.id} onPress={async () => {
+              setCmpLoading(true);
+              try {
+                const r = await apiGet(`/api/complaints/${c.id}?phone=${encodeURIComponent(phone)}`);
+                setCmpDetail(r); setScreen('complaint-detail');
+              } catch {}
+              setCmpLoading(false);
+            }} style={{ backgroundColor: C.bgCard, borderRadius: 18, padding: 16, marginBottom: 12, elevation: 3, borderWidth: 1.5, borderColor: C.glassBorder, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8 }}>
+
+              {/* Status bar at top */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: sm.color + '18', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 14 }}>{sm.icon}</Text>
+                  </View>
+                  <Text style={{ color: sm.color, fontWeight: '800', fontSize: 12 }}>{sm.label}</Text>
+                  {isAuto && (
+                    <View style={{ backgroundColor: 'rgba(124,58,237,0.10)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: 'rgba(124,58,237,0.25)' }}>
+                      <Text style={{ color: C.purple, fontSize: 9, fontWeight: '800' }}>🤖 AUTO</Text>
+                    </View>
+                  )}
+                </View>
+                {c.priority !== 'normal' && (
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: PRIORITY_COLOR[c.priority] }} />
+                )}
               </View>
-            </View>
-            <Text style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>{c.complaint_type.replace(/_/g,' ')} · {new Date(c.created_at).toLocaleDateString('en-IN')}</Text>
-            {c.priority !== 'normal' && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 4 }}>
-                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: priorityColor[c.priority] || '#999' }} />
-                <Text style={{ fontSize: 11, color: priorityColor[c.priority] || '#999', fontWeight: '700' }}>{c.priority.toUpperCase()} PRIORITY</Text>
-              </View>
-            )}
-            {c.resolution && <Text style={{ fontSize: 12, color: C.green, marginTop: 4, fontWeight: '700' }}>✅ {c.resolution.replace(/_/g,' ')}</Text>}
-          </TouchableOpacity>
-        ))}
+
+              <Text style={{ fontSize: 14, fontWeight: '800', color: C.text, marginBottom: 4 }} numberOfLines={2}>{c.title}</Text>
+              <Text style={{ fontSize: 11, color: C.textDim }}>
+                {c.complaint_type?.replace(/_/g, ' ')} · {new Date(c.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+              </Text>
+              {c.resolution && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 }}>
+                  <Text style={{ fontSize: 11, color: C.green, fontWeight: '700' }}>✅ {c.resolution.replace(/_/g, ' ')}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
     </ScreenIn>
   );
 }
 
+// ─── NewComplaintScreen — Rapido-style 4-step flow ───────────────────────────
 export function NewComplaintScreen() {
   const {
-    phone,
-    setScreen,
-    rideData,
+    phone, setScreen, rideData,
     cmpType, setCmpType,
     cmpDesc, setCmpDesc,
     cmpLoading, setCmpLoading,
@@ -81,46 +169,81 @@ export function NewComplaintScreen() {
     setComplaints,
   } = useApp();
 
-  const customerTypes = [
-    { id: 'early_trip_end', label: '🛑 Trip Beech Mein Band', desc: 'Driver ne drop se pehle trip complete kiya' },
-    { id: 'reckless_driving', label: '🚗 Reckless Driving', desc: 'Dangerous driving, over-speeding' },
-    { id: 'route_deviation', label: '🗺️ Route Deviation', desc: 'Longer/wrong route liya' },
-    { id: 'overcharging', label: '💸 Overcharging', desc: 'Extra fare mang raha tha' },
-    { id: 'unprofessional', label: '😤 Unprofessional Behavior', desc: 'Rude ya unprofessional tha' },
-    { id: 'vehicle_condition', label: '🚙 Vehicle Condition', desc: 'Dirty ya unsafe vehicle' },
-    { id: 'driver_no_show', label: '🚫 Driver No Show', desc: 'Driver pickup pe nahi aaya' },
-    { id: 'harassment', label: '⚠️ Harassment', desc: 'Verbal ya physical harassment' },
-    { id: 'physical_abuse', label: '🆘 Physical Abuse', desc: 'Physical harm ya attack' },
-    { id: 'other', label: '📝 Other Issue', desc: 'Koi aur problem' },
-  ];
+  const [step, setStep] = useState(1);
+  const [catId, setCatId] = useState('');
 
+  const selectedCat = CATEGORIES.find(c => c.id === catId);
   const effectiveRide = cmpLinkedRide || (rideData?.ride_id ? rideData : null);
+  const STEP_LABELS = ['Ride', 'Category', 'Issue', 'Details'];
+
+  const goBack = () => {
+    if (step === 1) { setCmpShowRidePicker(false); setScreen('complaints'); return; }
+    if (step === 3) setCmpType('');
+    setStep(s => s - 1);
+  };
 
   return (
     <ScreenIn style={s.screen}>
       <DotBG />
+
+      {/* Header */}
       <View style={s.topBar}>
-        <TouchableOpacity onPress={() => { setCmpShowRidePicker(false); setScreen('complaints'); }} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
-        <Text style={s.topTitle}>⚠️ File Complaint</Text>
+        <TouchableOpacity onPress={goBack} style={{ padding: 4 }}>
+          <Ionicons name="arrow-back" size={22} color="#fff" />
+        </TouchableOpacity>
+        <Text style={s.topTitle}>⚠️ Complaint File Karo</Text>
         <View style={{ width: 40 }} />
       </View>
 
+      {/* Step progress indicator */}
+      <View style={{ backgroundColor: C.bgCard, paddingHorizontal: 16, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderColor: C.glassBorder }}>
+        {STEP_LABELS.map((label, i) => {
+          const n = i + 1;
+          const done = step > n;
+          const active = step === n;
+          return (
+            <View key={i} style={{ flex: 1, alignItems: 'center', flexDirection: i < STEP_LABELS.length - 1 ? 'row' : 'column' }}>
+              <View style={{ alignItems: 'center' }}>
+                <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: done ? C.green : active ? C.pink : C.glassMid, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: done ? C.green : active ? C.pink : C.glassBorder }}>
+                  {done
+                    ? <Ionicons name="checkmark" size={14} color="#fff" />
+                    : <Text style={{ color: active ? '#fff' : C.textDim, fontSize: 11, fontWeight: '800' }}>{n}</Text>}
+                </View>
+                <Text style={{ fontSize: 9, fontWeight: '700', color: active ? C.pink : done ? C.green : C.textDim, marginTop: 2 }}>{label}</Text>
+              </View>
+              {i < STEP_LABELS.length - 1 && (
+                <View style={{ flex: 1, height: 2, backgroundColor: step > n ? C.green : C.glassMid, marginBottom: 12, marginHorizontal: 4 }} />
+              )}
+            </View>
+          );
+        })}
+      </View>
+
+      {/* Ride picker modal */}
       {cmpShowRidePicker && (
-        <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.75)', zIndex: 99, justifyContent: 'flex-end' }}>
-          <View style={{ backgroundColor: C.bgCard, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '70%', borderTopWidth: 1, borderColor: C.glassBorder }}>
+        <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)', zIndex: 99, justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: C.bgCard, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '72%', borderTopWidth: 1, borderColor: C.glassBorder }}>
             <View style={{ padding: 16, borderBottomWidth: 1, borderColor: C.glassBorder, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={{ fontWeight: '900', fontSize: 15, color: C.text }}>Ride Select Karo</Text>
-              <TouchableOpacity onPress={() => setCmpShowRidePicker(false)}><Text style={{ color: C.pink, fontWeight: '800' }}>Cancel</Text></TouchableOpacity>
+              <Text style={{ fontWeight: '900', fontSize: 16, color: C.text }}>Ride Choose Karo</Text>
+              <TouchableOpacity onPress={() => setCmpShowRidePicker(false)}>
+                <Text style={{ color: C.pink, fontWeight: '800' }}>Cancel</Text>
+              </TouchableOpacity>
             </View>
             <ScrollView contentContainerStyle={{ padding: 12 }}>
-              {cmpHistoryRides.length === 0 && <Text style={{ color: C.textDim, textAlign: 'center', paddingVertical: 20 }}>Koi recent rides nahi milein</Text>}
+              {cmpHistoryRides.length === 0 && (
+                <Text style={{ color: C.textDim, textAlign: 'center', paddingVertical: 24, fontSize: 13 }}>Koi completed rides nahi milein</Text>
+              )}
               {cmpHistoryRides.map((r: any) => (
                 <TouchableOpacity key={r.id} onPress={() => { setCmpLinkedRide(r); setCmpShowRidePicker(false); }}
                   style={{ backgroundColor: cmpLinkedRide?.id === r.id ? C.pinkGlass : C.glass, borderRadius: 14, padding: 14, marginBottom: 8, borderWidth: 2, borderColor: cmpLinkedRide?.id === r.id ? C.pinkBorder : C.glassBorder }}>
-                  <Text style={{ fontWeight: '800', fontSize: 13, color: C.text }}>#{r.id} · {r.driver_name || 'Unknown Driver'}</Text>
-                  <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }} numberOfLines={1}>{r.pickup} → {r.drop_location}</Text>
-                  <Text style={{ fontSize: 11, color: C.textDim, marginTop: 3 }}>₹{r.fare} · {new Date(r.created_at).toLocaleDateString('en-IN')} · {r.ride_type?.toUpperCase()}</Text>
-                  {r.driver_phone && <Text style={{ fontSize: 11, color: C.pink, marginTop: 2 }}>Driver: {r.driver_phone}</Text>}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <Text style={{ fontWeight: '800', fontSize: 13, color: C.text }}>#{r.id?.toString().slice(-6)} · {r.driver_name || 'Driver'}</Text>
+                    <Text style={{ fontWeight: '800', color: C.pink }}>₹{r.fare}</Text>
+                  </View>
+                  <Text style={{ fontSize: 12, color: C.textMuted }} numberOfLines={1}>{r.pickup} → {r.drop_location}</Text>
+                  <Text style={{ fontSize: 11, color: C.textDim, marginTop: 3 }}>
+                    {new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · {(r.ride_type || '').toUpperCase()}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -128,172 +251,303 @@ export function NewComplaintScreen() {
         </View>
       )}
 
-      <ScrollView style={{ flex: 1, padding: 14 }} contentContainerStyle={{ paddingBottom: 40 }}>
-        <View style={{ backgroundColor: C.glass, borderRadius: 16, padding: 14, marginBottom: 16, elevation: 2, borderWidth: 1, borderColor: C.glassBorder }}>
-          <Text style={{ fontSize: 13, fontWeight: '800', color: C.text, marginBottom: 10 }}>Ride Link karo (zaroori)</Text>
-          {effectiveRide ? (
-            <View style={{ backgroundColor: C.greenGlass, borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: C.greenBorder }}>
-              <Text style={{ fontSize: 18 }}>🔗</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontWeight: '800', fontSize: 13, color: C.text }}>
-                  {effectiveRide.driver_name || 'Driver'} · Ride #{effectiveRide.id || effectiveRide.ride_id}
-                </Text>
-                <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }} numberOfLines={1}>
-                  {effectiveRide.pickup} → {effectiveRide.drop_location || effectiveRide.drop}
-                </Text>
-                {effectiveRide.driver_phone && <Text style={{ fontSize: 11, color: C.pink, marginTop: 2 }}>{effectiveRide.driver_phone}</Text>}
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 50 }}>
+
+        {/* ── STEP 1: Ride selection ─────────────────────────────────── */}
+        {step === 1 && (
+          <SlideUp delay={0}>
+            <Text style={{ fontSize: 19, fontWeight: '900', color: C.text, marginBottom: 4 }}>Kaunsi ride pe problem aayi?</Text>
+            <Text style={{ fontSize: 13, color: C.textMuted, marginBottom: 20 }}>Complaint ke liye ride link karna zaroori hai</Text>
+
+            {effectiveRide ? (
+              <View style={{ backgroundColor: C.greenGlass, borderRadius: 18, padding: 16, borderWidth: 2, borderColor: C.greenBorder, marginBottom: 20 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+                  <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: C.green + '22', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 20 }}>🔗</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontWeight: '900', fontSize: 14, color: C.text }}>
+                      Ride #{(effectiveRide.id || effectiveRide.ride_id)?.toString().slice(-6)}
+                    </Text>
+                    <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }} numberOfLines={2}>
+                      {effectiveRide.pickup} → {effectiveRide.drop_location || effectiveRide.drop}
+                    </Text>
+                    {effectiveRide.driver_name && (
+                      <Text style={{ fontSize: 11, color: C.green, fontWeight: '700', marginTop: 3 }}>
+                        Driver: {effectiveRide.driver_name}
+                      </Text>
+                    )}
+                  </View>
+                  {!rideData?.ride_id && (
+                    <TouchableOpacity onPress={() => setCmpLinkedRide(null)} style={{ padding: 4 }}>
+                      <Ionicons name="close-circle" size={22} color={C.red} />
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
-              {!rideData?.ride_id && (
-                <TouchableOpacity onPress={() => { setCmpLinkedRide(null); }} style={{ padding: 4 }}>
-                  <Text style={{ color: C.red, fontSize: 18 }}>✕</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          ) : (
-            <TouchableOpacity onPress={async () => {
-              setCmpLoading(true);
-              try {
-                const d = await apiGet(`/api/rides/history?phone=${phone}`);
-                setCmpHistoryRides((d.rides || []).filter((r: any) => r.status === 'completed'));
-              } catch {}
-              setCmpLoading(false);
-              setCmpShowRidePicker(true);
-            }} style={{ backgroundColor: C.glassMid, borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: C.pinkBorder, borderStyle: 'dashed' }}>
-              <Text style={{ fontSize: 20 }}>🔍</Text>
-              <View>
-                <Text style={{ fontWeight: '800', fontSize: 13, color: C.pink }}>{cmpLoading ? 'Loading rides...' : 'Ride Select Karo'}</Text>
-                <Text style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>Pichli rides mein se jis pe problem aayi</Text>
-              </View>
+            ) : (
+              <TouchableOpacity onPress={async () => {
+                setCmpLoading(true);
+                try {
+                  const d = await apiGet(`/api/rides/history?phone=${phone}`);
+                  setCmpHistoryRides((d.rides || []).filter((r: any) => r.status === 'completed'));
+                } catch {}
+                setCmpLoading(false);
+                setCmpShowRidePicker(true);
+              }} style={{ backgroundColor: C.bgCard, borderRadius: 18, padding: 22, alignItems: 'center', gap: 10, borderWidth: 2, borderColor: C.pinkBorder, borderStyle: 'dashed', marginBottom: 20 }}>
+                <Text style={{ fontSize: 36 }}>{cmpLoading ? '⏳' : '🔍'}</Text>
+                <Text style={{ fontWeight: '900', fontSize: 14, color: C.pink }}>{cmpLoading ? 'Loading rides...' : 'Ride Select Karo'}</Text>
+                <Text style={{ fontSize: 12, color: C.textDim }}>Pichli completed rides mein se</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity onPress={() => { if (!effectiveRide) { Alert.alert('Ride Required', 'Pehle ride select karo'); return; } setStep(2); }}
+              style={[s.btn, { opacity: effectiveRide ? 1 : 0.45 }]}>
+              <Text style={s.btnTxt}>Aage Badho →</Text>
             </TouchableOpacity>
-          )}
-        </View>
+          </SlideUp>
+        )}
 
-        <Text style={{ fontSize: 13, fontWeight: '800', color: C.textMuted, letterSpacing: 1, marginBottom: 12 }}>ISSUE TYPE SELECT KARO</Text>
-        {customerTypes.map(t => (
-          <TouchableOpacity key={t.id} onPress={() => setCmpType(t.id)}
-            style={{ backgroundColor: cmpType === t.id ? C.bgCard : C.glass, borderRadius: 14, padding: 14, marginBottom: 8, borderWidth: 2, borderColor: cmpType === t.id ? C.pinkBorder : C.glassBorder, flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={{ fontSize: 16, marginRight: 10 }}>{t.label.split(' ')[0]}</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: '800', fontSize: 13, color: cmpType === t.id ? C.text : C.textMuted }}>{t.label.substring(t.label.indexOf(' ')+1)}</Text>
-              <Text style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>{t.desc}</Text>
+        {/* ── STEP 2: Category ──────────────────────────────────────── */}
+        {step === 2 && (
+          <SlideUp delay={0}>
+            <Text style={{ fontSize: 19, fontWeight: '900', color: C.text, marginBottom: 4 }}>Kya problem aayi?</Text>
+            <Text style={{ fontSize: 13, color: C.textMuted, marginBottom: 20 }}>Category choose karo</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+              {CATEGORIES.map(cat => (
+                <TouchableOpacity key={cat.id}
+                  onPress={() => {
+                    setCatId(cat.id);
+                    if (cat.types.length === 1) { setCmpType(cat.types[0].id); setStep(4); }
+                    else setStep(3);
+                  }}
+                  style={{ width: '47%', backgroundColor: C.bgCard, borderRadius: 20, padding: 18, alignItems: 'center', gap: 10, borderWidth: 2, borderColor: cat.border, elevation: 4, shadowColor: cat.color, shadowOpacity: 0.15, shadowRadius: 8 }}>
+                  <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: cat.bg, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 24 }}>{cat.icon}</Text>
+                  </View>
+                  <Text style={{ fontWeight: '900', fontSize: 12, color: cat.color, textAlign: 'center' }}>{cat.label}</Text>
+                  <Text style={{ fontSize: 10, color: C.textDim }}>~{cat.sla}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
-            {cmpType === t.id && <Text style={{ color: C.pink, fontSize: 20, fontWeight: '900' }}>✓</Text>}
-          </TouchableOpacity>
-        ))}
+          </SlideUp>
+        )}
 
-        <Text style={{ fontSize: 13, fontWeight: '800', color: C.textMuted, letterSpacing: 1, marginTop: 16, marginBottom: 8 }}>DETAILS (PURI BAAT BATAO)</Text>
-        <TextInput value={cmpDesc} onChangeText={setCmpDesc} placeholder="Kya hua, kahan hua, kitne baje hua — puri detail mein batao (kam se kam 20 characters)..."
-          multiline style={[s.input, { height: 130, textAlignVertical: 'top', fontSize: 13, backgroundColor: C.glassMid, color: C.text, borderColor: C.glassBorder }]} placeholderTextColor={C.textDim} maxLength={2000} />
-        <Text style={{ fontSize: 11, color: cmpDesc.length < 20 ? C.red : C.green, textAlign: 'right', marginTop: 4 }}>{cmpDesc.length}/2000</Text>
+        {/* ── STEP 3: Sub-issue ─────────────────────────────────────── */}
+        {step === 3 && selectedCat && (
+          <SlideUp delay={0}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20, backgroundColor: selectedCat.bg, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: selectedCat.border }}>
+              <Text style={{ fontSize: 26 }}>{selectedCat.icon}</Text>
+              <View>
+                <Text style={{ fontSize: 17, fontWeight: '900', color: selectedCat.color }}>{selectedCat.label}</Text>
+                <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>Specific issue choose karo</Text>
+              </View>
+            </View>
+            {selectedCat.types.map(t => (
+              <TouchableOpacity key={t.id} onPress={() => { setCmpType(t.id); setStep(4); }}
+                style={{ backgroundColor: C.bgCard, borderRadius: 16, padding: 16, marginBottom: 10, borderWidth: 2, borderColor: cmpType === t.id ? selectedCat.border : C.glassBorder, flexDirection: 'row', alignItems: 'center', gap: 12, elevation: 2 }}>
+                <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: selectedCat.bg, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 20 }}>{selectedCat.icon}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: '800', fontSize: 14, color: C.text }}>{t.label}</Text>
+                  <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>{t.desc}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={C.textDim} />
+              </TouchableOpacity>
+            ))}
+          </SlideUp>
+        )}
 
-        <TouchableOpacity
-          onPress={async () => {
-            const linked = cmpLinkedRide || (rideData?.ride_id ? rideData : null);
-            if (!linked) return Alert.alert('Ride Required', 'Pehle ride select karo jis pe problem aayi');
-            if (!cmpType) return Alert.alert('Issue Type', 'Complaint type select karo');
-            if (cmpDesc.trim().length < 20) return Alert.alert('Description', 'Kam se kam 20 characters likho');
-            setCmpLoading(true);
-            const data = await apiPost('/api/complaints', {
-              phone,
-              ride_id: linked.id || linked.ride_id || null,
-              complaint_type: cmpType,
-              description: cmpDesc.trim(),
-            });
-            setCmpLoading(false);
-            if (data.complaint) {
-              const listData = await apiGet(`/api/complaints?phone=${encodeURIComponent(phone)}`);
-              setComplaints(listData.complaints || []);
-              setCmpLinkedRide(null); setCmpType(''); setCmpDesc('');
-              Alert.alert('✅ Complaint Submit Ho Gayi', 'Sppero team 24-48 ghante mein review karegi. Complaint ID: ' + data.complaint.id.slice(0, 8).toUpperCase(), [{ text: 'Track Karo', onPress: () => setScreen('complaints') }]);
-            } else {
-              Alert.alert('❌ Error', data.error || data.message || 'Submit fail hua — dobara try karo');
-            }
-          }}
-          style={[s.btn, { marginTop: 20, opacity: cmpLoading ? 0.6 : 1 }]}
-          disabled={cmpLoading}>
-          <Text style={s.btnTxt}>{cmpLoading ? 'Submitting...' : '📤 Submit Complaint'}</Text>
-        </TouchableOpacity>
+        {/* ── STEP 4: Description + Submit ─────────────────────────── */}
+        {step === 4 && selectedCat && cmpType && (
+          <SlideUp delay={0}>
+            {/* Selected issue summary */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: selectedCat.bg, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: selectedCat.border, marginBottom: 20 }}>
+              <Text style={{ fontSize: 22 }}>{selectedCat.icon}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontWeight: '900', fontSize: 13, color: selectedCat.color }}>
+                  {selectedCat.types.find(t => t.id === cmpType)?.label || cmpType.replace(/_/g, ' ')}
+                </Text>
+                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>⏱️ Resolution ~{selectedCat.sla}</Text>
+              </View>
+            </View>
+
+            <Text style={{ fontSize: 14, fontWeight: '800', color: C.text, marginBottom: 8 }}>Puri baat batao</Text>
+            <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 10 }}>Kya hua, kahan hua, kab hua — jitni detail ho utni do</Text>
+            <TextInput
+              value={cmpDesc} onChangeText={setCmpDesc}
+              placeholder="Minimum 20 characters..."
+              multiline
+              style={[s.input, {
+                height: 130, textAlignVertical: 'top', fontSize: 13,
+                backgroundColor: C.bgCard, color: C.text,
+                borderColor: cmpDesc.length > 0 && cmpDesc.length < 20 ? C.red : C.glassBorder,
+                marginBottom: 4,
+              }]}
+              placeholderTextColor={C.textDim}
+              maxLength={2000}
+            />
+            <Text style={{ fontSize: 11, textAlign: 'right', marginBottom: 20, color: cmpDesc.length === 0 ? C.textDim : cmpDesc.length < 20 ? C.red : C.green }}>
+              {cmpDesc.length < 20 ? `${Math.max(0, 20 - cmpDesc.length)} aur characters chahiye` : `✓ ${cmpDesc.length} characters`}
+            </Text>
+
+            {/* SLA info card */}
+            <View style={{ backgroundColor: C.bgDeep, borderRadius: 14, padding: 14, marginBottom: 22, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <Text style={{ fontSize: 22 }}>⏱️</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontWeight: '800', fontSize: 13, color: C.text }}>Expected Resolution Time</Text>
+                <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
+                  Sppero team ~{selectedCat.sla} mein review karegi
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              onPress={async () => {
+                if (cmpDesc.trim().length < 20) { Alert.alert('Too Short', 'Kam se kam 20 characters likho'); return; }
+                const linked = cmpLinkedRide || (rideData?.ride_id ? rideData : null);
+                setCmpLoading(true);
+                const data = await apiPost('/api/complaints', {
+                  phone,
+                  ride_id: linked?.id || linked?.ride_id || null,
+                  complaint_type: cmpType,
+                  description: cmpDesc.trim(),
+                });
+                setCmpLoading(false);
+                if (data.complaint) {
+                  const listData = await apiGet(`/api/complaints?phone=${encodeURIComponent(phone)}`);
+                  setComplaints(listData.complaints || []);
+                  setCmpLinkedRide(null); setCmpType(''); setCmpDesc('');
+                  setStep(1); setCatId('');
+                  Alert.alert(
+                    '✅ Complaint Submit Ho Gayi!',
+                    `Sppero team ~${selectedCat.sla} mein review karegi.\n\nID: ${data.complaint.id.slice(0, 8).toUpperCase()}`,
+                    [{ text: 'Track Karo', onPress: () => setScreen('complaints') }],
+                  );
+                } else {
+                  Alert.alert('❌ Error', data.error || data.message || 'Submit fail hua — dobara try karo');
+                }
+              }}
+              style={[s.btn, { opacity: cmpLoading || cmpDesc.trim().length < 20 ? 0.5 : 1 }]}
+              disabled={cmpLoading || cmpDesc.trim().length < 20}>
+              <Text style={s.btnTxt}>{cmpLoading ? 'Submitting...' : '📤 Complaint Submit Karo'}</Text>
+            </TouchableOpacity>
+          </SlideUp>
+        )}
       </ScrollView>
     </ScreenIn>
   );
 }
 
+// ─── ComplaintDetailScreen ────────────────────────────────────────────────────
 export function ComplaintDetailScreen() {
-  const {
-    phone,
-    setScreen,
-    cmpDetail, setCmpDetail,
-    cmpMsg, setCmpMsg,
-    setComplaints,
-  } = useApp();
+  const { phone, setScreen, cmpDetail, setCmpDetail, cmpMsg, setCmpMsg, setComplaints } = useApp();
 
   if (!cmpDetail) return null;
   const c = cmpDetail.complaint;
-  const msgs = cmpDetail.messages || [];
-  const evidence = cmpDetail.evidence || [];
-  const timeline = cmpDetail.timeline || [];
-  const isClosed = ['resolved','closed'].includes(c?.status);
+  const msgs: any[] = cmpDetail.messages || [];
+  const evidence: any[] = cmpDetail.evidence || [];
+  const timeline: any[] = cmpDetail.timeline || [];
+  const isClosed = ['resolved', 'closed'].includes(c?.status);
+  const sm = STATUS_META[c.status] || { color: '#999', label: c.status, icon: '❓' };
+  const isAuto = c.source === 'system_auto';
 
   return (
     <ScreenIn style={s.screen}>
       <DotBG />
       <View style={s.topBar}>
-        <TouchableOpacity onPress={() => setScreen('complaints')} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
+        <TouchableOpacity onPress={() => setScreen('complaints')} style={{ padding: 4 }}>
+          <Ionicons name="arrow-back" size={22} color="#fff" />
+        </TouchableOpacity>
         <Text style={s.topTitle}>Complaint Detail</Text>
         <View style={{ width: 40 }} />
       </View>
+
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, paddingBottom: 40 }}>
-        <View style={{ backgroundColor: statusColor[c.status] || '#999', borderRadius: 14, padding: 14, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <Text style={{ fontSize: 24 }}>{c.status === 'resolved' ? '✅' : c.status === 'closed' ? '📁' : '🔍'}</Text>
-          <View>
-            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>{c.status.replace(/_/g,' ').toUpperCase()}</Text>
-            {c.assigned_admin && <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 2 }}>Assigned: {c.assigned_admin}</Text>}
+
+        {/* Status card */}
+        <View style={{ backgroundColor: sm.color, borderRadius: 16, padding: 16, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Text style={{ fontSize: 26 }}>{sm.icon}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>{sm.label}</Text>
+            {c.assigned_admin && <Text style={{ color: 'rgba(255,255,255,0.80)', fontSize: 12, marginTop: 2 }}>Assigned: {c.assigned_admin}</Text>}
           </View>
+          {c.priority !== 'normal' && (
+            <View style={{ backgroundColor: 'rgba(0,0,0,0.20)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }}>
+              <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>{c.priority?.toUpperCase()}</Text>
+            </View>
+          )}
         </View>
 
-        <View style={{ backgroundColor: C.glass, borderRadius: 16, padding: 16, marginBottom: 14, elevation: 2, borderWidth: 1, borderColor: C.glassBorder }}>
-          <Text style={{ fontSize: 17, fontWeight: '900', color: C.text }}>{c.title}</Text>
-          <Text style={{ fontSize: 12, color: C.pink, fontWeight: '700', marginTop: 4 }}>{c.complaint_type?.replace(/_/g,' ')} · Filed: {new Date(c.created_at).toLocaleDateString('en-IN')}</Text>
-          <Text style={{ fontSize: 13, color: C.textMuted, marginTop: 10, lineHeight: 20 }}>{c.description}</Text>
-          {c.filed_against_name && <Text style={{ fontSize: 12, color: C.textDim, marginTop: 8 }}>Against: {c.filed_against_name}</Text>}
-          {c.pickup && <Text style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>Ride: {c.pickup} → {c.drop_location}</Text>}
+        {/* Auto-detected badge */}
+        {isAuto && (
+          <View style={{ backgroundColor: 'rgba(124,58,237,0.10)', borderRadius: 14, padding: 12, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: 'rgba(124,58,237,0.25)' }}>
+            <Text style={{ fontSize: 20 }}>🤖</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontWeight: '800', fontSize: 13, color: C.purple }}>System ne Auto-Detect Kiya</Text>
+              <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>Yeh complaint system ne automatically raise ki — aapko manually file nahi karna pada</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Main complaint info */}
+        <View style={{ backgroundColor: C.bgCard, borderRadius: 16, padding: 16, marginBottom: 14, elevation: 2, borderWidth: 1, borderColor: C.glassBorder }}>
+          <Text style={{ fontSize: 17, fontWeight: '900', color: C.text, marginBottom: 6 }}>{c.title}</Text>
+          <Text style={{ fontSize: 12, color: C.pink, fontWeight: '700', marginBottom: 10 }}>
+            {c.complaint_type?.replace(/_/g, ' ')} · {new Date(c.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+          </Text>
+          <Text style={{ fontSize: 13, color: C.textMuted, lineHeight: 20 }}>{c.description}</Text>
+          {c.filed_against_name && <Text style={{ fontSize: 12, color: C.textDim, marginTop: 8 }}>Driver: {c.filed_against_name}</Text>}
+          {c.pickup && <Text style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>Route: {c.pickup} → {c.drop_location}</Text>}
         </View>
 
+        {/* Resolution */}
         {c.resolution && (
           <View style={{ backgroundColor: C.greenGlass, borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: C.greenBorder }}>
             <Text style={{ fontSize: 14, fontWeight: '900', color: C.green, marginBottom: 6 }}>✅ Resolution</Text>
-            <Text style={{ fontSize: 13, color: C.green, fontWeight: '700' }}>{c.resolution?.replace(/_/g,' ')}</Text>
+            <Text style={{ fontSize: 13, color: C.green, fontWeight: '700' }}>{c.resolution?.replace(/_/g, ' ')}</Text>
             {c.resolution_note && <Text style={{ fontSize: 13, color: C.textMuted, marginTop: 6, lineHeight: 18 }}>{c.resolution_note}</Text>}
             {c.action_taken && <Text style={{ fontSize: 12, color: C.green, marginTop: 4, opacity: 0.8 }}>Action: {c.action_taken}</Text>}
           </View>
         )}
 
+        {/* Evidence */}
         {evidence.length > 0 && (
-          <View style={{ backgroundColor: C.glass, borderRadius: 16, padding: 16, marginBottom: 14, elevation: 2, borderWidth: 1, borderColor: C.glassBorder }}>
+          <View style={{ backgroundColor: C.bgCard, borderRadius: 16, padding: 16, marginBottom: 14, elevation: 2, borderWidth: 1, borderColor: C.glassBorder }}>
             <Text style={{ fontSize: 14, fontWeight: '800', color: C.text, marginBottom: 10 }}>📎 Evidence ({evidence.length})</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {evidence.map((e: any, i: number) => (
-                <Image key={i} source={{ uri: e.file_url }} style={{ width: 90, height: 90, borderRadius: 12, marginRight: 10, borderWidth: 1, borderColor: C.glassBorder }} />
+                <Image key={i} source={{ uri: e.file_url }} style={{ width: 90, height: 80, borderRadius: 12, marginRight: 10, borderWidth: 1.5, borderColor: C.glassBorder }} />
               ))}
             </ScrollView>
           </View>
         )}
 
-        <View style={{ backgroundColor: C.glass, borderRadius: 16, padding: 16, marginBottom: 14, elevation: 2, borderWidth: 1, borderColor: C.glassBorder }}>
-          <Text style={{ fontSize: 14, fontWeight: '800', color: C.text, marginBottom: 10 }}>💬 Messages ({msgs.length})</Text>
-          {msgs.length === 0 && <Text style={{ fontSize: 12, color: C.textDim, textAlign: 'center', paddingVertical: 10 }}>Koi message nahi abhi</Text>}
-          {msgs.map((m: any, i: number) => (
-            <View key={i} style={{ marginBottom: 12, padding: 12, backgroundColor: m.sender_role === 'admin' ? C.glassMid : m.sender_role === 'customer' ? C.pinkGlass : C.yellowGlass, borderRadius: 12, borderWidth: 1, borderColor: m.sender_role === 'admin' ? C.glassBorder : m.sender_role === 'customer' ? C.pinkBorder : C.yellowBorder }}>
-              <Text style={{ fontSize: 11, fontWeight: '800', color: m.sender_role === 'admin' ? C.purple : m.sender_role === 'customer' ? C.pink : C.yellow, marginBottom: 4 }}>{m.sender_name || m.sender_role} · {new Date(m.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</Text>
-              <Text style={{ fontSize: 13, color: C.text, lineHeight: 18 }}>{m.message}</Text>
-            </View>
-          ))}
+        {/* Messages */}
+        <View style={{ backgroundColor: C.bgCard, borderRadius: 16, padding: 16, marginBottom: 14, elevation: 2, borderWidth: 1, borderColor: C.glassBorder }}>
+          <Text style={{ fontSize: 14, fontWeight: '800', color: C.text, marginBottom: 12 }}>💬 Messages ({msgs.length})</Text>
+          {msgs.length === 0 && <Text style={{ fontSize: 12, color: C.textDim, textAlign: 'center', paddingVertical: 8 }}>Koi message nahi abhi</Text>}
+          {msgs.map((m: any, i: number) => {
+            const isAdmin = m.sender_role === 'admin';
+            const isDriver = m.sender_role === 'driver';
+            return (
+              <View key={i} style={{ marginBottom: 10, padding: 12, backgroundColor: isAdmin ? C.glassMid : isDriver ? C.yellowGlass : C.pinkGlass, borderRadius: 12, borderWidth: 1, borderColor: isAdmin ? C.glassBorder : isDriver ? C.yellowBorder : C.pinkBorder }}>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: isAdmin ? C.purple : isDriver ? C.yellow : C.pink, marginBottom: 4 }}>
+                  {m.sender_name || m.sender_role} · {new Date(m.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                </Text>
+                <Text style={{ fontSize: 13, color: C.text, lineHeight: 18 }}>{m.message}</Text>
+              </View>
+            );
+          })}
         </View>
 
+        {/* Reply box */}
         {!isClosed && (
-          <View style={{ backgroundColor: C.glass, borderRadius: 16, padding: 16, marginBottom: 14, elevation: 2, borderWidth: 1, borderColor: C.glassBorder }}>
-            <Text style={{ fontSize: 13, fontWeight: '800', color: C.text, marginBottom: 8 }}>Reply karein</Text>
-            <TextInput value={cmpMsg} onChangeText={setCmpMsg} placeholder="Message type karo..." multiline placeholderTextColor={C.textDim}
+          <View style={{ backgroundColor: C.bgCard, borderRadius: 16, padding: 16, marginBottom: 14, elevation: 2, borderWidth: 1, borderColor: C.glassBorder }}>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: C.text, marginBottom: 8 }}>Reply Karo</Text>
+            <TextInput value={cmpMsg} onChangeText={setCmpMsg} placeholder="Message type karo..." multiline
+              placeholderTextColor={C.textDim}
               style={[s.input, { height: 80, textAlignVertical: 'top', fontSize: 13, backgroundColor: C.glassMid, color: C.text, borderColor: C.glassBorder }]} />
             <TouchableOpacity onPress={async () => {
               if (!cmpMsg.trim()) return;
@@ -309,9 +563,10 @@ export function ComplaintDetailScreen() {
           </View>
         )}
 
+        {/* Timeline */}
         {timeline.length > 0 && (
-          <View style={{ backgroundColor: C.glass, borderRadius: 16, padding: 16, marginBottom: 14, elevation: 2, borderWidth: 1, borderColor: C.glassBorder }}>
-            <Text style={{ fontSize: 14, fontWeight: '800', color: C.text, marginBottom: 10 }}>📅 Timeline</Text>
+          <View style={{ backgroundColor: C.bgCard, borderRadius: 16, padding: 16, marginBottom: 14, elevation: 2, borderWidth: 1, borderColor: C.glassBorder }}>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: C.text, marginBottom: 12 }}>📅 Timeline</Text>
             {timeline.map((t: any, i: number) => (
               <View key={i} style={{ flexDirection: 'row', marginBottom: 10 }}>
                 <View style={{ width: 28, alignItems: 'center' }}>
@@ -320,13 +575,16 @@ export function ComplaintDetailScreen() {
                 </View>
                 <View style={{ flex: 1, paddingLeft: 10 }}>
                   <Text style={{ fontSize: 12, fontWeight: '700', color: C.text }}>{t.description}</Text>
-                  <Text style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>{new Date(t.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</Text>
+                  <Text style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>
+                    {new Date(t.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  </Text>
                 </View>
               </View>
             ))}
           </View>
         )}
 
+        {/* Appeal */}
         {c.status === 'resolved' && (
           <TouchableOpacity onPress={() => Alert.prompt('Appeal', 'Aap kyun disagree karte hain? (20+ characters)', async (reason) => {
             if (!reason || reason.length < 20) { Alert.alert('Too short', 'Reason 20+ characters ka likho'); return; }
@@ -336,11 +594,12 @@ export function ComplaintDetailScreen() {
               setCmpDetail(r);
               Alert.alert('Appeal Submit', 'Dobara review hoga');
             } catch {}
-          })} style={{ backgroundColor: C.yellowGlass, borderRadius: 14, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: C.yellowBorder, alignItems: 'center' }}>
+          })} style={{ backgroundColor: C.yellowGlass, borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: C.yellowBorder, alignItems: 'center' }}>
             <Text style={{ color: C.yellow, fontWeight: '800' }}>⚖️ Resolution se Disagree? Appeal Karo</Text>
           </TouchableOpacity>
         )}
 
+        {/* Withdraw */}
         {!isClosed && c.status !== 'resolved' && (
           <TouchableOpacity onPress={() => Alert.alert('Withdraw', 'Complaint withdraw karna chahte ho?', [
             { text: 'Cancel', style: 'cancel' },

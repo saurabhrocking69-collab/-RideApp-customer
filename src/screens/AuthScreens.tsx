@@ -105,7 +105,7 @@ export function LoginScreen() {
       <DotBG />
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <Animated.View style={{ alignItems: 'center', paddingTop: 68, paddingBottom: 36, opacity: loginHeroAnim, transform: [{ translateY: loginHeroAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }}>
-          <View style={{ width: 104, height: 104, borderRadius: 32, backgroundColor: C.pinkGlass, borderWidth: 1.5, borderColor: C.pinkBorder, alignItems: 'center', justifyContent: 'center', marginBottom: 22, elevation: 12, shadowColor: C.pink, shadowOpacity: 0.5, shadowRadius: 22 }}>
+          <View style={{ width: 104, height: 104, borderRadius: 32, backgroundColor: C.pinkGlass, borderWidth: 1.5, borderColor: C.pinkBorder, alignItems: 'center', justifyContent: 'center', marginBottom: 22, elevation: 5, shadowColor: C.pink, shadowOpacity: 0.18, shadowRadius: 10 }}>
             <Ionicons name="car" size={52} color={C.pink} />
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'baseline', marginBottom: 10 }}>
@@ -115,7 +115,7 @@ export function LoginScreen() {
               <Text style={{ color: C.text }}>ero</Text>
             </Text>
           </View>
-          <Text style={{ color: C.textMuted, fontSize: 14, letterSpacing: 0.2, textAlign: 'center', lineHeight: 22 }}>Lucknow ka sabse fast aur safe ride{'\n'}Aapka safar, aapke rules</Text>
+          <Text style={{ color: C.textMuted, fontSize: 14, letterSpacing: 0.2, textAlign: 'center', lineHeight: 22 }}>India ka sabse fast aur safe ride 🇮🇳{'\n'}Aapka safar, aapke rules</Text>
           <View style={{ flexDirection: 'row', gap: 12, marginTop: 24 }}>
             {['🛺', '🏍️', '🚗', '🚙'].map((v, i) => (
               <View key={i} style={{ backgroundColor: C.glass, borderRadius: 16, padding: 12, borderWidth: 1, borderColor: C.glassBorder, elevation: 3, shadowColor: C.pink, shadowOpacity: 0.1, shadowRadius: 6 }}>
@@ -150,7 +150,7 @@ export function LoginScreen() {
           <Bouncy
             onPress={sendOtp}
             disabled={loading || phone.length < 10}
-            style={{ borderRadius: 18, overflow: 'hidden', marginBottom: 18, opacity: phone.length < 10 ? 0.45 : 1, elevation: phone.length === 10 ? 10 : 0, shadowColor: C.pink, shadowOpacity: 0.55, shadowRadius: 14 }}
+            style={{ borderRadius: 18, overflow: 'hidden', marginBottom: 18, opacity: phone.length < 10 ? 0.45 : 1, elevation: phone.length === 10 ? 6 : 0, shadowColor: C.pink, shadowOpacity: 0.25, shadowRadius: 8 }}
           >
             <View style={{ backgroundColor: C.pink, paddingVertical: 18, alignItems: 'center', borderRadius: 18 }}>
               <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900', letterSpacing: 0.5 }}>

@@ -30,9 +30,11 @@ export function BookingScreen() {
   const finalFare = Math.max(0, rawFare - discount);
   const hasFare   = rawFare > 0 && !fareLoading;
 
-  // Animated map collapse on scroll
+  // Animated map collapse on scroll (translateY avoids WebView flicker from height changes)
   const scrollY = useRef(new Animated.Value(0)).current;
-  const mapHeight = scrollY.interpolate({ inputRange: [0, 100], outputRange: [200, 0], extrapolate: 'clamp' });
+  const mapContainerH = scrollY.interpolate({ inputRange: [0, 100], outputRange: [200, 0], extrapolate: 'clamp' });
+  const mapTranslate = scrollY.interpolate({ inputRange: [0, 100], outputRange: [0, -200], extrapolate: 'clamp' });
+  const mapOpacity = scrollY.interpolate({ inputRange: [0, 60], outputRange: [1, 0], extrapolate: 'clamp' });
   const sheetRadius = scrollY.interpolate({ inputRange: [0, 80], outputRange: [24, 0], extrapolate: 'clamp' });
 
   return (
@@ -46,15 +48,17 @@ export function BookingScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1, alignItems: 'center' }}>
           <Text style={s.topTitle}>Book a Ride</Text>
-          <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, marginTop: 1 }}>Live fares · Lucknow</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, marginTop: 1 }}>Live fares · All India</Text>
         </View>
         <View style={{ width: 36 }} />
       </View>
 
       {/* Map — collapses as user scrolls up */}
-      <Animated.View style={{ height: mapHeight, overflow: 'hidden' }}>
-        <MapWebView pickupCoords={pickupCoords} dropCoords={dropCoords} height={200} />
-        <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} />
+      <Animated.View style={{ height: mapContainerH, overflow: 'hidden' }}>
+        <Animated.View style={{ height: 200, opacity: mapOpacity, transform: [{ translateY: mapTranslate }] }}>
+          <MapWebView pickupCoords={pickupCoords} dropCoords={dropCoords} height={200} />
+          <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} />
+        </Animated.View>
       </Animated.View>
 
       {/* Bottom sheet — slides up over map */}

@@ -59,8 +59,8 @@ export function PaymentScreen() {
             <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900', flex: 1 }}>UPI QR Se Pay Karo</Text>
           </View>
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-            <View style={{ backgroundColor: C.pink, borderRadius: 20, paddingHorizontal: 28, paddingVertical: 12, marginBottom: 24, elevation: 10, shadowColor: C.pink, shadowOpacity: 0.5, shadowRadius: 14 }}>
-              <Text style={{ color: '#fff', fontSize: 32, fontWeight: '900' }}>₹{fareNum}</Text>
+            <View style={{ backgroundColor: C.pinkGlass, borderRadius: 20, paddingHorizontal: 28, paddingVertical: 12, marginBottom: 24, elevation: 4, shadowColor: C.pink, shadowOpacity: 0.15, shadowRadius: 8, borderWidth: 2, borderColor: C.pinkBorder }}>
+              <Text style={{ color: C.pink, fontSize: 32, fontWeight: '900' }}>₹{fareNum}</Text>
             </View>
             {driverUpiId ? (
               <View style={{ backgroundColor: C.glassMid, borderRadius: 24, padding: 16, elevation: 8, borderWidth: 1, borderColor: C.glassBorder, alignItems: 'center' }}>

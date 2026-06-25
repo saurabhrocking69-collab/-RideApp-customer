@@ -153,10 +153,10 @@ function BuddyBookModal() {
           <View style={s.sheetHandle} />
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="always" contentContainerStyle={{ paddingBottom: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-              <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center', marginRight: 12, overflow: 'hidden', borderWidth: 2, borderColor: C.pinkBorder }}>
+              <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', marginRight: 12, overflow: 'hidden', borderWidth: 2, borderColor: C.pinkBorder }}>
                 {favouriteBuddy.face_photo
                   ? <Image source={{ uri: favouriteBuddy.face_photo }} style={{ width: 52, height: 52, borderRadius: 26 }} />
-                  : <Text style={{ color: '#fff', fontWeight: '800', fontSize: 20 }}>{(favouriteBuddy.driver_name || 'D')[0].toUpperCase()}</Text>}
+                  : <Text style={{ color: C.pink, fontWeight: '800', fontSize: 20 }}>{(favouriteBuddy.driver_name || 'D')[0].toUpperCase()}</Text>}
               </View>
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -205,7 +205,7 @@ function BuddyBookModal() {
                     </TouchableOpacity>
                   </>
                 ) : (
-                  <TouchableOpacity onPress={goToMatching} style={{ marginTop: 14, backgroundColor: C.pink, borderRadius: 14, paddingHorizontal: 28, paddingVertical: 14, width: '100%', alignItems: 'center', elevation: 8, shadowColor: C.pink, shadowOpacity: 0.5, shadowRadius: 10 }}>
+                  <TouchableOpacity onPress={goToMatching} style={{ marginTop: 14, backgroundColor: C.pink, borderRadius: 14, paddingHorizontal: 28, paddingVertical: 14, width: '100%', alignItems: 'center', elevation: 4, shadowColor: C.pink, shadowOpacity: 0.2, shadowRadius: 6 }}>
                     <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>Live Track Karo →</Text>
                   </TouchableOpacity>
                 )}
@@ -310,7 +310,7 @@ function HomeTab() {
     rideIcon, customerRating, walletBalance,
   } = useApp();
 
-  const GREETINGS = ['Namaste! 🙏', 'Good Morning! ☀️', 'Safe Travels! 🛺', 'Apni City, Apni Ride 🌟'];
+  const GREETINGS = ['Namaste! 🙏', 'Chalein India ki sair? 🗺️', 'Safe Travels! 🛺', 'Sppero ke saath chalein! 🚀', 'Ride karo, India dekho! 🇮🇳'];
   const [greetIdx, setGreetIdx] = useState(0);
   const greetFade  = useRef(new Animated.Value(1)).current;
   const greetSlide = useRef(new Animated.Value(0)).current;
@@ -383,7 +383,7 @@ function HomeTab() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: 90 }}
       >
-        {/* Lucknow city illustration */}
+        {/* India city illustration */}
         <LucknowCityCard />
 
         {/* White content sheet */}
@@ -409,7 +409,7 @@ function HomeTab() {
             <Bouncy onPress={() => setScreen('booking')} style={s.searchBox}>
               <Ionicons name="search" size={18} color={C.textMuted} style={{ marginRight: 10 }} />
               <Text style={s.searchPh}>Kahan jaana hai?</Text>
-              <View style={{ marginLeft: 'auto', backgroundColor: C.pink, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 5, elevation: 4, shadowColor: C.pink, shadowOpacity: 0.5, shadowRadius: 6 }}>
+              <View style={{ marginLeft: 'auto', backgroundColor: C.pink, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 5, elevation: 2, shadowColor: C.pink, shadowOpacity: 0.25, shadowRadius: 4 }}>
                 <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>Book</Text>
               </View>
             </Bouncy>
@@ -444,10 +444,10 @@ function HomeTab() {
                   </TouchableOpacity>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', padding: 14 }}>
-                  <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center', marginRight: 14, borderWidth: 2, borderColor: C.pinkBorder }}>
+                  <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', marginRight: 14, borderWidth: 2, borderColor: C.pinkBorder }}>
                     {favouriteBuddy.face_photo
                       ? <Image source={{ uri: favouriteBuddy.face_photo }} style={{ width: 52, height: 52, borderRadius: 26 }} />
-                      : <Text style={{ color: '#fff', fontWeight: '800', fontSize: 20 }}>{(favouriteBuddy.driver_name || 'D')[0].toUpperCase()}</Text>}
+                      : <Text style={{ color: C.pink, fontWeight: '800', fontSize: 20 }}>{(favouriteBuddy.driver_name || 'D')[0].toUpperCase()}</Text>}
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontWeight: '800', fontSize: 16, color: C.text }}>{favouriteBuddy.driver_name}</Text>
@@ -463,7 +463,7 @@ function HomeTab() {
                   </View>
                   <TouchableOpacity
                     onPress={() => { setBuddyBookMsg(''); setBuddyWaiting(false); setShowBuddyBook(true); }}
-                    style={{ backgroundColor: C.pink, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, alignItems: 'center', elevation: 6, shadowColor: C.pink, shadowOpacity: 0.5, shadowRadius: 8 }}>
+                    style={{ backgroundColor: C.pink, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, alignItems: 'center', elevation: 3, shadowColor: C.pink, shadowOpacity: 0.2, shadowRadius: 5 }}>
                     <Text style={{ fontSize: 18 }}>🚗</Text>
                     <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800', marginTop: 2 }}>Book</Text>
                   </TouchableOpacity>
@@ -519,7 +519,7 @@ function HomeTab() {
           {rideData?.ride_id && (
             <SlideUp delay={125}>
               <TouchableOpacity onPress={() => setScreen('matching')} style={{ backgroundColor: C.pinkGlass, borderRadius: 16, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', elevation: 5, borderWidth: 1.5, borderColor: C.pinkBorder }}>
-                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center', marginRight: 12, elevation: 4, shadowColor: C.pink, shadowOpacity: 0.4, shadowRadius: 6 }}>
+                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: C.bgCard, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1.5, borderColor: C.pinkBorder }}>
                   <Text style={{ fontSize: 22 }}>🚗</Text>
                 </View>
                 <View style={{ flex: 1 }}>
