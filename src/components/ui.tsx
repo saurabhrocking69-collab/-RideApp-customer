@@ -1,19 +1,98 @@
 import { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, Animated, StyleSheet, useWindowDimensions, Easing } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import { MAPS_KEY } from '../constants';
+import { C } from '../styles';
 
 // ─── RideVehicleIcon ─────────────────────────────────────────────────────────
 export const RideVehicleIcon = ({ id, size = 26, color = '#fff' }: { id: string; size?: number; color?: string }) => {
-  if (id === 'bike' || id === 'green_bike') return <MaterialCommunityIcons name="motorbike" size={size} color={id === 'green_bike' ? '#2e7d32' : color} />;
-  if (id === 'auto' || id === 'eriksha') return <MaterialCommunityIcons name="rickshaw" size={size} color={id === 'eriksha' ? '#4CAF50' : color} />;
-  if (id === 'electric_auto') return <Ionicons name="leaf" size={size} color="#2e7d32" />;
+  if (id === 'bike' || id === 'green_bike') return <MaterialCommunityIcons name="motorbike" size={size} color={id === 'green_bike' ? '#059669' : color} />;
+  if (id === 'auto' || id === 'eriksha') return <MaterialCommunityIcons name="rickshaw" size={size} color={id === 'eriksha' ? '#059669' : color} />;
+  if (id === 'electric_auto') return <Ionicons name="leaf" size={size} color="#059669" />;
   if (id === 'luxury') return <Ionicons name="diamond" size={size - 4} color={color} />;
   return <Ionicons name="car-sport" size={size} color={color} />;
 };
 
-// ─── PulseView ───
+// ─── BlobBG — decorative soft blobs on light backgrounds ─────────────────────
+export const BlobBG = ({ variant = 'pink' }: { variant?: 'pink' | 'green' | 'blue' | 'yellow' }) => {
+  const palettes: Record<string, [string, string, string]> = {
+    pink:   ['rgba(255,45,120,0.07)',  'rgba(245,158,11,0.05)',  'rgba(124,58,237,0.04)'],
+    green:  ['rgba(5,150,105,0.08)',   'rgba(245,158,11,0.05)',  'rgba(255,45,120,0.04)'],
+    blue:   ['rgba(59,130,246,0.08)',  'rgba(255,45,120,0.05)',  'rgba(5,150,105,0.04)'],
+    yellow: ['rgba(245,158,11,0.09)',  'rgba(255,45,120,0.05)',  'rgba(5,150,105,0.04)'],
+  };
+  const [c1, c2, c3] = palettes[variant] || palettes.pink;
+  return (
+    <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+      <View style={{ position: 'absolute', width: 340, height: 340, borderRadius: 170, backgroundColor: c1, top: -100, right: -80 }} />
+      <View style={{ position: 'absolute', width: 260, height: 260, borderRadius: 130, backgroundColor: c2, top: 240, left: -70 }} />
+      <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: c3, bottom: 80, right: -40 }} />
+      <View style={{ position: 'absolute', width: 140, height: 140, borderRadius: 70,  backgroundColor: c2, top: 120, right: 50 }} />
+    </View>
+  );
+};
+
+// Keep DotBG export pointing to BlobBG so existing imports still work
+export const DotBG = BlobBG;
+
+// ─── FloatBubbles — animated bubbles rising up ───────────────────────────────
+export const FloatBubbles = () => {
+  const CFG = [
+    { size: 28, color: 'rgba(255,45,120,0.22)',  left: 40,  bottom: 100, dur: 3600, delay: 0    },
+    { size: 18, color: 'rgba(5,150,105,0.22)',   left: 140, bottom: 70,  dur: 4200, delay: 700  },
+    { size: 22, color: 'rgba(245,158,11,0.20)',  left: 240, bottom: 90,  dur: 3900, delay: 1400 },
+    { size: 14, color: 'rgba(124,58,237,0.18)',  left: 300, bottom: 55,  dur: 4500, delay: 300  },
+    { size: 20, color: 'rgba(255,45,120,0.15)',  left: 190, bottom: 40,  dur: 3300, delay: 1100 },
+    { size: 16, color: 'rgba(5,150,105,0.18)',   left: 80,  bottom: 50,  dur: 4000, delay: 1800 },
+  ];
+  const anims = useRef(CFG.map(() => new Animated.Value(0))).current;
+  useEffect(() => {
+    CFG.forEach((b, i) => {
+      const run = () => {
+        anims[i].setValue(0);
+        Animated.sequence([
+          Animated.delay(b.delay),
+          Animated.timing(anims[i], { toValue: 1, duration: b.dur, useNativeDriver: true }),
+        ]).start(run);
+      };
+      run();
+    });
+  }, []);
+  return (
+    <View style={[StyleSheet.absoluteFillObject, { overflow: 'hidden' }]} pointerEvents="none">
+      {CFG.map((b, i) => (
+        <Animated.View key={i} style={{
+          position: 'absolute', width: b.size, height: b.size, borderRadius: b.size / 2,
+          backgroundColor: b.color, left: b.left, bottom: b.bottom,
+          opacity: anims[i].interpolate({ inputRange: [0, 0.12, 0.88, 1], outputRange: [0, 0.9, 0.9, 0] }),
+          transform: [{ translateY: anims[i].interpolate({ inputRange: [0, 1], outputRange: [0, -130] }) }],
+        }} />
+      ))}
+    </View>
+  );
+};
+
+// ─── AnimatedLine — glowing dot traveling along a line ───────────────────────
+export const AnimatedLine = ({ color = C.pink, width = 200 }: { color?: string; width?: number }) => {
+  const pos = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.loop(Animated.timing(pos, { toValue: 1, duration: 1600, useNativeDriver: false })).start();
+  }, []);
+  return (
+    <View style={{ width, height: 2, backgroundColor: `${color}22`, borderRadius: 1, overflow: 'hidden', marginVertical: 6 }}>
+      <Animated.View style={{
+        position: 'absolute', height: 2, borderRadius: 1,
+        width: 44, backgroundColor: color,
+        left: pos.interpolate({ inputRange: [0, 1], outputRange: [-44, width] }),
+        shadowColor: color, shadowOpacity: 1, shadowRadius: 4, shadowOffset: { width: 0, height: 0 },
+        elevation: 2,
+      }} />
+    </View>
+  );
+};
+
+// ─── PulseView ───────────────────────────────────────────────────────────────
 export const PulseView = ({ children, style }: any) => {
   const anim = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -25,7 +104,7 @@ export const PulseView = ({ children, style }: any) => {
   return <Animated.View style={[style, { transform: [{ scale: anim }] }]}>{children}</Animated.View>;
 };
 
-// ─── Bouncy Button ───
+// ─── Bouncy Button ───────────────────────────────────────────────────────────
 export const Bouncy = ({ children, onPress, style, disabled }: any) => {
   const scale = useRef(new Animated.Value(1)).current;
   const pressIn = () => Animated.spring(scale, { toValue: 0.95, friction: 5, useNativeDriver: true }).start();
@@ -39,7 +118,7 @@ export const Bouncy = ({ children, onPress, style, disabled }: any) => {
   );
 };
 
-// ─── SuccessBurst ───
+// ─── SuccessBurst ─────────────────────────────────────────────────────────────
 export const SuccessBurst = () => {
   const scale = useRef(new Animated.Value(0)).current;
   const particles = useRef([0,1,2,3,4,5,6,7].map(() => ({
@@ -63,49 +142,50 @@ export const SuccessBurst = () => {
           {['🎉','✨','⭐','🎊'][i % 4]}
         </Animated.Text>
       ))}
-      <Animated.View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#00D9A0', alignItems: 'center', justifyContent: 'center', transform: [{ scale }], elevation: 8, shadowColor: '#00D9A0', shadowOpacity: 0.6, shadowRadius: 14 }}>
+      <Animated.View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: C.green, alignItems: 'center', justifyContent: 'center', transform: [{ scale }], elevation: 8, shadowColor: C.green, shadowOpacity: 0.5, shadowRadius: 14 }}>
         <Text style={{ fontSize: 32, color: '#fff' }}>✓</Text>
       </Animated.View>
     </View>
   );
 };
 
-// ─── FadeIn ───
+// ─── FadeIn ───────────────────────────────────────────────────────────────────
 export const FadeIn = ({ children, style, delay = 0 }: any) => {
   const anim = useRef(new Animated.Value(0)).current;
   useEffect(() => { Animated.timing(anim, { toValue: 1, duration: 400, delay, useNativeDriver: true }).start(); }, []);
   return <Animated.View style={[style, { opacity: anim }]}>{children}</Animated.View>;
 };
 
-// ─── RadarView ───
+// ─── RadarView — concentric rings on light bg ─────────────────────────────────
 export const RadarView = () => {
   const rings = [useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current];
   useEffect(() => {
     rings.forEach((r, i) => {
       Animated.loop(Animated.sequence([
         Animated.delay(i * 600),
-        Animated.timing(r, { toValue: 1, duration: 2000, useNativeDriver: true }),
+        Animated.timing(r, { toValue: 1, duration: 2200, useNativeDriver: true }),
         Animated.timing(r, { toValue: 0, duration: 0, useNativeDriver: true }),
       ])).start();
     });
   }, []);
   return (
-    <View style={{ width: 120, height: 120, alignItems: 'center', justifyContent: 'center' }}>
+    <View style={{ width: 140, height: 140, alignItems: 'center', justifyContent: 'center' }}>
       {rings.map((r, i) => (
         <Animated.View key={i} style={{
-          position: 'absolute', width: 120, height: 120, borderRadius: 60, borderWidth: 2, borderColor: '#FF2D78',
-          opacity: r.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.9, 0.45, 0] }),
-          transform: [{ scale: r.interpolate({ inputRange: [0, 1], outputRange: [0.5, 2] }) }],
+          position: 'absolute', width: 140, height: 140, borderRadius: 70,
+          borderWidth: 2.5, borderColor: C.pink,
+          opacity: r.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0.8, 0.35, 0] }),
+          transform: [{ scale: r.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1.8] }) }],
         }} />
       ))}
-      <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: '#FF2D78', alignItems: 'center', justifyContent: 'center', elevation: 8, shadowColor: '#FF2D78', shadowOpacity: 0.6, shadowRadius: 12 }}>
-        <Text style={{ fontSize: 28 }}>🚖</Text>
+      <View style={{ width: 68, height: 68, borderRadius: 34, backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center', elevation: 10, shadowColor: C.pink, shadowOpacity: 0.45, shadowRadius: 14 }}>
+        <Text style={{ fontSize: 30 }}>🚖</Text>
       </View>
     </View>
   );
 };
 
-// ─── MapWebView ───
+// ─── MapWebView ───────────────────────────────────────────────────────────────
 export const MapWebView = ({ pickup, drop, pickupCoords, dropCoords, driverLat, driverLng, customerLat, customerLng, userLat, userLng, height = 280 }: any) => {
   const centerLat = pickupCoords?.lat || userLat || customerLat || 26.8467;
   const centerLng = pickupCoords?.lng || userLng || customerLng || 80.9462;
@@ -116,18 +196,18 @@ export const MapWebView = ({ pickup, drop, pickupCoords, dropCoords, driverLat, 
     map = new google.maps.Map(document.getElementById('map'), { center, zoom: 14, disableDefaultUI: true, zoomControl: true, styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }, { featureType: 'transit', stylers: [{ visibility: 'off' }] }] });
     const bounds = new google.maps.LatLngBounds();
     let hasPoint = false;
-    ${pickupCoords?.lat ? `const pickupPos={lat:${pickupCoords.lat},lng:${pickupCoords.lng}};new google.maps.Marker({position:pickupPos,map,icon:{path:google.maps.SymbolPath.CIRCLE,scale:10,fillColor:'#4CAF50',fillOpacity:1,strokeColor:'#fff',strokeWeight:3},animation:google.maps.Animation.DROP});bounds.extend(pickupPos);hasPoint=true;` : ''}
-    ${dropCoords?.lat ? `const dropPos={lat:${dropCoords.lat},lng:${dropCoords.lng}};new google.maps.Marker({position:dropPos,map,icon:{path:google.maps.SymbolPath.CIRCLE,scale:10,fillColor:'#e94560',fillOpacity:1,strokeColor:'#fff',strokeWeight:3},animation:google.maps.Animation.DROP});bounds.extend(dropPos);hasPoint=true;` : ''}
+    ${pickupCoords?.lat ? `const pickupPos={lat:${pickupCoords.lat},lng:${pickupCoords.lng}};new google.maps.Marker({position:pickupPos,map,icon:{path:google.maps.SymbolPath.CIRCLE,scale:10,fillColor:'#059669',fillOpacity:1,strokeColor:'#fff',strokeWeight:3},animation:google.maps.Animation.DROP});bounds.extend(pickupPos);hasPoint=true;` : ''}
+    ${dropCoords?.lat ? `const dropPos={lat:${dropCoords.lat},lng:${dropCoords.lng}};new google.maps.Marker({position:dropPos,map,icon:{path:google.maps.SymbolPath.CIRCLE,scale:10,fillColor:'#FF2D78',fillOpacity:1,strokeColor:'#fff',strokeWeight:3},animation:google.maps.Animation.DROP});bounds.extend(dropPos);hasPoint=true;` : ''}
     ${driverLat && driverLng ? `const driverPos={lat:${driverLat},lng:${driverLng}};new google.maps.Marker({position:driverPos,map,label:{text:'🚗',fontSize:'22px'},icon:{path:google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0}});bounds.extend(driverPos);hasPoint=true;` : ''}
     ${customerLat && customerLng ? `const customerPos={lat:${customerLat},lng:${customerLng}};new google.maps.Marker({position:customerPos,map,label:{text:'🧑',fontSize:'22px'},icon:{path:google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0}});bounds.extend(customerPos);hasPoint=true;` : ''}
-    ${pickupCoords?.lat && dropCoords?.lat ? `const ds=new google.maps.DirectionsService();const dr=new google.maps.DirectionsRenderer({map,suppressMarkers:true,polylineOptions:{strokeColor:'#1a1a2e',strokeWeight:4,strokeOpacity:0.8}});ds.route({origin:{lat:${pickupCoords.lat},lng:${pickupCoords.lng}},destination:{lat:${dropCoords.lat},lng:${dropCoords.lng}},travelMode:'DRIVING'},(result,status)=>{if(status==='OK')dr.setDirections(result);});` : ''}
+    ${pickupCoords?.lat && dropCoords?.lat ? `const ds=new google.maps.DirectionsService();const dr=new google.maps.DirectionsRenderer({map,suppressMarkers:true,polylineOptions:{strokeColor:'#FF2D78',strokeWeight:4,strokeOpacity:0.85}});ds.route({origin:{lat:${pickupCoords.lat},lng:${pickupCoords.lng}},destination:{lat:${dropCoords.lat},lng:${dropCoords.lng}},travelMode:'DRIVING'},(result,status)=>{if(status==='OK')dr.setDirections(result);});` : ''}
     if (hasPoint) { map.fitBounds(bounds, 80); if (map.getZoom() > 16) map.setZoom(16); }
   }
   </script><script async src="https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&callback=initMap"></script></body></html>`;
   return <WebView source={{ html }} style={{ height, width: '100%' }} scrollEnabled={false} javaScriptEnabled domStorageEnabled />;
 };
 
-// ─── CityMapView — decorative SVG city map for home screen ───
+// ─── CityMapView — decorative SVG city map for home screen ───────────────────
 const CITY_MAP_HTML = `<!DOCTYPE html>
 <html>
 <head>
@@ -161,8 +241,6 @@ const CITY_MAP_HTML = `<!DOCTYPE html>
 <path d="M0,38 C28,30 48,46 76,36 C104,26 126,42 155,34 C178,27 200,22 228,29 C252,35 268,25 295,19 C318,14 342,24 360,17" stroke="#90bcd6" stroke-width="13" fill="none" stroke-linecap="round" opacity="0.38"/>
 <path d="M0,38 C28,30 48,46 76,36 C104,26 126,42 155,34 C178,27 200,22 228,29 C252,35 268,25 295,19 C318,14 342,24 360,17" stroke="#b4d2e8" stroke-width="7" fill="none" stroke-linecap="round" opacity="0.55"/>
 <path d="M0,38 C28,30 48,46 76,36 C104,26 126,42 155,34 C178,27 200,22 228,29 C252,35 268,25 295,19 C318,14 342,24 360,17" stroke="#d4e8f4" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.85"/>
-<path d="M60,33 C70,30 80,36 90,32" stroke="#a0c8e0" stroke-width="0.8" fill="none" opacity="0.5"/>
-<path d="M190,26 C202,23 214,28 226,25" stroke="#a0c8e0" stroke-width="0.8" fill="none" opacity="0.5"/>
 <text x="310" y="16" text-anchor="middle" fill="#4888aa" font-size="6" font-family="sans-serif" font-style="italic" opacity="0.85">Gomti River</text>
 <rect x="85" y="8" width="58" height="56" rx="10" fill="#c6e2bc" opacity="0.85"/>
 <rect x="85" y="8" width="58" height="56" rx="10" fill="none" stroke="#86be7a" stroke-width="0.9" opacity="0.6"/>
@@ -179,24 +257,12 @@ const CITY_MAP_HTML = `<!DOCTYPE html>
 <circle cx="118" cy="57" r="4.5" fill="#6aaa60" opacity="0.8"/>
 <circle cx="133" cy="54" r="3.5" fill="#7cbf72" opacity="0.75"/>
 <rect x="0"   y="66" width="360" height="7" fill="#fafafa" opacity="0.9"/>
-<line x1="0" y1="66"  x2="360" y2="66"  stroke="#cdd0d5" stroke-width="0.5"/>
-<line x1="0" y1="73"  x2="360" y2="73"  stroke="#cdd0d5" stroke-width="0.5"/>
 <rect x="0"   y="187" width="360" height="7" fill="#fafafa" opacity="0.9"/>
-<line x1="0" y1="187" x2="360" y2="187" stroke="#cdd0d5" stroke-width="0.5"/>
-<line x1="0" y1="194" x2="360" y2="194" stroke="#cdd0d5" stroke-width="0.5"/>
 <rect x="72"  y="0"   width="7"   height="260" fill="#fafafa" opacity="0.9"/>
-<line x1="72" y1="0"  x2="72"  y2="260" stroke="#cdd0d5" stroke-width="0.5"/>
-<line x1="79" y1="0"  x2="79"  y2="260" stroke="#cdd0d5" stroke-width="0.5"/>
 <rect x="252" y="0"   width="7"   height="260" fill="#fafafa" opacity="0.9"/>
-<line x1="252" y1="0" x2="252" y2="260" stroke="#cdd0d5" stroke-width="0.5"/>
-<line x1="259" y1="0" x2="259" y2="260" stroke="#cdd0d5" stroke-width="0.5"/>
 <rect x="0"   y="124" width="360" height="8" fill="#ffffff" opacity="0.97"/>
-<line x1="0"   y1="124" x2="360" y2="124" stroke="#c4c8ce" stroke-width="0.6"/>
-<line x1="0"   y1="132" x2="360" y2="132" stroke="#c4c8ce" stroke-width="0.6"/>
 <line x1="0"   y1="128" x2="360" y2="128" stroke="#e2bc38" stroke-width="0.9" stroke-dasharray="16 9" opacity="0.4"/>
 <rect x="151" y="0"   width="8"   height="260" fill="#ffffff" opacity="0.97"/>
-<line x1="151" y1="0"  x2="151" y2="260" stroke="#c4c8ce" stroke-width="0.6"/>
-<line x1="159" y1="0"  x2="159" y2="260" stroke="#c4c8ce" stroke-width="0.6"/>
 <line x1="155" y1="0"  x2="155" y2="260" stroke="#e2bc38" stroke-width="0.9" stroke-dasharray="16 9" opacity="0.4"/>
 <line x1="0"   y1="105" x2="151" y2="105" stroke="#fff" stroke-width="3.5" opacity="0.8"/>
 <line x1="159" y1="105" x2="252" y2="105" stroke="#fff" stroke-width="3.5" opacity="0.75"/>
@@ -222,16 +288,10 @@ const CITY_MAP_HTML = `<!DOCTYPE html>
 <line x1="302" y1="73"  x2="302" y2="124" stroke="#fff" stroke-width="3"   opacity="0.7"/>
 <line x1="302" y1="132" x2="302" y2="187" stroke="#fff" stroke-width="3"   opacity="0.7"/>
 <line x1="302" y1="194" x2="302" y2="260" stroke="#fff" stroke-width="3"   opacity="0.65"/>
-<path d="M0,106 L38,106 L38,124" stroke="#c8b0d8" stroke-width="3.5" fill="none" opacity="0.55" stroke-linecap="round"/>
-<path d="M0,106 L38,106 L38,124" stroke="#fff" stroke-width="1.5" fill="none" stroke-dasharray="5 4" opacity="0.65"/>
-<line x1="5"  y1="106" x2="5"  y2="109" stroke="#c8b0d8" stroke-width="1.5" opacity="0.45"/>
-<line x1="12" y1="106" x2="12" y2="109" stroke="#c8b0d8" stroke-width="1.5" opacity="0.45"/>
-<line x1="19" y1="106" x2="19" y2="109" stroke="#c8b0d8" stroke-width="1.5" opacity="0.45"/>
-<line x1="26" y1="106" x2="26" y2="109" stroke="#c8b0d8" stroke-width="1.5" opacity="0.45"/>
-<path d="M44,128 L155,128" stroke="#e94560" stroke-width="2.5" fill="none" opacity="0.28" stroke-dasharray="10 7" stroke-linecap="round"><animate attributeName="stroke-dashoffset" from="0" to="-51" dur="1.4s" repeatCount="indefinite"/></path>
-<path d="M155,128 L155,70 L255,70" stroke="#1a73e8" stroke-width="2" fill="none" opacity="0.24" stroke-dasharray="9 6" stroke-linecap="round"><animate attributeName="stroke-dashoffset" from="0" to="-60" dur="1.8s" repeatCount="indefinite"/></path>
-<path d="M36,190 L76,190 L76,128 L155,128" stroke="#34a853" stroke-width="2" fill="none" opacity="0.24" stroke-dasharray="9 6" stroke-linecap="round"><animate attributeName="stroke-dashoffset" from="0" to="-60" dur="2s" repeatCount="indefinite"/></path>
-<path d="M155,128 L255,128 L255,150" stroke="#f0a500" stroke-width="2" fill="none" opacity="0.24" stroke-dasharray="9 6" stroke-linecap="round"><animate attributeName="stroke-dashoffset" from="0" to="-45" dur="1.6s" repeatCount="indefinite"/></path>
+<path d="M44,128 L155,128" stroke="#FF2D78" stroke-width="2.5" fill="none" opacity="0.3" stroke-dasharray="10 7" stroke-linecap="round"><animate attributeName="stroke-dashoffset" from="0" to="-51" dur="1.4s" repeatCount="indefinite"/></path>
+<path d="M155,128 L155,70 L255,70" stroke="#059669" stroke-width="2" fill="none" opacity="0.25" stroke-dasharray="9 6" stroke-linecap="round"><animate attributeName="stroke-dashoffset" from="0" to="-60" dur="1.8s" repeatCount="indefinite"/></path>
+<path d="M36,190 L76,190 L76,128 L155,128" stroke="#059669" stroke-width="2" fill="none" opacity="0.25" stroke-dasharray="9 6" stroke-linecap="round"><animate attributeName="stroke-dashoffset" from="0" to="-60" dur="2s" repeatCount="indefinite"/></path>
+<path d="M155,128 L255,128 L255,150" stroke="#F59E0B" stroke-width="2" fill="none" opacity="0.25" stroke-dasharray="9 6" stroke-linecap="round"><animate attributeName="stroke-dashoffset" from="0" to="-45" dur="1.6s" repeatCount="indefinite"/></path>
 <text font-size="14" text-anchor="middle" dominant-baseline="central"><animateMotion dur="5s" repeatCount="indefinite" rotate="auto"><mpath href="#rA"/></animateMotion>🚗</text>
 <text font-size="12" text-anchor="middle" dominant-baseline="central"><animateMotion dur="5s" begin="-2.5s" repeatCount="indefinite" rotate="auto"><mpath href="#rAr"/></animateMotion>🚕</text>
 <text font-size="12" text-anchor="middle" dominant-baseline="central"><animateMotion dur="6.5s" repeatCount="indefinite" rotate="auto"><mpath href="#rB"/></animateMotion>🏍️</text>
@@ -247,6 +307,13 @@ const CITY_MAP_HTML = `<!DOCTYPE html>
 <circle cx="76"  cy="190" r="3"   fill="#bec2c8" opacity="0.8"/>
 <circle cx="155" cy="190" r="3"   fill="#bec2c8" opacity="0.8"/>
 <circle cx="255" cy="190" r="3"   fill="#bec2c8" opacity="0.8"/>
+<rect x="108" y="6" width="120" height="26" rx="13" fill="rgba(255,45,120,0.09)" stroke="rgba(255,45,120,0.35)" stroke-width="0.9"/>
+<text x="168" y="16" text-anchor="middle" fill="#FF2D78" font-size="10" font-weight="bold" font-family="sans-serif">⚡ SPPERO</text>
+<text x="168" y="26" text-anchor="middle" fill="#999" font-size="5.5" font-family="sans-serif">Trusted Rides · Lucknow</text>
+<rect x="262" y="76"  width="62" height="30" rx="7" fill="#fff" opacity="0.95" stroke="#a0bcd4" stroke-width="0.9"/>
+<text x="278" y="92"  font-size="14" text-anchor="middle" dominant-baseline="central">🏢</text>
+<text x="306" y="87"  text-anchor="middle" fill="#20467a" font-size="6.5" font-weight="bold" font-family="sans-serif">IT Hub</text>
+<text x="306" y="98"  text-anchor="middle" fill="#5080b0" font-size="5.5" font-family="sans-serif">Office Park</text>
 <rect x="4"   y="110" width="60" height="30" rx="7" fill="#fff" opacity="0.95" stroke="#c0b0d4" stroke-width="0.9"/>
 <text x="19"  y="126" font-size="14" text-anchor="middle" dominant-baseline="central">🚉</text>
 <text x="44"  y="120" text-anchor="middle" fill="#5540a0" font-size="6.5" font-weight="bold" font-family="sans-serif">Railway</text>
@@ -255,10 +322,6 @@ const CITY_MAP_HTML = `<!DOCTYPE html>
 <text x="19"  y="59"  font-size="14" text-anchor="middle" dominant-baseline="central">🎓</text>
 <text x="44"  y="53"  text-anchor="middle" fill="#2a5e2a" font-size="6.5" font-weight="bold" font-family="sans-serif">University</text>
 <text x="44"  y="64"  text-anchor="middle" fill="#508050" font-size="5.5" font-family="sans-serif">City Campus</text>
-<rect x="262" y="76"  width="62" height="30" rx="7" fill="#fff" opacity="0.95" stroke="#a0bcd4" stroke-width="0.9"/>
-<text x="278" y="92"  font-size="14" text-anchor="middle" dominant-baseline="central">🏢</text>
-<text x="306" y="87"  text-anchor="middle" fill="#20467a" font-size="6.5" font-weight="bold" font-family="sans-serif">IT Hub</text>
-<text x="306" y="98"  text-anchor="middle" fill="#5080b0" font-size="5.5" font-family="sans-serif">Office Park</text>
 <rect x="262" y="136" width="62" height="30" rx="7" fill="#fff" opacity="0.95" stroke="#d4a8a8" stroke-width="0.9"/>
 <text x="278" y="152" font-size="14" text-anchor="middle" dominant-baseline="central">🏥</text>
 <text x="306" y="147" text-anchor="middle" fill="#841818" font-size="6.5" font-weight="bold" font-family="sans-serif">City Hospital</text>
@@ -275,48 +338,19 @@ const CITY_MAP_HTML = `<!DOCTYPE html>
 <text x="184" y="213" font-size="14" text-anchor="middle" dominant-baseline="central">🕌</text>
 <text x="210" y="207" text-anchor="middle" fill="#7a5010" font-size="6" font-weight="bold" font-family="sans-serif">Bara Imambara</text>
 <text x="210" y="218" text-anchor="middle" fill="#b08030" font-size="5.5" font-family="sans-serif">Heritage Site</text>
-<rect x="262" y="197" width="62" height="30" rx="7" fill="#fff" opacity="0.95" stroke="#c8d0a8" stroke-width="0.9"/>
-<text x="278" y="213" font-size="14" text-anchor="middle" dominant-baseline="central">⛽</text>
-<text x="306" y="207" text-anchor="middle" fill="#305828" font-size="6.5" font-weight="bold" font-family="sans-serif">Petrol Pump</text>
-<text x="306" y="218" text-anchor="middle" fill="#608848" font-size="5.5" font-family="sans-serif">HP / IndianOil</text>
 <circle cx="155" cy="128" r="17" fill="#fff" opacity="0.97" stroke="#e0b840" stroke-width="1.8"/>
 <circle cx="155" cy="128" r="14" fill="#fff9ee" opacity="0.6"/>
 <text x="155" y="123" font-size="14" text-anchor="middle" dominant-baseline="central">🛒</text>
 <text x="155" y="150" text-anchor="middle" fill="#7a5010" font-size="6" font-weight="bold" font-family="sans-serif">Hazratganj</text>
-<text x="114" y="70" text-anchor="middle" fill="#3a7030" font-size="5.5" font-family="sans-serif" font-style="italic">Ambedkar Park</text>
-<text x="105" y="120" text-anchor="middle" fill="#b4b8c0" font-size="4.8" font-family="sans-serif">← Hazratganj Rd →</text>
-<text x="145" y="48"  text-anchor="middle" fill="#b4b8c0" font-size="4.8" font-family="sans-serif" transform="rotate(-90,145,48)">MG Marg</text>
-<text x="210" y="64"  text-anchor="middle" fill="#b4b8c0" font-size="4.8" font-family="sans-serif">Vibhuti Khand Rd</text>
-<text x="36"  y="64"  text-anchor="middle" fill="#b4b8c0" font-size="4.8" font-family="sans-serif">Ring Rd</text>
-<rect x="108" y="6" width="120" height="26" rx="13" fill="rgba(233,69,96,0.08)" stroke="rgba(233,69,96,0.30)" stroke-width="0.9"/>
-<text x="168" y="16" text-anchor="middle" fill="#e94560" font-size="10" font-weight="bold" font-family="sans-serif">&#x26A1; SPPERO</text>
-<text x="168" y="26" text-anchor="middle" fill="#c09098" font-size="5.5" font-family="sans-serif">Trusted Rides · Lucknow</text>
-<circle cx="24" cy="242" r="12" fill="rgba(0,0,0,0.04)" stroke="#c4c8ce" stroke-width="0.8"/>
-<text x="24"  y="237" text-anchor="middle" fill="#888" font-size="7.5" font-family="sans-serif" font-weight="bold">N</text>
-<line x1="24" y1="238" x2="24" y2="247" stroke="#bbb" stroke-width="0.9"/>
-<text x="24"  y="254" text-anchor="middle" fill="#bbb" font-size="5" font-family="sans-serif">S</text>
-<line x1="15" y1="242" x2="33" y2="242" stroke="#bbb" stroke-width="0.7"/>
-<text x="10"  y="244" text-anchor="middle" fill="#bbb" font-size="5" font-family="sans-serif">W</text>
-<text x="38"  y="244" text-anchor="middle" fill="#bbb" font-size="5" font-family="sans-serif">E</text>
-<line x1="296" y1="249" x2="350" y2="249" stroke="#c0c4ca" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
-<line x1="296" y1="246" x2="296" y2="252" stroke="#c0c4ca" stroke-width="1.5" opacity="0.7"/>
-<line x1="350" y1="246" x2="350" y2="252" stroke="#c0c4ca" stroke-width="1.5" opacity="0.7"/>
-<text x="323" y="258" text-anchor="middle" fill="#aaa" font-size="5.5" font-family="sans-serif">1 km</text>
 </svg>
 </body>
 </html>`;
 
 export const CityMapView = ({ height = 260 }: { height?: number }) => (
-  <WebView
-    source={{ html: CITY_MAP_HTML }}
-    style={{ height, width: '100%', backgroundColor: '#f0f2f5' }}
-    scrollEnabled={false}
-    javaScriptEnabled
-    domStorageEnabled
-  />
+  <WebView source={{ html: CITY_MAP_HTML }} style={{ height, width: '100%', backgroundColor: '#f0f2f5' }} scrollEnabled={false} javaScriptEnabled domStorageEnabled />
 );
 
-// ─── SlideUp ───
+// ─── SlideUp ──────────────────────────────────────────────────────────────────
 export const SlideUp = ({ children, style, delay = 0 }: any) => {
   const y = useRef(new Animated.Value(50)).current;
   const o = useRef(new Animated.Value(0)).current;
@@ -329,8 +363,8 @@ export const SlideUp = ({ children, style, delay = 0 }: any) => {
   return <Animated.View style={[style, { transform: [{ translateY: y }], opacity: o }]}>{children}</Animated.View>;
 };
 
-// ─── FloatingDots ───
-export const FloatingDots = ({ color = '#e94560' }: any) => {
+// ─── FloatingDots ─────────────────────────────────────────────────────────────
+export const FloatingDots = ({ color = C.pink }: any) => {
   const dots = [useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current];
   useEffect(() => {
     dots.forEach((d, i) => {
@@ -351,7 +385,7 @@ export const FloatingDots = ({ color = '#e94560' }: any) => {
   );
 };
 
-// ─── EmptyAnim ───
+// ─── EmptyAnim ────────────────────────────────────────────────────────────────
 export const EmptyAnim = ({ icon, title, sub }: any) => {
   const bounce = useRef(new Animated.Value(0)).current;
   const fade   = useRef(new Animated.Value(0)).current;
@@ -365,13 +399,13 @@ export const EmptyAnim = ({ icon, title, sub }: any) => {
   return (
     <Animated.View style={{ alignItems: 'center', marginTop: 60, paddingHorizontal: 30, opacity: fade }}>
       <Animated.Text style={{ fontSize: 72, transform: [{ translateY: bounce }] }}>{icon}</Animated.Text>
-      <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff', marginTop: 22 }}>{title}</Text>
-      {sub ? <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 8, textAlign: 'center', lineHeight: 20 }}>{sub}</Text> : null}
+      <Text style={{ fontSize: 18, fontWeight: '800', color: C.text, marginTop: 22 }}>{title}</Text>
+      {sub ? <Text style={{ fontSize: 13, color: C.textMuted, marginTop: 8, textAlign: 'center', lineHeight: 20 }}>{sub}</Text> : null}
     </Animated.View>
   );
 };
 
-// ─── MapOverlay ───
+// ─── MapOverlay ───────────────────────────────────────────────────────────────
 export const MapOverlay = ({ hasRoute, pickup, drop, live = false }: any) => {
   const pulse = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -384,27 +418,27 @@ export const MapOverlay = ({ hasRoute, pickup, drop, live = false }: any) => {
   return (
     <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} pointerEvents="none">
       {live && (
-        <View style={{ position: 'absolute', top: 10, right: 10, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(46,125,50,0.92)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5, elevation: 4 }}>
+        <View style={{ position: 'absolute', top: 10, right: 10, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(5,150,105,0.92)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5, elevation: 4 }}>
           <Animated.View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#fff', marginRight: 5, transform: [{ scale: pulse }] }} />
           <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold', letterSpacing: 0.5 }}>LIVE</Text>
         </View>
       )}
       {hasRoute && (
-        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(26,26,46,0.86)', paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#4CAF50', marginRight: 6 }} />
-          <Text style={{ color: '#fff', fontSize: 11, flex: 1 }} numberOfLines={1}>{pickup}</Text>
-          <Text style={{ color: '#666', fontSize: 12, marginHorizontal: 5 }}>→</Text>
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#e94560', marginRight: 6 }} />
-          <Text style={{ color: '#fff', fontSize: 11, flex: 1 }} numberOfLines={1}>{drop}</Text>
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(255,255,255,0.94)', paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#E4E6F6' }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#059669', marginRight: 6 }} />
+          <Text style={{ color: '#1A1A2E', fontSize: 11, flex: 1, fontWeight: '600' }} numberOfLines={1}>{pickup}</Text>
+          <Text style={{ color: '#94A3B8', fontSize: 12, marginHorizontal: 5 }}>→</Text>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF2D78', marginRight: 6 }} />
+          <Text style={{ color: '#1A1A2E', fontSize: 11, flex: 1, fontWeight: '600' }} numberOfLines={1}>{drop}</Text>
         </View>
       )}
     </View>
   );
 };
 
-// ─── Confetti ───
+// ─── Confetti ─────────────────────────────────────────────────────────────────
 export const Confetti = () => {
-  const COLORS = ['#e94560','#4CAF50','#f0a500','#2196F3','#9C27B0','#FF5722','#00BCD4'];
+  const COLORS = ['#FF2D78','#059669','#F59E0B','#3B82F6','#7C3AED','#EF4444','#06B6D4'];
   const pieces = useRef([...Array(28)].map((_, i) => ({
     y: new Animated.Value(-20), rot: new Animated.Value(0), o: new Animated.Value(1),
     left: (i * 13 + (i % 4) * 9) % 360, dur: 1200 + (i % 6) * 180, delay: (i % 7) * 90,
@@ -438,7 +472,7 @@ export const Confetti = () => {
   );
 };
 
-// ─── ScreenIn — screen mount slide + fade ───
+// ─── ScreenIn ─────────────────────────────────────────────────────────────────
 export const ScreenIn = ({ children, style }: any) => {
   const x = useRef(new Animated.Value(45)).current;
   const o = useRef(new Animated.Value(0)).current;
@@ -451,7 +485,7 @@ export const ScreenIn = ({ children, style }: any) => {
   return <Animated.View style={[style, { transform: [{ translateX: x }], opacity: o }]}>{children}</Animated.View>;
 };
 
-// ─── TripSteps ───
+// ─── TripSteps ────────────────────────────────────────────────────────────────
 export const TripSteps = ({ step }: { step: 0 | 1 | 2 | 3 }) => {
   const anim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -460,24 +494,24 @@ export const TripSteps = ({ step }: { step: 0 | 1 | 2 | 3 }) => {
   const steps = [{ icon: '🔍', label: 'Booking' }, { icon: '🚗', label: 'Driver' }, { icon: '🛣️', label: 'Ride' }, { icon: '✅', label: 'Done' }];
   return (
     <View style={{ paddingHorizontal: 6, paddingBottom: 14, paddingTop: 4 }}>
-      <View style={{ height: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 2, marginHorizontal: 14, marginBottom: 10, overflow: 'hidden' }}>
-        <Animated.View style={{ height: 4, backgroundColor: '#FF2D78', borderRadius: 2, width: anim.interpolate({ inputRange: [0, 3], outputRange: ['0%', '100%'] }), shadowColor: '#FF2D78', shadowOpacity: 0.8, shadowRadius: 4 }} />
+      <View style={{ height: 4, backgroundColor: C.glassBorder, borderRadius: 2, marginHorizontal: 14, marginBottom: 10, overflow: 'hidden' }}>
+        <Animated.View style={{ height: 4, backgroundColor: C.pink, borderRadius: 2, width: anim.interpolate({ inputRange: [0, 3], outputRange: ['0%', '100%'] }), shadowColor: C.pink, shadowOpacity: 0.5, shadowRadius: 4 }} />
       </View>
       <View style={{ flexDirection: 'row' }}>
         {steps.map((s, i) => (
           <View key={i} style={{ flex: 1, alignItems: 'center' }}>
             <Animated.View style={{
               width: 30, height: 30, borderRadius: 15,
-              backgroundColor: i <= step ? '#FF2D78' : 'rgba(255,255,255,0.1)',
+              backgroundColor: i <= step ? C.pink : C.glassMid,
               alignItems: 'center', justifyContent: 'center',
               transform: [{ scale: i === step ? 1.2 : 1 }],
               elevation: i === step ? 6 : 0,
-              shadowColor: '#FF2D78', shadowOpacity: i === step ? 0.6 : 0, shadowRadius: 8,
-              borderWidth: i > step ? 1 : 0, borderColor: 'rgba(255,255,255,0.15)',
+              shadowColor: C.pink, shadowOpacity: i === step ? 0.4 : 0, shadowRadius: 8,
+              borderWidth: i > step ? 1 : 0, borderColor: C.glassBorder,
             }}>
               <Text style={{ fontSize: 13 }}>{i <= step ? s.icon : '·'}</Text>
             </Animated.View>
-            <Text style={{ fontSize: 9, marginTop: 4, color: i <= step ? '#FF2D78' : 'rgba(255,255,255,0.3)', fontWeight: i === step ? '800' : 'normal' }}>{s.label}</Text>
+            <Text style={{ fontSize: 9, marginTop: 4, color: i <= step ? C.pink : C.textDim, fontWeight: i === step ? '800' : 'normal' }}>{s.label}</Text>
           </View>
         ))}
       </View>
@@ -485,7 +519,7 @@ export const TripSteps = ({ step }: { step: 0 | 1 | 2 | 3 }) => {
   );
 };
 
-// ─── CountUp ───
+// ─── CountUp ──────────────────────────────────────────────────────────────────
 export const CountUp = ({ to, prefix = '', style }: any) => {
   const anim = useRef(new Animated.Value(0)).current;
   const [display, setDisplay] = useState(0);
@@ -499,31 +533,10 @@ export const CountUp = ({ to, prefix = '', style }: any) => {
   return <Text style={style}>{prefix}{display}</Text>;
 };
 
-// ─── DotBG — subtle animated dot grid background ─────────────────────────────
-export const DotBG = ({ color = 'rgba(255,255,255,0.055)', spacing = 32, size = 3 }: any) => {
-  const cols = 13;
-  const rows = 28;
-  const dots: { x: number; y: number; key: number }[] = [];
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      // Offset alternating rows for a hex-grid feel
-      const xOff = r % 2 === 0 ? 0 : spacing / 2;
-      dots.push({ x: c * spacing + xOff, y: r * spacing, key: r * cols + c });
-    }
-  }
-  return (
-    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' }} pointerEvents="none">
-      {dots.map(d => (
-        <View key={d.key} style={{ position: 'absolute', left: d.x, top: d.y, width: size, height: size, borderRadius: size / 2, backgroundColor: color }} />
-      ))}
-    </View>
-  );
-};
-
-// ─── GlowPulse — pulsing glow dot ─────────────────────────────────────────────
-export const GlowPulse = ({ color = '#FF2D78', size = 12 }: any) => {
+// ─── GlowPulse ────────────────────────────────────────────────────────────────
+export const GlowPulse = ({ color = C.pink, size = 12 }: any) => {
   const scale = useRef(new Animated.Value(1)).current;
-  const opacity = useRef(new Animated.Value(0.6)).current;
+  const opacity = useRef(new Animated.Value(0.5)).current;
   useEffect(() => {
     Animated.loop(Animated.parallel([
       Animated.sequence([
@@ -531,8 +544,8 @@ export const GlowPulse = ({ color = '#FF2D78', size = 12 }: any) => {
         Animated.timing(scale, { toValue: 1, duration: 700, useNativeDriver: true }),
       ]),
       Animated.sequence([
-        Animated.timing(opacity, { toValue: 0.15, duration: 700, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0.6, duration: 700, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.1, duration: 700, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.5, duration: 700, useNativeDriver: true }),
       ]),
     ])).start();
   }, []);
@@ -544,7 +557,7 @@ export const GlowPulse = ({ color = '#FF2D78', size = 12 }: any) => {
   );
 };
 
-// ─── ShineCard — card with sweeping shine animation ───────────────────────────
+// ─── ShineCard — shine sweep animation ───────────────────────────────────────
 export const ShineCard = ({ children, style }: any) => {
   const shine = useRef(new Animated.Value(-100)).current;
   useEffect(() => {
@@ -560,37 +573,135 @@ export const ShineCard = ({ children, style }: any) => {
   return (
     <View style={[{ overflow: 'hidden' }, style]}>
       {children}
-      <Animated.View
-        pointerEvents="none"
-        style={{
-          position: 'absolute', top: 0, bottom: 0, width: 70,
-          backgroundColor: 'rgba(255,255,255,0.07)',
-          transform: [{ translateX: shine }, { skewX: '-20deg' }],
-        }}
-      />
+      <Animated.View pointerEvents="none" style={{
+        position: 'absolute', top: 0, bottom: 0, width: 70,
+        backgroundColor: 'rgba(255,255,255,0.35)',
+        transform: [{ translateX: shine }, { skewX: '-20deg' }],
+      }} />
     </View>
   );
 };
 
-// ─── GradientBar — horizontal accent bar with glowing dot ─────────────────────
-export const GradientBar = ({ colors = ['#FF2D78', '#FFD700'], height = 3, style }: any) => {
-  const dot = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.loop(
-      Animated.timing(dot, { toValue: 1, duration: 2000, useNativeDriver: false })
-    ).start();
-  }, []);
-  return (
-    <View style={[{ height, borderRadius: height / 2, overflow: 'hidden', flexDirection: 'row' }, style]}>
-      <View style={{ flex: 1, backgroundColor: colors[0], borderRadius: height / 2 }} />
-      <View style={{ flex: 1, backgroundColor: colors[1] || colors[0], borderRadius: height / 2 }} />
-    </View>
-  );
-};
+// ─── GradientBar — animated accent bar ───────────────────────────────────────
+export const GradientBar = ({ colors = [C.pink, C.yellow], height = 3, style }: any) => (
+  <View style={[{ height, borderRadius: height / 2, flexDirection: 'row' }, style]}>
+    <View style={{ flex: 1, backgroundColor: colors[0], borderRadius: height / 2 }} />
+    <View style={{ flex: 1, backgroundColor: colors[1] || colors[0], borderRadius: height / 2 }} />
+  </View>
+);
 
-// ─── PinkBadge — colored label chip ──────────────────────────────────────────
-export const PinkBadge = ({ label, color = '#FF2D78' }: any) => (
-  <View style={{ backgroundColor: color + '22', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start', borderWidth: 1, borderColor: color + '55' }}>
+// ─── PinkBadge ────────────────────────────────────────────────────────────────
+export const PinkBadge = ({ label, color = C.pink }: any) => (
+  <View style={{ backgroundColor: color + '18', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start', borderWidth: 1, borderColor: color + '40' }}>
     <Text style={{ color, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>{label}</Text>
   </View>
 );
+
+// ─── IndiaCityCard — metro-map style India illustration ──────────────────────
+export const LucknowCityCard = () => {
+  const { width: W } = useWindowDimensions();
+  const PAD = 18;
+
+  const dotX  = useRef(new Animated.Value(0)).current;
+  const autoX = useRef(new Animated.Value(-50)).current;
+  const glow  = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(dotX, { toValue: 1, duration: 4400, easing: Easing.linear, useNativeDriver: true })
+    ).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glow, { toValue: 1.55, duration: 750, useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 1.0,  duration: 750, useNativeDriver: true }),
+      ])
+    ).start();
+
+    const drive = () => {
+      autoX.setValue(-50);
+      Animated.timing(autoX, { toValue: W + 50, duration: 5600, easing: Easing.inOut(Easing.ease), useNativeDriver: true })
+        .start(({ finished }) => { if (finished) setTimeout(drive, 1400); });
+    };
+    const t = setTimeout(drive, 500);
+    return () => { clearTimeout(t); dotX.stopAnimation(); autoX.stopAnimation(); glow.stopAnimation(); };
+  }, []);
+
+  const landmarks = [
+    { icon: '🕌', label: 'Taj\nMahal' },
+    { icon: '🏰', label: 'Red\nFort' },
+    { icon: '⛪', label: 'Golden\nTemple' },
+    { icon: '🌉', label: 'Gateway\nMumbai' },
+    { icon: '🏛️', label: 'Charminar' },
+  ];
+
+  const DOT_Y = 48;
+
+  return (
+    <View style={{ height: 148, backgroundColor: '#E8EBF5', overflow: 'hidden' }}>
+      {/* Grid lines */}
+      {[33, 66].map(p => (
+        <View key={`h${p}`} style={{ position: 'absolute', left: 0, right: 0, top: `${p}%` as any, height: 1, backgroundColor: 'rgba(120,130,200,0.07)' }} />
+      ))}
+      {[25, 50, 75].map(p => (
+        <View key={`v${p}`} style={{ position: 'absolute', top: 0, bottom: 0, left: `${p}%` as any, width: 1, backgroundColor: 'rgba(120,130,200,0.07)' }} />
+      ))}
+
+      {/* India-silhouette blobs */}
+      <View style={{ position: 'absolute', width: 220, height: 165, borderTopRightRadius: 90, borderBottomRightRadius: 55, borderBottomLeftRadius: 75, borderTopLeftRadius: 50, backgroundColor: 'rgba(140,148,210,0.11)', top: -8, left: -18 }} />
+      <View style={{ position: 'absolute', width: 110, height: 125, borderRadius: 55, borderBottomLeftRadius: 18, borderBottomRightRadius: 28, backgroundColor: 'rgba(140,148,210,0.08)', top: 0, right: 36 }} />
+      <View style={{ position: 'absolute', width: 65, height: 75, borderTopRightRadius: 32, borderTopLeftRadius: 32, borderBottomLeftRadius: 8, borderBottomRightRadius: 8, backgroundColor: 'rgba(140,148,210,0.06)', bottom: 0, right: 76 }} />
+
+      {/* Dotted route line */}
+      <View style={{ position: 'absolute', top: DOT_Y - 1, left: PAD, right: PAD, flexDirection: 'row', overflow: 'hidden', height: 3, alignItems: 'center' }}>
+        {Array.from({ length: 40 }).map((_, i) => (
+          <View key={i} style={{ width: 6, height: 2.5, borderRadius: 1.5, backgroundColor: 'rgba(255,45,120,0.38)', marginRight: 4 }} />
+        ))}
+      </View>
+
+      {/* Animated traveling dot with glow */}
+      <Animated.View style={{
+        position: 'absolute', top: DOT_Y - 8, left: 0,
+        width: 16, height: 16, borderRadius: 8,
+        backgroundColor: C.pink,
+        borderWidth: 3, borderColor: '#fff',
+        elevation: 10,
+        shadowColor: C.pink, shadowOpacity: 0.9, shadowRadius: 8,
+        transform: [
+          { translateX: dotX.interpolate({ inputRange: [0, 1], outputRange: [PAD - 8, W - PAD - 8] }) },
+          { scale: glow },
+        ],
+      }} />
+
+      {/* Landmark icons + vertical connectors + junction dots */}
+      <View style={{ position: 'absolute', top: 4, left: PAD - 10, right: PAD - 10, flexDirection: 'row', justifyContent: 'space-between' }}>
+        {landmarks.map((l, i) => (
+          <View key={i} style={{ alignItems: 'center', flex: 1 }}>
+            <Text style={{ fontSize: 17, lineHeight: 22 }}>{l.icon}</Text>
+            <View style={{ width: 1.5, height: 18, backgroundColor: 'rgba(255,45,120,0.20)', marginTop: 1 }} />
+            <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: C.pink, borderWidth: 1.5, borderColor: '#fff', marginTop: -1 }} />
+            <Text style={{ fontSize: 6.5, color: '#6B7CB0', fontWeight: '700', textAlign: 'center', marginTop: 3, lineHeight: 9 }} numberOfLines={2}>{l.label}</Text>
+          </View>
+        ))}
+      </View>
+
+      {/* Road line */}
+      <View style={{ position: 'absolute', bottom: 22, left: 0, right: 0, height: 1.5, backgroundColor: 'rgba(155,165,220,0.38)' }} />
+
+      {/* Animated auto */}
+      <Animated.Text style={{ position: 'absolute', bottom: 13, fontSize: 17, transform: [{ translateX: autoX }] }}>🛺</Animated.Text>
+
+      {/* Location dots — decorative */}
+      <View style={{ position: 'absolute', top: '12%' as any, left: '7%' as any, width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(124,58,237,0.28)' }} />
+      <View style={{ position: 'absolute', top: '32%' as any, left: '14%' as any, width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(124,58,237,0.22)' }} />
+      <View style={{ position: 'absolute', top: '18%' as any, right: '14%' as any, width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(124,58,237,0.22)' }} />
+      <View style={{ position: 'absolute', top: '42%' as any, right: '24%' as any, width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(124,58,237,0.18)' }} />
+
+      {/* LUCKNOW badge */}
+      <View style={{ position: 'absolute', bottom: 5, right: 10, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,45,120,0.10)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(255,45,120,0.20)' }}>
+        <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: C.pink }} />
+        <Text style={{ color: C.pink, fontSize: 9, fontWeight: '900', letterSpacing: 1.5 }}>INDIA</Text>
+      </View>
+    </View>
+  );
+};

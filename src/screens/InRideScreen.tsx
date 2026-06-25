@@ -1,4 +1,4 @@
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { MapOverlay, MapWebView, PulseView, TripSteps, DotBG } from '../components/ui';
@@ -19,9 +19,9 @@ export function InRideScreen() {
 
   return (
     <View style={s.screen}>
-      <DotBG />
-      <View style={s.topBar}>
-        <Text style={s.topTitle}>🚗 Ride Chal Rahi Hai</Text>
+      <View style={{ backgroundColor: C.pink, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 52, paddingBottom: 20, paddingHorizontal: 16 }}>
+        <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.10)', top: -60, right: -40 }} />
+        <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900' }}>🚗 Ride Chal Rahi Hai</Text>
       </View>
       <View style={s.mapFit}>
         <MapWebView pickupCoords={pickupCoords} dropCoords={dropCoords} driverLat={driverLoc?.lat} driverLng={driverLoc?.lng} customerLat={userCoords?.latitude} customerLng={userCoords?.longitude} height={220} />

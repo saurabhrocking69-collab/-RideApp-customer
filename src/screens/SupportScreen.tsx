@@ -21,7 +21,7 @@ export function SupportScreen() {
       }
     },
     { icon: '💬', label: 'WhatsApp', sub: 'Sabse fast response', color: '#25D366', bg: 'rgba(37,211,102,0.12)', border: 'rgba(37,211,102,0.35)', action: () => Linking.openURL('https://wa.me/919999999999?text=Hi%20Sppero%20Support') },
-    { icon: '📞', label: 'Helpline Call', sub: '24x7 available', color: '#90CAF9', bg: 'rgba(33,150,243,0.12)', border: 'rgba(33,150,243,0.35)', action: () => Linking.openURL('tel:9999999999') },
+    { icon: '📞', label: 'Helpline Call', sub: '24x7 available', color: C.purple, bg: C.glassMid, border: C.glassBorder, action: () => Linking.openURL('tel:9999999999') },
     { icon: '📧', label: 'Email Support', sub: 'Response in 24 hrs', color: C.pink, bg: C.pinkGlass, border: C.pinkBorder, action: () => Linking.openURL('mailto:support@sppero.com') },
   ];
 

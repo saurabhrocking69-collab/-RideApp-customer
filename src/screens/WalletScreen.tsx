@@ -37,19 +37,21 @@ export function WalletScreen() {
 
   return (
     <ScreenIn style={s.screen}>
-      <DotBG />
-      <View style={{ backgroundColor: C.bgDeep, paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 14 : 52, paddingBottom: 20, paddingHorizontal: 18, borderBottomWidth: 1, borderColor: C.glassBorder }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 18 }}>
+      <View style={{ backgroundColor: C.pink, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 14 : 56, paddingBottom: 22, paddingHorizontal: 18 }}>
+        <View style={{ position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(255,255,255,0.10)', top: -70, right: -50 }} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 0 }}>
           <TouchableOpacity onPress={() => { setScreen('home'); setTab('profile'); }}
-            style={{ marginRight: 14, padding: 6, backgroundColor: C.glassMid, borderRadius: 10, borderWidth: 1, borderColor: C.glassBorder }}>
+            style={{ marginRight: 14, padding: 8, backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.40)' }}>
             <Ionicons name="arrow-back" size={20} color="#fff" />
           </TouchableOpacity>
-          <Text style={{ color: C.text, fontSize: 20, fontWeight: '800', flex: 1 }}>My Wallet</Text>
-          <TouchableOpacity onPress={() => loadWalletDetail(phone)} style={{ padding: 8 }}>
+          <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900', flex: 1 }}>💰 My Wallet</Text>
+          <TouchableOpacity onPress={() => loadWalletDetail(phone)} style={{ padding: 8, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 10 }}>
             <Text style={{ fontSize: 20 }}>⟳</Text>
           </TouchableOpacity>
         </View>
+      </View>
 
+      <View style={{ backgroundColor: C.bgDeep, paddingHorizontal: 18, paddingTop: 16, paddingBottom: 20, borderBottomWidth: 1, borderColor: C.glassBorder }}>
         <ShineCard style={{ backgroundColor: C.glass, borderRadius: 22, padding: 20, alignItems: 'center', borderWidth: 1, borderColor: C.pinkBorder }}>
           <Text style={{ color: C.textMuted, fontSize: 12, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 }}>Available Balance</Text>
           <CountUp to={walletBalance} prefix="₹" style={{ color: C.text, fontSize: 52, fontWeight: '900' }} />

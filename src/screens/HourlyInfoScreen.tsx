@@ -102,8 +102,8 @@ export function HourlyInfoScreen() {
           ))}
         </View>
 
-        <View style={{ backgroundColor: 'rgba(21,101,192,0.15)', borderRadius: 18, padding: 18, marginBottom: 14, borderLeftWidth: 4, borderLeftColor: '#90CAF9', borderWidth: 1, borderColor: 'rgba(21,101,192,0.35)' }}>
-          <Text style={{ color: '#90CAF9', fontSize: 15, fontWeight: '900', marginBottom: 12 }}>🔄 Time Extension — Aur Time Chahiye?</Text>
+        <View style={{ backgroundColor: 'C.glassMid', borderRadius: 18, padding: 18, marginBottom: 14, borderLeftWidth: 4, borderLeftColor: C.purple, borderWidth: 1, borderColor: 'C.glassBorder' }}>
+          <Text style={{ color: C.purple, fontSize: 15, fontWeight: '900', marginBottom: 12 }}>🔄 Time Extension — Aur Time Chahiye?</Text>
           {[
             ['⏱️', 'Extend request', 'Active ride mein "+1h / +2h / +3h" option se request bhejein'],
             ['✅ Driver', 'Driver accept/reject kar sakta hai', 'Agar driver agree kare to extra hours add ho jaate hain'],
@@ -113,7 +113,7 @@ export function HourlyInfoScreen() {
             <View key={i} style={{ flexDirection: 'row', marginBottom: 10 }}>
               <Text style={{ fontSize: 16, marginRight: 10, width: 30 }}>{icon}</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: '#90CAF9', fontWeight: '800', fontSize: 13 }}>{title}</Text>
+                <Text style={{ color: C.purple, fontWeight: '800', fontSize: 13 }}>{title}</Text>
                 <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>{desc}</Text>
               </View>
             </View>

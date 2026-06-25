@@ -283,8 +283,8 @@ export function ComplaintDetailScreen() {
           <Text style={{ fontSize: 14, fontWeight: '800', color: C.text, marginBottom: 10 }}>💬 Messages ({msgs.length})</Text>
           {msgs.length === 0 && <Text style={{ fontSize: 12, color: C.textDim, textAlign: 'center', paddingVertical: 10 }}>Koi message nahi abhi</Text>}
           {msgs.map((m: any, i: number) => (
-            <View key={i} style={{ marginBottom: 12, padding: 12, backgroundColor: m.sender_role === 'admin' ? 'rgba(33,150,243,0.15)' : m.sender_role === 'customer' ? C.pinkGlass : C.yellowGlass, borderRadius: 12, borderWidth: 1, borderColor: m.sender_role === 'admin' ? 'rgba(33,150,243,0.35)' : m.sender_role === 'customer' ? C.pinkBorder : C.yellowBorder }}>
-              <Text style={{ fontSize: 11, fontWeight: '800', color: m.sender_role === 'admin' ? '#90CAF9' : m.sender_role === 'customer' ? C.pink : C.yellow, marginBottom: 4 }}>{m.sender_name || m.sender_role} · {new Date(m.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</Text>
+            <View key={i} style={{ marginBottom: 12, padding: 12, backgroundColor: m.sender_role === 'admin' ? C.glassMid : m.sender_role === 'customer' ? C.pinkGlass : C.yellowGlass, borderRadius: 12, borderWidth: 1, borderColor: m.sender_role === 'admin' ? C.glassBorder : m.sender_role === 'customer' ? C.pinkBorder : C.yellowBorder }}>
+              <Text style={{ fontSize: 11, fontWeight: '800', color: m.sender_role === 'admin' ? C.purple : m.sender_role === 'customer' ? C.pink : C.yellow, marginBottom: 4 }}>{m.sender_name || m.sender_role} · {new Date(m.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</Text>
               <Text style={{ fontSize: 13, color: C.text, lineHeight: 18 }}>{m.message}</Text>
             </View>
           ))}

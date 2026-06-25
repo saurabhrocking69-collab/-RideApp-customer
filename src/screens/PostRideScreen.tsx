@@ -39,11 +39,15 @@ export function PostRideScreen() {
       <DotBG />
       <Confetti />
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
-        <View style={[s.hero, { paddingTop: 52, paddingBottom: 32, backgroundColor: C.bgDeep, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
-          <Text style={{ fontSize: 54 }}>{paymentDone ? '✅' : '🎉'}</Text>
-          <Text style={[s.heroTitle, { color: C.text }]}>{paymentDone ? 'Payment Done!' : 'Pahunch Gaye!'}</Text>
-          <Text style={[s.heroSub, { color: C.textMuted }]}>{pickup} → {drop}</Text>
-          <Text style={{ color: C.yellow, fontSize: 28, fontWeight: '900', marginTop: 8, textShadowColor: C.yellow, textShadowRadius: 10 }}>{rideData?.fare}</Text>
+        <View style={{ paddingTop: 52, paddingBottom: 36, backgroundColor: C.pink, borderBottomLeftRadius: 36, borderBottomRightRadius: 36, alignItems: 'center', overflow: 'hidden' }}>
+          <View style={{ position: 'absolute', width: 240, height: 240, borderRadius: 120, backgroundColor: 'rgba(255,255,255,0.10)', top: -80, right: -60 }} />
+          <View style={{ position: 'absolute', width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(255,255,255,0.07)', bottom: -40, left: -40 }} />
+          <Text style={{ fontSize: 60 }}>{paymentDone ? '✅' : '🎉'}</Text>
+          <Text style={{ fontSize: 26, fontWeight: '900', color: '#fff', marginTop: 10 }}>{paymentDone ? 'Payment Done!' : 'Pahunch Gaye!'}</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13, marginTop: 6, textAlign: 'center', paddingHorizontal: 24 }}>{pickup} → {drop}</Text>
+          <View style={{ marginTop: 12, backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 16, paddingHorizontal: 20, paddingVertical: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.40)' }}>
+            <Text style={{ color: '#fff', fontSize: 32, fontWeight: '900' }}>{rideData?.fare}</Text>
+          </View>
         </View>
 
         <View style={{ paddingHorizontal: 14, paddingTop: 16 }}>

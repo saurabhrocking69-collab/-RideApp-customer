@@ -1,4 +1,4 @@
-import { Animated, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Image, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
@@ -40,14 +40,14 @@ export function MatchingScreen() {
 
   return (
     <View style={s.screen}>
-      <View style={s.topBar}>
-        <Text style={s.topTitle}>{rideData?.driver ? '🚗 Driver mil gaya!' : '🔍 Driver dhundh rahe hain'}</Text>
+      <View style={{ backgroundColor: C.pink, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 52, paddingBottom: 20, paddingHorizontal: 16 }}>
+        <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.10)', top: -60, right: -40 }} />
+        <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900' }}>{rideData?.driver ? '🚗 Driver Mil Gaya!' : '🔍 Driver Dhundh Rahe Hain'}</Text>
       </View>
-      <View style={s.mapFit}>
-        <MapWebView pickupCoords={pickupCoords} dropCoords={dropCoords} driverLat={driverLoc?.lat} driverLng={driverLoc?.lng} customerLat={userCoords?.latitude} customerLng={userCoords?.longitude} height={220} />
+      <View style={[s.mapFit, { height: 190 }]}>
+        <MapWebView pickupCoords={pickupCoords} dropCoords={dropCoords} driverLat={driverLoc?.lat} driverLng={driverLoc?.lng} customerLat={userCoords?.latitude} customerLng={userCoords?.longitude} height={190} />
         <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} live={!!rideData?.driver} />
       </View>
-      <DotBG />
       <View style={{ flex: 1, backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 16, paddingHorizontal: 16, borderTopWidth: 1, borderColor: C.glassBorder }}>
         <TripSteps step={rideData?.driver ? 1 : 0} />
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
@@ -100,8 +100,8 @@ export function MatchingScreen() {
               ) : null}
               {rideData?.startOtp && (
                 <View style={s.otpCard}>
-                  <Text style={{ color: '#aaa', fontSize: 12, marginBottom: 6 }}>🔐 Driver ko yeh OTP batao</Text>
-                  <Text style={{ color: '#fff', fontSize: 34, fontWeight: 'bold', letterSpacing: 10 }}>{rideData.startOtp}</Text>
+                  <Text style={{ color: C.textMuted, fontSize: 12, marginBottom: 6 }}>🔐 Driver ko yeh OTP batao</Text>
+                  <Text style={{ color: C.text, fontSize: 34, fontWeight: 'bold', letterSpacing: 10 }}>{rideData.startOtp}</Text>
                 </View>
               )}
               <View style={s.actionRow}>
@@ -202,21 +202,21 @@ export function MatchingScreen() {
                 return (
                   <SlideUp>
                     <View style={{ paddingHorizontal: 20, marginBottom: 14 }}>
-                      <View style={{ backgroundColor: '#1a1a2e', borderRadius: 20, padding: 18, borderWidth: 1.5, borderColor: '#FF5722' }}>
+                      <View style={{ backgroundColor: C.bg, borderRadius: 20, padding: 18, borderWidth: 1.5, borderColor: '#FF5722', elevation: 6, shadowColor: '#FF5722', shadowOpacity: 0.15, shadowRadius: 12 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
                           <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#FF5722', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
                             <Text style={{ fontSize: 20 }}>⚡</Text>
                           </View>
                           <View style={{ flex: 1 }}>
-                            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '900' }}>100 Seconds Ho Gaye!</Text>
-                            <Text style={{ color: '#FF9800', fontSize: 12, marginTop: 1 }}>Fare badhao — zyada drivers attract karo</Text>
+                            <Text style={{ color: C.text, fontSize: 15, fontWeight: '900' }}>100 Seconds Ho Gaye!</Text>
+                            <Text style={{ color: '#E65100', fontSize: 12, marginTop: 1 }}>Fare badhao — zyada drivers attract karo</Text>
                           </View>
                           <View style={{ backgroundColor: '#FF5722', borderRadius: 10, paddingHorizontal: 9, paddingVertical: 4 }}>
                             <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900' }}>{3 - surgeCount}/3</Text>
                           </View>
                         </View>
-                        <Text style={{ color: '#888', fontSize: 12, marginBottom: 14 }}>
-                          Abhi: <Text style={{ color: '#fff', fontWeight: '700' }}>{surgeFare || rideData?.fare}</Text>
+                        <Text style={{ color: C.textMuted, fontSize: 12, marginBottom: 14 }}>
+                          Abhi: <Text style={{ color: C.text, fontWeight: '700' }}>{surgeFare || rideData?.fare}</Text>
                           {'  '}·{'  '}Badhao aur fresh driver search shuru hoga
                         </Text>
                         <View style={{ gap: 10 }}>

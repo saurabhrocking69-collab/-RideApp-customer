@@ -1,10 +1,11 @@
-import { ScrollView, View, Text, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, Image } from 'react-native';
+import { useState, useEffect, useRef } from 'react';
+import { ScrollView, View, Text, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, Image, Animated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { apiPost } from '../../api';
 import { useRideStore } from '../../store';
 import { useApp } from '../context/AppContext';
-import { Bouncy, PulseView, CityMapView, MapOverlay, SlideUp, CountUp, EmptyAnim, DotBG, GlowPulse, ShineCard } from '../components/ui';
+import { Bouncy, PulseView, LucknowCityCard, SlideUp, CountUp, EmptyAnim, DotBG, GlowPulse, ShineCard } from '../components/ui';
 import { s, C } from '../styles';
 import { MAPS_KEY } from '../constants';
 
@@ -295,7 +296,7 @@ function BuddyBookModal() {
 function HomeTab() {
   const {
     userName, phone,
-    pickup, drop, pickupCoords, dropCoords,
+    pickup, drop,
     favouriteBuddy, removeFavouriteBuddy,
     activeOffers, offerDismissed, setOfferDismissed,
     rideData, hourlyBooking,
@@ -306,27 +307,104 @@ function HomeTab() {
     setPickup, setDrop,
     setHourlyStep, setHPickup, setHDrop, setHPickupCoords, setHDropCoords,
     setHPickupSugg, setHDropSugg, setHRoundTrip, setHStayHours, setHourlyBooking,
-    rideIcon,
+    rideIcon, customerRating, walletBalance,
   } = useApp();
+
+  const GREETINGS = ['Namaste! 🙏', 'Good Morning! ☀️', 'Safe Travels! 🛺', 'Apni City, Apni Ride 🌟'];
+  const [greetIdx, setGreetIdx] = useState(0);
+  const greetFade  = useRef(new Animated.Value(1)).current;
+  const greetSlide = useRef(new Animated.Value(0)).current;
+  const scrollY    = useRef(new Animated.Value(0)).current;
+
+  const FULL_H = Platform.OS === 'android' ? 130 : 146;
+  const MINI_H = Platform.OS === 'android' ? 72 : 84;
+
+  const headerH   = scrollY.interpolate({ inputRange: [0, 90], outputRange: [FULL_H, MINI_H], extrapolate: 'clamp' });
+  const fullAlpha = scrollY.interpolate({ inputRange: [0, 65], outputRange: [1, 0], extrapolate: 'clamp' });
+  const miniAlpha = scrollY.interpolate({ inputRange: [50, 85], outputRange: [0, 1], extrapolate: 'clamp' });
+
+  useEffect(() => {
+    const iv = setInterval(() => {
+      Animated.parallel([
+        Animated.timing(greetFade,  { toValue: 0, duration: 300, useNativeDriver: true }),
+        Animated.timing(greetSlide, { toValue: -8, duration: 300, useNativeDriver: true }),
+      ]).start(() => {
+        setGreetIdx(i => (i + 1) % GREETINGS.length);
+        greetSlide.setValue(8);
+        Animated.parallel([
+          Animated.timing(greetFade,  { toValue: 1, duration: 300, useNativeDriver: true }),
+          Animated.timing(greetSlide, { toValue: 0, duration: 300, useNativeDriver: true }),
+        ]).start();
+      });
+    }, 3000);
+    return () => clearInterval(iv);
+  }, []);
 
   return (
     <View style={s.screen}>
-      <DotBG />
-      <View style={s.topBar}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.greeting}>Namaste 👋 {userName || 'Rider'}</Text>
-          <Text style={s.subTxt}>📍 Lucknow, UP</Text>
-        </View>
-        <TouchableOpacity style={s.avatar} onPress={() => { setTab('profile'); loadWallet(phone); }}>
-          <Text style={s.avatarTxt}>{(userName || 'R')[0].toUpperCase()}</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={s.mapFit}>
-        <CityMapView height={260} />
-        <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} />
-      </View>
-      <View style={{ flex: 1, backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 16, paddingHorizontal: 16, borderTopWidth: 1, borderColor: C.glassBorder }}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 90 }}>
+      {/* ── Animated collapsing header ────────────────────────────── */}
+      <Animated.View style={{ height: headerH, backgroundColor: C.pink, overflow: 'hidden' }}>
+        <View style={{ position: 'absolute', width: 260, height: 260, borderRadius: 130, backgroundColor: 'rgba(255,255,255,0.10)', top: -80, right: -60 }} />
+        <View style={{ position: 'absolute', width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(255,255,255,0.07)', top: 16, left: -50 }} />
+        <View style={{ position: 'absolute', width: 90, height: 90, borderRadius: 45, backgroundColor: 'rgba(245,158,11,0.25)', bottom: -20, right: 90 }} />
+        {/* Full header — fades out on scroll */}
+        <Animated.View style={{ paddingTop: Platform.OS === 'android' ? 38 : 50, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', opacity: fullAlpha }}>
+          <View style={{ flex: 1 }}>
+            <Animated.Text style={{ color: 'rgba(255,255,255,0.82)', fontSize: 12, fontWeight: '600', opacity: greetFade, transform: [{ translateY: greetSlide }] }}>
+              {GREETINGS[greetIdx]}
+            </Animated.Text>
+            <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900', letterSpacing: -0.5, marginTop: 3 }}>{userName || 'Rider'}</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.60)', fontSize: 10, marginTop: 3 }}>📍 India</Text>
+          </View>
+          <TouchableOpacity onPress={() => { setTab('profile'); loadWallet(phone); }}
+            style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.45)' }}>
+            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 19 }}>{(userName || 'R')[0].toUpperCase()}</Text>
+          </TouchableOpacity>
+        </Animated.View>
+        {/* Mini pill — fades in when scrolled */}
+        <Animated.View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 14, paddingBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 10, opacity: miniAlpha }}>
+          <TouchableOpacity onPress={() => setScreen('booking')}
+            style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 22, paddingHorizontal: 14, paddingVertical: 9, gap: 8 }}>
+            <Ionicons name="search" size={13} color="#fff" />
+            <Text style={{ color: 'rgba(255,255,255,0.88)', fontSize: 13, fontWeight: '600' }}>Kahan jaana hai?</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => { setTab('profile'); loadWallet(phone); }}
+            style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.40)' }}>
+            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>{(userName || 'R')[0].toUpperCase()}</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </Animated.View>
+
+      {/* ── Main scrollable content ────────────────────────────────── */}
+      <Animated.ScrollView
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
+        scrollEventThrottle={8}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: 90 }}
+      >
+        {/* Lucknow city illustration */}
+        <LucknowCityCard />
+
+        {/* White content sheet */}
+        <View style={{ backgroundColor: C.bg, borderTopLeftRadius: 26, borderTopRightRadius: 26, marginTop: -20, paddingTop: 14, paddingHorizontal: 16, borderTopWidth: 1, borderColor: C.glassBorder, elevation: 6, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, minHeight: 600 }}>
+
+          {/* Ride stats strip */}
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+            <View style={{ flex: 1, backgroundColor: C.pinkGlass, borderRadius: 14, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: C.pinkBorder }}>
+              <Text style={{ color: C.pink, fontSize: 22, fontWeight: '900' }}>{historyRides.length || 0}</Text>
+              <Text style={{ color: C.textDim, fontSize: 9, marginTop: 1, fontWeight: '700', letterSpacing: 0.5 }}>RIDES</Text>
+            </View>
+            <View style={{ flex: 1, backgroundColor: C.yellowGlass, borderRadius: 14, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: C.yellowBorder }}>
+              <Text style={{ color: C.yellow, fontSize: 18, fontWeight: '900' }}>⭐ {customerRating?.rating ? parseFloat(customerRating.rating).toFixed(1) : '5.0'}</Text>
+              <Text style={{ color: C.textDim, fontSize: 9, marginTop: 1, fontWeight: '700', letterSpacing: 0.5 }}>RATING</Text>
+            </View>
+            <View style={{ flex: 1, backgroundColor: C.greenGlass, borderRadius: 14, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: C.greenBorder }}>
+              <CountUp to={walletBalance} prefix="₹" style={{ color: C.green, fontSize: 18, fontWeight: '900' }} />
+              <Text style={{ color: C.textDim, fontSize: 9, marginTop: 1, fontWeight: '700', letterSpacing: 0.5 }}>WALLET</Text>
+            </View>
+          </View>
+
           <SlideUp delay={0}>
             <Bouncy onPress={() => setScreen('booking')} style={s.searchBox}>
               <Ionicons name="search" size={18} color={C.textMuted} style={{ marginRight: 10 }} />
@@ -440,15 +518,15 @@ function HomeTab() {
 
           {rideData?.ride_id && (
             <SlideUp delay={125}>
-              <TouchableOpacity onPress={() => setScreen('matching')} style={{ backgroundColor: 'rgba(21,101,192,0.2)', borderRadius: 16, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', elevation: 5, borderWidth: 1.5, borderColor: 'rgba(21,101,192,0.4)' }}>
-                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(21,101,192,0.4)', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+              <TouchableOpacity onPress={() => setScreen('matching')} style={{ backgroundColor: C.pinkGlass, borderRadius: 16, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', elevation: 5, borderWidth: 1.5, borderColor: C.pinkBorder }}>
+                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center', marginRight: 12, elevation: 4, shadowColor: C.pink, shadowOpacity: 0.4, shadowRadius: 6 }}>
                   <Text style={{ fontSize: 22 }}>🚗</Text>
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: C.text, fontWeight: '800', fontSize: 15 }}>Active Ride In Progress!</Text>
                   <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>{drop ? `→ ${drop}` : 'Tap karo ride screen pe jao'}</Text>
                 </View>
-                <Text style={{ color: '#fff', fontSize: 24, fontWeight: '300' }}>›</Text>
+                <Text style={{ color: C.pink, fontSize: 24, fontWeight: '300' }}>›</Text>
               </TouchableOpacity>
             </SlideUp>
           )}
@@ -532,8 +610,8 @@ function HomeTab() {
               ))}
             </>
           )}
-        </ScrollView>
-      </View>
+        </View>
+      </Animated.ScrollView>
       <View style={s.navFloat}><NavBar /></View>
       <BuddyBookModal />
     </View>
@@ -556,9 +634,9 @@ function LiveTab() {
   const stdStatus = storeStatus !== 'idle' ? storeStatus : (rideData?.ride_id ? 'requested' : 'idle');
   const stdStatusMap: any = {
     requested: { label: 'Driver dhoondh rahe hain...', color: '#f57c00', glassColor: C.yellowGlass, border: C.yellowBorder, icon: '🔍' },
-    matched:   { label: 'Driver aa raha hai',          color: '#1565C0', glassColor: 'rgba(21,101,192,0.15)', border: 'rgba(21,101,192,0.4)', icon: '🚗' },
+    matched:   { label: 'Driver aa raha hai',          color: C.purple,  glassColor: C.glassMid,            border: C.glassBorder,          icon: '🚗' },
     arrived:   { label: 'Driver pahunch gaya!',        color: C.green,   glassColor: C.greenGlass,  border: C.greenBorder,  icon: '📍' },
-    started:   { label: 'Trip chal rahi hai',          color: '#7b1fa2', glassColor: 'rgba(123,31,162,0.15)', border: 'rgba(123,31,162,0.4)', icon: '🛣️' },
+    started:   { label: 'Trip chal rahi hai',          color: C.purple,  glassColor: 'rgba(124,58,237,0.10)', border: 'rgba(124,58,237,0.30)', icon: '🛣️' },
     completed: { label: 'Trip complete — Payment pending', color: C.pink, glassColor: C.pinkGlass, border: C.pinkBorder, icon: '✅' },
   };
   const si = stdStatusMap[stdStatus] || stdStatusMap.requested;
@@ -576,13 +654,11 @@ function LiveTab() {
 
   return (
     <View style={s.screen}>
-      <DotBG />
-      <View style={s.topBar}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.topTitle}>🔴 Live Ride</Text>
-        </View>
+      <View style={{ backgroundColor: C.pink, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 56, paddingBottom: 28, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.10)', top: -60, right: -40 }} />
+        <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900', flex: 1 }}>🔴 Live Ride</Text>
         {(hasStd || hasHourly) && (
-          <PulseView><GlowPulse color={C.pink} size={12} /></PulseView>
+          <PulseView><GlowPulse color="#fff" size={12} /></PulseView>
         )}
       </View>
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
@@ -724,8 +800,10 @@ function HistoryTab() {
 
   return (
     <View style={s.screen}>
-      <DotBG />
-      <View style={s.topBar}><Text style={s.topTitle}>🕐 My Trips</Text></View>
+      <View style={{ backgroundColor: C.pink, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 56, paddingBottom: 28, paddingHorizontal: 20 }}>
+        <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.10)', top: -60, right: -40 }} />
+        <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>🕐 My Trips</Text>
+      </View>
       <ScrollView style={{ flex: 1, padding: 14 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
         {historyRides.length === 0
           ? <EmptyAnim icon="🚖" title="Abhi koi trip nahi" sub="Pehli ride book karo aur yahan apni history dekho!" />
@@ -779,8 +857,10 @@ function ProfileTab() {
 
   return (
     <View style={s.screen}>
-      <DotBG />
-      <View style={s.topBar}><Text style={s.topTitle}>👤 Profile</Text></View>
+      <View style={{ backgroundColor: C.pink, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 56, paddingBottom: 28, paddingHorizontal: 20 }}>
+        <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.10)', top: -60, right: -40 }} />
+        <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>👤 Profile</Text>
+      </View>
       <ScrollView style={{ flex: 1, padding: 14 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
         <View style={s.profileHero}>
           <View style={s.profileAvatar}><Text style={{ color: '#fff', fontSize: 34, fontWeight: '800' }}>{(userName||'R')[0].toUpperCase()}</Text></View>
@@ -793,18 +873,18 @@ function ProfileTab() {
           <TouchableOpacity onPress={() => { loadWalletDetail(phone); loadLoyalty(phone); setScreen('wallet'); }} activeOpacity={0.85}>
             <View style={s.row}>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: C.textMuted, fontSize: 13 }}>💰 Wallet Balance</Text>
-                <CountUp to={walletBalance} prefix="₹" style={{ color: C.text, fontSize: 30, fontWeight: '800', marginTop: 2 }} />
+                <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13 }}>💰 Wallet Balance</Text>
+                <CountUp to={walletBalance} prefix="₹" style={{ color: '#fff', fontSize: 30, fontWeight: '800', marginTop: 2 }} />
               </View>
-              <View style={{ backgroundColor: C.pinkGlass, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: C.pinkBorder }}>
-                <Text style={{ color: C.text, fontWeight: '700', fontSize: 13 }}>Manage ›</Text>
+              <View style={{ backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.40)' }}>
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Manage ›</Text>
               </View>
             </View>
             <View style={{ flexDirection: 'row', marginTop: 14, gap: 8 }}>
               {[100, 200, 500].map(amt => (
                 <TouchableOpacity key={amt} onPress={(e) => { e.stopPropagation?.(); openRazorpayTopup(amt); }}
-                  style={{ flex: 1, backgroundColor: C.glassMid, borderRadius: 10, paddingVertical: 8, alignItems: 'center', borderWidth: 1, borderColor: C.glassBorder }}>
-                  <Text style={{ color: C.text, fontWeight: '700', fontSize: 13 }}>+₹{amt}</Text>
+                  style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.20)', borderRadius: 10, paddingVertical: 8, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.30)' }}>
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>+₹{amt}</Text>
                 </TouchableOpacity>
               ))}
               <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); openRazorpayTopup(1000); }}

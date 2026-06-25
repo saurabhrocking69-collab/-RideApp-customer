@@ -46,7 +46,7 @@ export function BookingScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1, alignItems: 'center' }}>
           <Text style={s.topTitle}>Book a Ride</Text>
-          <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 1 }}>Live fares · Lucknow</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, marginTop: 1 }}>Live fares · Lucknow</Text>
         </View>
         <View style={{ width: 36 }} />
       </View>

@@ -1,31 +1,50 @@
 import { View, Text, Animated } from 'react-native';
 import { useApp } from '../context/AppContext';
-import { DotBG, PulseView } from '../components/ui';
+import { FloatBubbles, GlowPulse } from '../components/ui';
 import { C } from '../styles';
 
 export function SplashScreen() {
   const { splashFade, splashLogo, splashScale, splashTag } = useApp();
   return (
-    <Animated.View style={{ flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', opacity: splashFade }}>
-      <DotBG />
-      <View style={{ position: 'absolute', width: 400, height: 400, borderRadius: 200, backgroundColor: C.pinkGlass, top: -80, right: -80 }} />
-      <View style={{ position: 'absolute', width: 280, height: 280, borderRadius: 140, backgroundColor: C.yellowGlass, bottom: 40, left: -60 }} />
+    <Animated.View style={{ flex: 1, backgroundColor: C.bgCard, alignItems: 'center', justifyContent: 'center', opacity: splashFade }}>
+      <FloatBubbles />
 
+      {/* Background decorative circles */}
+      <View style={{ position: 'absolute', width: 480, height: 480, borderRadius: 240, backgroundColor: 'rgba(255,45,120,0.05)', top: -120, right: -120 }} />
+      <View style={{ position: 'absolute', width: 320, height: 320, borderRadius: 160, backgroundColor: 'rgba(5,150,105,0.05)', bottom: -60, left: -80 }} />
+      <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(245,158,11,0.06)', top: '30%', right: -40 }} />
+
+      {/* Logo section */}
       <Animated.View style={{ alignItems: 'center', opacity: splashLogo, transform: [{ scale: splashScale }] }}>
-        <View style={{ width: 112, height: 112, borderRadius: 34, backgroundColor: C.pinkGlass, borderWidth: 1.5, borderColor: C.pinkBorder, alignItems: 'center', justifyContent: 'center', marginBottom: 20, shadowColor: C.pink, shadowOpacity: 0.55, shadowRadius: 24, elevation: 14 }}>
-          <Text style={{ fontSize: 52 }}>🚖</Text>
+        {/* Outer glow ring */}
+        <View style={{ width: 140, height: 140, borderRadius: 70, backgroundColor: 'rgba(255,45,120,0.08)', alignItems: 'center', justifyContent: 'center', marginBottom: 28 }}>
+          <View style={{ width: 116, height: 116, borderRadius: 58, backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center', elevation: 18, shadowColor: C.pink, shadowOpacity: 0.45, shadowRadius: 28, shadowOffset: { width: 0, height: 8 } }}>
+            <Text style={{ fontSize: 54 }}>🚖</Text>
+          </View>
         </View>
-        <Text style={{ fontSize: 48, fontWeight: '900', color: C.text, letterSpacing: -1.5 }}>Sppero</Text>
+
+        {/* Brand name */}
+        <Text style={{ fontSize: 50, fontWeight: '900', color: C.text, letterSpacing: -2, lineHeight: 52 }}>Sppero</Text>
+
+        {/* Pink underline accent */}
+        <View style={{ width: 56, height: 4, borderRadius: 2, backgroundColor: C.pink, marginTop: 10, marginBottom: 4 }} />
       </Animated.View>
 
-      <Animated.View style={{ alignItems: 'center', marginTop: 14, opacity: splashTag, transform: [{ translateY: splashTag.interpolate({ inputRange: [0,1], outputRange: [16, 0] }) }] }}>
-        <Text style={{ color: C.textMuted, fontSize: 15, letterSpacing: 0.5 }}>Lucknow ka smartest ride</Text>
+      {/* Tagline */}
+      <Animated.View style={{ alignItems: 'center', marginTop: 18, opacity: splashTag, transform: [{ translateY: splashTag.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }}>
+        <Text style={{ color: C.textMuted, fontSize: 15, letterSpacing: 1, fontWeight: '500' }}>Lucknow ka smartest ride</Text>
       </Animated.View>
 
-      <View style={{ position: 'absolute', bottom: 60, flexDirection: 'row', gap: 10 }}>
-        {[C.pink, C.yellow, C.green].map((col, i) => (
-          <PulseView key={i} style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: col }} />
-        ))}
+      {/* Bottom indicator */}
+      <View style={{ position: 'absolute', bottom: 64, flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+        <GlowPulse color={C.pink} size={10} />
+        <GlowPulse color={C.yellow} size={10} />
+        <GlowPulse color={C.green} size={10} />
+      </View>
+
+      {/* Bottom brand text */}
+      <View style={{ position: 'absolute', bottom: 30 }}>
+        <Text style={{ color: C.textDim, fontSize: 11, letterSpacing: 2, textTransform: 'uppercase' }}>Lucknow · India</Text>
       </View>
     </Animated.View>
   );

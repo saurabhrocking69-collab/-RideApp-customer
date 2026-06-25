@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
@@ -181,8 +181,9 @@ export function HourlyScreen() {
     return (
       <ScreenIn style={s.screen}>
         <DotBG />
-        <View style={[s.topBar, { justifyContent: 'center' }]}>
-          <Text style={s.topTitle}>⏱️ Trip Complete!</Text>
+        <View style={{ backgroundColor: C.pink, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 52, paddingBottom: 20, paddingHorizontal: 16, alignItems: 'center' }}>
+          <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.10)', top: -60, right: -40 }} />
+          <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900' }}>⏱️ Trip Complete!</Text>
         </View>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
           <View style={{ alignItems: 'center', marginBottom: 24 }}>
@@ -209,10 +210,10 @@ export function HourlyScreen() {
             {extFare > 0 && (
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderColor: C.glassBorder }}>
                 <View>
-                  <Text style={{ color: '#90CAF9', fontSize: 13, fontWeight: '600' }}>⏱️ Extension</Text>
+                  <Text style={{ color: C.purple, fontSize: 13, fontWeight: '600' }}>⏱️ Extension</Text>
                   <Text style={{ color: C.textDim, fontSize: 11 }}>{extMinutes >= 60 ? `${Math.floor(extMinutes/60)}h ${extMinutes%60}m` : `${extMinutes} min`} extra</Text>
                 </View>
-                <Text style={{ color: '#90CAF9', fontWeight: '700', fontSize: 14 }}>₹{extFare.toFixed(0)}</Text>
+                <Text style={{ color: C.purple, fontWeight: '700', fontSize: 14 }}>₹{extFare.toFixed(0)}</Text>
               </View>
             )}
             {extraKmChg > 0 && (
@@ -252,11 +253,9 @@ export function HourlyScreen() {
   // ── ACTIVE TRIP ──
   if (hourlyStep === 'active') return (
     <ScreenIn style={s.screen}>
-      <DotBG />
-      <View style={s.topBar}>
-        <View style={{ width: 36 }} />
-        <Text style={s.topTitle}>⏱️ Hourly Trip</Text>
-        <View style={{ width: 36 }} />
+      <View style={{ backgroundColor: C.pink, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 52, paddingBottom: 20, paddingHorizontal: 16, alignItems: 'center' }}>
+        <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.10)', top: -60, right: -40 }} />
+        <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900' }}>⏱️ Hourly Trip</Text>
       </View>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         {(() => {
@@ -435,8 +434,8 @@ export function HourlyScreen() {
               )}
               {hExtendStep === 'idle' && (
                 <TouchableOpacity onPress={() => { hExtendStepRef.current = 'choose'; setHExtendStep('choose'); }}
-                  style={{ marginTop: 8, backgroundColor: hApproachLimit.is_roundtrip ? 'rgba(21,101,192,0.3)' : C.yellowGlass, borderRadius: 8, padding: 8, alignSelf: 'flex-start', borderWidth: 1, borderColor: hApproachLimit.is_roundtrip ? 'rgba(21,101,192,0.5)' : C.yellowBorder }}>
-                  <Text style={{ color: hApproachLimit.is_roundtrip ? '#90CAF9' : C.yellow, fontSize: 12, fontWeight: '800' }}>
+                  style={{ marginTop: 8, backgroundColor: hApproachLimit.is_roundtrip ? C.glassMid : C.yellowGlass, borderRadius: 8, padding: 8, alignSelf: 'flex-start', borderWidth: 1, borderColor: hApproachLimit.is_roundtrip ? C.glassBorder : C.yellowBorder }}>
+                  <Text style={{ color: hApproachLimit.is_roundtrip ? C.purple : C.yellow, fontSize: 12, fontWeight: '800' }}>
                     {hApproachLimit.is_roundtrip ? '⏱️ Extension Chahiye?' : '⏱️ Extend Karo'}
                   </Text>
                 </TouchableOpacity>
@@ -542,19 +541,19 @@ export function HourlyScreen() {
         )}
 
         {hExtendStep === 'pending' && (
-          <View style={{ backgroundColor: 'rgba(21,101,192,0.15)', borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(21,101,192,0.35)' }}>
+          <View style={{ backgroundColor: C.glassMid, borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: C.glassBorder }}>
             <Text style={{ fontSize: 20, marginRight: 10 }}>⏳</Text>
             <View>
-              <Text style={{ fontWeight: '800', color: '#90CAF9', fontSize: 13 }}>Extension Request Pending</Text>
+              <Text style={{ fontWeight: '800', color: C.purple, fontSize: 13 }}>Extension Request Pending</Text>
               <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>Driver ke response ka intezaar... ₹{Math.round(hourlyBooking?.extend_escrow || 0)} hold mein</Text>
             </View>
           </View>
         )}
 
         {!hApproachLimit?.warn && hExtendStep === 'idle' && hourlyBooking?.status === 'active' && !hourlyBooking?.extend_requested_hours && (
-          <Bouncy style={{ backgroundColor: 'rgba(21,101,192,0.15)', borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(21,101,192,0.35)' }} onPress={() => { hExtendStepRef.current = 'choose'; setHExtendStep('choose'); }}>
+          <Bouncy style={{ backgroundColor: C.glassMid, borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.glassBorder }} onPress={() => { hExtendStepRef.current = 'choose'; setHExtendStep('choose'); }}>
             <Text style={{ fontSize: 16, marginRight: 8 }}>⏱️</Text>
-            <Text style={{ color: '#90CAF9', fontWeight: '800' }}>Trip Extend Karo</Text>
+            <Text style={{ color: C.purple, fontWeight: '800' }}>Trip Extend Karo</Text>
           </Bouncy>
         )}
 
@@ -631,11 +630,9 @@ export function HourlyScreen() {
     const driverAccepted = hourlyBooking?.status === 'matched';
     return (
       <ScreenIn style={s.screen}>
-        <DotBG />
-        <View style={s.topBar}>
-          <View style={{ width: 36 }} />
-          <Text style={s.topTitle}>⏱️ Driver Dhundh Rahe Hain</Text>
-          <View style={{ width: 36 }} />
+        <View style={{ backgroundColor: C.pink, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 52, paddingBottom: 20, paddingHorizontal: 16, alignItems: 'center' }}>
+          <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.10)', top: -60, right: -40 }} />
+          <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900' }}>⏱️ Driver Dhundh Rahe Hain</Text>
         </View>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <PulseView><Text style={{ fontSize: 72, marginBottom: 16 }}>⏱️</Text></PulseView>
@@ -679,11 +676,13 @@ export function HourlyScreen() {
   // ── BOOKING FORM ──
   return (
     <ScreenIn style={s.screen}>
-      <DotBG />
-      <View style={s.topBar}>
-        <TouchableOpacity onPress={() => setScreen('home')} style={s.backBtn}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
-        <Text style={s.topTitle}>⏱️ Book by Hour</Text>
-        <TouchableOpacity onPress={() => setScreen('hourly-info')} style={{ width: 36, alignItems: 'flex-end' }}><Text style={{ fontSize: 20 }}>ℹ️</Text></TouchableOpacity>
+      <View style={{ backgroundColor: C.pink, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 52, paddingBottom: 20, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.10)', top: -60, right: -40 }} />
+        <TouchableOpacity onPress={() => setScreen('home')} style={{ marginRight: 14, padding: 8, backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 10 }}>
+          <Ionicons name="arrow-back" size={20} color="#fff" />
+        </TouchableOpacity>
+        <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900', flex: 1 }}>⏱️ Book by Hour</Text>
+        <TouchableOpacity onPress={() => setScreen('hourly-info')} style={{ padding: 8 }}><Text style={{ fontSize: 20 }}>ℹ️</Text></TouchableOpacity>
       </View>
       <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16, paddingBottom: 50 }}>
         <Text style={[s.secTitle, { color: C.textMuted, letterSpacing: 1 }]}>VEHICLE TYPE</Text>
@@ -697,9 +696,9 @@ export function HourlyScreen() {
         </View>
         <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
           {[{id:'green_bike',label:'Green Bike'},{id:'electric_auto',label:'Elec. Auto'}].map(v => (
-            <Bouncy key={v.id} style={{ flex: 1, backgroundColor: hVehicle === v.id ? 'rgba(27,94,32,0.3)' : C.greenGlass, borderRadius: 14, padding: 10, alignItems: 'center', borderWidth: 2, borderColor: hVehicle === v.id ? C.green : C.greenBorder }} onPress={() => setHVehicle(v.id)}>
-              <RideVehicleIcon id={v.id} size={22} color={hVehicle === v.id ? C.green : 'rgba(0,217,160,0.7)'} />
-              <Text style={{ fontSize: 10, fontWeight: '700', marginTop: 3, color: hVehicle === v.id ? C.green : 'rgba(0,217,160,0.7)' }}>{v.label}</Text>
+            <Bouncy key={v.id} style={{ flex: 1, backgroundColor: hVehicle === v.id ? C.greenGlass : C.glass, borderRadius: 14, padding: 10, alignItems: 'center', borderWidth: 2, borderColor: hVehicle === v.id ? C.green : C.greenBorder }} onPress={() => setHVehicle(v.id)}>
+              <RideVehicleIcon id={v.id} size={22} color={hVehicle === v.id ? C.green : C.textDim} />
+              <Text style={{ fontSize: 10, fontWeight: '700', marginTop: 3, color: hVehicle === v.id ? C.green : C.textDim }}>{v.label}</Text>
               <Text style={{ fontSize: 9, color: C.green, marginTop: 1 }}>ECO</Text>
             </Bouncy>
           ))}
@@ -707,9 +706,9 @@ export function HourlyScreen() {
         <Bouncy
           onPress={() => setHVehicle('ultra_luxury')}
           style={{ backgroundColor: hVehicle === 'ultra_luxury' ? C.bgCard : C.yellowGlass, borderRadius: 14, padding: 14, marginBottom: 18, borderWidth: 2, borderColor: hVehicle === 'ultra_luxury' ? C.yellow : C.yellowBorder, flexDirection: 'row', alignItems: 'center' }}>
-          <Ionicons name="diamond" size={26} color={hVehicle === 'ultra_luxury' ? C.yellow : 'rgba(255,215,0,0.6)'} style={{ marginRight: 12 }} />
+          <Ionicons name="diamond" size={26} color={hVehicle === 'ultra_luxury' ? C.yellow : C.textDim} style={{ marginRight: 12 }} />
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 13, fontWeight: '800', color: hVehicle === 'ultra_luxury' ? C.yellow : 'rgba(255,215,0,0.6)' }}>Ultra Luxury</Text>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: hVehicle === 'ultra_luxury' ? C.yellow : C.textMuted }}>Ultra Luxury</Text>
             <Text style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>BMW · Mercedes · Audi · Land Rover · Lexus</Text>
           </View>
           <Text style={{ fontSize: 14, fontWeight: '900', color: C.pink }}>₹{hourlyPackages.ultra_luxury?.[hPackageHours]?.fare || 800}</Text>
@@ -777,11 +776,11 @@ export function HourlyScreen() {
           </View>
         )}
 
-        <View style={{ backgroundColor: 'rgba(21,101,192,0.15)', borderRadius: 12, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'flex-start', borderWidth: 1, borderColor: 'rgba(21,101,192,0.35)' }}>
+        <View style={{ backgroundColor: C.glassMid, borderRadius: 12, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'flex-start', borderWidth: 1, borderColor: C.glassBorder }}>
           <Text style={{ fontSize: 15, marginRight: 8 }}>ℹ️</Text>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: '#90CAF9', fontWeight: '800', fontSize: 12 }}>Package mein {hourlyPackages[hVehicle]?.[hPackageHours]?.km} km included</Text>
-            <Text style={{ color: '#90CAF9', fontSize: 11, marginTop: 3, opacity: 0.8 }}>
+            <Text style={{ color: C.purple, fontWeight: '800', fontSize: 12 }}>Package mein {hourlyPackages[hVehicle]?.[hPackageHours]?.km} km included</Text>
+            <Text style={{ color: C.purple, fontSize: 11, marginTop: 3, opacity: 0.8 }}>
               Aap kahi bhi ja sakte hain {hPackageHours} hour mein. Agar package km exceed hua to extra ₹{hourlyPackages[hVehicle]?.extra}/km trip end pe pay hoga.
             </Text>
           </View>

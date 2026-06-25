@@ -38,7 +38,7 @@ export function PaymentScreen() {
 
   const payOptions = [
     { color: C.pink, glassColor: C.pinkGlass, border: C.pinkBorder, icon: '💰', title: 'Wallet se Pay', sub: `Balance: ₹${walletBalance}`, fn: payWithWallet },
-    ...(driverUpiId ? [{ color: '#1565c0', glassColor: 'rgba(21,101,192,0.15)', border: 'rgba(21,101,192,0.4)', icon: '📱', title: 'UPI QR Scan', sub: `Driver ka QR scan karo — ₹${fareNum}`, fn: () => setShowUpiQr(true) }] : []),
+    ...(driverUpiId ? [{ color: C.purple, glassColor: C.glassMid, border: C.glassBorder, icon: '📱', title: 'UPI QR Scan', sub: `Driver ka QR scan karo — ₹${fareNum}`, fn: () => setShowUpiQr(true) }] : []),
     { color: C.bgCard, glassColor: C.glassMid, border: C.glassBorder, icon: '💳', title: 'Online Pay', sub: 'UPI / Card (Razorpay)', fn: handlePayment },
     { color: C.green, glassColor: C.greenGlass, border: C.greenBorder, icon: '💵', title: 'Cash Pay', sub: 'Driver ko haath mein cash do', fn: async () => {
       try { await fetch(`${API}/api/rides/payment-complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, payment_method: 'cash', phone: phone || '9999999999' }) }); } catch (_e) {}
@@ -52,11 +52,11 @@ export function PaymentScreen() {
       {showUpiQr && (
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: C.bg, zIndex: 999, justifyContent: 'space-between' }}>
           <DotBG />
-          <View style={{ backgroundColor: C.bgCard, paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 14 : 52, paddingBottom: 18, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderColor: C.glassBorder }}>
-            <TouchableOpacity onPress={() => setShowUpiQr(false)} style={{ marginRight: 14, padding: 6, backgroundColor: C.glassMid, borderRadius: 10, borderWidth: 1, borderColor: C.glassBorder }}>
+          <View style={{ backgroundColor: C.pink, paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 14 : 56, paddingBottom: 18, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', overflow: 'hidden' }}>
+            <TouchableOpacity onPress={() => setShowUpiQr(false)} style={{ marginRight: 14, padding: 8, backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 10 }}>
               <Ionicons name="arrow-back" size={20} color="#fff" />
             </TouchableOpacity>
-            <Text style={{ color: C.text, fontSize: 18, fontWeight: '800', flex: 1 }}>UPI QR Se Pay Karo</Text>
+            <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900', flex: 1 }}>UPI QR Se Pay Karo</Text>
           </View>
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
             <View style={{ backgroundColor: C.pink, borderRadius: 20, paddingHorizontal: 28, paddingVertical: 12, marginBottom: 24, elevation: 10, shadowColor: C.pink, shadowOpacity: 0.5, shadowRadius: 14 }}>

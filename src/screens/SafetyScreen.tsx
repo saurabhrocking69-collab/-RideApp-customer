@@ -11,8 +11,8 @@ export function SafetyScreen() {
     { label: '🚓 Police',             number: '100',  color: C.bgCard,  textColor: C.text },
     { label: '🚑 Ambulance',          number: '108',  color: C.redGlass, textColor: C.red },
     { label: '🚒 Fire Brigade',       number: '101',  color: 'rgba(255,87,34,0.15)', textColor: '#FF5722' },
-    { label: '👩 Women Helpline',     number: '1091', color: 'rgba(156,39,176,0.15)', textColor: '#CE93D8' },
-    { label: '📞 National Emergency', number: '112',  color: 'rgba(33,150,243,0.15)', textColor: '#90CAF9' },
+    { label: '👩 Women Helpline',     number: '1091', color: 'rgba(124,58,237,0.10)', textColor: C.purple },
+    { label: '📞 National Emergency', number: '112',  color: C.glassMid,              textColor: C.purple },
   ];
 
   return (
