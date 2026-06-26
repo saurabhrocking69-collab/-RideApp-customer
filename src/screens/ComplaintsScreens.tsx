@@ -221,7 +221,7 @@ export function NewComplaintScreen() {
 
       {/* Ride picker modal */}
       {cmpShowRidePicker && (
-        <View style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)', zIndex: 99, justifyContent: 'flex-end' }}>
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.65)', zIndex: 99, justifyContent: 'flex-end' }}>
           <View style={{ backgroundColor: C.bgCard, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '72%', borderTopWidth: 1, borderColor: C.glassBorder }}>
             <View style={{ padding: 16, borderBottomWidth: 1, borderColor: C.glassBorder, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text style={{ fontWeight: '900', fontSize: 16, color: C.text }}>Ride Choose Karo</Text>
