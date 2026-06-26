@@ -33,6 +33,7 @@
   }
     },
     "plugins": [
+      "@sentry/react-native/expo",
       ["expo-notifications", { "icon": "./assets/icon.png", "color": "#e94560" }],
       ["expo-location", { "locationAlwaysAndWhenInUsePermission": "Ride tracking ke liye location chahiye" }]
     ],

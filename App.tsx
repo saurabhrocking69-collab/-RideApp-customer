@@ -8,7 +8,6 @@ Sentry.init({
   dsn: 'https://4367c95061c05f0f9a5768bffdd05dec@o4511631997796352.ingest.us.sentry.io/4511632039804933',
   environment: 'production',
   tracesSampleRate: 0.1,
-  enableNativeFramesTracking: true,
 });
 
 function BackHandlerWrapper() {
