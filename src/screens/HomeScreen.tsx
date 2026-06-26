@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { ScrollView, View, Text, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, Image, Animated } from 'react-native';
+import { ScrollView, View, Text, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, Image, Animated, Share } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { apiPost } from '../../api';
+import { apiPost, apiGet } from '../../api';
 import { useRideStore } from '../../store';
 import { useApp } from '../context/AppContext';
 import { Bouncy, PulseView, LucknowCityCard, SlideUp, CountUp, EmptyAnim, DotBG, GlowPulse, ShineCard } from '../components/ui';
@@ -603,6 +603,88 @@ function HomeTab() {
             <Text style={{ fontSize: 18, color: C.textDim }}>›</Text>
           </TouchableOpacity>
 
+          {/* ── Sppero Buddy Feature Banner ── */}
+          {!favouriteBuddy && (
+            <SlideUp delay={160}>
+              <TouchableOpacity activeOpacity={0.93} onPress={() => setTab('history')}
+                style={{ borderRadius: 22, marginBottom: 14, overflow: 'hidden', elevation: 8, shadowColor: '#E91E63', shadowOpacity: 0.18, shadowRadius: 14 }}>
+
+                {/* Main banner body */}
+                <View style={{ backgroundColor: '#100818', padding: 18, paddingBottom: 0 }}>
+
+                  {/* Top badge row */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+                    <View style={{ backgroundColor: 'rgba(233,30,99,0.18)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(233,30,99,0.4)', marginRight: 10 }}>
+                      <Text style={{ color: '#E91E63', fontSize: 10, fontWeight: '900', letterSpacing: 1.2 }}>✨ SPPERO EXCLUSIVE</Text>
+                    </View>
+                    <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.07)' }} />
+                    <Text style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginLeft: 10 }}>Free</Text>
+                  </View>
+
+                  {/* Headline */}
+                  <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900', letterSpacing: 0.3, marginBottom: 4 }}>
+                    ⭐ Apna{' '}
+                    <Text style={{ color: '#FFD700' }}>Sppero Buddy</Text>
+                    {'\n'}Banao
+                  </Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13, marginBottom: 18, lineHeight: 18 }}>
+                    Favourite driver save karo — har baar wahi trusted face!
+                  </Text>
+
+                  {/* 3 Steps */}
+                  <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+                    {[
+                      { icon: '🚗', num: '1', title: 'Ride Lo', sub: 'Kisi bhi driver ke saath' },
+                      { icon: '⭐', num: '2', title: 'Buddy Banao', sub: 'Trip baad mark karo' },
+                      { icon: '📲', num: '3', title: 'Direct Book', sub: 'Sirf usse request' },
+                    ].map(({ icon, num, title, sub }, i) => (
+                      <View key={i} style={{ flex: 1, alignItems: 'center' }}>
+                        <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', marginBottom: 6 }}>
+                          <Text style={{ fontSize: 22 }}>{icon}</Text>
+                        </View>
+                        <View style={{ backgroundColor: '#E91E63', borderRadius: 8, paddingHorizontal: 5, paddingVertical: 1, marginBottom: 4 }}>
+                          <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900' }}>STEP {num}</Text>
+                        </View>
+                        <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800', textAlign: 'center' }}>{title}</Text>
+                        <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9, textAlign: 'center', marginTop: 2, lineHeight: 13 }}>{sub}</Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  {/* Connector arrows between steps */}
+                  <View pointerEvents="none" style={{ flexDirection: 'row', position: 'absolute', top: 114, left: 84, right: 84, justifyContent: 'space-between' }}>
+                    <Text style={{ color: 'rgba(255,255,255,0.2)', fontSize: 16 }}>›</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.2)', fontSize: 16 }}>›</Text>
+                  </View>
+
+                  {/* Benefits row */}
+                  <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 14, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {[
+                      '✅ Same trusted driver',
+                      '✅ Queue skip — direct request',
+                      '✅ Driver pehle se ready',
+                    ].map((t, i) => (
+                      <View key={i} style={{ backgroundColor: 'rgba(255,215,0,0.08)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(255,215,0,0.18)' }}>
+                        <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: '600' }}>{t}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+
+                {/* CTA strip */}
+                <View style={{ backgroundColor: '#E91E63', paddingHorizontal: 18, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View>
+                    <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>🕐 Trips tab mein Buddy banao</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 2 }}>Ride ke baad driver ko mark karo</Text>
+                  </View>
+                  <View style={{ backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)' }}>
+                    <Text style={{ color: '#fff', fontWeight: '900', fontSize: 13 }}>Dekho →</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </SlideUp>
+          )}
+
           {historyRides.length > 0 && (
             <>
               <Text style={s.secTitle}>🕐 Recent Trips</Text>
@@ -618,6 +700,14 @@ function HomeTab() {
               ))}
             </>
           )}
+
+          {/* ── Made in India footer ── */}
+          <View style={{ alignItems: 'center', paddingTop: 28, paddingBottom: 10 }}>
+            <View style={{ width: 40, height: 1, backgroundColor: C.glassBorder, marginBottom: 16 }} />
+            <Text style={{ fontSize: 22, marginBottom: 6 }}>🇮🇳</Text>
+            <Text style={{ color: C.textDim, fontSize: 11, fontWeight: '800', letterSpacing: 2 }}>MADE IN INDIA</Text>
+            <Text style={{ color: C.textDim, fontSize: 10, marginTop: 5, letterSpacing: 0.8 }}>Sppero Inc.</Text>
+          </View>
         </View>
       </Animated.ScrollView>
       <View style={s.navFloat}><NavBar /></View>
@@ -806,6 +896,74 @@ function HistoryTab() {
     rideIcon, setScreen,
   } = useApp();
 
+  const [showBill, setShowBill] = useState(false);
+  const [billRide, setBillRide] = useState<any>(null);
+  const [billData, setBillData] = useState<any>(null);
+  const [billLoading, setBillLoading] = useState(false);
+
+  const openBill = async (h: any) => {
+    setBillRide(h);
+    setBillLoading(true);
+    setShowBill(true);
+    try {
+      const d = await apiGet(`/api/rides/status/${h.ride_id}`);
+      setBillData(d.ride);
+    } catch (_e) {
+      setBillData(null);
+    }
+    setBillLoading(false);
+  };
+
+  const closeBill = () => { setShowBill(false); setBillRide(null); setBillData(null); };
+
+  const billFareNum = parseInt(String(billRide?.fare).replace(/[^0-9]/g, '')) || 0;
+  const billGst = Math.round((billFareNum * 5 / 105) * 100) / 100;
+  const billBase = Math.round((billFareNum - billGst) * 100) / 100;
+  const billId = '#SP' + String(billRide?.ride_id || '').slice(-8).toUpperCase();
+  const billDateStr = billRide ? new Date(billRide.created_at).toLocaleString('en-IN', {
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true,
+  }) : '';
+  const billVehicle = (billRide?.ride_type || billData?.ride_type || 'Auto').replace(/\b\w/g, (c: string) => c.toUpperCase());
+  const billPayLabel = () => {
+    const m = billRide?.payment_method || billData?.payment_method || '';
+    if (m === 'cash') return 'Cash';
+    if (m === 'wallet') return 'Wallet';
+    if (m === 'online' || m === 'upi' || m === 'upi_qr') return 'Online / UPI';
+    return 'Cash';
+  };
+
+  const shareBill = () => {
+    const dist = billData?.distance ? `\n📏 Distance: ${billData.distance} km` : '';
+    const text =
+`🚖 *SPPERO — RIDE RECEIPT*
+━━━━━━━━━━━━━━━━━━━
+
+📋 *Booking ID:* ${billId}
+📅 *Date:* ${billDateStr}
+
+📍 *Pickup:*  ${billRide?.pickup || ''}
+🏁 *Drop:*    ${billRide?.drop_location || ''}
+${dist}
+🚗 *Vehicle:* ${billVehicle}
+👤 *Driver:*  ${billRide?.driver_name || billData?.driver_name || 'N/A'}
+
+━━━━━━━━━━━━━━━━━━━
+       *FARE BREAKDOWN*
+━━━━━━━━━━━━━━━━━━━
+Base Fare:       ₹${billBase.toFixed(2)}
+GST (5%)*:       ₹${billGst.toFixed(2)}
+━━━━━━━━━━━━━━━━━━━
+*TOTAL PAID:  ₹${billFareNum}*
+💳 *Payment:* ${billPayLabel()}
+━━━━━━━━━━━━━━━━━━━
+
+_*GST transparency ke liye dikhaya gaya hai._
+_Abhi customers se GST collect nahi hota._
+
+🙏 *Sppero* mein safar karne ka shukriya!`;
+    Share.share({ message: text });
+  };
+
   return (
     <View style={s.screen}>
       <View style={{ backgroundColor: C.pink, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 56, paddingBottom: 28, paddingHorizontal: 20 }}>
@@ -843,11 +1001,124 @@ function HistoryTab() {
                   )}
                 </View>
               </View>
+              {h.status === 'completed' && (
+                <TouchableOpacity onPress={() => openBill(h)}
+                  style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: C.glassMid, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, borderColor: C.glassBorder }}>
+                  <Text style={{ fontSize: 14 }}>🧾</Text>
+                  <Text style={{ color: C.textMuted, fontWeight: '700', fontSize: 12 }}>Bill & Share</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ))
         }
       </ScrollView>
       <View style={s.navFloat}><NavBar /></View>
+
+      {/* Bill Modal */}
+      <Modal visible={showBill} transparent animationType="slide" onRequestClose={closeBill}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: '#0d0d1a', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: 32 }}>
+            <View style={{ width: 40, height: 4, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 4 }} />
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 8 }}>
+
+              <View style={{ alignItems: 'center', paddingVertical: 18 }}>
+                <Text style={{ fontSize: 28 }}>🧾</Text>
+                <Text style={{ fontSize: 20, fontWeight: '900', color: '#fff', marginTop: 6, letterSpacing: 1 }}>SPPERO</Text>
+                <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', letterSpacing: 2, marginTop: 2 }}>RIDE RECEIPT</Text>
+              </View>
+
+              <View style={{ borderStyle: 'dashed', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', marginBottom: 16 }} />
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>Booking ID</Text>
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '800' }}>{billId}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 }}>
+                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>Date & Time</Text>
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>{billDateStr}</Text>
+              </View>
+
+              <View style={{ backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 14, padding: 14, marginBottom: 14 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 }}>
+                  <Text style={{ fontSize: 16, marginRight: 10, marginTop: 1 }}>📍</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, marginBottom: 2 }}>PICKUP</Text>
+                    <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>{billRide?.pickup}</Text>
+                  </View>
+                </View>
+                <View style={{ width: 2, height: 16, backgroundColor: 'rgba(255,255,255,0.15)', marginLeft: 17, marginBottom: 10 }} />
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                  <Text style={{ fontSize: 16, marginRight: 10, marginTop: 1 }}>🏁</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, marginBottom: 2 }}>DROP</Text>
+                    <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>{billRide?.drop_location}</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
+                <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: 12 }}>
+                  <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, marginBottom: 4 }}>VEHICLE</Text>
+                  <Text style={{ fontSize: 18, marginBottom: 2 }}>🚗</Text>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>{billVehicle}</Text>
+                  {billData?.vehicle_no ? <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 2 }}>{billData.vehicle_no}</Text> : null}
+                </View>
+                <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: 12 }}>
+                  <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, marginBottom: 4 }}>DRIVER</Text>
+                  <Text style={{ fontSize: 18, marginBottom: 2 }}>👤</Text>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>{billRide?.driver_name || billData?.driver_name || 'N/A'}</Text>
+                  {billLoading
+                    ? <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 2 }}>Loading...</Text>
+                    : billData?.distance ? <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 2 }}>{billData.distance} km</Text> : null}
+                </View>
+              </View>
+
+              <View style={{ borderStyle: 'dashed', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', marginBottom: 14 }} />
+              <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: '700', letterSpacing: 1.5, textAlign: 'center', marginBottom: 14 }}>FARE BREAKDOWN</Text>
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 14 }}>Base Fare</Text>
+                <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>₹{billBase.toFixed(2)}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14, alignItems: 'flex-end' }}>
+                <View>
+                  <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 14 }}>GST (5%)</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, marginTop: 2 }}>*Transparency ke liye only</Text>
+                </View>
+                <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>₹{billGst.toFixed(2)}</Text>
+              </View>
+
+              <View style={{ borderStyle: 'dashed', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', marginBottom: 14 }} />
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>TOTAL PAID</Text>
+                <Text style={{ color: C.pink, fontSize: 28, fontWeight: '900' }}>₹{billFareNum}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+                <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12 }}>Payment Mode</Text>
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{billPayLabel()}</Text>
+              </View>
+
+              <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: 10, marginBottom: 18 }}>
+                <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, textAlign: 'center', lineHeight: 16 }}>
+                  GST transparency ke liye dikhaya gaya hai.{'\n'}Abhi customers se GST collect nahi hota.
+                </Text>
+              </View>
+
+              <TouchableOpacity onPress={shareBill}
+                style={{ backgroundColor: '#25D366', borderRadius: 16, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, elevation: 6, shadowColor: '#25D366', shadowOpacity: 0.4, shadowRadius: 10 }}>
+                <Text style={{ fontSize: 20 }}>📤</Text>
+                <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>WhatsApp par Share Karo</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={closeBill} style={{ marginTop: 12, paddingVertical: 12, alignItems: 'center' }}>
+                <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14 }}>Dismiss</Text>
+              </TouchableOpacity>
+
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

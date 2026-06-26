@@ -1,7 +1,7 @@
 import { Animated, Image, Linking, Platform, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
-import { Bouncy, DotBG, ScreenIn, ShineCard } from '../components/ui';
+import { Bouncy, DotBG, ScreenIn } from '../components/ui';
 import { s, C } from '../styles';
 import { API } from '../constants';
 
@@ -128,32 +128,32 @@ export function PaymentScreen() {
       )}
 
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-        <ShineCard style={[s.hero, { paddingTop: 60, paddingBottom: 32, backgroundColor: C.bgDeep, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 }]}>
-          <Text style={{ fontSize: 55 }}>🏁</Text>
+        <View style={[s.hero, { paddingTop: 40, paddingBottom: 16, backgroundColor: C.bgDeep, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }]}>
+          <Text style={{ fontSize: 40 }}>🏁</Text>
           <Text style={[s.heroTitle, { color: C.text }]}>Trip Complete!</Text>
           <Text style={[s.heroSub, { color: C.textMuted }]} numberOfLines={1}>{pickup} → {drop}</Text>
-          <Animated.Text style={{ color: C.yellow, fontSize: 48, fontWeight: '900', marginTop: 8, letterSpacing: -1 }}>₹{fareCount}</Animated.Text>
+          <Animated.Text style={{ color: C.yellow, fontSize: 36, fontWeight: '900', marginTop: 6, letterSpacing: -0.5 }}>₹{fareCount}</Animated.Text>
           {walletSufficient && (
             <View style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(22,163,74,0.15)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(22,163,74,0.3)' }}>
               <Text style={{ fontSize: 14 }}>🎁</Text>
               <Text style={{ color: C.green, fontSize: 11, fontWeight: '700' }}>Wallet se pay karo — scratch card milega!</Text>
             </View>
           )}
-        </ShineCard>
+        </View>
 
         <View style={{ padding: 16, gap: 10 }}>
           <Text style={{ fontSize: 12, fontWeight: '800', color: C.textMuted, letterSpacing: 1, marginBottom: 2, marginLeft: 2 }}>PAYMENT CHOOSE KARO</Text>
           {payOptions.map((p, i) => (
             <Bouncy key={i} onPress={p.disabled ? undefined : p.fn} style={{ opacity: p.disabled ? 0.45 : 1 }}>
               <View style={{
-                backgroundColor: p.glassColor, borderRadius: 18, padding: 16,
+                backgroundColor: p.glassColor, borderRadius: 16, padding: 14,
                 flexDirection: 'row', alignItems: 'center',
-                borderWidth: p.recommended ? 2 : 1.5, borderColor: p.recommended ? p.border : p.border,
-                elevation: p.recommended ? 6 : 3,
-                shadowColor: p.color, shadowOpacity: p.recommended ? 0.2 : 0.1, shadowRadius: 8,
+                borderWidth: p.recommended ? 1.5 : 1, borderColor: p.border,
+                elevation: p.recommended ? 3 : 1,
+                shadowColor: p.color, shadowOpacity: p.recommended ? 0.1 : 0.04, shadowRadius: 4,
               }}>
-                <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: `${p.color}22`, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: p.border }}>
-                  <Text style={{ fontSize: 22 }}>{p.icon}</Text>
+                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: `${p.color}18`, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 20 }}>{p.icon}</Text>
                 </View>
                 <View style={{ flex: 1, marginLeft: 14 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -171,9 +171,7 @@ export function PaymentScreen() {
                     </View>
                   )}
                 </View>
-                <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: p.glassColor, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: p.border }}>
-                  <Ionicons name="chevron-forward" size={16} color={C.textMuted} />
-                </View>
+                <Ionicons name="chevron-forward" size={16} color={C.textMuted} />
               </View>
             </Bouncy>
           ))}
