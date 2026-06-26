@@ -45,11 +45,15 @@ export function HourlyScreen() {
   const pkg = hourlyPackages[hVehicle]?.[hPackageHours];
 
   useEffect(() => {
-    if (hourlyStep !== 'waiting' || !hourlyBooking?.id || hourlyBooking?.status === 'matched') return;
+    if (hourlyStep !== 'waiting' || !hourlyBooking?.id) return;
+    if (hourlyBooking?.status === 'active') { setHourlyStep('active'); return; }
     const poll = async () => {
       try {
         const d = await apiGet(`/api/hourly/status/${hourlyBooking.id}`);
-        if (d.booking?.status === 'matched') {
+        if (d.booking?.status === 'active') {
+          setHourlyBooking((p: any) => ({ ...p, status: 'active', started_at: d.booking.started_at, driver_phone: d.booking.driver_phone }));
+          setHourlyStep('active');
+        } else if (d.booking?.status === 'matched') {
           setHourlyBooking((p: any) => ({ ...p, status: 'matched', driver_phone: d.booking.driver_phone }));
         }
       } catch (_e) {}

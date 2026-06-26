@@ -422,7 +422,7 @@ export function NewComplaintScreen() {
                   setStep(1); setCatId('');
                   Alert.alert(
                     '✅ Complaint Submit Ho Gayi!',
-                    `Sppero team ~${selectedCat.sla} mein review karegi.\n\nID: ${data.complaint.id.slice(0, 8).toUpperCase()}`,
+                    `Sppero team ~${selectedCat.sla} mein review karegi.\n\nID: #${String(data.complaint.id).slice(-8).toUpperCase()}`,
                     [{ text: 'Track Karo', onPress: () => setScreen('complaints') }],
                   );
                 } else {

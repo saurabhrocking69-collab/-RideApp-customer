@@ -745,6 +745,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     s.on('hourlyMatched', (data: any) => {
       setHourlyBooking((p: any) => p ? { ...p, status: 'matched', driver_phone: data.driver_phone } : p);
     });
+    s.on('hourlyTripStarted', (data: any) => {
+      setHourlyBooking((p: any) => p ? { ...p, status: 'active', started_at: data.started_at } : p);
+      setHourlyStep('active');
+    });
     s.on('hourlyDriverCancelled', () => {
       setHourlyBooking((p: any) => p ? { ...p, status: 'pending', driver_phone: null } : p);
     });
