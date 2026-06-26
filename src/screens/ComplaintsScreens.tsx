@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useApp } from '../context/AppContext';
 import { DotBG, ScreenIn, SlideUp } from '../components/ui';
 import { s, C } from '../styles';
@@ -453,6 +454,36 @@ export function ComplaintDetailScreen() {
   const sm = STATUS_META[c.status] || { color: '#999', label: c.status, icon: '❓' };
   const isAuto = c.source === 'system_auto';
 
+  const [uploading, setUploading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const refresh = async () => {
+    setRefreshing(true);
+    try {
+      const r = await apiGet(`/api/complaints/${c.id}?phone=${encodeURIComponent(phone)}`);
+      setCmpDetail(r);
+    } catch {}
+    setRefreshing(false);
+  };
+
+  const uploadEvidence = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) { Alert.alert('Permission', 'Gallery access chahiye'); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, base64: true, quality: 0.6 });
+    if (result.canceled || !result.assets?.[0]) return;
+    const asset = result.assets[0];
+    const dataUri = `data:image/jpeg;base64,${asset.base64}`;
+    setUploading(true);
+    try {
+      const r = await apiPost(`/api/complaints/${c.id}/evidence`, { phone, image: dataUri, caption: 'User evidence' });
+      if (r.url) {
+        await refresh();
+        Alert.alert('✅ Uploaded', 'Evidence submit ho gaya!');
+      } else { Alert.alert('Error', r.error || 'Upload fail hua'); }
+    } catch { Alert.alert('Error', 'Upload fail hua — retry karo'); }
+    setUploading(false);
+  };
+
   return (
     <ScreenIn style={s.screen}>
       <DotBG />
@@ -461,7 +492,9 @@ export function ComplaintDetailScreen() {
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
         <Text style={s.topTitle}>Complaint Detail</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity onPress={refresh} style={{ padding: 4 }}>
+          <Ionicons name="refresh" size={20} color="#fff" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, paddingBottom: 40 }}>
@@ -491,6 +524,20 @@ export function ComplaintDetailScreen() {
           </View>
         )}
 
+        {c.status === 'evidence_requested' && (
+          <View style={{ backgroundColor: '#FFF7ED', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 2, borderColor: '#FB923C', flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+            <Text style={{ fontSize: 26 }}>📎</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: '900', color: '#EA580C', marginBottom: 4 }}>Admin ne Proof Manga Hai!</Text>
+              <Text style={{ fontSize: 12, color: '#9A3412', lineHeight: 18 }}>Apni complaint prove karne ke liye screenshot ya photo upload karo. Bina proof ke complaint close ho sakti hai.</Text>
+              <TouchableOpacity onPress={uploadEvidence} disabled={uploading}
+                style={{ backgroundColor: '#EA580C', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 20, marginTop: 12, alignItems: 'center', opacity: uploading ? 0.6 : 1 }}>
+                <Text style={{ color: '#fff', fontWeight: '900', fontSize: 13 }}>{uploading ? '⏳ Uploading...' : '📸 Photo/Screenshot Upload Karo'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* Main complaint info */}
         <View style={{ backgroundColor: C.bgCard, borderRadius: 16, padding: 16, marginBottom: 14, elevation: 2, borderWidth: 1, borderColor: C.glassBorder }}>
           <Text style={{ fontSize: 17, fontWeight: '900', color: C.text, marginBottom: 6 }}>{c.title}</Text>
@@ -509,6 +556,15 @@ export function ComplaintDetailScreen() {
             <Text style={{ fontSize: 13, color: C.green, fontWeight: '700' }}>{c.resolution?.replace(/_/g, ' ')}</Text>
             {c.resolution_note && <Text style={{ fontSize: 13, color: C.textMuted, marginTop: 6, lineHeight: 18 }}>{c.resolution_note}</Text>}
             {c.action_taken && <Text style={{ fontSize: 12, color: C.green, marginTop: 4, opacity: 0.8 }}>Action: {c.action_taken}</Text>}
+            {(c.refund_amount > 0) && (
+              <View style={{ marginTop: 10, backgroundColor: 'rgba(22,163,74,0.12)', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(22,163,74,0.3)' }}>
+                <Text style={{ fontSize: 18 }}>💰</Text>
+                <View>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: C.green }}>₹{parseFloat(c.refund_amount).toFixed(0)} Refund Mila!</Text>
+                  <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>Aapke wallet mein credit ho gaya hai</Text>
+                </View>
+              </View>
+            )}
           </View>
         )}
 
@@ -521,6 +577,17 @@ export function ComplaintDetailScreen() {
                 <Image key={i} source={{ uri: e.file_url }} style={{ width: 90, height: 80, borderRadius: 12, marginRight: 10, borderWidth: 1.5, borderColor: C.glassBorder }} />
               ))}
             </ScrollView>
+          </View>
+        )}
+
+        {!isClosed && (
+          <View style={{ backgroundColor: C.bgCard, borderRadius: 16, padding: 16, marginBottom: 14, elevation: 2, borderWidth: 1, borderColor: c.status === 'evidence_requested' ? '#FB923C' : C.glassBorder }}>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: C.text, marginBottom: 8 }}>📎 Evidence Upload Karo</Text>
+            <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 12, lineHeight: 18 }}>Screenshot, photo, ya koi bhi proof upload karo jo aapki complaint support kare (max 5)</Text>
+            <TouchableOpacity onPress={uploadEvidence} disabled={uploading}
+              style={{ backgroundColor: c.status === 'evidence_requested' ? '#EA580C' : C.pink, borderRadius: 12, paddingVertical: 12, alignItems: 'center', opacity: uploading ? 0.6 : 1 }}>
+              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>{uploading ? '⏳ Uploading...' : '📸 Photo Upload Karo'}</Text>
+            </TouchableOpacity>
           </View>
         )}
 
