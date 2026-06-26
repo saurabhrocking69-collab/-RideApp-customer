@@ -87,7 +87,7 @@ export function BookingScreen() {
           {/* Route card / location inputs */}
           {pickupCoords && dropCoords ? (
             <TouchableOpacity activeOpacity={0.88}
-              onPress={() => { setPickupCoords(null); setDropCoords(null); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; }}
+              onPress={() => { setDropCoords(null); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; }}
               style={{ backgroundColor: C.glass, borderRadius: 18, marginBottom: 14, elevation: 3, overflow: 'hidden', borderWidth: 1, borderColor: C.glassBorder }}>
               <View style={{ padding: 14 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'stretch' }}>
