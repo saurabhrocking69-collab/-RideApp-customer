@@ -309,6 +309,7 @@ function HomeTab() {
     setHPickupSugg, setHDropSugg, setHRoundTrip, setHStayHours, setHourlyBooking,
     rideIcon, customerRating, walletBalance,
     storeStatus, paymentDone,
+    savedPlaces, referralData,
   } = useApp();
 
   const GREETINGS = ['Namaste! 🙏', 'Chalein India ki sair? 🗺️', 'Safe Travels! 🛺', 'Sppero ke saath chalein! 🚀', 'Ride karo, India dekho! 🇮🇳'];
@@ -417,19 +418,66 @@ function HomeTab() {
           </SlideUp>
 
           <SlideUp delay={60}>
-            <View style={s.quickRow}>
-              {[
-                { icon: '🏠', label: 'Home',   color: C.greenGlass,  border: C.greenBorder,  fn: () => setScreen('booking') },
-                { icon: '💼', label: 'Office',  color: C.yellowGlass, border: C.yellowBorder, fn: () => setScreen('booking') },
-                { icon: '🎁', label: 'Refer',   color: C.pinkGlass,   border: C.pinkBorder,   fn: () => { loadReferral(); setScreen('referral'); } },
-                { icon: '📍', label: 'Saved',   color: C.glass,       border: C.glassBorder,  fn: () => { loadSaved(); setScreen('saved'); } },
-              ].map(({ icon, label, color, border, fn }, i) => (
-                <Bouncy key={i} onPress={fn} style={[s.quickBtn, { backgroundColor: color, borderColor: border }]}>
-                  <Text style={s.quickIcon}>{icon}</Text>
-                  <Text style={[s.quickLbl, { color: C.text }]}>{label}</Text>
-                </Bouncy>
-              ))}
-            </View>
+            {(() => {
+              const homePlace = savedPlaces?.find((p: any) => /^home$|^ghar$/i.test(p.label?.trim()));
+              const officePlace = savedPlaces?.find((p: any) => /^office$|^kaam$/i.test(p.label?.trim()));
+              const recentDrop = historyRides?.[0]?.drop_location;
+              const bookTo = (addr: string) => { setDrop(addr); setScreen('booking'); };
+              const tiles = [
+                {
+                  icon: '🏠', label: 'Ghar',
+                  sub: homePlace ? homePlace.address : 'Set karo →',
+                  color: '#E8FFF0', border: C.greenBorder, dot: C.green,
+                  saved: !!homePlace,
+                  fn: homePlace ? () => bookTo(homePlace.address) : () => { loadSaved(); setScreen('saved'); },
+                },
+                {
+                  icon: '🏢', label: 'Office',
+                  sub: officePlace ? officePlace.address : 'Set karo →',
+                  color: '#FFF8E8', border: C.yellowBorder, dot: C.yellow,
+                  saved: !!officePlace,
+                  fn: officePlace ? () => bookTo(officePlace.address) : () => { loadSaved(); setScreen('saved'); },
+                },
+                {
+                  icon: '🕐', label: 'Recent',
+                  sub: recentDrop || 'Abhi koi trip nahi',
+                  color: C.pinkGlass, border: C.pinkBorder, dot: C.pink,
+                  saved: !!recentDrop,
+                  fn: recentDrop ? () => bookTo(recentDrop) : () => setScreen('booking'),
+                },
+                {
+                  icon: '📍', label: 'Saved',
+                  sub: savedPlaces?.length ? `${savedPlaces.length} jagah saved` : 'Places add karo',
+                  color: C.glass, border: C.glassBorder, dot: C.textMuted,
+                  saved: true,
+                  fn: () => { loadSaved(); setScreen('saved'); },
+                },
+              ];
+              return (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }} contentContainerStyle={{ paddingRight: 4 }}>
+                  {tiles.map((t, i) => (
+                    <Bouncy key={i} onPress={t.fn} style={{
+                      width: 128, marginRight: 10,
+                      backgroundColor: t.color, borderRadius: 18,
+                      padding: 14, borderWidth: 1.5, borderColor: t.border,
+                      elevation: 2, shadowColor: t.dot, shadowOpacity: 0.1, shadowRadius: 6,
+                    }}>
+                      <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.7)', alignItems: 'center', justifyContent: 'center', marginBottom: 10, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)' }}>
+                        <Text style={{ fontSize: 20 }}>{t.icon}</Text>
+                      </View>
+                      <Text style={{ color: C.text, fontWeight: '800', fontSize: 13, marginBottom: 3 }}>{t.label}</Text>
+                      <Text style={{ color: C.textMuted, fontSize: 10, lineHeight: 14 }} numberOfLines={2}>{t.sub}</Text>
+                      <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: t.dot }} />
+                        <Text style={{ fontSize: 9, color: t.dot, fontWeight: '800' }}>
+                          {t.saved ? 'Book karo →' : 'Add karo →'}
+                        </Text>
+                      </View>
+                    </Bouncy>
+                  ))}
+                </ScrollView>
+              );
+            })()}
           </SlideUp>
 
           {favouriteBuddy && (
@@ -508,11 +556,44 @@ function HomeTab() {
           ))}
 
           <SlideUp delay={120}>
-            <TouchableOpacity style={s.promoBanner} onPress={() => { loadReferral(); setScreen('referral'); }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                <PulseView><Text style={{ fontSize: 18, marginRight: 8 }}>🎁</Text></PulseView>
-                <Text style={s.promoTxt}>Dost ko refer karo, dono ko ₹50 milega!</Text>
-                <Text style={{ color: C.yellow, marginLeft: 8, fontWeight: '800', fontSize: 14 }}>→</Text>
+            <TouchableOpacity activeOpacity={0.92} onPress={() => { loadReferral(); setScreen('referral'); }}
+              style={{ borderRadius: 22, marginBottom: 14, overflow: 'hidden', elevation: 7, shadowColor: '#E91E63', shadowOpacity: 0.28, shadowRadius: 14 }}>
+              <View style={{ backgroundColor: '#E91E63', padding: 16, flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ flex: 1 }}>
+                  <View style={{ backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start', marginBottom: 8 }}>
+                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900', letterSpacing: 1.3 }}>🎁 REFER & EARN</Text>
+                  </View>
+                  <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700', opacity: 0.85 }}>Dost ko invite karo</Text>
+                  <Text style={{ color: '#FFD700', fontSize: 26, fontWeight: '900', lineHeight: 32, marginTop: 2 }}>Dono ko ₹50 + ₹50</Text>
+                  {referralData?.code && (
+                    <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, fontWeight: '600' }}>Tera code:</Text>
+                      <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 7, paddingHorizontal: 9, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)' }}>
+                        <Text style={{ color: '#fff', fontSize: 12, fontWeight: '900', letterSpacing: 1.8 }}>{referralData.code}</Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+                <View style={{ alignItems: 'center', marginLeft: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                    <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFD700' }}>
+                      <Text style={{ fontSize: 18 }}>👤</Text>
+                    </View>
+                    <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#FFD700', alignItems: 'center', justifyContent: 'center', marginHorizontal: -4, zIndex: 1, elevation: 3 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '900', color: '#222' }}>+</Text>
+                    </View>
+                    <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.5)' }}>
+                      <Text style={{ fontSize: 18 }}>🙋</Text>
+                    </View>
+                  </View>
+                  <View style={{ backgroundColor: '#FFD700', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8 }}>
+                    <Text style={{ color: '#111', fontSize: 12, fontWeight: '900' }}>Invite →</Text>
+                  </View>
+                </View>
+              </View>
+              <View style={{ backgroundColor: 'rgba(0,0,0,0.18)', paddingVertical: 8, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                <PulseView><Text style={{ fontSize: 12 }}>✨</Text></PulseView>
+                <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: '700' }}>Wallet mein credited hoga — turant!</Text>
               </View>
             </TouchableOpacity>
           </SlideUp>
@@ -906,7 +987,7 @@ function HistoryTab() {
     setBillLoading(true);
     setShowBill(true);
     try {
-      const d = await apiGet(`/api/rides/status/${h.ride_id}`);
+      const d = await apiGet(`/api/rides/status/${h.id}`);
       setBillData(d.ride);
     } catch (_e) {
       setBillData(null);
@@ -919,17 +1000,18 @@ function HistoryTab() {
   const billFareNum = parseInt(String(billRide?.fare).replace(/[^0-9]/g, '')) || 0;
   const billGst = Math.round((billFareNum * 5 / 105) * 100) / 100;
   const billBase = Math.round((billFareNum - billGst) * 100) / 100;
-  const billId = '#SP' + String(billRide?.ride_id || '').slice(-8).toUpperCase();
+  const billId = '#SP' + String(billRide?.id || '').slice(-8).toUpperCase();
   const billDateStr = billRide ? new Date(billRide.created_at).toLocaleString('en-IN', {
     day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true,
   }) : '';
   const billVehicle = (billRide?.ride_type || billData?.ride_type || 'Auto').replace(/\b\w/g, (c: string) => c.toUpperCase());
   const billPayLabel = () => {
-    const m = billRide?.payment_method || billData?.payment_method || '';
-    if (m === 'cash') return 'Cash';
-    if (m === 'wallet') return 'Wallet';
-    if (m === 'online' || m === 'upi' || m === 'upi_qr') return 'Online / UPI';
-    return 'Cash';
+    const m = billData?.payment_method || billRide?.payment_method || '';
+    if (m === 'cash') return 'Cash 💵';
+    if (m === 'wallet') return 'Sppero Wallet 👛';
+    if (m === 'upi_qr') return 'UPI QR 📱';
+    if (m === 'online' || m === 'upi' || m === 'razorpay') return 'Online / UPI 📱';
+    return '—';
   };
 
   const shareBill = () => {
@@ -951,14 +1033,13 @@ ${dist}
        *FARE BREAKDOWN*
 ━━━━━━━━━━━━━━━━━━━
 Base Fare:       ₹${billBase.toFixed(2)}
-GST (5%)*:       ₹${billGst.toFixed(2)}
+GST (5%):        ₹${billGst.toFixed(2)}
 ━━━━━━━━━━━━━━━━━━━
 *TOTAL PAID:  ₹${billFareNum}*
 💳 *Payment:* ${billPayLabel()}
 ━━━━━━━━━━━━━━━━━━━
 
-_*GST transparency ke liye dikhaya gaya hai._
-_Abhi customers se GST collect nahi hota._
+_GST fare mein included hai — alag se charge nahi hota._
 
 🙏 *Sppero* mein safar karne ka shukriya!`;
     Share.share({ message: text });
@@ -1083,7 +1164,7 @@ _Abhi customers se GST collect nahi hota._
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14, alignItems: 'flex-end' }}>
                 <View>
                   <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 14 }}>GST (5%)</Text>
-                  <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, marginTop: 2 }}>*Transparency ke liye only</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, marginTop: 2 }}>Fare mein included hai</Text>
                 </View>
                 <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>₹{billGst.toFixed(2)}</Text>
               </View>
@@ -1099,9 +1180,10 @@ _Abhi customers se GST collect nahi hota._
                 <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{billPayLabel()}</Text>
               </View>
 
-              <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: 10, marginBottom: 18 }}>
-                <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, textAlign: 'center', lineHeight: 16 }}>
-                  GST transparency ke liye dikhaya gaya hai.{'\n'}Abhi customers se GST collect nahi hota.
+              <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: 10, marginBottom: 18, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={{ fontSize: 14 }}>ℹ️</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, lineHeight: 16, flex: 1 }}>
+                  GST fare mein already included hai.{'\n'}Yeh amount alag se charge nahi hota.
                 </Text>
               </View>
 
