@@ -1,7 +1,15 @@
+import * as Sentry from '@sentry/react-native';
 import { useEffect, useRef } from 'react';
 import { BackHandler, ToastAndroid } from 'react-native';
 import { AppProvider, useApp } from './src/context/AppContext';
 import { Router } from './src/Router';
+
+Sentry.init({
+  dsn: 'https://4367c95061c05f0f9a5768bffdd05dec@o4511631997796352.ingest.us.sentry.io/4511632039804933',
+  environment: 'production',
+  tracesSampleRate: 0.1,
+  enableNativeFramesTracking: true,
+});
 
 function BackHandlerWrapper() {
   const { screen, setScreen, tab, setTab, rideData, hourlyStep } = useApp();
@@ -58,10 +66,12 @@ function BackHandlerWrapper() {
   return <Router />;
 }
 
-export default function App() {
+function App() {
   return (
     <AppProvider>
       <BackHandlerWrapper />
     </AppProvider>
   );
 }
+
+export default Sentry.wrap(App);
