@@ -118,33 +118,143 @@ export const Bouncy = ({ children, onPress, style, disabled }: any) => {
   );
 };
 
-// ─── SuccessBurst ─────────────────────────────────────────────────────────────
+// ─── SuccessBurst — Driver Lock Animation ─────────────────────────────────────
 export const SuccessBurst = () => {
-  const scale = useRef(new Animated.Value(0)).current;
-  const particles = useRef([0,1,2,3,4,5,6,7].map(() => ({
+  // Ripple rings: green → yellow → pink in cascade
+  const rings = useRef([0,1,2].map(() => new Animated.Value(0))).current;
+  // Car slides in from right
+  const carX    = useRef(new Animated.Value(130)).current;
+  const carScale = useRef(new Animated.Value(0.3)).current;
+  // Motion trail lines (left of car)
+  const trail = useRef([0,1,2].map(() => new Animated.Value(0))).current;
+  // Check badge stamps onto car
+  const badgeScale = useRef(new Animated.Value(0)).current;
+  const badgeOpacity = useRef(new Animated.Value(0)).current;
+  // White flash on arrival
+  const flash = useRef(new Animated.Value(0)).current;
+  // 8 colored dot particles burst
+  const dots = useRef([...Array(8)].map(() => ({
     x: new Animated.Value(0), y: new Animated.Value(0), o: new Animated.Value(1),
   }))).current;
+
   useEffect(() => {
-    Animated.spring(scale, { toValue: 1, friction: 4, tension: 100, useNativeDriver: true }).start();
-    particles.forEach((p, i) => {
+    // 1. Instant white flash
+    Animated.sequence([
+      Animated.timing(flash, { toValue: 0.5, duration: 60, useNativeDriver: true }),
+      Animated.timing(flash, { toValue: 0, duration: 340, useNativeDriver: true }),
+    ]).start();
+
+    // 2. Ripple rings cascade (loop so they keep pulsing)
+    rings.forEach((r, i) =>
+      Animated.loop(Animated.sequence([
+        Animated.delay(i * 330),
+        Animated.timing(r, { toValue: 1, duration: 1500, useNativeDriver: true }),
+        Animated.timing(r, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ])).start()
+    );
+
+    // 3. Car spring slides in from right
+    Animated.spring(carX,    { toValue: 0, friction: 7, tension: 100, useNativeDriver: true }).start();
+    Animated.spring(carScale,{ toValue: 1, friction: 5, tension: 120, useNativeDriver: true }).start();
+
+    // 4. Motion trail appears then fades
+    trail.forEach((t, i) =>
+      Animated.sequence([
+        Animated.timing(t, { toValue: 1, duration: 80, delay: i * 40, useNativeDriver: true }),
+        Animated.timing(t, { toValue: 0, duration: 300, delay: 100, useNativeDriver: true }),
+      ]).start()
+    );
+
+    // 5. Check badge stamps in after car lands
+    setTimeout(() => {
+      Animated.parallel([
+        Animated.spring(badgeScale,   { toValue: 1, friction: 3, tension: 220, useNativeDriver: true }),
+        Animated.timing(badgeOpacity, { toValue: 1, duration: 120, useNativeDriver: true }),
+      ]).start();
+    }, 500);
+
+    // 6. Dot particles burst outward
+    dots.forEach((d, i) => {
       const angle = (i / 8) * Math.PI * 2;
       Animated.parallel([
-        Animated.timing(p.x, { toValue: Math.cos(angle) * 70, duration: 700, useNativeDriver: true }),
-        Animated.timing(p.y, { toValue: Math.sin(angle) * 70, duration: 700, useNativeDriver: true }),
-        Animated.timing(p.o, { toValue: 0, duration: 700, useNativeDriver: true }),
+        Animated.timing(d.x, { toValue: Math.cos(angle) * 62, duration: 560, useNativeDriver: true }),
+        Animated.timing(d.y, { toValue: Math.sin(angle) * 54, duration: 560, useNativeDriver: true }),
+        Animated.timing(d.o, { toValue: 0, duration: 560, delay: 160, useNativeDriver: true }),
       ]).start();
     });
   }, []);
+
+  const DOT_COLORS = ['#4CAF50','#FFC107','#E91E63','#2196F3','#FF5722','#9C27B0','#00BCD4','#FF9800'];
+  const RING_COLORS = [C.green, '#FFC107', C.pink];
+
   return (
-    <View style={{ alignItems: 'center', justifyContent: 'center', height: 90 }}>
-      {particles.map((p, i) => (
-        <Animated.Text key={i} style={{ position: 'absolute', fontSize: 18, opacity: p.o, transform: [{ translateX: p.x }, { translateY: p.y }] }}>
-          {['🎉','✨','⭐','🎊'][i % 4]}
-        </Animated.Text>
+    <View style={{ height: 110, alignItems: 'center', justifyContent: 'center', overflow: 'visible' }}>
+
+      {/* Flash overlay */}
+      <Animated.View style={{
+        position: 'absolute', top: -8, left: -60, right: -60, bottom: -8,
+        backgroundColor: '#fff', opacity: flash, borderRadius: 18,
+      }} />
+
+      {/* Ripple rings */}
+      {rings.map((r, i) => (
+        <Animated.View key={i} style={{
+          position: 'absolute',
+          width: 68, height: 68, borderRadius: 34,
+          borderWidth: 2.5 - i * 0.5,
+          borderColor: RING_COLORS[i],
+          opacity: r.interpolate({ inputRange: [0, 0.12, 0.75, 1], outputRange: [0, 1, 0.35, 0] }),
+          transform: [{ scale: r.interpolate({ inputRange: [0, 1], outputRange: [0.35, 2.8] }) }],
+        }} />
       ))}
-      <Animated.View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: C.green, alignItems: 'center', justifyContent: 'center', transform: [{ scale }], elevation: 8, shadowColor: C.green, shadowOpacity: 0.5, shadowRadius: 14 }}>
-        <Text style={{ fontSize: 32, color: '#fff' }}>✓</Text>
+
+      {/* Dot particles */}
+      {dots.map((d, i) => (
+        <Animated.View key={i} style={{
+          position: 'absolute',
+          width: 7, height: 7, borderRadius: 3.5,
+          backgroundColor: DOT_COLORS[i],
+          opacity: d.o,
+          transform: [{ translateX: d.x }, { translateY: d.y }],
+        }} />
+      ))}
+
+      {/* Motion trail — 3 lines, left of car center */}
+      {trail.map((t, i) => (
+        <Animated.View key={i} style={{
+          position: 'absolute',
+          height: i === 0 ? 3 : 2,
+          width:  i === 0 ? 34 : i === 1 ? 22 : 14,
+          borderRadius: 2,
+          backgroundColor: C.green,
+          opacity: t,
+          transform: [
+            { translateX: -(i === 0 ? 46 : i === 1 ? 38 : 30) },
+            { translateY: i === 0 ? 0 : i === 1 ? 9 : -9 },
+          ],
+        }} />
+      ))}
+
+      {/* 🚗 Car — main element */}
+      <Animated.Text style={{
+        fontSize: 48,
+        transform: [{ translateX: carX }, { scale: carScale }],
+      }}>🚗</Animated.Text>
+
+      {/* ✓ Lock badge pops onto car (top-right) */}
+      <Animated.View style={{
+        position: 'absolute',
+        transform: [{ translateX: 30 }, { translateY: -32 }, { scale: badgeScale }],
+        width: 28, height: 28, borderRadius: 14,
+        backgroundColor: C.green,
+        alignItems: 'center', justifyContent: 'center',
+        opacity: badgeOpacity,
+        elevation: 10, shadowColor: C.green, shadowOpacity: 0.8, shadowRadius: 8,
+        borderWidth: 2.5, borderColor: '#fff',
+      }}>
+        <Text style={{ color: '#fff', fontSize: 14, fontWeight: '900' }}>✓</Text>
       </Animated.View>
+
     </View>
   );
 };

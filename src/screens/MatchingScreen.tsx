@@ -2,7 +2,7 @@ import { Animated, Image, Platform, ScrollView, Text, TouchableOpacity, View } f
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
-import { Bouncy, DotBG, FloatingDots, MapOverlay, MapWebView, PulseView, RadarView, SlideUp, SuccessBurst, TripSteps } from '../components/ui';
+import { Bouncy, DotBG, FadeIn, FloatingDots, MapOverlay, MapWebView, PulseView, RadarView, SlideUp, SuccessBurst, TripSteps } from '../components/ui';
 import { s, C } from '../styles';
 import { apiPost } from '../../api';
 
@@ -54,8 +54,11 @@ export function MatchingScreen() {
           {rideData?.driver ? (
             <>
               <SuccessBurst />
-              <Text style={{ textAlign: 'center', fontSize: 16, fontWeight: '800', color: C.green, marginBottom: 12 }}>Driver Mil Gaya! 🎉</Text>
-              <View style={s.driverCard}>
+              <FadeIn delay={300} style={{ alignItems: 'center', marginBottom: 12 }}>
+                <Text style={{ fontSize: 18, fontWeight: '900', color: C.green, letterSpacing: 0.3 }}>Driver Mil Gaya! 🎉</Text>
+                <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }}>Aapka ride confirm ho gaya</Text>
+              </FadeIn>
+              <SlideUp><View style={s.driverCard}>
                 <View style={{ position: 'relative' }}>
                   {rideData.driver.photo
                     ? <Image source={{ uri: rideData.driver.photo }} style={{ width: 50, height: 50, borderRadius: 25 }} />
@@ -87,7 +90,7 @@ export function MatchingScreen() {
                   <Text style={{ fontSize: 10, color: C.textMuted }}>arriving</Text>
                   {driverDist ? <Text style={{ fontSize: 10, color: C.textDim, marginTop: 2 }}>{driverDist} door</Text> : null}
                 </View>
-              </View>
+              </View></SlideUp>
               {driverEta ? (
                 <View style={{ backgroundColor: C.greenGlass, borderRadius: 14, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: C.greenBorder }}>
                   <Text style={{ fontSize: 20, marginRight: 10 }}>🚗</Text>
