@@ -953,7 +953,7 @@ function HistoryTab() {
 
   const closeBill = () => { setShowBill(false); setBillRide(null); setBillData(null); };
 
-  const billFareNum = parseInt(String(billRide?.fare).replace(/[^0-9]/g, '')) || 0;
+  const billFareNum = Math.round(parseFloat(String(billRide?.fare ?? 0).replace(/[^0-9.]/g, '')) || 0);
   const billGst = Math.round((billFareNum * 5 / 105) * 100) / 100;
   const billBase = Math.round((billFareNum - billGst) * 100) / 100;
   const billId = '#SP' + String(billRide?.id || '').slice(-8).toUpperCase();
@@ -1170,6 +1170,7 @@ function ProfileTab() {
     setPromoScreenCode, setPromoScreenMsg,
     loadWalletDetail, loadLoyalty, loadReferral, loadSaved,
     openRazorpayTopup,
+    setComplaints, setCmpLoading,
   } = useApp();
 
   return (
@@ -1220,6 +1221,7 @@ function ProfileTab() {
           { label: 'Promo Codes',        sub: 'Discount codes apply karo',        icon: 'pricetag',      onPress: () => { setPromoScreenCode(''); setPromoScreenMsg(''); setScreen('promo'); }, iconColor: C.yellow },
           { label: 'Notifications',      sub: 'Alerts — Enabled ✓',              icon: 'notifications', onPress: () => Alert.alert('🔔 Notifications', 'Aapki sabhi ride notifications, wallet alerts aur offers automatically enable hain.'), iconColor: C.pink },
           { label: 'Safety',             sub: 'Emergency contacts & SOS',         icon: 'shield',        onPress: () => setScreen('safety'),                       iconColor: C.red },
+          { label: 'My Complaints',      sub: 'File & track ride complaints',     icon: 'alert-circle',  onPress: async () => { setCmpLoading(true); try { const r = await apiGet(`/api/complaints?phone=${encodeURIComponent(phone)}`); setComplaints(r.complaints||[]); } catch {} setCmpLoading(false); setScreen('complaints'); }, iconColor: '#DC2626', iconBg: 'rgba(220,38,38,0.08)', iconBorder: 'rgba(220,38,38,0.25)' },
           { label: 'Support',            sub: '24x7 help',                        icon: 'call',          onPress: () => setScreen('support'),                      iconColor: C.green },
         ].map((item, i) => (
           <Bouncy key={i} style={s.menuItem} onPress={item.onPress}>

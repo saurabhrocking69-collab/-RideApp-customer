@@ -1160,7 +1160,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // ── Data loaders ─────────────────────────────────────────────────────────
   const loadHistory = async (ph: string) => {
-    try { const r = await fetch(`${API}/api/rides/history?phone=${ph}`); const d = await r.json(); setHistoryRides(d.rides || []); } catch (_e) {}
+    try {
+      const r = await fetch(`${API}/api/rides/history?phone=${ph}`);
+      const d = await r.json();
+      const rides = d.rides || [];
+      setHistoryRides(rides);
+      // Seed dropHistory from completed rides if no local history saved yet
+      const saved = await AsyncStorage.getItem('dropLocationHistory').catch(() => null);
+      if (!saved) {
+        const unique: { text: string; coords: null }[] = [];
+        for (const h of rides) {
+          if (h.status === 'completed' && h.drop_location && !unique.find(u => u.text === h.drop_location)) {
+            unique.push({ text: h.drop_location, coords: null });
+            if (unique.length >= 7) break;
+          }
+        }
+        if (unique.length > 0) setDropHistory(unique);
+      }
+    } catch (_e) {}
   };
   const loadWallet = async (ph: string) => {
     try { const r = await fetch(`${API}/api/wallet/balance?phone=${ph}`); const d = await r.json(); setWalletBalance(d.balance || 0); } catch (_e) {}

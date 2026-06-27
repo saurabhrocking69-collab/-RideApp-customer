@@ -40,7 +40,7 @@ export function PostRideScreen() {
   const [billData, setBillData] = useState<any>(null);
   const [billLoading, setBillLoading] = useState(false);
 
-  const fareNum = parseInt(String(rideData?.fare).replace(/[^0-9]/g, '')) || 0;
+  const fareNum = Math.round(parseFloat(String(rideData?.fare ?? billData?.fare ?? 0).replace(/[^0-9.]/g, '')) || 0);
   const gstAmt = Math.round((fareNum * 5 / 105) * 100) / 100;
   const baseAmt = Math.round((fareNum - gstAmt) * 100) / 100;
 
@@ -90,14 +90,13 @@ ${dist}
        *FARE BREAKDOWN*
 ━━━━━━━━━━━━━━━━━━━
 Base Fare:       ₹${baseAmt.toFixed(2)}
-GST (5%)*:       ₹${gstAmt.toFixed(2)}
+GST (5%):        ₹${gstAmt.toFixed(2)}
 ━━━━━━━━━━━━━━━━━━━
 *TOTAL PAID:  ₹${fareNum}*
 💳 *Payment:* ${paymentLabel()}
 ━━━━━━━━━━━━━━━━━━━
 
-_*GST transparency ke liye dikhaya gaya hai._
-_Abhi customers se GST collect nahi hota._
+_GST fare mein included hai — alag se charge nahi hota._
 
 🙏 *Sppero* mein safar karne ka shukriya!`;
 
@@ -344,9 +343,10 @@ _Abhi customers se GST collect nahi hota._
                 <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{paymentLabel()}</Text>
               </View>
 
-              <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: 10, marginBottom: 18 }}>
-                <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, textAlign: 'center', lineHeight: 16 }}>
-                  GST transparency ke liye dikhaya gaya hai.{'\n'}Abhi customers se GST collect nahi hota.
+              <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: 10, marginBottom: 18, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={{ fontSize: 14 }}>ℹ️</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, lineHeight: 16, flex: 1 }}>
+                  GST fare mein included hai — alag se charge nahi hota.
                 </Text>
               </View>
 
