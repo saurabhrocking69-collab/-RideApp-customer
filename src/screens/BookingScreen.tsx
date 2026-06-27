@@ -1,10 +1,11 @@
 import { Animated, KeyboardAvoidingView, Platform, ScrollView, TextInput, Text, TouchableOpacity, View } from 'react-native';
-import { useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { Bouncy, MapOverlay, MapWebView, RideVehicleIcon, DotBG } from '../components/ui';
 import { s, C } from '../styles';
 import { RIDES } from '../constants';
+import { apiGet } from '../../api';
 
 const MAP_H = 200;
 
@@ -36,6 +37,28 @@ export function BookingScreen() {
   const showDropSugg = dropSugg.length > 0;
   const showDropHist = dropSugg.length === 0 && !drop && !dropCoords && dropHistory.length > 0;
   const hasDropDown  = showDropSugg || showDropHist;
+
+  type EtaInfo = { dist_km: number; eta_min: number };
+  const [driverEta, setDriverEta]         = useState<Record<string, EtaInfo>>({});
+  const [etaLoaded, setEtaLoaded]         = useState(false);
+  const [showWaitModal, setShowWaitModal] = useState(false);
+  const [waitConfirmed, setWaitConfirmed] = useState(false);
+
+  useEffect(() => {
+    if (!pickupCoords?.lat || !pickupCoords?.lng) { setDriverEta({}); setEtaLoaded(false); return; }
+    let cancelled = false;
+    setEtaLoaded(false);
+    apiGet(`/api/driver-eta?pickup_lat=${pickupCoords.lat}&pickup_lng=${pickupCoords.lng}`)
+      .then(d => { if (!cancelled) { setDriverEta(d.eta || {}); setEtaLoaded(true); } })
+      .catch(() => { if (!cancelled) setEtaLoaded(true); });
+    return () => { cancelled = true; };
+  }, [pickupCoords?.lat, pickupCoords?.lng]);
+
+  const handleBook = () => {
+    const eta = driverEta[rideType];
+    if (eta && eta.dist_km > 5) { setWaitConfirmed(false); setShowWaitModal(true); return; }
+    bookRide();
+  };
 
   // Sheet entrance: fade + slide-up on mount
   const sheetAnim = useRef(new Animated.Value(0)).current;
@@ -325,6 +348,34 @@ export function BookingScreen() {
           <Text style={{ fontSize: 11, fontWeight: '900', color: C.textDim, letterSpacing: 1.4, marginBottom: 10, marginTop: 2, marginLeft: 2 }}>
             CHOOSE VEHICLE
           </Text>
+
+          {/* ─── Nearest driver recommendation banner ─── */}
+          {etaLoaded && (() => {
+            const nearest = RIDES
+              .map(r => ({ r, info: driverEta[r.id] }))
+              .filter(x => x.info)
+              .sort((a, b) => (a.info?.eta_min || 999) - (b.info?.eta_min || 999))[0];
+            if (!nearest) return (
+              <View style={{ backgroundColor: 'rgba(239,68,68,0.08)', borderRadius: 12, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: 'rgba(239,68,68,0.22)' }}>
+                <Text style={{ fontSize: 15 }}>😔</Text>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#EF4444', flex: 1 }}>Is area mein abhi koi driver online nahi hai — thodi der baad try karo</Text>
+              </View>
+            );
+            return (
+              <View style={{ backgroundColor: 'rgba(16,185,129,0.08)', borderRadius: 12, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
+                <Text style={{ fontSize: 16 }}>💡</Text>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#059669', flex: 1 }}>
+                  {nearest.r.label} sabse paas — ~{nearest.info?.eta_min} min mein aayega
+                </Text>
+                {rideType !== nearest.r.id && (
+                  <TouchableOpacity onPress={() => setRideType(nearest.r.id)} style={{ backgroundColor: '#059669', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 }}>
+                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900' }}>Select</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            );
+          })()}
+
           <View style={{ gap: 10, marginBottom: 4 }}>
             {RIDES.map((r: any) => {
               const isSel = rideType === r.id;
@@ -373,6 +424,26 @@ export function BookingScreen() {
                     </View>
                     <Text style={{ color: C.textDim, fontSize: 12, marginTop: 2 }}>{r.desc}</Text>
                     <Text style={{ color: C.textDim, fontSize: 11, marginTop: 3 }}>🕐 {r.eta}</Text>
+                    {etaLoaded && (() => {
+                      const info = driverEta[r.id];
+                      if (!info) return (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
+                          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#9CA3AF' }} />
+                          <Text style={{ fontSize: 10, color: '#9CA3AF', fontWeight: '700' }}>Driver nahi hai abhi</Text>
+                        </View>
+                      );
+                      const isFar = info.dist_km > 5;
+                      return (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
+                          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: isFar ? '#F59E0B' : '#10B981' }} />
+                          <Text style={{ fontSize: 10, color: isFar ? '#F59E0B' : '#10B981', fontWeight: '800' }}>
+                            {isFar
+                              ? `${info.dist_km} km door · ~${info.eta_min} min wait`
+                              : `~${info.eta_min} min · Driver paas mein`}
+                          </Text>
+                        </View>
+                      );
+                    })()}
                   </View>
 
                   {/* Fare + selected indicator */}
@@ -516,7 +587,7 @@ export function BookingScreen() {
         }}>
           <Bouncy
             style={[{ borderRadius: 18, overflow: 'hidden' }, loading && { opacity: 0.72 }]}
-            onPress={bookRide}
+            onPress={handleBook}
             disabled={loading}>
             <View style={{
               backgroundColor: loading ? C.glassMid : hasFare ? C.pink : '#C0C6D4',
@@ -547,6 +618,88 @@ export function BookingScreen() {
           </Bouncy>
         </View>
       </Animated.View>
+
+      {/* ─── Far-driver commitment modal ─── */}
+      {showWaitModal && (() => {
+        const info = driverEta[rideType];
+        const extraMin = info ? Math.max(0, info.eta_min - 5) : 0;
+        const selLabel = RIDES.find(r => r.id === rideType)?.label || 'Ride';
+        return (
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end', zIndex: 999 }}>
+            <View style={{ backgroundColor: '#0F172A', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, borderTopWidth: 1.5, borderColor: '#1E293B' }}>
+
+              {/* Warning icon + title */}
+              <View style={{ alignItems: 'center', marginBottom: 20 }}>
+                <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(245,158,11,0.12)', alignItems: 'center', justifyContent: 'center', marginBottom: 12, borderWidth: 2, borderColor: 'rgba(245,158,11,0.35)' }}>
+                  <Text style={{ fontSize: 28 }}>⚠️</Text>
+                </View>
+                <Text style={{ fontSize: 19, fontWeight: '900', color: '#F1F5F9' }}>Driver Thoda Door Hai</Text>
+                <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 4 }}>{selLabel} driver aapke pickup se bahar hai</Text>
+              </View>
+
+              {/* Distance / ETA info card */}
+              <View style={{ backgroundColor: 'rgba(245,158,11,0.07)', borderRadius: 16, padding: 16, marginBottom: 18, borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.22)', gap: 12 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 13, color: '#94A3B8' }}>Driver kitna door hai</Text>
+                  <View style={{ backgroundColor: 'rgba(245,158,11,0.15)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '900', color: '#F59E0B' }}>{info?.dist_km} km</Text>
+                  </View>
+                </View>
+                <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.06)' }} />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 13, color: '#94A3B8' }}>Estimated wait time</Text>
+                  <View style={{ backgroundColor: 'rgba(245,158,11,0.15)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '900', color: '#F59E0B' }}>~{info?.eta_min} min</Text>
+                  </View>
+                </View>
+                {extraMin > 0 && (
+                  <>
+                    <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.06)' }} />
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ fontSize: 13, color: '#94A3B8' }}>Normal se extra</Text>
+                      <View style={{ backgroundColor: 'rgba(239,68,68,0.15)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '900', color: '#EF4444' }}>+{extraMin} min zyada</Text>
+                      </View>
+                    </View>
+                  </>
+                )}
+              </View>
+
+              {/* Commitment checkbox */}
+              <TouchableOpacity
+                onPress={() => setWaitConfirmed(v => !v)}
+                activeOpacity={0.8}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 20, backgroundColor: waitConfirmed ? 'rgba(16,185,129,0.10)' : 'rgba(255,255,255,0.04)', borderRadius: 14, padding: 16, borderWidth: 1.5, borderColor: waitConfirmed ? 'rgba(16,185,129,0.40)' : '#1E293B' }}>
+                <View style={{ width: 26, height: 26, borderRadius: 7, backgroundColor: waitConfirmed ? '#10B981' : 'transparent', borderWidth: 2.5, borderColor: waitConfirmed ? '#10B981' : '#475569', alignItems: 'center', justifyContent: 'center' }}>
+                  {waitConfirmed && <Ionicons name="checkmark" size={15} color="#fff" />}
+                </View>
+                <Text style={{ flex: 1, fontSize: 13, fontWeight: '700', color: waitConfirmed ? '#10B981' : '#CBD5E1', lineHeight: 19 }}>
+                  Haan, main wait karunga — booking ke baad ride cancel nahi karunga
+                </Text>
+              </TouchableOpacity>
+
+              {/* Action buttons */}
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <TouchableOpacity
+                  onPress={() => setShowWaitModal(false)}
+                  style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 14, paddingVertical: 16, alignItems: 'center', borderWidth: 1, borderColor: '#1E293B' }}>
+                  <Text style={{ fontWeight: '700', color: '#64748B', fontSize: 14 }}>Wapas Jao</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => { setShowWaitModal(false); bookRide(); }}
+                  disabled={!waitConfirmed}
+                  style={{ flex: 2, backgroundColor: waitConfirmed ? C.pink : '#1E293B', borderRadius: 14, paddingVertical: 16, alignItems: 'center', elevation: waitConfirmed ? 8 : 0, shadowColor: C.pink, shadowOpacity: waitConfirmed ? 0.45 : 0, shadowRadius: 12 }}>
+                  <Text style={{ fontWeight: '900', color: waitConfirmed ? '#fff' : '#334155', fontSize: 15 }}>
+                    {waitConfirmed ? 'Book Karo →' : 'Pehle Confirm Karo'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={{ height: Platform.OS === 'android' ? 20 : 30 }} />
+            </View>
+          </View>
+        );
+      })()}
     </KeyboardAvoidingView>
   );
 }
