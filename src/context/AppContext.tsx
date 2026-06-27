@@ -45,6 +45,7 @@ interface AppContextType {
   rideType: string; setRideType: (t: string) => void;
   pickupSugg: any[]; setPickupSugg: (s: any[]) => void;
   dropSugg: any[]; setDropSugg: (s: any[]) => void;
+  dropHistory: { text: string; coords: { lat: number; lng: number } | null }[];
   fareEstimates: any; setFareEstimates: (e: any) => void;
   fareLoading: boolean;
   eta: string; setEta: (e: string) => void;
@@ -302,6 +303,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [rideType, setRideType] = useState('auto');
   const [pickupSugg, setPickupSugg] = useState<any[]>([]);
   const [dropSugg, setDropSugg] = useState<any[]>([]);
+  const [dropHistory, setDropHistory] = useState<{ text: string; coords: { lat: number; lng: number } | null }[]>([]);
   const [fareEstimates, setFareEstimates] = useState<any>({});
   const [fareLoading, setFareLoading] = useState(false);
   const [eta, setEta] = useState('');
@@ -459,6 +461,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setTimeout(async () => {
       const savedPhone = await AsyncStorage.getItem('userPhone').catch(() => null);
       const savedName  = await AsyncStorage.getItem('userName').catch(() => null);
+      const savedDropHist = await AsyncStorage.getItem('dropLocationHistory').catch(() => null);
+      if (savedDropHist) { try { setDropHistory(JSON.parse(savedDropHist)); } catch (_) {} }
 
       Animated.timing(splashFade, { toValue: 0, duration: 300, useNativeDriver: true }).start(async () => {
         if (savedPhone) {
@@ -1050,6 +1054,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       setRideData(data); setScreen('matching'); setResult(''); setAltSuggest(null);
       AsyncStorage.setItem('activeStdRideId', String(data.ride_id)).catch(() => {});
+      // Save drop to local history (last 7, deduped)
+      const _dropEntry = { text: drop, coords: dropCoords || null };
+      setDropHistory(prev => {
+        const updated = [_dropEntry, ...prev.filter(h => h.text !== drop)].slice(0, 7);
+        AsyncStorage.setItem('dropLocationHistory', JSON.stringify(updated)).catch(() => {});
+        return updated;
+      });
       joinRideSocket(data.ride_id);
       ride.setRide(data); ride.startPolling(phone || '9999999999');
       setBookTime(Date.now()); setCancelTimer(60); setSurgeCount(0); setSurgeFare(''); setSearchElapsed(0);
@@ -1263,7 +1274,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     splashLogo, splashScale, splashTag, splashFade,
     onboardFade, onboardSlide, loginHeroAnim, loginCardAnim,
     pickup, setPickup, drop, setDrop, pickupCoords, setPickupCoords, dropCoords, setDropCoords,
-    rideType, setRideType, pickupSugg, setPickupSugg, dropSugg, setDropSugg,
+    rideType, setRideType, pickupSugg, setPickupSugg, dropSugg, setDropSugg, dropHistory,
     fareEstimates, setFareEstimates, fareLoading, eta, setEta, userCoords, setUserCoords,
     showPromoInput, setShowPromoInput, instantApplied, setInstantApplied, lastFetchKey,
     promoCode, setPromoCode, promoDiscount, setPromoDiscount,

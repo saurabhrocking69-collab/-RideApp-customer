@@ -24,6 +24,7 @@ export function BookingScreen() {
     result, loading,
     lastFetchKey,
     searchPlaces, geocodePlace, useMyLocation, swapLocations, applyPromo, bookRide,
+    dropHistory,
   } = useApp();
 
   const selRide   = RIDES.find(r => r.id === rideType);
@@ -247,6 +248,26 @@ export function BookingScreen() {
                       onPress={() => { setDrop(sg.text); setDropSugg([]); geocodePlace(sg.text, 'drop'); }}>
                       <Ionicons name="flag" size={15} color={C.pink} style={{ marginRight: 8 }} />
                       <Text style={{ fontSize: 13, color: C.text, flex: 1, fontWeight: '500' }} numberOfLines={2}>{sg.text}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
+              {dropSugg.length === 0 && !drop && !dropCoords && dropHistory.length > 0 && (
+                <View style={[s.suggBox, { zIndex: 100 }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingTop: 10, paddingBottom: 5, gap: 6 }}>
+                    <Ionicons name="time-outline" size={13} color={C.textDim} />
+                    <Text style={{ fontSize: 10, color: C.textDim, fontWeight: '800', letterSpacing: 1 }}>RECENT DESTINATIONS</Text>
+                  </View>
+                  {dropHistory.map((h, i) => (
+                    <TouchableOpacity key={i} style={[s.suggItem, { paddingVertical: 11 }]}
+                      onPress={() => {
+                        setDrop(h.text); setDropSugg([]);
+                        if (h.coords) { setDropCoords(h.coords); }
+                        else { geocodePlace(h.text, 'drop'); }
+                      }}>
+                      <Ionicons name="location-outline" size={15} color={C.textDim} style={{ marginRight: 8 }} />
+                      <Text style={{ fontSize: 13, color: C.text, flex: 1, fontWeight: '500' }} numberOfLines={2}>{h.text}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
