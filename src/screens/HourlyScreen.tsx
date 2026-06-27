@@ -54,7 +54,8 @@ export function HourlyScreen() {
           setHourlyBooking((p: any) => ({ ...p, status: 'active', started_at: d.booking.started_at, driver_phone: d.booking.driver_phone }));
           setHourlyStep('active');
         } else if (d.booking?.status === 'matched') {
-          setHourlyBooking((p: any) => ({ ...p, status: 'matched', driver_phone: d.booking.driver_phone }));
+          setHourlyBooking((p: any) => ({ ...p, ...d.booking, driver: d.driver }));
+          setHourlyStep('active');
         }
       } catch (_e) {}
     };

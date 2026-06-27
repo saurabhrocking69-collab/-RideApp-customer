@@ -355,12 +355,7 @@ export function BookingScreen() {
               .map(r => ({ r, info: driverEta[r.id] }))
               .filter(x => x.info)
               .sort((a, b) => (a.info?.eta_min || 999) - (b.info?.eta_min || 999))[0];
-            if (!nearest) return (
-              <View style={{ backgroundColor: 'rgba(239,68,68,0.08)', borderRadius: 12, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: 'rgba(239,68,68,0.22)' }}>
-                <Text style={{ fontSize: 15 }}>😔</Text>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#EF4444', flex: 1 }}>Is area mein abhi koi driver online nahi hai — thodi der baad try karo</Text>
-              </View>
-            );
+            if (!nearest) return null;
             return (
               <View style={{ backgroundColor: 'rgba(16,185,129,0.08)', borderRadius: 12, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
                 <Text style={{ fontSize: 16 }}>💡</Text>

@@ -661,7 +661,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Fare counter animation on payment screen
   useEffect(() => {
     if (screen !== 'payment' || !rideData?.fare) return;
-    const target = parseInt(String(rideData.fare).replace(/[^0-9]/g, '')) || 0;
+    const target = Math.round(parseFloat(String(rideData.fare).replace(/[^0-9.]/g, '')) || 0);
     let cur = 0; const step = Math.ceil(target / 30);
     const t = setInterval(() => { cur = Math.min(cur + step, target); setFareCount(cur); if (cur >= target) clearInterval(t); }, 40);
     return () => clearInterval(t);
@@ -776,7 +776,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setTimeout(() => setHExtendResult(null), 6000);
     });
     s.on('hourlyMatched', (data: any) => {
-      setHourlyBooking((p: any) => p ? { ...p, status: 'matched', driver_phone: data.driver_phone } : p);
+      if (data.booking_id) {
+        apiGet(`/api/hourly/status/${data.booking_id}`)
+          .then(d => {
+            if (d.booking) setHourlyBooking((p: any) => p ? { ...p, ...d.booking, driver: d.driver } : d.booking);
+            else setHourlyBooking((p: any) => p ? { ...p, status: 'matched', driver_phone: data.driver_phone } : p);
+          })
+          .catch(() => setHourlyBooking((p: any) => p ? { ...p, status: 'matched', driver_phone: data.driver_phone } : p));
+      } else {
+        setHourlyBooking((p: any) => p ? { ...p, status: 'matched', driver_phone: data.driver_phone } : p);
+      }
+      setHourlyStep('active');
     });
     s.on('hourlyTripStarted', (data: any) => {
       setHourlyBooking((p: any) => p ? { ...p, status: 'active', started_at: data.started_at } : p);

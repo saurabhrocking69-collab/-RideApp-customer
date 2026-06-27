@@ -20,7 +20,7 @@ export function PaymentScreen() {
   } = useApp();
 
   const driverUpiId = rideData?.driver?.upi_id || '';
-  const fareNum = parseInt(String(rideData?.fare).replace(/[^0-9]/g, '')) || fareCount;
+  const fareNum = Math.round(parseFloat(String(rideData?.fare ?? '').replace(/[^0-9.]/g, '') || '0') || fareCount);
   const upiLink = driverUpiId
     ? `upi://pay?pa=${encodeURIComponent(driverUpiId)}&pn=${encodeURIComponent(rideData?.driver?.name || 'Driver')}&am=${fareNum}&cu=INR&tn=Sppero%20Trip`
     : '';
