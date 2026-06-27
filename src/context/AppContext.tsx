@@ -792,6 +792,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setHourlyBooking((p: any) => p ? { ...p, status: 'active', started_at: data.started_at } : p);
       setHourlyStep('active');
     });
+    s.on('hourlyDriverArrived', () => {
+      setHourlyBooking((p: any) => p ? { ...p, driver_arrived: true } : p);
+      setResult('📍 Sppero Buddy pickup point pe pahunch gaya! OTP batao aur trip shuru karo.');
+    });
     s.on('hourlyDriverCancelled', () => {
       setHourlyBooking((p: any) => p ? { ...p, status: 'pending', driver_phone: null } : p);
       setHourlyStep('waiting');
