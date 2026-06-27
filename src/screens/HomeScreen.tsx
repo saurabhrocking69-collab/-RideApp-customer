@@ -309,7 +309,7 @@ function HomeTab() {
     setHPickupSugg, setHDropSugg, setHRoundTrip, setHStayHours, setHourlyBooking,
     rideIcon, customerRating, walletBalance,
     storeStatus, paymentDone,
-    savedPlaces, referralData,
+    referralData,
   } = useApp();
 
   const GREETINGS = ['Namaste! 🙏', 'Chalein India ki sair? 🗺️', 'Safe Travels! 🛺', 'Sppero ke saath chalein! 🚀', 'Ride karo, India dekho! 🇮🇳'];
@@ -417,69 +417,6 @@ function HomeTab() {
             </Bouncy>
           </SlideUp>
 
-          <SlideUp delay={60}>
-            {(() => {
-              const homePlace = savedPlaces?.find((p: any) => /^home$|^ghar$/i.test(p.label?.trim()));
-              const officePlace = savedPlaces?.find((p: any) => /^office$|^kaam$/i.test(p.label?.trim()));
-              const recentDrop = historyRides?.[0]?.drop_location;
-              const bookTo = (addr: string) => { setDrop(addr); setScreen('booking'); };
-              const tiles = [
-                {
-                  icon: '🏠', label: 'Ghar',
-                  sub: homePlace ? homePlace.address : 'Set karo →',
-                  color: '#E8FFF0', border: C.greenBorder, dot: C.green,
-                  saved: !!homePlace,
-                  fn: homePlace ? () => bookTo(homePlace.address) : () => { loadSaved(); setScreen('saved'); },
-                },
-                {
-                  icon: '🏢', label: 'Office',
-                  sub: officePlace ? officePlace.address : 'Set karo →',
-                  color: '#FFF8E8', border: C.yellowBorder, dot: C.yellow,
-                  saved: !!officePlace,
-                  fn: officePlace ? () => bookTo(officePlace.address) : () => { loadSaved(); setScreen('saved'); },
-                },
-                {
-                  icon: '🕐', label: 'Recent',
-                  sub: recentDrop || 'Abhi koi trip nahi',
-                  color: C.pinkGlass, border: C.pinkBorder, dot: C.pink,
-                  saved: !!recentDrop,
-                  fn: recentDrop ? () => bookTo(recentDrop) : () => setScreen('booking'),
-                },
-                {
-                  icon: '📍', label: 'Saved',
-                  sub: savedPlaces?.length ? `${savedPlaces.length} jagah saved` : 'Places add karo',
-                  color: C.glass, border: C.glassBorder, dot: C.textMuted,
-                  saved: true,
-                  fn: () => { loadSaved(); setScreen('saved'); },
-                },
-              ];
-              return (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }} contentContainerStyle={{ paddingRight: 4 }}>
-                  {tiles.map((t, i) => (
-                    <Bouncy key={i} onPress={t.fn} style={{
-                      width: 128, marginRight: 10,
-                      backgroundColor: t.color, borderRadius: 18,
-                      padding: 14, borderWidth: 1.5, borderColor: t.border,
-                      elevation: 2, shadowColor: t.dot, shadowOpacity: 0.1, shadowRadius: 6,
-                    }}>
-                      <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.7)', alignItems: 'center', justifyContent: 'center', marginBottom: 10, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)' }}>
-                        <Text style={{ fontSize: 20 }}>{t.icon}</Text>
-                      </View>
-                      <Text style={{ color: C.text, fontWeight: '800', fontSize: 13, marginBottom: 3 }}>{t.label}</Text>
-                      <Text style={{ color: C.textMuted, fontSize: 10, lineHeight: 14 }} numberOfLines={2}>{t.sub}</Text>
-                      <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: t.dot }} />
-                        <Text style={{ fontSize: 9, color: t.dot, fontWeight: '800' }}>
-                          {t.saved ? 'Book karo →' : 'Add karo →'}
-                        </Text>
-                      </View>
-                    </Bouncy>
-                  ))}
-                </ScrollView>
-              );
-            })()}
-          </SlideUp>
-
           {favouriteBuddy && (
             <SlideUp delay={70}>
               <ShineCard style={{ backgroundColor: C.glass, borderRadius: 18, marginBottom: 10, borderWidth: 1.5, borderColor: C.yellowBorder }}>
@@ -557,43 +494,62 @@ function HomeTab() {
 
           <SlideUp delay={120}>
             <TouchableOpacity activeOpacity={0.92} onPress={() => { loadReferral(); setScreen('referral'); }}
-              style={{ borderRadius: 22, marginBottom: 14, overflow: 'hidden', elevation: 7, shadowColor: '#E91E63', shadowOpacity: 0.28, shadowRadius: 14 }}>
-              <View style={{ backgroundColor: '#E91E63', padding: 16, flexDirection: 'row', alignItems: 'center' }}>
-                <View style={{ flex: 1 }}>
-                  <View style={{ backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start', marginBottom: 8 }}>
-                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900', letterSpacing: 1.3 }}>🎁 REFER & EARN</Text>
+              style={{ borderRadius: 22, marginBottom: 14, overflow: 'hidden', elevation: 10, shadowColor: '#E91E63', shadowOpacity: 0.35, shadowRadius: 18 }}>
+
+              {/* Main body */}
+              <View style={{ backgroundColor: '#E91E63', padding: 18 }}>
+                {/* Decorative bubbles */}
+                <View style={{ position: 'absolute', width: 150, height: 150, borderRadius: 75, backgroundColor: 'rgba(255,255,255,0.08)', top: -50, right: -40 }} />
+                <View style={{ position: 'absolute', width: 90, height: 90, borderRadius: 45, backgroundColor: 'rgba(255,215,0,0.10)', bottom: -30, left: 10 }} />
+
+                {/* Top badge */}
+                <View style={{ backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start', marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.28)' }}>
+                  <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900', letterSpacing: 1.5 }}>🎁 REFER & EARN</Text>
+                </View>
+
+                {/* Headline + avatars row */}
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '600', marginBottom: 4 }}>Dost ko invite karo</Text>
+                    <Text style={{ color: '#FFD700', fontSize: 30, fontWeight: '900', lineHeight: 36 }}>₹50 + ₹50</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 11, marginTop: 2 }}>Dono ke wallet mein credited hoga</Text>
                   </View>
-                  <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700', opacity: 0.85 }}>Dost ko invite karo</Text>
-                  <Text style={{ color: '#FFD700', fontSize: 26, fontWeight: '900', lineHeight: 32, marginTop: 2 }}>Dono ko ₹50 + ₹50</Text>
-                  {referralData?.code && (
-                    <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, fontWeight: '600' }}>Tera code:</Text>
-                      <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 7, paddingHorizontal: 9, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)' }}>
-                        <Text style={{ color: '#fff', fontSize: 12, fontWeight: '900', letterSpacing: 1.8 }}>{referralData.code}</Text>
+                  <View style={{ alignItems: 'center', gap: 10, marginLeft: 14 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFD700' }}>
+                        <Text style={{ fontSize: 20 }}>👤</Text>
+                      </View>
+                      <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFD700', alignItems: 'center', justifyContent: 'center', marginHorizontal: -5, zIndex: 1, elevation: 3 }}>
+                        <Text style={{ fontSize: 12, fontWeight: '900', color: '#222' }}>+</Text>
+                      </View>
+                      <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.45)' }}>
+                        <Text style={{ fontSize: 20 }}>🙋</Text>
                       </View>
                     </View>
-                  )}
-                </View>
-                <View style={{ alignItems: 'center', marginLeft: 10 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                    <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFD700' }}>
-                      <Text style={{ fontSize: 18 }}>👤</Text>
-                    </View>
-                    <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#FFD700', alignItems: 'center', justifyContent: 'center', marginHorizontal: -4, zIndex: 1, elevation: 3 }}>
-                      <Text style={{ fontSize: 10, fontWeight: '900', color: '#222' }}>+</Text>
-                    </View>
-                    <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.5)' }}>
-                      <Text style={{ fontSize: 18 }}>🙋</Text>
+                    <View style={{ backgroundColor: '#FFD700', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 9, elevation: 4, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 4 }}>
+                      <Text style={{ color: '#111', fontSize: 12, fontWeight: '900' }}>Invite →</Text>
                     </View>
                   </View>
-                  <View style={{ backgroundColor: '#FFD700', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8 }}>
-                    <Text style={{ color: '#111', fontSize: 12, fontWeight: '900' }}>Invite →</Text>
-                  </View>
                 </View>
+
+                {/* Your code pill */}
+                {referralData?.code && (
+                  <View style={{ marginTop: 16, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.20)', borderRadius: 16, padding: 14, gap: 12 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 9, fontWeight: '800', letterSpacing: 1.5, marginBottom: 4 }}>YOUR CODE</Text>
+                      <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900', letterSpacing: 3 }}>{referralData.code}</Text>
+                    </View>
+                    <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 11, paddingHorizontal: 14, paddingVertical: 9, borderWidth: 1, borderColor: 'rgba(255,255,255,0.28)' }}>
+                      <Text style={{ color: '#fff', fontSize: 12, fontWeight: '800' }}>Share 🔗</Text>
+                    </View>
+                  </View>
+                )}
               </View>
-              <View style={{ backgroundColor: 'rgba(0,0,0,0.18)', paddingVertical: 8, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+
+              {/* Footer strip */}
+              <View style={{ backgroundColor: 'rgba(0,0,0,0.22)', paddingVertical: 9, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                 <PulseView><Text style={{ fontSize: 12 }}>✨</Text></PulseView>
-                <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: '700' }}>Wallet mein credited hoga — turant!</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: '700' }}>Instantly credited — no minimum required</Text>
               </View>
             </TouchableOpacity>
           </SlideUp>
