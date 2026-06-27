@@ -282,6 +282,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Polling-driven screen transitions — fallback if socket event was missed (e.g. app backgrounded)
   useEffect(() => {
+    if (storeStatus === 'matched' || storeStatus === 'arrived') {
+      // Driver accepted — fetch fresh ride data to populate driver info in context
+      const rideId = activeRideIdRef.current;
+      if (rideId) {
+        fetch(`${API}/api/rides/status/${rideId}`)
+          .then(r => r.json())
+          .then(d => {
+            if (d.ride?.driver_name || d.ride?.driver_phone) {
+              setRideData((p: any) => p ? {
+                ...p,
+                startOtp: d.ride.start_otp || p?.startOtp,
+                fare: d.ride.fare || p?.fare,
+                distance: d.ride.distance || p?.distance,
+                driver: {
+                  name: d.ride.driver_name,
+                  phone: d.ride.driver_phone,
+                  vehicle_no: d.ride.vehicle_no,
+                  vehicle_brand: d.ride.vehicle_brand,
+                  vehicle_model: d.ride.vehicle_model,
+                  rating: d.ride.driver_rating,
+                  photo: d.ride.driver_photo,
+                  verified: d.ride.driver_verified ?? false,
+                },
+              } : p);
+            }
+          })
+          .catch(() => {});
+      }
+    }
     if (storeStatus === 'started') {
       setScreen((cur: Screen) => (['matching', 'inride'].includes(cur) ? 'inride' : cur));
     } else if (storeStatus === 'completed') {
@@ -781,8 +810,39 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const st = data.status;
       if (st === 'matched' || st === 'arrived') {
         setAltSuggest(null);
-        setRideData((p: any) => p ? { ...p, startOtp: data.start_otp || p?.startOtp, ...(data.driver ? { driver: data.driver } : {}) } : p);
-        useRideStore.setState({ rideStatus: st, startOtp: data.start_otp || '' });
+        if (data.driver) {
+          setRideData((p: any) => p ? { ...p, startOtp: data.start_otp || p?.startOtp, driver: data.driver } : p);
+          useRideStore.setState({ rideStatus: st, startOtp: data.start_otp || '' });
+        } else {
+          // Driver info not in socket payload — fetch from API immediately
+          useRideStore.setState({ rideStatus: st, startOtp: data.start_otp || '' });
+          const rideId = activeRideIdRef.current;
+          if (rideId) {
+            fetch(`${API}/api/rides/status/${rideId}`)
+              .then(r => r.json())
+              .then(d => {
+                if (d.ride?.driver_name || d.ride?.driver_phone) {
+                  setRideData((p: any) => p ? {
+                    ...p,
+                    startOtp: d.ride.start_otp || p?.startOtp,
+                    fare: d.ride.fare || p?.fare,
+                    distance: d.ride.distance || p?.distance,
+                    driver: {
+                      name: d.ride.driver_name,
+                      phone: d.ride.driver_phone,
+                      vehicle_no: d.ride.vehicle_no,
+                      vehicle_brand: d.ride.vehicle_brand,
+                      vehicle_model: d.ride.vehicle_model,
+                      rating: d.ride.driver_rating,
+                      photo: d.ride.driver_photo,
+                      verified: d.ride.driver_verified ?? false,
+                    },
+                  } : p);
+                }
+              })
+              .catch(() => {});
+          }
+        }
       }
       if (st === 'searching') {
         setRideData((p: any) => p ? { ...p, ...(data.new_fare ? { fare: data.new_fare } : {}), ...(data.new_vehicle_type ? { vehicle_type: data.new_vehicle_type } : {}) } : p);
