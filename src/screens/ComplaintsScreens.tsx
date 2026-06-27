@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -81,7 +81,16 @@ const CATEGORIES = [
 
 // ─── ComplaintsScreen — list ──────────────────────────────────────────────────
 export function ComplaintsScreen() {
-  const { phone, setScreen, complaints, cmpLoading, setCmpLoading, setCmpDetail, setCmpType, setCmpDesc } = useApp();
+  const { phone, setScreen, complaints, setComplaints, cmpLoading, setCmpLoading, setCmpDetail, setCmpType, setCmpDesc } = useApp();
+
+  useEffect(() => {
+    if (!phone) return;
+    setCmpLoading(true);
+    apiGet(`/api/complaints?phone=${encodeURIComponent(phone)}`)
+      .then(d => setComplaints(d.complaints || []))
+      .catch(() => {})
+      .finally(() => setCmpLoading(false));
+  }, [phone]);
 
   return (
     <ScreenIn style={s.screen}>
