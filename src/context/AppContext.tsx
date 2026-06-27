@@ -893,6 +893,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }
     });
+    s.on('driverMoved', (data: any) => {
+      if (data.lat && data.lng) setDriverLoc({ lat: data.lat, lng: data.lng });
+    });
     s.on('suggestAlternative', (data: any) => {
       if (data.alternatives?.length > 0) setAltSuggest({ alternatives: data.alternatives, current_type: data.current_type });
     });
