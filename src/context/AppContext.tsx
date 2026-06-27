@@ -794,6 +794,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
     s.on('hourlyDriverCancelled', () => {
       setHourlyBooking((p: any) => p ? { ...p, status: 'pending', driver_phone: null } : p);
+      setHourlyStep('waiting');
     });
     s.on('hourlyTripCompleted', (data: any) => {
       setHourlyBooking((p: any) => p ? { ...p, status: 'completed', driver_earning: data.driver_earning } : p);
