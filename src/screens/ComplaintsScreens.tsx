@@ -87,7 +87,7 @@ export function ComplaintsScreen() {
     <ScreenIn style={s.screen}>
       <DotBG />
       <View style={s.topBar}>
-        <TouchableOpacity onPress={() => setScreen('support')} style={{ padding: 4 }}>
+        <TouchableOpacity onPress={() => setScreen('home')} style={{ padding: 4 }}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
         <Text style={s.topTitle}>📋 My Complaints</Text>
