@@ -48,10 +48,14 @@ export function BookingScreen() {
     if (!pickupCoords?.lat || !pickupCoords?.lng) { setDriverEta({}); setEtaLoaded(false); return; }
     let cancelled = false;
     setEtaLoaded(false);
-    apiGet(`/api/driver-eta?pickup_lat=${pickupCoords.lat}&pickup_lng=${pickupCoords.lng}`)
-      .then(d => { if (!cancelled) { setDriverEta(d.eta || {}); setEtaLoaded(true); } })
-      .catch(() => { if (!cancelled) setEtaLoaded(true); });
-    return () => { cancelled = true; };
+    const fetchEta = () => {
+      apiGet(`/api/rides/driver-eta?pickup_lat=${pickupCoords.lat}&pickup_lng=${pickupCoords.lng}`)
+        .then(d => { if (!cancelled) { setDriverEta(d.eta || {}); setEtaLoaded(true); } })
+        .catch(() => { if (!cancelled) setEtaLoaded(true); });
+    };
+    fetchEta();
+    const timer = setInterval(fetchEta, 30000);
+    return () => { cancelled = true; clearInterval(timer); };
   }, [pickupCoords?.lat, pickupCoords?.lng]);
 
   const handleBook = () => {
@@ -418,23 +422,41 @@ export function BookingScreen() {
                       )}
                     </View>
                     <Text style={{ color: C.textDim, fontSize: 12, marginTop: 2 }}>{r.desc}</Text>
-                    <Text style={{ color: C.textDim, fontSize: 11, marginTop: 3 }}>🕐 {r.eta}</Text>
-                    {etaLoaded && (() => {
+                    {!etaLoaded ? (
+                      <Text style={{ color: C.textDim, fontSize: 11, marginTop: 3 }}>🕐 {r.eta}</Text>
+                    ) : (() => {
                       const info = driverEta[r.id];
-                      if (!info) return (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
-                          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#9CA3AF' }} />
-                          <Text style={{ fontSize: 10, color: '#9CA3AF', fontWeight: '700' }}>Driver nahi hai abhi</Text>
-                        </View>
-                      );
+                      if (!info) {
+                        const bestAlt = RIDES
+                          .filter(alt => alt.id !== r.id && driverEta[alt.id])
+                          .sort((a, b) => ((driverEta[a.id]?.eta_min || 999) - (driverEta[b.id]?.eta_min || 999)))[0];
+                        return (
+                          <View style={{ marginTop: 4 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#6B7280' }} />
+                              <Text style={{ fontSize: 10, color: '#6B7280', fontWeight: '600' }}>Is area mein abhi available nahi</Text>
+                            </View>
+                            {bestAlt && (
+                              <TouchableOpacity
+                                onPress={() => setRideType(bestAlt.id)}
+                                style={{ marginTop: 5, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(233,69,96,0.08)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' }}>
+                                <Text style={{ fontSize: 10, color: C.pink, fontWeight: '800' }}>
+                                  {bestAlt.label} try karo · ~{driverEta[bestAlt.id]?.eta_min} min
+                                </Text>
+                                <Ionicons name="arrow-forward" size={10} color={C.pink} />
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                        );
+                      }
                       const isFar = info.dist_km > 5;
                       return (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 }}>
                           <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: isFar ? '#F59E0B' : '#10B981' }} />
                           <Text style={{ fontSize: 10, color: isFar ? '#F59E0B' : '#10B981', fontWeight: '800' }}>
                             {isFar
                               ? `${info.dist_km} km door · ~${info.eta_min} min wait`
-                              : `~${info.eta_min} min · Driver paas mein`}
+                              : `~${info.eta_min} min · ${info.dist_km} km paas`}
                           </Text>
                         </View>
                       );
@@ -457,6 +479,69 @@ export function BookingScreen() {
               );
             })}
           </View>
+
+          {/* ─── Live driver availability banner ─── */}
+          {etaLoaded && (() => {
+            const info = driverEta[rideType];
+            const selLabel = RIDES.find(r => r.id === rideType)?.label || 'Ye vehicle';
+
+            if (info) {
+              const isFar = info.dist_km > 5;
+              return (
+                <View style={{ backgroundColor: isFar ? 'rgba(245,158,11,0.08)' : 'rgba(16,185,129,0.08)', borderRadius: 16, padding: 14, marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1.5, borderColor: isFar ? 'rgba(245,158,11,0.28)' : 'rgba(16,185,129,0.25)' }}>
+                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: isFar ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 20 }}>{isFar ? '🕐' : '✅'}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: isFar ? '#F59E0B' : '#10B981' }}>
+                      {selLabel} driver {isFar ? 'thoda door hai' : 'paas mein hai'}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: C.textDim, marginTop: 3 }}>
+                      {info.dist_km} km door · ~{info.eta_min} min mein aayega
+                    </Text>
+                  </View>
+                </View>
+              );
+            }
+
+            const availables = RIDES
+              .filter(r => driverEta[r.id])
+              .sort((a, b) => ((driverEta[a.id]?.eta_min || 999) - (driverEta[b.id]?.eta_min || 999)));
+            if (availables.length === 0) return (
+              <View style={{ backgroundColor: 'rgba(239,68,68,0.07)', borderRadius: 16, padding: 14, marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1.5, borderColor: 'rgba(239,68,68,0.22)' }}>
+                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(239,68,68,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 20 }}>😕</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#EF4444' }}>Is area mein koi driver online nahi</Text>
+                  <Text style={{ fontSize: 11, color: C.textDim, marginTop: 3 }}>Thodi der baad dobara try karein</Text>
+                </View>
+              </View>
+            );
+            return (
+              <View style={{ backgroundColor: 'rgba(245,158,11,0.07)', borderRadius: 16, padding: 14, marginTop: 10, borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.28)' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <Text style={{ fontSize: 16 }}>⚡</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#B45309', flex: 1 }}>
+                    {selLabel} abhi available nahi — ye try karo:
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {availables.slice(0, 3).map(alt => (
+                    <TouchableOpacity
+                      key={alt.id}
+                      onPress={() => setRideType(alt.id)}
+                      style={{ backgroundColor: C.pink, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 6, elevation: 4, shadowColor: C.pink, shadowOpacity: 0.35, shadowRadius: 6 }}>
+                      <RideVehicleIcon id={alt.id} size={13} color="#fff" />
+                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900' }}>
+                        {alt.label} · ~{driverEta[alt.id]?.eta_min} min
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            );
+          })()}
 
           {/* ─── Fare breakdown ─────────────────────────────── */}
           {selRide && hasFare ? (

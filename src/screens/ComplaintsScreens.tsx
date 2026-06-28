@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useApp } from '../context/AppContext';
@@ -106,7 +106,14 @@ export function ComplaintsScreen() {
       </View>
 
       <ScrollView style={{ flex: 1, padding: 14 }} contentContainerStyle={{ paddingBottom: 40 }}>
-        {complaints.length === 0 && (
+        {cmpLoading && (
+          <View style={{ alignItems: 'center', paddingTop: 60 }}>
+            <ActivityIndicator size="large" color={C.pink} />
+            <Text style={{ fontSize: 13, color: C.textMuted, marginTop: 14 }}>Complaints load ho rahi hain...</Text>
+          </View>
+        )}
+
+        {!cmpLoading && complaints.length === 0 && (
           <View style={{ alignItems: 'center', paddingTop: 60 }}>
             <Text style={{ fontSize: 52 }}>📭</Text>
             <Text style={{ fontSize: 17, fontWeight: '900', color: C.text, marginTop: 14 }}>Koi complaint nahi</Text>
