@@ -38,6 +38,7 @@ export function HourlyScreen() {
     hChatUnread, setHChatUnread,
     hChatMsgs, setHChatMsgs,
     hChatInput, setHChatInput,
+    chatToast, setChatToast,
     walletBalance,
     initiateCall, joinHourlySocket, loadWallet, loadWalletDetail, loadLoyalty,
   } = useApp();
@@ -262,7 +263,7 @@ export function HourlyScreen() {
         <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.10)', top: -60, right: -40 }} />
         <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900' }}>⏱️ Hourly Trip</Text>
       </View>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
         {(() => {
           const minLeft = hApproachLimit?.min_left ?? null;
           const isCritical = hApproachLimit?.critical;
@@ -313,7 +314,7 @@ export function HourlyScreen() {
                 <Text style={{ fontSize: 9, color: C.green, fontWeight: '700', marginTop: 2 }}>Call</Text>
               </Bouncy>
               <Bouncy style={{ backgroundColor: hChatOpen ? C.bgCard : C.glassMid, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: hChatOpen ? C.pink : C.glassBorder }}
-                onPress={() => { setHChatOpen((o: boolean) => !o); setHChatUnread(0); }}>
+                onPress={() => { setHChatOpen((o: boolean) => !o); setHChatUnread(0); setChatToast(null); }}>
                 {hChatUnread > 0 && !hChatOpen && (
                   <View style={{ position: 'absolute', top: -4, right: -4, backgroundColor: C.pink, borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
                     <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900' }}>{hChatUnread}</Text>
@@ -326,13 +327,23 @@ export function HourlyScreen() {
           </View>
         </View>
 
+        {chatToast && !hChatOpen && (
+          <TouchableOpacity
+            style={{ backgroundColor: '#1a1a2e', borderRadius: 14, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: 'rgba(233,69,96,0.45)', elevation: 8 }}
+            onPress={() => { setChatToast(null); setHChatOpen(true); setHChatUnread(0); }}>
+            <Ionicons name="chatbubble" size={16} color={C.pink} />
+            <Text style={{ color: '#fff', fontSize: 13, flex: 1, fontWeight: '600' }} numberOfLines={1}>{chatToast}</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10 }}>Tap to reply</Text>
+          </TouchableOpacity>
+        )}
+
         {hChatOpen && (
           <View style={{ backgroundColor: C.glass, borderRadius: 16, marginBottom: 16, elevation: 3, overflow: 'hidden', borderWidth: 1, borderColor: C.glassBorder }}>
             <View style={{ backgroundColor: C.bgCard, padding: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderColor: C.glassBorder }}>
               <Text style={{ color: C.text, fontWeight: '700', fontSize: 13 }}>💬 Driver se Chat</Text>
               <TouchableOpacity onPress={() => setHChatOpen(false)}><Text style={{ color: C.textMuted, fontSize: 18 }}>✕</Text></TouchableOpacity>
             </View>
-            <ScrollView style={{ maxHeight: 200, padding: 10 }}>
+            <ScrollView style={{ maxHeight: 200, padding: 10 }} keyboardShouldPersistTaps="handled">
               {hChatMsgs.length === 0 && (
                 <Text style={{ color: C.textDim, fontSize: 12, textAlign: 'center', marginTop: 20, marginBottom: 20 }}>Koi message nahi — pehla message bhejo</Text>
               )}

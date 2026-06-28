@@ -81,6 +81,7 @@ interface AppContextType {
   chatInput: string; setChatInput: (i: string) => void;
   unreadChat: number; setUnreadChat: React.Dispatch<React.SetStateAction<number>>;
   lastChatCount: React.MutableRefObject<number>;
+  chatToast: string | null; setChatToast: (v: string | null) => void;
   // Post ride
   rating: number; setRating: (r: number) => void;
   tip: number; setTip: (t: number) => void;
@@ -377,6 +378,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [chatInput, setChatInput] = useState('');
   const [unreadChat, setUnreadChat] = useState(0);
   const lastChatCount = useRef(0);
+  const [chatToast, setChatToast] = useState<string | null>(null);
+  const chatToastTimer = useRef<any>(null);
 
   // ── Post ride ───────────────────────────────────────────────────────────
   const [rating, setRating] = useState(0);
@@ -680,7 +683,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [screen, tab, phone]);
 
-  // Background chat badge
+  // Background chat badge + toast
   useEffect(() => {
     if (!['matching','inride'].includes(screen) || !rideData?.ride_id) return;
     let busy = false;
@@ -688,10 +691,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (busy) return; busy = true;
       try {
         const d = await apiGet(`/api/chat/${rideData.ride_id}`);
-        if (!d._error) { const msgs = d.messages || []; if (msgs.length > lastChatCount.current) setUnreadChat(msgs.length - lastChatCount.current); }
+        if (!d._error) {
+          const msgs = d.messages || [];
+          if (msgs.length > lastChatCount.current) {
+            setUnreadChat(msgs.length - lastChatCount.current);
+            const latest = msgs[msgs.length - 1];
+            if (latest?.sender === 'driver') {
+              setChatToast(latest.message);
+              if (chatToastTimer.current) clearTimeout(chatToastTimer.current);
+              chatToastTimer.current = setTimeout(() => setChatToast(null), 4500);
+            }
+          }
+        }
       } catch (_e) {}
       busy = false;
-    }, 8000);
+    }, 5000);
     return () => clearInterval(iv);
   }, [screen, rideData?.ride_id]);
 
@@ -715,7 +729,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(iv);
   }, [screen, hChatOpen, hourlyBooking?.id]);
 
-  // Hourly chat badge when panel closed
+  // Hourly chat badge + toast when panel closed
   useEffect(() => {
     if (screen !== 'hourly' || hChatOpen || !hourlyBooking?.id || hourlyStep === 'book') return;
     let lastCount = hChatMsgs.length;
@@ -723,7 +737,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       try {
         const d = await apiGet(`/api/hourly/chat/${hourlyBooking.id}`);
         const msgs = d.messages || [];
-        if (msgs.length > lastCount) { setHChatUnread(n => n + (msgs.length - lastCount)); lastCount = msgs.length; setHChatMsgs(msgs); }
+        if (msgs.length > lastCount) {
+          setHChatUnread(n => n + (msgs.length - lastCount));
+          lastCount = msgs.length;
+          setHChatMsgs(msgs);
+          const latest = msgs[msgs.length - 1];
+          if (latest?.sender === 'driver') {
+            setChatToast(latest.message);
+            if (chatToastTimer.current) clearTimeout(chatToastTimer.current);
+            chatToastTimer.current = setTimeout(() => setChatToast(null), 4500);
+          }
+        }
       } catch (_e) {}
     }, 5000);
     return () => clearInterval(iv);
@@ -1382,7 +1406,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     freeCancelsLeft, setFreeCancelsLeft, bookTime, setBookTime,
     searchElapsed, setSearchElapsed, surgeCount, setSurgeCount,
     surgeFare, setSurgeFare, surging, setSurging, surgeBarAnim, surgeBarAnimRef,
-    chatMsgs, setChatMsgs, chatInput, setChatInput, unreadChat, setUnreadChat, lastChatCount,
+    chatMsgs, setChatMsgs, chatInput, setChatInput, unreadChat, setUnreadChat, lastChatCount, chatToast, setChatToast,
     rating, setRating, tip, setTip, review, setReview,
     paymentDone, setPaymentDone, showUpiQr, setShowUpiQr, fareCount, setFareCount,
     scratchCard, setScratchCard, scratched, setScratched, scratchAnim, starAnims, sosActive, setSosActive,
