@@ -381,31 +381,49 @@ function SearchAnim({ emoji, label }: { emoji: string; label: string }) {
   );
 
   return (
-    <View style={{ width: SW, height: 262, backgroundColor: '#07070f', overflow: 'hidden' }}>
+    <View style={{ width: SW, height: 262, backgroundColor: '#f4efe3', overflow: 'hidden' }}>
+
+      {/* ── Paper map background ── */}
+      {/* Horizontal grid lines */}
+      {Array.from({ length: 8 }).map((_, i) => (
+        <View key={`h${i}`} style={{ position: 'absolute', left: 0, right: 0, top: (i + 1) * 30, height: 1, backgroundColor: 'rgba(160,130,80,0.18)' }} />
+      ))}
+      {/* Vertical grid lines */}
+      {Array.from({ length: Math.ceil(SW / 30) }).map((_, i) => (
+        <View key={`v${i}`} style={{ position: 'absolute', top: 0, bottom: 0, left: (i + 1) * 30, width: 1, backgroundColor: 'rgba(160,130,80,0.18)' }} />
+      ))}
+      {/* Road strips — horizontal */}
+      <View style={{ position: 'absolute', left: 0, right: 0, top: 52, height: 5, backgroundColor: 'rgba(195,165,105,0.28)' }} />
+      <View style={{ position: 'absolute', left: 0, right: 0, top: 182, height: 8, backgroundColor: 'rgba(195,165,105,0.22)' }} />
+      {/* Road strips — vertical */}
+      <View style={{ position: 'absolute', top: 0, bottom: 0, left: SW * 0.22, width: 5, backgroundColor: 'rgba(195,165,105,0.26)' }} />
+      <View style={{ position: 'absolute', top: 0, bottom: 0, left: SW * 0.71, width: 8, backgroundColor: 'rgba(195,165,105,0.20)' }} />
+      {/* Slight vignette edges */}
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 28, backgroundColor: 'rgba(210,190,150,0.18)' }} />
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 28, backgroundColor: 'rgba(210,190,150,0.18)' }} />
+
       {/* Ambient center glow */}
-      <View style={{ position: 'absolute', left: CX - 95, top: CY - 95, width: 190, height: 190, borderRadius: 95, backgroundColor: 'rgba(233,69,96,0.05)' }} />
+      <View style={{ position: 'absolute', left: CX - 95, top: CY - 95, width: 190, height: 190, borderRadius: 95, backgroundColor: 'rgba(233,69,96,0.07)' }} />
 
       <Ring v={r1} sz={60} c="#e94560" />
-      <Ring v={r2} sz={104} c="rgba(233,69,96,0.72)" />
-      <Ring v={r3} sz={150} c="rgba(233,69,96,0.42)" />
+      <Ring v={r2} sz={104} c="rgba(233,69,96,0.68)" />
+      <Ring v={r3} sz={150} c="rgba(233,69,96,0.38)" />
 
       {/* Rotating radar sweep — 240×240 container centered at (CX, CY) */}
       <Animated.View style={{ position: 'absolute', left: CX - 120, top: CY - 120, width: 240, height: 240, transform: [{ rotate: sweepRot }] }}>
-        {/* Line from center (120,120) to top-center (120,0) */}
-        <View style={{ position: 'absolute', left: 119, top: 0, width: 2, height: 120, backgroundColor: 'rgba(233,69,96,0.5)', borderRadius: 1 }} />
-        {/* Soft glow trail beside line */}
-        <View style={{ position: 'absolute', left: 110, top: 8, width: 20, height: 112, backgroundColor: 'rgba(233,69,96,0.09)', borderRadius: 10 }} />
+        <View style={{ position: 'absolute', left: 119, top: 0, width: 2, height: 120, backgroundColor: 'rgba(233,69,96,0.65)', borderRadius: 1 }} />
+        <View style={{ position: 'absolute', left: 110, top: 8, width: 20, height: 112, backgroundColor: 'rgba(233,69,96,0.13)', borderRadius: 10 }} />
       </Animated.View>
 
       {/* Center vehicle icon */}
       <Animated.View style={{
         position: 'absolute', left: CX - 44, top: CY - 44,
         width: 88, height: 88, borderRadius: 44,
-        backgroundColor: 'rgba(233,69,96,0.13)',
-        borderWidth: 2.5, borderColor: 'rgba(233,69,96,0.58)',
+        backgroundColor: 'rgba(255,255,255,0.82)',
+        borderWidth: 2.5, borderColor: 'rgba(233,69,96,0.65)',
         alignItems: 'center', justifyContent: 'center',
         transform: [{ scale: pulse }],
-        elevation: 14, shadowColor: '#e94560', shadowOpacity: 0.55, shadowRadius: 18,
+        elevation: 14, shadowColor: '#e94560', shadowOpacity: 0.45, shadowRadius: 16,
       }}>
         <Text style={{ fontSize: 40, lineHeight: 46 }}>{emoji}</Text>
       </Animated.View>
@@ -422,17 +440,17 @@ function SearchAnim({ emoji, label }: { emoji: string; label: string }) {
             backgroundColor: '#e94560',
             borderWidth: 1.5, borderColor: '#fff',
             opacity: d, elevation: 6,
-            shadowColor: '#e94560', shadowOpacity: 0.7, shadowRadius: 6,
+            shadowColor: '#e94560', shadowOpacity: 0.6, shadowRadius: 6,
           }} />
         );
       })}
 
       {/* Animated label */}
-      <View style={{ position: 'absolute', bottom: 16, left: 0, right: 0, alignItems: 'center' }}>
-        <Animated.Text style={{ color: '#fff', fontSize: 13, fontWeight: '800', opacity: textO }}>
+      <View style={{ position: 'absolute', bottom: 14, left: 0, right: 0, alignItems: 'center' }}>
+        <Animated.Text style={{ color: '#2d1f0e', fontSize: 13, fontWeight: '800', opacity: textO }}>
           {`Dhundh rahe hain aapka ${label} Buddy...`}
         </Animated.Text>
-        <Text style={{ color: 'rgba(233,69,96,0.75)', fontSize: 10, marginTop: 4, fontWeight: '700', letterSpacing: 1.5 }}>
+        <Text style={{ color: '#e94560', fontSize: 10, marginTop: 4, fontWeight: '700', letterSpacing: 1.5 }}>
           SPPERO · BEST MATCH FOR YOU
         </Text>
       </View>
