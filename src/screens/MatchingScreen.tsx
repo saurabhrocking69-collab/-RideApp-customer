@@ -1,8 +1,9 @@
-import { Animated, Image, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useRef, useEffect } from 'react';
+import { Animated, Dimensions, Image, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
-import { Bouncy, DotBG, FadeIn, FloatingDots, MapOverlay, MapWebView, PulseView, RadarView, SlideUp, SuccessBurst, TripSteps } from '../components/ui';
+import { Bouncy, DotBG, FadeIn, FloatingDots, PulseView, SlideUp, SuccessBurst, TripSteps } from '../components/ui';
 import { s, C } from '../styles';
 import { apiPost } from '../../api';
 
@@ -45,11 +46,10 @@ export function MatchingScreen() {
         <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.10)', top: -60, right: -40 }} />
         <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900' }}>{rideData?.driver ? '🚗 Driver Mil Gaya!' : '🔍 Driver Dhundh Rahe Hain'}</Text>
       </View>
-      <View style={[s.mapFit, { height: 190 }]}>
-        <MapWebView pickupCoords={pickupCoords} dropCoords={dropCoords} driverLat={driverLoc?.lat} driverLng={driverLoc?.lng} customerLat={userCoords?.latitude} customerLng={userCoords?.longitude} height={190} />
-        <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} live={!!rideData?.driver} />
-      </View>
-      <View style={{ flex: 1, backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 16, paddingHorizontal: 16, borderTopWidth: 1, borderColor: C.glassBorder }}>
+      {!rideData?.driver && (
+        <SearchAnim emoji={rideIcon(rideType)} label={VEHICLE_LABELS[rideType] || (rideType || '').replace(/_/g, ' ')} />
+      )}
+      <View style={{ flex: 1, backgroundColor: C.bg, paddingTop: 16, paddingHorizontal: 16 }}>
         <TripSteps step={rideData?.driver ? 1 : 0} />
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
           {rideData?.driver ? (
@@ -149,10 +149,6 @@ export function MatchingScreen() {
             </>
           ) : (
             <View style={{ paddingBottom: 24 }}>
-              <View style={{ alignItems: 'center', paddingTop: 4, paddingBottom: 10 }}>
-                <Text style={{ fontSize: 17, fontWeight: '800', color: C.text }}>Driver Dhundh Rahe Hain</Text>
-                <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 4, textAlign: 'center', paddingHorizontal: 28 }} numberOfLines={1}>{pickup} → {drop}</Text>
-              </View>
 
               <View style={{ alignItems: 'center', marginBottom: 14 }}>
                 <View style={{ backgroundColor: C.bgCard, borderRadius: 28, paddingHorizontal: 22, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', gap: 10, elevation: 8, shadowColor: C.pink, shadowOpacity: 0.2, shadowRadius: 12, borderWidth: 1, borderColor: C.glassBorder }}>
@@ -166,11 +162,6 @@ export function MatchingScreen() {
                     </View>
                   )}
                 </View>
-              </View>
-
-              <View style={{ alignItems: 'center', marginBottom: 16 }}>
-                <RadarView />
-                <FloatingDots />
               </View>
 
               <View style={{ paddingHorizontal: 20, marginBottom: 14 }}>
@@ -315,6 +306,135 @@ export function MatchingScreen() {
             </View>
           )}
         </ScrollView>
+      </View>
+    </View>
+  );
+}
+
+const VEHICLE_LABELS: Record<string, string> = {
+  bike: 'Bike', auto: 'Auto', car: 'Car', eriksha: 'E-Riksha',
+  green_bike: 'Green Bike', electric_auto: 'Electric Auto', luxury: 'Luxury',
+};
+
+function SearchAnim({ emoji, label }: { emoji: string; label: string }) {
+  const SW = Dimensions.get('window').width;
+  const CX = SW / 2;
+  const CY = 128;
+
+  const r1 = useRef(new Animated.Value(0)).current;
+  const r2 = useRef(new Animated.Value(0)).current;
+  const r3 = useRef(new Animated.Value(0)).current;
+  const pulse = useRef(new Animated.Value(1)).current;
+  const sweep = useRef(new Animated.Value(0)).current;
+  const dots = useRef([0, 1, 2, 3, 4, 5].map(() => new Animated.Value(0))).current;
+  const textO = useRef(new Animated.Value(0.55)).current;
+
+  useEffect(() => {
+    const ring = (val: Animated.Value, delay: number) =>
+      Animated.loop(Animated.sequence([
+        Animated.delay(delay),
+        Animated.timing(val, { toValue: 1, duration: 2000, useNativeDriver: true }),
+        Animated.timing(val, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ]));
+    ring(r1, 0).start();
+    ring(r2, 660).start();
+    ring(r3, 1320).start();
+
+    Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1.13, duration: 900, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+    ])).start();
+
+    Animated.loop(
+      Animated.timing(sweep, { toValue: 1, duration: 2800, useNativeDriver: true })
+    ).start();
+
+    const dotDelays = [0, 850, 1700, 2550, 3400, 4250];
+    dots.forEach((d, i) =>
+      Animated.loop(Animated.sequence([
+        Animated.delay(dotDelays[i]),
+        Animated.timing(d, { toValue: 1, duration: 480, useNativeDriver: true }),
+        Animated.delay(1600),
+        Animated.timing(d, { toValue: 0, duration: 480, useNativeDriver: true }),
+        Animated.delay(1200),
+      ])).start()
+    );
+
+    Animated.loop(Animated.sequence([
+      Animated.timing(textO, { toValue: 1, duration: 1100, useNativeDriver: true }),
+      Animated.timing(textO, { toValue: 0.45, duration: 1100, useNativeDriver: true }),
+    ])).start();
+  }, []);
+
+  const DOT_R = 106;
+  const DOT_ANGLES = [20, 80, 150, 200, 280, 340];
+  const sweepRot = sweep.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+
+  const Ring = ({ v, sz, c }: { v: Animated.Value; sz: number; c: string }) => (
+    <Animated.View style={{
+      position: 'absolute', left: CX - sz, top: CY - sz,
+      width: sz * 2, height: sz * 2, borderRadius: sz,
+      borderWidth: sz < 80 ? 2 : 1.5, borderColor: c,
+      opacity: v.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0.95, 0.5, 0] }),
+      transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.2, 1.6] }) }],
+    }} />
+  );
+
+  return (
+    <View style={{ width: SW, height: 262, backgroundColor: '#07070f', overflow: 'hidden' }}>
+      {/* Ambient center glow */}
+      <View style={{ position: 'absolute', left: CX - 95, top: CY - 95, width: 190, height: 190, borderRadius: 95, backgroundColor: 'rgba(233,69,96,0.05)' }} />
+
+      <Ring v={r1} sz={60} c="#e94560" />
+      <Ring v={r2} sz={104} c="rgba(233,69,96,0.72)" />
+      <Ring v={r3} sz={150} c="rgba(233,69,96,0.42)" />
+
+      {/* Rotating radar sweep — 240×240 container centered at (CX, CY) */}
+      <Animated.View style={{ position: 'absolute', left: CX - 120, top: CY - 120, width: 240, height: 240, transform: [{ rotate: sweepRot }] }}>
+        {/* Line from center (120,120) to top-center (120,0) */}
+        <View style={{ position: 'absolute', left: 119, top: 0, width: 2, height: 120, backgroundColor: 'rgba(233,69,96,0.5)', borderRadius: 1 }} />
+        {/* Soft glow trail beside line */}
+        <View style={{ position: 'absolute', left: 110, top: 8, width: 20, height: 112, backgroundColor: 'rgba(233,69,96,0.09)', borderRadius: 10 }} />
+      </Animated.View>
+
+      {/* Center vehicle icon */}
+      <Animated.View style={{
+        position: 'absolute', left: CX - 44, top: CY - 44,
+        width: 88, height: 88, borderRadius: 44,
+        backgroundColor: 'rgba(233,69,96,0.13)',
+        borderWidth: 2.5, borderColor: 'rgba(233,69,96,0.58)',
+        alignItems: 'center', justifyContent: 'center',
+        transform: [{ scale: pulse }],
+        elevation: 14, shadowColor: '#e94560', shadowOpacity: 0.55, shadowRadius: 18,
+      }}>
+        <Text style={{ fontSize: 40, lineHeight: 46 }}>{emoji}</Text>
+      </Animated.View>
+
+      {/* Driver blip dots at clock-face positions */}
+      {dots.map((d, i) => {
+        const ang = DOT_ANGLES[i] * Math.PI / 180;
+        return (
+          <Animated.View key={i} style={{
+            position: 'absolute',
+            left: CX + DOT_R * Math.cos(ang) - 11,
+            top: CY + DOT_R * Math.sin(ang) - 11,
+            width: 22, height: 22, borderRadius: 11,
+            backgroundColor: '#e94560',
+            borderWidth: 1.5, borderColor: '#fff',
+            opacity: d, elevation: 6,
+            shadowColor: '#e94560', shadowOpacity: 0.7, shadowRadius: 6,
+          }} />
+        );
+      })}
+
+      {/* Animated label */}
+      <View style={{ position: 'absolute', bottom: 16, left: 0, right: 0, alignItems: 'center' }}>
+        <Animated.Text style={{ color: '#fff', fontSize: 13, fontWeight: '800', opacity: textO }}>
+          {`Dhundh rahe hain aapka ${label} Buddy...`}
+        </Animated.Text>
+        <Text style={{ color: 'rgba(233,69,96,0.75)', fontSize: 10, marginTop: 4, fontWeight: '700', letterSpacing: 1.5 }}>
+          SPPERO · BEST MATCH FOR YOU
+        </Text>
       </View>
     </View>
   );
