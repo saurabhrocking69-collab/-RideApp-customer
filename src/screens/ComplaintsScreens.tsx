@@ -87,7 +87,7 @@ export function ComplaintsScreen() {
     if (!phone) return;
     setCmpLoading(true);
     apiGet(`/api/complaints?phone=${encodeURIComponent(phone)}`)
-      .then(d => setComplaints(d.complaints || []))
+      .then(d => { if (!d._error && Array.isArray(d.complaints)) setComplaints(d.complaints); })
       .catch(() => {})
       .finally(() => setCmpLoading(false));
   }, [phone]);
@@ -434,7 +434,11 @@ export function NewComplaintScreen() {
                 setCmpLoading(false);
                 if (data.complaint) {
                   const listData = await apiGet(`/api/complaints?phone=${encodeURIComponent(phone)}`);
-                  setComplaints(listData.complaints || []);
+                  if (!listData._error && Array.isArray(listData.complaints)) {
+                    setComplaints(listData.complaints);
+                  } else {
+                    setComplaints((prev: any[]) => [data.complaint, ...prev]);
+                  }
                   setCmpLinkedRide(null); setCmpType(''); setCmpDesc('');
                   setStep(1); setCatId('');
                   Alert.alert(

@@ -314,7 +314,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     if (storeStatus === 'started') {
       setScreen((cur: Screen) => (['matching', 'inride'].includes(cur) ? 'inride' : cur));
-    } else if (storeStatus === 'completed') {
+    } else if (storeStatus === 'completed' && rideDataRef.current?.ride_id) {
       setScreen((cur: Screen) => (['payment', 'postride'].includes(cur) ? cur : 'payment'));
       AsyncStorage.removeItem('activeStdRideId').catch(() => {});
     }
@@ -357,6 +357,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // ── Active ride ─────────────────────────────────────────────────────────
   const [rideData, setRideData] = useState<any>(null);
+  const rideDataRef = useRef<any>(null);
+  useEffect(() => { rideDataRef.current = rideData; }, [rideData]);
   const [altSuggest, setAltSuggest] = useState<any>(null);
   const [switchingVehicle, setSwitchingVehicle] = useState(false);
   const [driverLoc, setDriverLoc] = useState<any>(null);
@@ -552,7 +554,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (rideId) await AsyncStorage.setItem('activeStdRideId', String(rideId)).catch(() => {});
       if (['ride_matched','driver_arrived'].includes(data.type)) setScreen('matching');
       else if (data.type === 'trip_started') setScreen('inride');
-      else if (data.type === 'trip_completed') setScreen('payment');
+      else if (data.type === 'trip_completed' && rideDataRef.current?.ride_id) setScreen('payment');
       else if (data.type === 'ride_cancelled') setScreen('home');
     };
     const sub2 = Notifications.addNotificationResponseReceivedListener(handleNotifTap);
@@ -566,6 +568,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
         loadWallet(phone); loadHistory(phone);
+        registerFCM(phone);
         if (socketRef.current && !socketRef.current.connected) socketRef.current.connect();
       }
     });
@@ -837,7 +840,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setUnreadChat((prev: number) => prev + 1);
     });
     s.on('paymentConfirmed', (data: any) => {
-      if (data.status === 'completed') {
+      if (data.status === 'completed' && rideDataRef.current?.ride_id) {
         if (data.cashbacks?.length) setCashbackEarned(data.cashbacks);
         setPaymentDone(true);
         setScreen('postride');
@@ -888,7 +891,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         useRideStore.setState({ rideStatus: 'requested' });
       }
       if (st === 'started') { setScreen('inride'); useRideStore.setState({ rideStatus: 'started', startOtp: '' }); }
-      if (st === 'completed') {
+      if (st === 'completed' && rideDataRef.current?.ride_id) {
         AsyncStorage.removeItem('activeStdRideId').catch(() => {});
         useRideStore.setState({ rideStatus: 'completed' });
         setScreen((cur: Screen) => (cur === 'payment' || cur === 'postride') ? cur : 'payment');
