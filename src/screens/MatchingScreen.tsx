@@ -20,6 +20,7 @@ export function MatchingScreen() {
     cancelTimer,
     freeCancelsLeft,
     unreadChat, setUnreadChat,
+    chatToast, setChatToast,
     showCancelModal, setShowCancelModal,
     sosActive,
     searchElapsed,
@@ -118,9 +119,18 @@ export function MatchingScreen() {
                 <Bouncy style={s.actionBtn} onPress={callDriver}><Ionicons name="call" size={22} color={C.green} /><Text style={{ fontSize: 10, color: C.textMuted, marginTop: 3 }}>Call</Text></Bouncy>
                 <Bouncy style={s.actionBtn} onPress={triggerSOS}><Ionicons name="warning" size={22} color={C.red} /><Text style={{ fontSize: 10, color: C.textMuted, marginTop: 3 }}>SOS</Text></Bouncy>
               </View>
-              {unreadChat > 0 && (
+              {chatToast && (
+                <TouchableOpacity
+                  style={{ backgroundColor: '#1a1a2e', borderRadius: 14, padding: 14, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: 'rgba(233,69,96,0.45)', elevation: 8 }}
+                  onPress={() => { setChatToast(null); setUnreadChat(0); setScreen('chat'); }}>
+                  <Ionicons name="chatbubble" size={16} color={C.pink} />
+                  <Text style={{ color: '#fff', fontSize: 13, flex: 1, fontWeight: '600' }} numberOfLines={1}>{chatToast}</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10 }}>Reply</Text>
+                </TouchableOpacity>
+              )}
+              {!chatToast && unreadChat > 0 && (
                 <TouchableOpacity style={s.chatAlert} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
-                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>💬 Driver ne {unreadChat} message bheja — dekho</Text>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>💬 Driver ke {unreadChat} message — tap to read</Text>
                 </TouchableOpacity>
               )}
               {sosActive && <View style={[s.infoBox, { backgroundColor: C.redGlass, borderColor: C.redBorder }]}><Text style={{ fontSize: 13, color: C.red, fontWeight: '800' }}>🆘 Alert bheja! Police: 100 · Ambulance: 108</Text></View>}
