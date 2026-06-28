@@ -1273,17 +1273,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const openRazorpayTopup = async (amt: number) => {
     if (amt < 1) return;
+    if (!RazorpayCheckout) { Alert.alert('Error', 'Payment module load nahi hua. App restart karein.'); return; }
     try {
       const r = await fetch(`${API}/api/wallet/topup/order`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, amount: amt }) });
       const d = await r.json();
-      if (!d.success) { setResult('❌ ' + (d.error || 'Payment start nahi hua')); return; }
+      if (!d.success) { Alert.alert('Payment Error', d.error || 'Payment start nahi hua'); return; }
       RazorpayCheckout.open({ key: d.key_id, amount: d.amount, currency: d.currency || 'INR', order_id: d.order_id, name: 'Sppero', description: `Wallet Recharge ₹${amt}`, prefill: { contact: phone }, theme: { color: '#e94560' } })
         .then(async (payment: any) => {
           const vr = await fetch(`${API}/api/wallet/topup/verify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, razorpay_order_id: payment.razorpay_order_id, razorpay_payment_id: payment.razorpay_payment_id, razorpay_signature: payment.razorpay_signature, amount: amt }) });
           const vd = await vr.json();
           if (vd.success) { setWalletBalance(vd.balance); await loadWalletDetail(phone); }
-        }).catch((_e: any) => {});
-    } catch (_e) { setResult('❌ Server error'); }
+          else { Alert.alert('Payment Error', vd.error || 'Wallet update nahi hua'); }
+        }).catch((e: any) => { if (e?.code !== 'PAYMENT_CANCELLED') Alert.alert('Payment Error', e?.description || e?.message || 'Payment fail'); });
+    } catch (_e) { Alert.alert('Error', 'Server se connect nahi hua. Internet check karein.'); }
   };
 
   const addMoney = async (amt: number) => { openRazorpayTopup(amt); };
