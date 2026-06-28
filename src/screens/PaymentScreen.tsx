@@ -25,12 +25,15 @@ export function PaymentScreen() {
     ? `upi://pay?pa=${encodeURIComponent(driverUpiId)}&pn=${encodeURIComponent(rideData?.driver?.name || 'Driver')}&am=${fareNum}&cu=INR&tn=Sppero%20Trip`
     : '';
   const qrUrl = driverUpiId
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=10&data=${encodeURIComponent(upiLink)}`
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=12&data=${encodeURIComponent(upiLink)}`
     : '';
 
   const confirmUpiQrPaid = async () => {
     try {
-      await fetch(`${API}/api/rides/payment-complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, payment_method: 'upi_qr', phone: phone || '9999999999' }) });
+      await fetch(`${API}/api/rides/payment-complete`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ride_id: rideData.ride_id, payment_method: 'upi_qr', phone: phone || '9999999999' }),
+      });
     } catch (_e) {}
     setShowUpiQr(false);
     setPaymentDone(true); setScreen('postride'); createScratchCard();
@@ -39,143 +42,228 @@ export function PaymentScreen() {
   const walletSufficient = walletBalance >= fareNum;
   const cashback = Math.max(5, Math.min(50, Math.round(fareNum * 0.05)));
 
-  const payOptions = [
-    {
-      color: C.pink, glassColor: C.pinkGlass, border: C.pinkBorder,
-      icon: '💰', title: 'Wallet se Pay',
-      sub: `Balance: ₹${walletBalance}${walletSufficient ? '' : ' (Balance kam hai)'}`,
-      badge: `🎁 ₹${cashback} scratch card milega`,
-      badgeColor: C.green,
-      recommended: walletSufficient,
-      disabled: !walletSufficient,
-      fn: payWithWallet,
-    },
-    ...(driverUpiId ? [{
-      color: C.purple, glassColor: C.glassMid, border: C.glassBorder,
-      icon: '📱', title: 'UPI QR Scan',
-      sub: `Driver ka QR scan karo — ₹${fareNum}`,
-      badge: null, badgeColor: null, recommended: false, disabled: false,
-      fn: () => setShowUpiQr(true),
-    }] : []),
-    {
-      color: C.bgCard, glassColor: C.glassMid, border: C.glassBorder,
-      icon: '💳', title: 'Online Pay',
-      sub: 'UPI / Card (Razorpay)',
-      badge: null, badgeColor: null, recommended: false, disabled: false,
-      fn: handlePayment,
-    },
-    {
-      color: C.green, glassColor: C.greenGlass, border: C.greenBorder,
-      icon: '💵', title: 'Cash Pay',
-      sub: 'Driver ko haath mein cash do',
-      badge: null, badgeColor: null, recommended: false, disabled: false,
-      fn: async () => {
-        try { await fetch(`${API}/api/rides/payment-complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, payment_method: 'cash', phone: phone || '9999999999' }) }); } catch (_e) {}
-        setPaymentDone(true); setScreen('postride'); createScratchCard();
-      },
-    },
-  ];
+  const payWithCash = async () => {
+    try {
+      await fetch(`${API}/api/rides/payment-complete`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ride_id: rideData.ride_id, payment_method: 'cash', phone: phone || '9999999999' }),
+      });
+    } catch (_e) {}
+    setPaymentDone(true); setScreen('postride'); createScratchCard();
+  };
 
+  const SB_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 0;
+
+  // ─── UPI QR full-screen overlay ───
+  if (showUpiQr) return (
+    <ScreenIn style={s.screen}>
+      <DotBG />
+      <View style={{ backgroundColor: C.pink, paddingTop: SB_HEIGHT + 14, paddingBottom: 20, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', overflow: 'hidden' }}>
+        <View style={{ position: 'absolute', width: 180, height: 180, borderRadius: 90, backgroundColor: 'rgba(255,255,255,0.1)', top: -60, right: -40 }} />
+        <TouchableOpacity onPress={() => setShowUpiQr(false)}
+          style={{ marginRight: 14, padding: 9, backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)' }}>
+          <Ionicons name="arrow-back" size={20} color="#fff" />
+        </TouchableOpacity>
+        <View>
+          <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>UPI / QR Se Pay Karo</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 1 }}>Koi bhi UPI app use karo</Text>
+        </View>
+      </View>
+
+      <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 20 }}>
+        {/* Amount chip */}
+        <View style={{ alignItems: 'center', marginBottom: 22 }}>
+          <View style={{ backgroundColor: C.pinkGlass, borderRadius: 20, paddingHorizontal: 28, paddingVertical: 14, borderWidth: 2, borderColor: C.pinkBorder, elevation: 6, shadowColor: C.pink, shadowOpacity: 0.25, shadowRadius: 10 }}>
+            <Text style={{ color: C.pink, fontSize: 42, fontWeight: '900', textAlign: 'center' }}>₹{fareNum}</Text>
+            <Text style={{ color: C.textMuted, fontSize: 11, textAlign: 'center', marginTop: 2 }}>Driver: {rideData?.driver?.name || '–'}</Text>
+          </View>
+        </View>
+
+        {driverUpiId ? (
+          <View style={{ alignItems: 'center' }}>
+            <View style={{ backgroundColor: C.glassMid, borderRadius: 24, padding: 18, elevation: 8, borderWidth: 1.5, borderColor: C.glassBorder, alignItems: 'center', width: '100%', maxWidth: 320, alignSelf: 'center' }}>
+              <Image source={{ uri: qrUrl }} style={{ width: 252, height: 252, borderRadius: 16 }} resizeMode="contain" />
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 14, gap: 8 }}>
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.green }} />
+                <Text style={{ fontSize: 12, color: C.textMuted, fontWeight: '600' }}>Scan with any UPI app</Text>
+              </View>
+              <Text style={{ fontSize: 11, color: C.textDim, marginTop: 4 }}>{driverUpiId}</Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 18, flexWrap: 'wrap' }}>
+              {['GPay', 'PhonePe', 'Paytm', 'BHIM'].map(app => (
+                <View key={app} style={{ backgroundColor: C.glassMid, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1, borderColor: C.glassBorder }}>
+                  <Text style={{ color: C.textMuted, fontSize: 12, fontWeight: '600' }}>{app}</Text>
+                </View>
+              ))}
+            </View>
+
+            <TouchableOpacity onPress={() => Linking.openURL(upiLink)}
+              style={{ marginTop: 14, backgroundColor: C.glass, borderRadius: 14, paddingHorizontal: 22, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: C.glassBorder }}>
+              <Text style={{ fontSize: 18 }}>📱</Text>
+              <Text style={{ color: C.text, fontWeight: '700', fontSize: 14 }}>UPI App Mein Seedha Kholo</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={{ backgroundColor: C.yellowGlass, borderRadius: 18, padding: 24, alignItems: 'center', borderWidth: 1.5, borderColor: C.yellowBorder }}>
+            <Text style={{ fontSize: 40 }}>⚠️</Text>
+            <Text style={{ fontSize: 14, color: C.yellow, textAlign: 'center', marginTop: 10, fontWeight: '700' }}>Driver ka UPI set nahi hai</Text>
+            <Text style={{ fontSize: 12, color: C.textMuted, textAlign: 'center', marginTop: 6 }}>Cash ya Wallet se pay karo</Text>
+          </View>
+        )}
+      </ScrollView>
+
+      <View style={{ padding: 16, paddingBottom: 32, gap: 10 }}>
+        <TouchableOpacity onPress={confirmUpiQrPaid}
+          style={{ backgroundColor: C.green, borderRadius: 18, padding: 18, alignItems: 'center', elevation: 8, shadowColor: C.green, shadowOpacity: 0.4, shadowRadius: 12 }}>
+          <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900' }}>✅  Maine Pay Kar Diya — ₹{fareNum}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setShowUpiQr(false)} style={{ borderRadius: 12, padding: 12, alignItems: 'center' }}>
+          <Text style={{ color: C.textMuted, fontSize: 14 }}>← Wapas Jao</Text>
+        </TouchableOpacity>
+      </View>
+    </ScreenIn>
+  );
+
+  // ─── Main payment screen ───
   return (
     <ScreenIn style={s.screen}>
       <DotBG />
-      {showUpiQr && (
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: C.bg, zIndex: 999, justifyContent: 'space-between' }}>
-          <DotBG />
-          <View style={{ backgroundColor: C.pink, paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 14 : 56, paddingBottom: 18, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', overflow: 'hidden' }}>
-            <TouchableOpacity onPress={() => setShowUpiQr(false)} style={{ marginRight: 14, padding: 8, backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 10 }}>
-              <Ionicons name="arrow-back" size={20} color="#fff" />
-            </TouchableOpacity>
-            <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900', flex: 1 }}>UPI QR Se Pay Karo</Text>
-          </View>
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-            <View style={{ backgroundColor: C.pinkGlass, borderRadius: 20, paddingHorizontal: 28, paddingVertical: 12, marginBottom: 24, elevation: 4, shadowColor: C.pink, shadowOpacity: 0.15, shadowRadius: 8, borderWidth: 2, borderColor: C.pinkBorder }}>
-              <Text style={{ color: C.pink, fontSize: 32, fontWeight: '900' }}>₹{fareNum}</Text>
-            </View>
-            {driverUpiId ? (
-              <View style={{ backgroundColor: C.glassMid, borderRadius: 24, padding: 16, elevation: 8, borderWidth: 1, borderColor: C.glassBorder, alignItems: 'center' }}>
-                <Image source={{ uri: qrUrl }} style={{ width: 250, height: 250, borderRadius: 16 }} resizeMode="contain" />
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 14, gap: 8 }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.green }} />
-                  <Text style={{ fontSize: 13, color: C.textMuted, fontWeight: '600' }}>Scan with any UPI app</Text>
-                </View>
-              </View>
-            ) : (
-              <View style={{ backgroundColor: C.yellowGlass, borderRadius: 16, padding: 24, alignItems: 'center', borderWidth: 1, borderColor: C.yellowBorder }}>
-                <Text style={{ fontSize: 36 }}>⚠️</Text>
-                <Text style={{ fontSize: 14, color: C.yellow, textAlign: 'center', marginTop: 10, fontWeight: '600' }}>Driver ka UPI set nahi hai{'\n'}Cash ya Wallet use karo</Text>
-              </View>
-            )}
-            <Text style={{ fontSize: 12, color: C.textDim, marginTop: 20, letterSpacing: 0.5 }}>GPay · PhonePe · Paytm · BHIM · Koi bhi UPI app</Text>
-            <Text style={{ fontSize: 12, color: C.textDim, marginTop: 6 }}>{driverUpiId}</Text>
-            {driverUpiId ? (
-              <TouchableOpacity onPress={() => Linking.openURL(upiLink)}
-                style={{ marginTop: 16, backgroundColor: C.bgCard, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: C.glassBorder }}>
-                <Text style={{ color: C.text, fontWeight: '700', fontSize: 14 }}>📱 UPI App Mein Kholo</Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
-          <View style={{ padding: 16, paddingBottom: 32, gap: 10 }}>
-            <TouchableOpacity onPress={confirmUpiQrPaid}
-              style={{ backgroundColor: C.green, borderRadius: 16, padding: 18, alignItems: 'center', elevation: 6, shadowColor: C.green, shadowOpacity: 0.4, shadowRadius: 10 }}>
-              <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900' }}>✅ Maine Pay Kar Diya — ₹{fareNum}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setShowUpiQr(false)} style={{ borderRadius: 12, padding: 12, alignItems: 'center' }}>
-              <Text style={{ color: C.textMuted, fontSize: 13 }}>← Wapas Jao</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
 
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-        <View style={[s.hero, { paddingTop: 40, paddingBottom: 16, backgroundColor: C.bgDeep, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }]}>
-          <Text style={{ fontSize: 40 }}>🏁</Text>
-          <Text style={[s.heroTitle, { color: C.text }]}>Trip Complete!</Text>
-          <Text style={[s.heroSub, { color: C.textMuted }]} numberOfLines={1}>{pickup} → {drop}</Text>
-          <Animated.Text style={{ color: C.yellow, fontSize: 36, fontWeight: '900', marginTop: 6, letterSpacing: -0.5 }}>₹{fareCount}</Animated.Text>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 32 }}>
+
+        {/* ── Hero: big fare + route ── */}
+        <View style={{ backgroundColor: C.pink, paddingTop: SB_HEIGHT + 18, paddingBottom: 28, paddingHorizontal: 20, overflow: 'hidden' }}>
+          <View style={{ position: 'absolute', width: 260, height: 260, borderRadius: 130, backgroundColor: 'rgba(255,255,255,0.09)', top: -90, right: -70 }} />
+          <View style={{ position: 'absolute', width: 140, height: 140, borderRadius: 70, backgroundColor: 'rgba(255,255,255,0.06)', bottom: -60, left: -30 }} />
+
+          <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: '800', letterSpacing: 2, textAlign: 'center', marginBottom: 8, textTransform: 'uppercase' }}>Trip Complete · Payment Karo</Text>
+
+          <Animated.Text style={{ color: '#fff', fontSize: 68, fontWeight: '900', textAlign: 'center', letterSpacing: -1 }}>
+            ₹{fareCount}
+          </Animated.Text>
+
+          {/* Route */}
+          <View style={{ backgroundColor: 'rgba(255,255,255,0.17)', borderRadius: 14, padding: 12, marginTop: 14, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 9, fontWeight: '800', letterSpacing: 1.2, marginBottom: 2 }}>FROM</Text>
+              <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }} numberOfLines={1}>{pickup}</Text>
+            </View>
+            <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 20, marginHorizontal: 4 }}>→</Text>
+            <View style={{ flex: 1, alignItems: 'flex-end' }}>
+              <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 9, fontWeight: '800', letterSpacing: 1.2, marginBottom: 2 }}>TO</Text>
+              <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }} numberOfLines={1}>{drop}</Text>
+            </View>
+          </View>
+
+          {/* Wallet promo chip */}
           {walletSufficient && (
-            <View style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(22,163,74,0.15)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(22,163,74,0.3)' }}>
-              <Text style={{ fontSize: 14 }}>🎁</Text>
-              <Text style={{ color: C.green, fontSize: 11, fontWeight: '700' }}>Wallet se pay karo — scratch card milega!</Text>
+            <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <View style={{ backgroundColor: 'rgba(22,163,74,0.9)', borderRadius: 22, paddingHorizontal: 14, paddingVertical: 7, flexDirection: 'row', alignItems: 'center', gap: 6, elevation: 4, shadowColor: '#16a34a', shadowOpacity: 0.5, shadowRadius: 8 }}>
+                <Text style={{ fontSize: 15 }}>💰</Text>
+                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>Wallet se pay karo · ₹{cashback} scratch milega!</Text>
+              </View>
             </View>
           )}
         </View>
 
-        <View style={{ padding: 16, gap: 10 }}>
-          <Text style={{ fontSize: 12, fontWeight: '800', color: C.textMuted, letterSpacing: 1, marginBottom: 2, marginLeft: 2 }}>PAYMENT CHOOSE KARO</Text>
-          {payOptions.map((p, i) => (
-            <Bouncy key={i} onPress={p.disabled ? undefined : p.fn} style={{ opacity: p.disabled ? 0.45 : 1 }}>
-              <View style={{
-                backgroundColor: p.glassColor, borderRadius: 16, padding: 14,
-                flexDirection: 'row', alignItems: 'center',
-                borderWidth: p.recommended ? 1.5 : 1, borderColor: p.border,
-                elevation: p.recommended ? 3 : 1,
-                shadowColor: p.color, shadowOpacity: p.recommended ? 0.1 : 0.04, shadowRadius: 4,
-              }}>
-                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: `${p.color}18`, alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ fontSize: 20 }}>{p.icon}</Text>
-                </View>
-                <View style={{ flex: 1, marginLeft: 14 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <Text style={{ color: C.text, fontWeight: '800', fontSize: 15 }}>{p.title}</Text>
-                    {p.recommended && (
-                      <View style={{ backgroundColor: C.greenGlass, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: C.greenBorder }}>
-                        <Text style={{ fontSize: 9, color: C.green, fontWeight: '900' }}>RECOMMENDED</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>{p.sub}</Text>
-                  {p.badge && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                      <Text style={{ fontSize: 11, color: p.badgeColor, fontWeight: '700' }}>{p.badge}</Text>
+        {/* ── Payment Options ── */}
+        <View style={{ padding: 16, gap: 12 }}>
+          <Text style={{ fontSize: 11, fontWeight: '800', color: C.textDim, letterSpacing: 1.8, marginBottom: 2, textTransform: 'uppercase' }}>Payment Method</Text>
+
+          {/* ── Wallet ── */}
+          <Bouncy onPress={walletSufficient ? payWithWallet : undefined} style={{ opacity: walletSufficient ? 1 : 0.6 }}>
+            <View style={{
+              borderRadius: 20, padding: 18, flexDirection: 'row', alignItems: 'center',
+              backgroundColor: walletSufficient ? 'rgba(22,163,74,0.10)' : C.glassMid,
+              borderWidth: walletSufficient ? 2 : 1,
+              borderColor: walletSufficient ? '#22c55e' : C.glassBorder,
+              elevation: walletSufficient ? 6 : 1,
+              shadowColor: '#22c55e', shadowOpacity: walletSufficient ? 0.25 : 0, shadowRadius: 10,
+            }}>
+              <View style={{ width: 54, height: 54, borderRadius: 18, backgroundColor: walletSufficient ? 'rgba(22,163,74,0.2)' : C.glass, alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                <Text style={{ fontSize: 26 }}>💰</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                  <Text style={{ color: C.text, fontWeight: '900', fontSize: 16 }}>Wallet</Text>
+                  {walletSufficient && (
+                    <View style={{ backgroundColor: '#22c55e', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 }}>
+                      <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900' }}>BEST</Text>
                     </View>
                   )}
                 </View>
-                <Ionicons name="chevron-forward" size={16} color={C.textMuted} />
+                <Text style={{ color: walletSufficient ? '#86efac' : C.textMuted, fontSize: 12 }}>
+                  Balance: ₹{walletBalance}{walletSufficient ? ` — covers ₹${fareNum}` : ' — balance kam hai'}
+                </Text>
+                {walletSufficient
+                  ? <Text style={{ color: '#22c55e', fontSize: 11, fontWeight: '700', marginTop: 3 }}>🎁 ₹{cashback} scratch card milega!</Text>
+                  : <TouchableOpacity onPress={() => setScreen('wallet')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <Text style={{ color: C.pink, fontSize: 12, fontWeight: '800', marginTop: 4 }}>+ Recharge Karo →</Text>
+                    </TouchableOpacity>
+                }
+              </View>
+              <Ionicons
+                name={walletSufficient ? 'arrow-forward-circle' : 'chevron-forward'}
+                size={walletSufficient ? 30 : 20}
+                color={walletSufficient ? '#22c55e' : C.textDim}
+              />
+            </View>
+          </Bouncy>
+
+          {/* ── UPI QR (only if driver has UPI) ── */}
+          {driverUpiId ? (
+            <Bouncy onPress={() => setShowUpiQr(true)}>
+              <View style={{ borderRadius: 20, padding: 18, flexDirection: 'row', alignItems: 'center', backgroundColor: C.glassMid, borderWidth: 1, borderColor: C.glassBorder }}>
+                <View style={{ width: 54, height: 54, borderRadius: 18, backgroundColor: 'rgba(139,92,246,0.12)', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                  <Text style={{ fontSize: 26 }}>📱</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: C.text, fontWeight: '900', fontSize: 16, marginBottom: 3 }}>UPI / QR Scan</Text>
+                  <Text style={{ color: C.textMuted, fontSize: 12 }}>GPay · PhonePe · Paytm · Any UPI app</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={C.textDim} />
               </View>
             </Bouncy>
-          ))}
+          ) : null}
+
+          {/* ── Online / Razorpay ── */}
+          <Bouncy onPress={handlePayment}>
+            <View style={{ borderRadius: 20, padding: 18, flexDirection: 'row', alignItems: 'center', backgroundColor: C.glassMid, borderWidth: 1, borderColor: C.glassBorder }}>
+              <View style={{ width: 54, height: 54, borderRadius: 18, backgroundColor: 'rgba(59,130,246,0.12)', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                <Text style={{ fontSize: 26 }}>💳</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: C.text, fontWeight: '900', fontSize: 16, marginBottom: 3 }}>Online Pay</Text>
+                <Text style={{ color: C.textMuted, fontSize: 12 }}>Razorpay · UPI · Debit / Credit Card</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={C.textDim} />
+            </View>
+          </Bouncy>
+
+          {/* ── Cash ── */}
+          <Bouncy onPress={payWithCash}>
+            <View style={{ borderRadius: 20, padding: 18, flexDirection: 'row', alignItems: 'center', backgroundColor: C.glassMid, borderWidth: 1, borderColor: C.glassBorder }}>
+              <View style={{ width: 54, height: 54, borderRadius: 18, backgroundColor: 'rgba(16,185,129,0.12)', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                <Text style={{ fontSize: 26 }}>💵</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: C.text, fontWeight: '900', fontSize: 16, marginBottom: 3 }}>Cash</Text>
+                <Text style={{ color: C.textMuted, fontSize: 12 }}>Driver ko haath mein ₹{fareNum} do</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={C.textDim} />
+            </View>
+          </Bouncy>
+
           {result ? <Text style={s.err}>{result}</Text> : null}
+
+          {/* Security note */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.glass, borderRadius: 14, padding: 12, marginTop: 4, borderWidth: 1, borderColor: C.glassBorder }}>
+            <Text style={{ fontSize: 16 }}>🔒</Text>
+            <Text style={{ color: C.textDim, fontSize: 11, flex: 1, lineHeight: 16 }}>
+              Aapka payment 100% secure hai. Razorpay PCI-DSS compliant payment gateway use karta hai.
+            </Text>
+          </View>
         </View>
       </ScrollView>
     </ScreenIn>
