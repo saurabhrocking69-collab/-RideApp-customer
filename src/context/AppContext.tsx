@@ -12,7 +12,7 @@ import { API, MAPS_KEY, RIDES, DEFAULT_HOURLY_PACKAGES } from '../constants';
 import { Screen, Tab, Coords, HourlyStep, ExtendStep, WalletTxnTab } from '../types';
 
 let RazorpayCheckout: any = null;
-try { RazorpayCheckout = require('react-native-razorpay'); } catch (_e) {}
+try { const _m = require('react-native-razorpay'); RazorpayCheckout = _m?.default || _m; } catch (_e) {}
 
 // ─── Context Type ───────────────────────────────────────────────────────────
 interface AppContextType {
