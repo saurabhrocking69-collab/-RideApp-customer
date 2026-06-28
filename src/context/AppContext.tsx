@@ -359,6 +359,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [rideData, setRideData] = useState<any>(null);
   const rideDataRef = useRef<any>(null);
   useEffect(() => { rideDataRef.current = rideData; }, [rideData]);
+  const payingRef = useRef(false);
   const [altSuggest, setAltSuggest] = useState<any>(null);
   const [switchingVehicle, setSwitchingVehicle] = useState(false);
   const [driverLoc, setDriverLoc] = useState<any>(null);
@@ -1216,20 +1217,44 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const payWithWallet = async () => {
+    if (payingRef.current) return; // Prevent double-tap during async call
+    payingRef.current = true;
     const fareNum = parseInt(String(rideData?.fare).replace(/[^0-9]/g, '')) || 0;
-    if (walletBalance < fareNum) { setResult(`❌ Balance kam hai! ₹${walletBalance} hai`); return; }
+    if (walletBalance < fareNum) {
+      setResult(`❌ Balance kam hai! ₹${walletBalance} hai`);
+      payingRef.current = false; return;
+    }
     try {
       const res = await fetch(`${API}/api/wallet/pay`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: phone || '9999999999', amount: fareNum, ride_id: rideData.ride_id }) });
       const data = await res.json();
       if (data.success) {
         setWalletBalance(data.balance);
-        const pcRes = await fetch(`${API}/api/rides/payment-complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, payment_method: 'wallet', phone: phone || '9999999999' }) });
-        const pcData = await pcRes.json().catch(() => ({}));
-        if (pcData.cashbacks?.length) setCashbackEarned(pcData.cashbacks);
+        // Advance screen immediately — never block the customer on payment-complete network call
         setPaymentDone(true); setScreen('postride'); createScratchCard();
         AsyncStorage.removeItem('activeStdRideId').catch(() => {});
-      } else setResult('❌ ' + (data.message || 'Payment fail'));
+        // Notify backend + driver via socket in background with retry
+        const rideId = rideData.ride_id;
+        const ph = phone || '9999999999';
+        (async () => {
+          for (let attempt = 0; attempt < 5; attempt++) {
+            try {
+              const pcRes = await fetch(`${API}/api/rides/payment-complete`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ride_id: rideId, payment_method: 'wallet', phone: ph }),
+              });
+              const pcData = await pcRes.json();
+              if (pcData.cashbacks?.length) setCashbackEarned(pcData.cashbacks);
+              return; // Success — stop retrying
+            } catch (_e) {
+              if (attempt < 4) await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+            }
+          }
+        })();
+      } else {
+        setResult('❌ ' + (data.message || 'Payment fail'));
+      }
     } catch (_e) { setResult('❌ Server error'); }
+    payingRef.current = false;
   };
 
   const createScratchCard = async () => {
