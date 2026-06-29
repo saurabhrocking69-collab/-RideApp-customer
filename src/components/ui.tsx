@@ -1,61 +1,35 @@
 import { useState, useEffect, useRef } from 'react';
-import { Platform, View, Text, TouchableOpacity, Animated, StyleSheet, useWindowDimensions, Easing } from 'react-native';
-import { BlurView } from 'expo-blur';
+import { View, Text, TouchableOpacity, Animated, StyleSheet, useWindowDimensions, Easing } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import { MAPS_KEY } from '../constants';
 import { C } from '../styles';
 
 // ─── GlassPanel ──────────────────────────────────────────────────────────────
-// Proper glassmorphism: moderate blur (intensity 18 ≈ 10px) + semi-transparent
-// background + subtle white border + soft shadow.
-// Rule: only use on surfaces that have real visual content behind them
-// (map, gradient, image). Don't plaster on plain white backgrounds.
-export const GlassPanel = ({ children, style, intensity = 18, tint = 'light' }: {
+// Glassmorphism via semi-transparent bg + white border + shadow.
+// Pure RN — no native blur module needed (cross-platform safe).
+export const GlassPanel = ({ children, style, tint = 'light' }: {
   children: React.ReactNode;
   style?: any;
-  intensity?: number;
+  intensity?: number; // kept for API compat, unused
   tint?: 'light' | 'dark' | 'default';
-}) => {
-  if (Platform.OS === 'android') {
-    // Android BlurView is experimental — use a high-opacity semi-transparent fallback
-    return (
-      <View style={[{
-        backgroundColor: tint === 'dark'
-          ? 'rgba(20,20,36,0.82)'
-          : 'rgba(255,255,255,0.88)',
-        borderWidth: 1,
-        borderColor: tint === 'dark'
-          ? 'rgba(255,255,255,0.12)'
-          : 'rgba(255,255,255,0.70)',
-        shadowColor: tint === 'dark' ? '#000' : C.pink,
-        shadowOpacity: 0.10,
-        shadowRadius: 14,
-        elevation: 8,
-      }, style]}>
-        {children}
-      </View>
-    );
-  }
-  return (
-    <BlurView
-      intensity={intensity}
-      tint={tint}
-      style={[{
-        borderWidth: 1,
-        borderColor: tint === 'dark'
-          ? 'rgba(255,255,255,0.14)'
-          : 'rgba(255,255,255,0.65)',
-        shadowColor: C.pink,
-        shadowOpacity: 0.08,
-        shadowRadius: 14,
-        overflow: 'hidden',
-      }, style]}
-    >
-      {children}
-    </BlurView>
-  );
-};
+}) => (
+  <View style={[{
+    backgroundColor: tint === 'dark'
+      ? 'rgba(18,18,32,0.84)'
+      : 'rgba(255,255,255,0.90)',
+    borderWidth: 1,
+    borderColor: tint === 'dark'
+      ? 'rgba(255,255,255,0.13)'
+      : 'rgba(255,255,255,0.72)',
+    shadowColor: tint === 'dark' ? '#000' : C.pink,
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+  }, style]}>
+    {children}
+  </View>
+);
 
 // ─── RideVehicleIcon ─────────────────────────────────────────────────────────
 export const RideVehicleIcon = ({ id, size = 26, color = '#fff' }: { id: string; size?: number; color?: string }) => {
