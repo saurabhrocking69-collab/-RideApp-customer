@@ -1,7 +1,7 @@
 import { Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
-import { MapOverlay, MapWebView, PulseView, TripSteps, DotBG } from '../components/ui';
+import { GlassPanel, MapOverlay, MapWebView, PulseView, TripSteps, DotBG } from '../components/ui';
 import { s, C } from '../styles';
 
 export function InRideScreen() {
@@ -28,7 +28,7 @@ export function InRideScreen() {
         <MapWebView pickupCoords={pickupCoords} dropCoords={dropCoords} driverLat={driverLoc?.lat} driverLng={driverLoc?.lng} customerLat={userCoords?.latitude} customerLng={userCoords?.longitude} height={220} />
         <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} live={true} />
       </View>
-      <View style={{ flex: 1, backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 16, paddingHorizontal: 16, borderTopWidth: 1, borderColor: C.glassBorder }}>
+      <GlassPanel intensity={20} style={{ flex: 1, borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 16, paddingHorizontal: 16, elevation: 12, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 16 }}>
         <TripSteps step={2} />
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
           <View style={{ backgroundColor: C.greenGlass, borderRadius: 16, padding: 16, alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: C.greenBorder }}>
@@ -67,7 +67,7 @@ export function InRideScreen() {
           )}
           {sosActive && <View style={[s.infoBox, { backgroundColor: C.redGlass, borderColor: C.redBorder }]}><Text style={{ fontSize: 13, color: C.red, fontWeight: '800' }}>🆘 Alert bheja! Police: 100</Text></View>}
         </ScrollView>
-      </View>
+      </GlassPanel>
     </View>
   );
 }

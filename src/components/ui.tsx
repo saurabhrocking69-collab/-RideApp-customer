@@ -1,9 +1,61 @@
 import { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Animated, StyleSheet, useWindowDimensions, Easing } from 'react-native';
+import { Platform, View, Text, TouchableOpacity, Animated, StyleSheet, useWindowDimensions, Easing } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import { MAPS_KEY } from '../constants';
 import { C } from '../styles';
+
+// ─── GlassPanel ──────────────────────────────────────────────────────────────
+// Proper glassmorphism: moderate blur (intensity 18 ≈ 10px) + semi-transparent
+// background + subtle white border + soft shadow.
+// Rule: only use on surfaces that have real visual content behind them
+// (map, gradient, image). Don't plaster on plain white backgrounds.
+export const GlassPanel = ({ children, style, intensity = 18, tint = 'light' }: {
+  children: React.ReactNode;
+  style?: any;
+  intensity?: number;
+  tint?: 'light' | 'dark' | 'default';
+}) => {
+  if (Platform.OS === 'android') {
+    // Android BlurView is experimental — use a high-opacity semi-transparent fallback
+    return (
+      <View style={[{
+        backgroundColor: tint === 'dark'
+          ? 'rgba(20,20,36,0.82)'
+          : 'rgba(255,255,255,0.88)',
+        borderWidth: 1,
+        borderColor: tint === 'dark'
+          ? 'rgba(255,255,255,0.12)'
+          : 'rgba(255,255,255,0.70)',
+        shadowColor: tint === 'dark' ? '#000' : C.pink,
+        shadowOpacity: 0.10,
+        shadowRadius: 14,
+        elevation: 8,
+      }, style]}>
+        {children}
+      </View>
+    );
+  }
+  return (
+    <BlurView
+      intensity={intensity}
+      tint={tint}
+      style={[{
+        borderWidth: 1,
+        borderColor: tint === 'dark'
+          ? 'rgba(255,255,255,0.14)'
+          : 'rgba(255,255,255,0.65)',
+        shadowColor: C.pink,
+        shadowOpacity: 0.08,
+        shadowRadius: 14,
+        overflow: 'hidden',
+      }, style]}
+    >
+      {children}
+    </BlurView>
+  );
+};
 
 // ─── RideVehicleIcon ─────────────────────────────────────────────────────────
 export const RideVehicleIcon = ({ id, size = 26, color = '#fff' }: { id: string; size?: number; color?: string }) => {
@@ -528,19 +580,19 @@ export const MapOverlay = ({ hasRoute, pickup, drop, live = false }: any) => {
   return (
     <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} pointerEvents="none">
       {live && (
-        <View style={{ position: 'absolute', top: 10, right: 10, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(5,150,105,0.92)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5, elevation: 4 }}>
-          <Animated.View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#fff', marginRight: 5, transform: [{ scale: pulse }] }} />
+        <GlassPanel tint="dark" intensity={20} style={{ position: 'absolute', top: 10, right: 10, flexDirection: 'row', alignItems: 'center', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5, elevation: 4 }}>
+          <Animated.View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: C.green, marginRight: 5, transform: [{ scale: pulse }] }} />
           <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold', letterSpacing: 0.5 }}>LIVE</Text>
-        </View>
+        </GlassPanel>
       )}
       {hasRoute && (
-        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(255,255,255,0.94)', paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#E4E6F6' }}>
+        <GlassPanel intensity={20} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 12, paddingVertical: 9, flexDirection: 'row', alignItems: 'center' }}>
           <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#059669', marginRight: 6 }} />
           <Text style={{ color: '#1A1A2E', fontSize: 11, flex: 1, fontWeight: '600' }} numberOfLines={1}>{pickup}</Text>
           <Text style={{ color: '#94A3B8', fontSize: 12, marginHorizontal: 5 }}>→</Text>
           <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF2D78', marginRight: 6 }} />
           <Text style={{ color: '#1A1A2E', fontSize: 11, flex: 1, fontWeight: '600' }} numberOfLines={1}>{drop}</Text>
-        </View>
+        </GlassPanel>
       )}
     </View>
   );

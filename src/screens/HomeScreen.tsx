@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { apiPost, apiGet } from '../../api';
 import { useRideStore } from '../../store';
 import { useApp } from '../context/AppContext';
-import { Bouncy, PulseView, LucknowCityCard, SlideUp, CountUp, EmptyAnim, DotBG, GlowPulse, ShineCard } from '../components/ui';
+import { Bouncy, GlassPanel, PulseView, LucknowCityCard, SlideUp, CountUp, EmptyAnim, DotBG, GlowPulse, ShineCard } from '../components/ui';
 import { s, C } from '../styles';
 import { MAPS_KEY } from '../constants';
 
@@ -20,7 +20,7 @@ function NavBar() {
     { t: 'profile', ion: 'person',   lbl: 'Profile' },
   ];
   return (
-    <View style={s.nav}>
+    <GlassPanel intensity={16} style={[s.nav, { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.6)' }]}>
       {navTabs.map(({ t, ion, lbl }) => {
         const active = tab === t && screen === 'home';
         const col = active ? C.pink : C.textDim;
@@ -37,7 +37,7 @@ function NavBar() {
           </TouchableOpacity>
         );
       })}
-    </View>
+    </GlassPanel>
   );
 }
 

@@ -2,7 +2,7 @@ import { Animated, KeyboardAvoidingView, Platform, ScrollView, TextInput, Text, 
 import { useState, useRef, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
-import { Bouncy, MapOverlay, MapWebView, RideVehicleIcon, DotBG } from '../components/ui';
+import { Bouncy, GlassPanel, MapOverlay, MapWebView, RideVehicleIcon, DotBG } from '../components/ui';
 import { s, C } from '../styles';
 import { RIDES } from '../constants';
 import { apiGet } from '../../api';
@@ -99,21 +99,21 @@ export function BookingScreen() {
         <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} />
       </View>
 
-      {/* ─── Bottom sheet — animates up once on mount ─── */}
+      {/* ─── Bottom sheet — glass panel floating over map ─── */}
       <Animated.View style={{
         flex: 1,
-        backgroundColor: C.bg,
+        opacity: sheetOpacity,
+        transform: [{ translateY: sheetTranslate }],
+      }}>
+      <GlassPanel intensity={22} style={{
+        flex: 1,
         borderTopLeftRadius: 28,
         borderTopRightRadius: 28,
         marginTop: -28,
-        borderTopWidth: 1.5,
-        borderTopColor: C.glassBorder,
         elevation: 14,
         shadowColor: C.pink,
         shadowOpacity: 0.10,
         shadowRadius: 18,
-        opacity: sheetOpacity,
-        transform: [{ translateY: sheetTranslate }],
       }}>
         {/* Drag handle */}
         <View style={{ alignItems: 'center', paddingVertical: 10 }}>
@@ -701,6 +701,7 @@ export function BookingScreen() {
             </View>
           </Bouncy>
         </View>
+      </GlassPanel>
       </Animated.View>
 
       {/* ─── Far-driver commitment modal ─── */}

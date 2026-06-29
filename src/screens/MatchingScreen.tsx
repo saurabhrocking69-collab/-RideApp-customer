@@ -3,7 +3,7 @@ import { Animated, Dimensions, Image, Platform, ScrollView, Text, TouchableOpaci
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
-import { Bouncy, DotBG, FadeIn, FloatingDots, PulseView, SlideUp, SuccessBurst, TripSteps } from '../components/ui';
+import { Bouncy, DotBG, FadeIn, FloatingDots, GlassPanel, PulseView, SlideUp, SuccessBurst, TripSteps } from '../components/ui';
 import { s, C } from '../styles';
 import { apiPost } from '../../api';
 
@@ -490,8 +490,8 @@ function CancelModal() {
 
   return (
     <View style={s.screen}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' }}>
-        <View style={{ backgroundColor: C.bgCard, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 34, borderTopWidth: 1, borderColor: C.glassBorder }}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.62)', justifyContent: 'flex-end' }}>
+        <GlassPanel intensity={24} style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 34 }}>
           <View style={s.sheetHandle} />
           <Text style={{ fontSize: 18, fontWeight: '800', color: C.text, marginBottom: 8 }}>Ride Cancel karein?</Text>
           <View style={{ backgroundColor: isFree ? C.greenGlass : C.yellowGlass, borderRadius: 12, padding: 12, marginBottom: waitSec > 0 ? 8 : 16, borderWidth: 1, borderColor: isFree ? C.greenBorder : C.yellowBorder }}>
@@ -532,7 +532,7 @@ function CancelModal() {
             onPress={() => setShowCancelModal(false)}>
             <Text style={{ color: C.text, fontWeight: '800', fontSize: 14 }}>Nahi, ride rakhni hai</Text>
           </TouchableOpacity>
-        </View>
+        </GlassPanel>
       </View>
     </View>
   );

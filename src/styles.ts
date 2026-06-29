@@ -300,15 +300,12 @@ export const s = StyleSheet.create({
   // ── Bottom nav ────────────────────────────────────────────────────────────
   nav: {
     flexDirection: 'row',
-    backgroundColor: C.bgCard,
-    borderTopWidth: 1,
-    borderTopColor: C.glassBorder,
     paddingBottom: Platform.OS === 'android' ? 44 : 16,
     paddingTop: 10,
     elevation: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    shadowColor: C.pink,
+    shadowOpacity: 0.10,
+    shadowRadius: 16,
   },
   navItem:   { flex: 1, alignItems: 'center', justifyContent: 'center' },
   navIcon:   { fontSize: 22, color: C.textDim },
