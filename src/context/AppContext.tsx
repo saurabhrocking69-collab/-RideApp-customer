@@ -70,6 +70,7 @@ interface AppContextType {
   showCancelModal: boolean; setShowCancelModal: (v: boolean) => void;
   cancelTimer: number; setCancelTimer: (t: number) => void;
   freeCancelsLeft: number; setFreeCancelsLeft: (n: number) => void;
+  cancelInfo: any; setCancelInfo: (v: any) => void;
   bookTime: number; setBookTime: (t: number) => void;
   searchElapsed: number; setSearchElapsed: (n: number) => void;
   surgeCount: number; setSurgeCount: (n: number) => void;
@@ -370,6 +371,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelTimer, setCancelTimer] = useState(60);
   const [freeCancelsLeft, setFreeCancelsLeft] = useState(3);
+  const [cancelInfo, setCancelInfo] = useState<any>(null);
   const [bookTime, setBookTime] = useState(0);
   const [searchElapsed, setSearchElapsed] = useState(0);
   const [surgeCount, setSurgeCount] = useState(0);
@@ -586,6 +588,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const iv = setInterval(() => fetchAppConfig(), 5 * 60 * 1000);
     return () => clearInterval(iv);
   }, [phone]);
+
+  // Live cancel fee polling — every 10s when waiting for driver
+  useEffect(() => {
+    const rideId = rideData?.ride_id;
+    if (!rideId || !['matching', 'inride'].includes(screen)) { setCancelInfo(null); return; }
+    const poll = async () => {
+      try {
+        const r = await fetch(`${API}/api/rides/cancel-info/${rideId}`);
+        const d = await r.json();
+        if (d.fee !== undefined) setCancelInfo(d);
+      } catch (_e) {}
+    };
+    poll();
+    const iv = setInterval(poll, 10000);
+    return () => clearInterval(iv);
+  }, [rideData?.ride_id, screen]);
 
   // Resend timer
   useEffect(() => {
@@ -1463,7 +1481,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     switchingVehicle, setSwitchingVehicle, driverLoc, setDriverLoc,
     driverEta, setDriverEta, driverDist, setDriverDist,
     showCancelModal, setShowCancelModal, cancelTimer, setCancelTimer,
-    freeCancelsLeft, setFreeCancelsLeft, bookTime, setBookTime,
+    freeCancelsLeft, setFreeCancelsLeft, cancelInfo, setCancelInfo, bookTime, setBookTime,
     searchElapsed, setSearchElapsed, surgeCount, setSurgeCount,
     surgeFare, setSurgeFare, surging, setSurging, surgeBarAnim, surgeBarAnimRef,
     chatMsgs, setChatMsgs, chatInput, setChatInput, unreadChat, setUnreadChat, lastChatCount, chatToast, setChatToast,

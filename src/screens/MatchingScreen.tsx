@@ -20,6 +20,7 @@ export function MatchingScreen() {
     driverEta, driverDist,
     cancelTimer,
     freeCancelsLeft,
+    cancelInfo,
     unreadChat, setUnreadChat,
     chatToast, setChatToast,
     showCancelModal, setShowCancelModal,
@@ -135,7 +136,14 @@ export function MatchingScreen() {
               )}
               {sosActive && <View style={[s.infoBox, { backgroundColor: C.redGlass, borderColor: C.redBorder }]}><Text style={{ fontSize: 13, color: C.red, fontWeight: '800' }}>🆘 Alert bheja! Police: 100 · Ambulance: 108</Text></View>}
               <TouchableOpacity style={{ backgroundColor: C.pinkGlass, borderWidth: 1.5, borderColor: C.pinkBorder, borderRadius: 14, padding: 14, alignItems: 'center', marginBottom: 10 }} onPress={() => setShowCancelModal(true)}>
-                <Text style={{ color: C.pink, fontWeight: '800', fontSize: 14 }}>✕ Ride Cancel karein {cancelTimer > 0 ? '(Free)' : '(₹15)'}</Text>
+                <Text style={{ color: C.pink, fontWeight: '800', fontSize: 14 }}>
+                  ✕ Ride Cancel karein {cancelInfo ? (cancelInfo.is_free ? '(Free)' : `(₹${cancelInfo.fee})`) : cancelTimer > 0 ? '(Free)' : '(₹10)'}
+                </Text>
+                {cancelInfo?.driver_wait_sec > 0 && (
+                  <Text style={{ color: C.pink, fontSize: 11, marginTop: 3, opacity: 0.8 }}>
+                    Driver {Math.floor(cancelInfo.driver_wait_sec / 60)}m {cancelInfo.driver_wait_sec % 60}s se wait kar raha
+                  </Text>
+                )}
               </TouchableOpacity>
               <View style={s.fareCard}>
                 {[['Distance',rideData.distance],['Total Fare',rideData.fare]].map(([lbl,val]: any,i: number) => (
@@ -297,7 +305,9 @@ export function MatchingScreen() {
 
               <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 20 }}>
                 <Bouncy onPress={() => setShowCancelModal(true)} style={{ flex: 1, backgroundColor: C.pinkGlass, borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: C.pinkBorder }}>
-                  <Text style={{ color: C.pink, fontWeight: '800', fontSize: 14 }}>✕ Cancel {cancelTimer > 0 ? '(Free)' : '(₹10)'}</Text>
+                  <Text style={{ color: C.pink, fontWeight: '800', fontSize: 14 }}>
+                    ✕ Cancel {cancelInfo ? (cancelInfo.is_free ? '(Free)' : `(₹${cancelInfo.fee})`) : cancelTimer > 0 ? '(Free)' : '(₹10)'}
+                  </Text>
                 </Bouncy>
                 <Bouncy onPress={() => { setRideData(null); bookRide(); }} style={{ flex: 1, backgroundColor: C.glass, borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: C.glassBorder }}>
                   <Text style={{ color: C.text, fontWeight: '800', fontSize: 14 }}>🔄 Retry</Text>
@@ -462,6 +472,7 @@ function CancelModal() {
   const {
     phone,
     cancelTimer,
+    cancelInfo,
     rideData, setRideData,
     setShowCancelModal, setScreen,
     setPickup, setDrop, setPickupCoords, setDropCoords, setEta,
@@ -471,17 +482,34 @@ function CancelModal() {
   const { useRideStore } = require('../../store');
   const ride = useRideStore();
 
+  const isFree = cancelInfo ? cancelInfo.is_free : cancelTimer > 0;
+  const fee = cancelInfo?.fee ?? (cancelTimer > 0 ? 0 : 10);
+  const waitSec = cancelInfo?.driver_wait_sec ?? 0;
+  const waitMin = Math.floor(waitSec / 60);
+  const waitSecRem = waitSec % 60;
+
   return (
     <View style={s.screen}>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' }}>
         <View style={{ backgroundColor: C.bgCard, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 34, borderTopWidth: 1, borderColor: C.glassBorder }}>
           <View style={s.sheetHandle} />
           <Text style={{ fontSize: 18, fontWeight: '800', color: C.text, marginBottom: 8 }}>Ride Cancel karein?</Text>
-          <View style={{ backgroundColor: cancelTimer > 0 ? C.greenGlass : C.yellowGlass, borderRadius: 12, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: cancelTimer > 0 ? C.greenBorder : C.yellowBorder }}>
-            <Text style={{ fontSize: 13, color: cancelTimer > 0 ? C.green : C.yellow, fontWeight: '700' }}>
-              {cancelTimer > 0 ? `✅ Abhi cancel FREE hai (${cancelTimer}s bache)` : '⚠️ Cancel fee ₹10 lagega'}
+          <View style={{ backgroundColor: isFree ? C.greenGlass : C.yellowGlass, borderRadius: 12, padding: 12, marginBottom: waitSec > 0 ? 8 : 16, borderWidth: 1, borderColor: isFree ? C.greenBorder : C.yellowBorder }}>
+            <Text style={{ fontSize: 13, color: isFree ? C.green : C.yellow, fontWeight: '700' }}>
+              {isFree
+                ? `✅ Abhi cancel FREE hai${cancelInfo ? ` (${cancelInfo.sec_since_book} sec hua)` : ` (${cancelTimer}s bache)`}`
+                : `⚠️ Cancel fee ₹${fee} lagega`}
             </Text>
           </View>
+          {waitSec > 0 && (
+            <View style={{ backgroundColor: 'rgba(239,68,68,0.08)', borderRadius: 10, padding: 10, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(239,68,68,0.25)', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={{ fontSize: 18 }}>⏱️</Text>
+              <View>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: '#DC2626' }}>Driver {waitMin}m {waitSecRem}s se wait kar raha hai</Text>
+                {!isFree && <Text style={{ fontSize: 11, color: '#9B1C1C', marginTop: 2 }}>Jitna zyada wait, utna zyada fee barhta hai</Text>}
+              </View>
+            </View>
+          )}
           <Text style={{ fontSize: 14, fontWeight: '700', color: C.textMuted, marginBottom: 10 }}>Cancel ka reason?</Text>
           {['Galti se book ho gaya', 'Bahut wait ho raha', 'Plan change ho gaya', 'Driver door hai', 'Koi aur reason'].map((reason, i) => (
             <TouchableOpacity key={i} style={{ backgroundColor: C.glass, borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: C.glassBorder }}
