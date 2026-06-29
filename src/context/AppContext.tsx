@@ -46,6 +46,7 @@ interface AppContextType {
   pickupSugg: any[]; setPickupSugg: (s: any[]) => void;
   dropSugg: any[]; setDropSugg: (s: any[]) => void;
   dropHistory: { text: string; coords: { lat: number; lng: number } | null }[];
+  appConfig: any;
   fareEstimates: any; setFareEstimates: (e: any) => void;
   fareLoading: boolean;
   eta: string; setEta: (e: string) => void;
@@ -334,6 +335,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [pickupSugg, setPickupSugg] = useState<any[]>([]);
   const [dropSugg, setDropSugg] = useState<any[]>([]);
   const [dropHistory, setDropHistory] = useState<{ text: string; coords: { lat: number; lng: number } | null }[]>([]);
+  const [appConfig, setAppConfig] = useState<any>({});
   const [fareEstimates, setFareEstimates] = useState<any>({});
   const [fareLoading, setFareLoading] = useState(false);
   const [eta, setEta] = useState('');
@@ -524,6 +526,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           } else {
             setScreen('home');
           }
+          fetchAppConfig();
           loadHistory(savedPhone); loadWallet(savedPhone);
           loadOffers(); loadHourlyPackages();
           connectSocket(savedPhone); registerFCM(savedPhone);
@@ -568,12 +571,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!phone) return;
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
+        fetchAppConfig();
         loadWallet(phone); loadHistory(phone);
         registerFCM(phone);
         if (socketRef.current && !socketRef.current.connected) socketRef.current.connect();
       }
     });
     return () => sub.remove();
+  }, [phone]);
+
+  // App config refresh every 5 minutes
+  useEffect(() => {
+    if (!phone) return;
+    const iv = setInterval(() => fetchAppConfig(), 5 * 60 * 1000);
+    return () => clearInterval(iv);
   }, [phone]);
 
   // Resend timer
@@ -996,6 +1007,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         } else {
           setUserName(serverName || 'Rider');
           await AsyncStorage.setItem('userName', serverName || 'Rider');
+          fetchAppConfig();
           setScreen('home'); setResult(''); loadHistory(phone); loadWallet(phone);
           registerFCM(phone); loadOffers(); loadHourlyPackages(); connectSocket(phone);
         }
@@ -1017,9 +1029,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem('onboardingCompleted', 'true');
     if (gender) await AsyncStorage.setItem('userGender', gender);
     setUserName(finalName); setResult('');
+    fetchAppConfig();
     setScreen('home'); loadHistory(phone); loadWallet(phone); registerFCM(phone);
     loadOffers(); loadHourlyPackages(); connectSocket(phone);
     setLoading(false);
+  };
+
+  const fetchAppConfig = async () => {
+    try {
+      const r = await fetch(`${API}/api/app/config`);
+      const d = await r.json();
+      if (d.fares) {
+        setAppConfig(d);
+        AsyncStorage.setItem('appConfig', JSON.stringify(d)).catch(() => {});
+      }
+    } catch (_e) {
+      try {
+        const cached = await AsyncStorage.getItem('appConfig');
+        if (cached) setAppConfig(JSON.parse(cached));
+      } catch (_e2) {}
+    }
   };
 
   const registerFCM = async (userPhone: string) => {
@@ -1424,6 +1453,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     onboardFade, onboardSlide, loginHeroAnim, loginCardAnim,
     pickup, setPickup, drop, setDrop, pickupCoords, setPickupCoords, dropCoords, setDropCoords,
     rideType, setRideType, pickupSugg, setPickupSugg, dropSugg, setDropSugg, dropHistory,
+    appConfig,
     fareEstimates, setFareEstimates, fareLoading, eta, setEta, userCoords, setUserCoords,
     showPromoInput, setShowPromoInput, instantApplied, setInstantApplied, lastFetchKey,
     promoCode, setPromoCode, promoDiscount, setPromoDiscount,

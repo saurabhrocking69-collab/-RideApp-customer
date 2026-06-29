@@ -17,6 +17,7 @@ export function BookingScreen() {
     pickupSugg, setPickupSugg, dropSugg, setDropSugg,
     eta, setEta,
     rideType, setRideType,
+    appConfig,
     fareEstimates, setFareEstimates, fareLoading,
     promoDiscount, setPromoDiscount,
     promoCode, setPromoCode,
@@ -31,7 +32,7 @@ export function BookingScreen() {
   const selRide   = RIDES.find(r => r.id === rideType);
   const _est      = fareEstimates[rideType];
   const rawFare   = (_est?.fare ?? _est) || 0;
-  const estBase   = _est?.base_fare ?? selRide?.base ?? 0;
+  const estBase   = _est?.base_fare ?? appConfig?.fares?.[rideType]?.base_fare ?? selRide?.base ?? 0;
   const discount  = promoDiscount;
   const finalFare = Math.max(0, rawFare - discount);
   const hasFare   = rawFare > 0 && !fareLoading;
@@ -381,7 +382,8 @@ export function BookingScreen() {
             {RIDES.map((r: any) => {
               const isSel = rideType === r.id;
               const isLux = r.id === 'luxury';
-              const fareText = fareLoading ? '...' : fareEstimates[r.id] ? `₹${fareEstimates[r.id].fare ?? fareEstimates[r.id]}` : `₹${r.base}+`;
+              const cfgBase = appConfig?.fares?.[r.id]?.base_fare ?? r.base;
+              const fareText = fareLoading ? '...' : fareEstimates[r.id] ? `₹${fareEstimates[r.id].fare ?? fareEstimates[r.id]}` : `₹${cfgBase}+`;
               return (
                 <TouchableOpacity
                   key={r.id}
