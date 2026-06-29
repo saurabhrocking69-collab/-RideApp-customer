@@ -41,11 +41,7 @@ jobs:
       - name: Force legacy native-lib packaging
         run: echo "expo.useLegacyPackaging=true" >> android/gradle.properties
 
-      - name: Decode keystore
-        run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > sppero-release.keystore
-
-      - name: Build Release APK (unsigned)
+      - name: Build Release APK
         run: |
           cd android
           chmod +x gradlew
@@ -53,29 +49,30 @@ jobs:
         env:
           JAVA_OPTS: "-Xmx4g"
 
-      - name: Sign APK with keystore
+      - name: Sign APK with committed keystore
         run: |
-          # Find apksigner from installed build-tools
           BUILD_TOOLS=$(ls $ANDROID_SDK_ROOT/build-tools/ | sort -V | tail -1)
           APKSIGNER=$ANDROID_SDK_ROOT/build-tools/$BUILD_TOOLS/apksigner
+
           UNSIGNED=android/app/build/outputs/apk/release/app-release-unsigned.apk
           SIGNED=android/app/build/outputs/apk/release/app-release.apk
 
-          # Expo sometimes names it app-release.apk even when unsigned
+          # Expo may output as app-release.apk (debug-signed) instead of unsigned
           if [ ! -f "$UNSIGNED" ] && [ -f "$SIGNED" ]; then
             cp "$SIGNED" "$UNSIGNED"
           fi
 
+          # Sign with the committed debug.keystore — same cert every build
           $APKSIGNER sign \
-            --ks sppero-release.keystore \
-            --ks-pass pass:${{ secrets.KEYSTORE_PASSWORD }} \
-            --key-pass pass:${{ secrets.KEY_PASSWORD }} \
-            --ks-key-alias ${{ secrets.KEY_ALIAS }} \
+            --ks .github/debug.keystore \
+            --ks-pass pass:android \
+            --key-pass pass:android \
+            --ks-key-alias androiddebugkey \
             --out "$SIGNED" \
             "$UNSIGNED"
 
-          echo "✅ APK signed successfully"
-          $APKSIGNER verify "$SIGNED" && echo "✅ Signature verified"
+          echo "APK size: $(du -sh $SIGNED)"
+          $APKSIGNER verify --verbose "$SIGNED" | head -6
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
