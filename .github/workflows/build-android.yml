@@ -41,38 +41,25 @@ jobs:
       - name: Force legacy native-lib packaging
         run: echo "expo.useLegacyPackaging=true" >> android/gradle.properties
 
-      - name: Build Release APK
+      - name: Build signed Release APK
         run: |
+          KEYSTORE="$(realpath .github/debug.keystore)"
           cd android
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleRelease --no-daemon \
+            -Pandroid.injected.signing.store.file="$KEYSTORE" \
+            -Pandroid.injected.signing.store.password=android \
+            -Pandroid.injected.signing.key.alias=androiddebugkey \
+            -Pandroid.injected.signing.key.password=android
         env:
           JAVA_OPTS: "-Xmx4g"
 
-      - name: Sign APK with committed keystore
+      - name: Verify APK is signed + show size
         run: |
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          echo "APK size: $(du -sh $APK)"
           BUILD_TOOLS=$(ls $ANDROID_SDK_ROOT/build-tools/ | sort -V | tail -1)
-          APKSIGNER=$ANDROID_SDK_ROOT/build-tools/$BUILD_TOOLS/apksigner
-
-          UNSIGNED=android/app/build/outputs/apk/release/app-release-unsigned.apk
-          SIGNED=android/app/build/outputs/apk/release/app-release.apk
-
-          # Expo may output as app-release.apk (debug-signed) instead of unsigned
-          if [ ! -f "$UNSIGNED" ] && [ -f "$SIGNED" ]; then
-            cp "$SIGNED" "$UNSIGNED"
-          fi
-
-          # Sign with the committed debug.keystore — same cert every build
-          $APKSIGNER sign \
-            --ks .github/debug.keystore \
-            --ks-pass pass:android \
-            --key-pass pass:android \
-            --ks-key-alias androiddebugkey \
-            --out "$SIGNED" \
-            "$UNSIGNED"
-
-          echo "APK size: $(du -sh $SIGNED)"
-          $APKSIGNER verify --verbose "$SIGNED" | head -6
+          $ANDROID_SDK_ROOT/build-tools/$BUILD_TOOLS/apksigner verify --verbose $APK | head -10
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
