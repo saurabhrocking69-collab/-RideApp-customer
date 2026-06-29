@@ -36,6 +36,56 @@ jobs:
         env:
           EXPO_NO_TELEMETRY: 1
 
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/sppero-release.keystore
+
+      - name: Configure signing in gradle.properties
+        run: |
+          cat >> android/gradle.properties << 'EOF'
+          MYAPP_RELEASE_STORE_FILE=sppero-release.keystore
+          MYAPP_RELEASE_KEY_ALIAS=${{ secrets.KEY_ALIAS }}
+          MYAPP_RELEASE_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}
+          MYAPP_RELEASE_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}
+          EOF
+
+      - name: Inject signingConfig into build.gradle
+        run: |
+          python3 - << 'PYEOF'
+          import re
+
+          with open('android/app/build.gradle', 'r') as f:
+              content = f.read()
+
+          signing_block = """
+          signingConfigs {
+              release {
+                  storeFile file(MYAPP_RELEASE_STORE_FILE)
+                  storePassword MYAPP_RELEASE_STORE_PASSWORD
+                  keyAlias MYAPP_RELEASE_KEY_ALIAS
+                  keyPassword MYAPP_RELEASE_KEY_PASSWORD
+              }
+          }
+          """
+
+          # Insert signingConfigs before buildTypes if not already present
+          if 'signingConfigs' not in content:
+              content = content.replace('buildTypes {', signing_block + '\n    buildTypes {')
+
+          # Add signingConfig to release buildType
+          content = re.sub(
+              r'(release\s*\{)',
+              r'\1\n            signingConfig signingConfigs.release',
+              content,
+              count=1
+          )
+
+          with open('android/app/build.gradle', 'w') as f:
+              f.write(content)
+
+          print("signingConfig injected successfully")
+          PYEOF
+
       - name: Force legacy native-lib packaging (extract .so files; fixes crashes on many devices)
         run: echo "expo.useLegacyPackaging=true" >> android/gradle.properties
 
@@ -47,9 +97,23 @@ jobs:
         env:
           JAVA_OPTS: "-Xmx4g"
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: sppero-release
           path: android/app/build/outputs/apk/release/app-release.apk
-          retention-days: 7
+          retention-days: 30
+
+      - name: Create GitHub Release with APK
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: "Sppero APK - Build ${{ github.run_number }}"
+          body: |
+            Auto-built from commit ${{ github.sha }}
+            Download the APK below and install on Android.
+          files: android/app/build/outputs/apk/release/app-release.apk
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
