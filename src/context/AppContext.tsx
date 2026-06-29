@@ -1114,7 +1114,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       try {
         const res = await fetch(`${API}/api/fare-estimate`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' }, body: JSON.stringify({ ride_type: r.id, distance: km }) });
         const d = await res.json();
-        if (d.fare) est[r.id] = d.fare;
+        if (d.fare) est[r.id] = { fare: d.fare, base_fare: d.base_fare, per_km_rate: d.per_km_rate };
       } catch (_e) {}
     }));
     setFareEstimates(est); setFareLoading(false);

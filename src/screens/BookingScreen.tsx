@@ -29,7 +29,9 @@ export function BookingScreen() {
   } = useApp();
 
   const selRide   = RIDES.find(r => r.id === rideType);
-  const rawFare   = fareEstimates[rideType] || 0;
+  const _est      = fareEstimates[rideType];
+  const rawFare   = (_est?.fare ?? _est) || 0;
+  const estBase   = _est?.base_fare ?? selRide?.base ?? 0;
   const discount  = promoDiscount;
   const finalFare = Math.max(0, rawFare - discount);
   const hasFare   = rawFare > 0 && !fareLoading;
@@ -379,7 +381,7 @@ export function BookingScreen() {
             {RIDES.map((r: any) => {
               const isSel = rideType === r.id;
               const isLux = r.id === 'luxury';
-              const fareText = fareLoading ? '...' : fareEstimates[r.id] ? `₹${fareEstimates[r.id]}` : `₹${r.base}+`;
+              const fareText = fareLoading ? '...' : fareEstimates[r.id] ? `₹${fareEstimates[r.id].fare ?? fareEstimates[r.id]}` : `₹${r.base}+`;
               return (
                 <TouchableOpacity
                   key={r.id}
@@ -576,11 +578,11 @@ export function BookingScreen() {
               <View style={{ paddingHorizontal: 16, paddingVertical: 12, gap: 8 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                   <Text style={{ fontSize: 13, color: C.textMuted }}>Base fare</Text>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: C.text }}>₹{selRide.base}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: C.text }}>₹{estBase}</Text>
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                   <Text style={{ fontSize: 13, color: C.textMuted }}>Distance charge</Text>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: C.text }}>₹{rawFare - selRide.base > 0 ? rawFare - selRide.base : '—'}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: C.text }}>₹{rawFare - estBase > 0 ? rawFare - estBase : '—'}</Text>
                 </View>
                 {discount > 0 && (
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
