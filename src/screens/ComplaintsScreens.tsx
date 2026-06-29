@@ -467,12 +467,22 @@ export function ComplaintDetailScreen() {
 
   if (!cmpDetail) return null;
   const c = cmpDetail.complaint;
+  if (!c) return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+      <Text style={{ fontSize: 32, marginBottom: 12 }}>⚠️</Text>
+      <Text style={{ fontSize: 16, fontWeight: '700', color: '#333', marginBottom: 8 }}>Complaint load nahi hui</Text>
+      <Text style={{ fontSize: 13, color: '#666', textAlign: 'center', marginBottom: 20 }}>{cmpDetail?.error || 'Server se data nahi mila'}</Text>
+      <TouchableOpacity onPress={() => setScreen('complaints')} style={{ backgroundColor: '#e94560', borderRadius: 10, paddingVertical: 12, paddingHorizontal: 24 }}>
+        <Text style={{ color: '#fff', fontWeight: '800' }}>← Wapas Jao</Text>
+      </TouchableOpacity>
+    </View>
+  );
   const msgs: any[] = cmpDetail.messages || [];
   const evidence: any[] = cmpDetail.evidence || [];
   const timeline: any[] = cmpDetail.timeline || [];
   const isClosed = ['resolved', 'closed'].includes(c?.status);
-  const sm = STATUS_META[c.status] || { color: '#999', label: c.status, icon: '❓' };
-  const isAuto = c.source === 'system_auto';
+  const sm = STATUS_META[c?.status] || { color: '#999', label: c?.status, icon: '❓' };
+  const isAuto = c?.source === 'system_auto';
 
   const [uploading, setUploading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
