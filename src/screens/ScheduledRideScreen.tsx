@@ -12,12 +12,20 @@ import { MAPS_KEY, RIDES } from '../constants';
 import { externalGet } from '../../api';
 
 const VEHICLE_OPTIONS = [
-  { id: 'bike',         emoji: '🏍️', label: 'Bike',     price: '₹15+' },
-  { id: 'auto',         emoji: '🛺', label: 'Auto',     price: '₹25+' },
-  { id: 'eriksha',      emoji: '🛵', label: 'E-Riksha', price: '₹20+' },
-  { id: 'car',          emoji: '🚕', label: 'Car',      price: '₹40+' },
-  { id: 'green_bike',   emoji: '⚡', label: 'E-Bike',   price: '₹12+' },
+  { id: 'bike',         emoji: '🏍️', label: 'Bike',     price: '₹15+', base: 15, perKm: 8  },
+  { id: 'auto',         emoji: '🛺', label: 'Auto',     price: '₹25+', base: 25, perKm: 12 },
+  { id: 'eriksha',      emoji: '🛵', label: 'E-Riksha', price: '₹20+', base: 20, perKm: 10 },
+  { id: 'car',          emoji: '🚕', label: 'Car',      price: '₹40+', base: 40, perKm: 15 },
+  { id: 'green_bike',   emoji: '⚡', label: 'E-Bike',   price: '₹12+', base: 12, perKm: 6  },
 ];
+
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
 
 function TimePicker({ value, onChange }: { value: Date; onChange: (d: Date) => void }) {
   const now = new Date();
@@ -38,12 +46,19 @@ function TimePicker({ value, onChange }: { value: Date; onChange: (d: Date) => v
   const hours = [1,2,3,4,5,6,7,8,9,10,11,12];
   const mins  = [0, 15, 30, 45];
 
+  const [timeError, setTimeError] = useState('');
+
   useEffect(() => {
     const d = new Date(dayOptions[selDay]);
     let h = selHour % 12;
     if (selAmPm === 'PM') h += 12;
     d.setHours(h, selMin, 0, 0);
-    if (d > minDate) onChange(d);
+    if (d > minDate) {
+      setTimeError('');
+      onChange(d);
+    } else {
+      setTimeError('⚠️ Kam se kam 30 min aage ka time chuno');
+    }
   }, [selDay, selHour, selMin, selAmPm]);
 
   return (
@@ -109,6 +124,11 @@ function TimePicker({ value, onChange }: { value: Date; onChange: (d: Date) => v
           ))}
         </View>
       </View>
+      {!!timeError && (
+        <View style={{ backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: 10, padding: 10, marginTop: 10, borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)' }}>
+          <Text style={{ color: '#EF4444', fontSize: 12, fontWeight: '700', textAlign: 'center' }}>{timeError}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -136,6 +156,18 @@ export function ScheduledRideScreen() {
   const [msg, setMsg]             = useState('');
   const [scheduled, setScheduled] = useState<any[]>([]);
   const [listLoading, setListLoading] = useState(false);
+  const [fareEst, setFareEst]     = useState<number | null>(null);
+
+  // Recalculate fare estimate whenever coords or vehicle change
+  useEffect(() => {
+    if (pickupCoords && dropCoords) {
+      const distKm = haversineKm(pickupCoords.lat, pickupCoords.lng, dropCoords.lat, dropCoords.lng);
+      const v = VEHICLE_OPTIONS.find(o => o.id === vehicle);
+      if (v) setFareEst(Math.round(v.base + distKm * v.perKm));
+    } else {
+      setFareEst(null);
+    }
+  }, [pickupCoords, dropCoords, vehicle]);
 
   useEffect(() => { loadScheduled(); }, []);
 
@@ -182,6 +214,7 @@ export function ScheduledRideScreen() {
         drop_lat: dropCoords?.lat, drop_lng: dropCoords?.lng,
         vehicle_type: vehicle,
         scheduled_at: schedTime.toISOString(),
+        fare_estimate: fareEst || 0,
         notes: notes.trim() || null,
       });
       if (d.success) {
@@ -199,12 +232,13 @@ export function ScheduledRideScreen() {
       { text: 'Nahi', style: 'cancel' },
       { text: 'Haan, Cancel Karo', style: 'destructive', onPress: async () => {
         try {
-          const d = await apiPost(`/api/rides/scheduled/${id}`, { phone, _method: 'DELETE' });
-          // fallback: use direct delete via apiPost wrapper
-          const r = await fetch(`https://rideapp-backend-production-5e1c.up.railway.app/api/rides/scheduled/${id}`, {
-            method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }),
+          const { API } = await import('../../api');
+          const res = await fetch(`${API}/api/rides/scheduled/${id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone }),
           });
-          const data = await r.json();
+          const data = await res.json();
           if (data.success) loadScheduled();
         } catch (_e) {}
       }},
@@ -283,6 +317,7 @@ export function ScheduledRideScreen() {
                           <Text style={{ fontSize: 13, fontWeight: '900', color: C.pink }}>{fmt(r.scheduled_at)}</Text>
                           <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>
                             {(r.vehicle_type || '').replace('_', ' ').toUpperCase()}
+                            {r.fare_estimate > 0 ? ` · ~₹${r.fare_estimate}` : ''}
                           </Text>
                         </View>
                         <View style={{ backgroundColor: C.greenGlass, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: C.greenBorder }}>
@@ -404,6 +439,17 @@ export function ScheduledRideScreen() {
                 multiline
               />
             </View>
+
+            {/* Fare Estimate */}
+            {fareEst !== null && (
+              <View style={{ backgroundColor: C.greenGlass, borderRadius: 16, padding: 14, marginBottom: 14, borderWidth: 1.5, borderColor: C.greenBorder, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: C.green, textTransform: 'uppercase', letterSpacing: 0.8 }}>Estimated Fare</Text>
+                  <Text style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>Final fare may vary slightly</Text>
+                </View>
+                <Text style={{ fontSize: 28, fontWeight: '900', color: C.green }}>₹{fareEst}</Text>
+              </View>
+            )}
 
             {!!msg && (
               <View style={{ borderRadius: 12, padding: 12, marginBottom: 14,
