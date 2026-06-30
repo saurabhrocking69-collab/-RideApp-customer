@@ -1245,18 +1245,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // ── Payment ──────────────────────────────────────────────────────────────
   const handlePayment = async () => {
+    if (!RazorpayCheckout) { Alert.alert('Payment Error', 'Payment module load nahi hua. App restart karein.'); return; }
     try {
       const fareNum = parseInt(String(rideData?.fare).replace(/[^0-9]/g, '')) || 0;
-      const orderRes = await fetch(`${API}/api/payment/create-order`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: fareNum, ride_id: rideData.ride_id }) });
-      const order = await orderRes.json();
-      if (!order.success) { setResult('❌ Order error'); return; }
+      const order = await apiPost('/api/payment/create-order', { amount: fareNum, ride_id: rideData.ride_id });
+      if (!order.success) { setResult('❌ ' + (order.error || 'Order create nahi hua')); return; }
       RazorpayCheckout.open({ description: 'Sppero Trip', currency: 'INR', key: order.key_id, amount: order.amount, order_id: order.order_id, name: 'Sppero', prefill: { contact: phone, name: userName || 'User' }, theme: { color: '#e94560' } })
         .then(async (data: any) => {
-          await fetch(`${API}/api/payment/verify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, razorpay_payment_id: data.razorpay_payment_id, razorpay_order_id: data.razorpay_order_id, razorpay_signature: data.razorpay_signature, amount: fareNum, method: 'online' }) });
-          await fetch(`${API}/api/rides/payment-complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, payment_method: 'online', phone: phone || '9999999999' }) });
+          apiPost('/api/payment/verify', { ride_id: rideData.ride_id, razorpay_payment_id: data.razorpay_payment_id, razorpay_order_id: data.razorpay_order_id, razorpay_signature: data.razorpay_signature, amount: fareNum, method: 'online' }).catch(() => {});
+          apiPost('/api/rides/payment-complete', { ride_id: rideData.ride_id, payment_method: 'online', phone: phone || '9999999999' }).catch(() => {});
           setPaymentDone(true); setScreen('postride'); createScratchCard();
           AsyncStorage.removeItem('activeStdRideId').catch(() => {});
-        }).catch((_e: any) => setResult('❌ Payment cancel ya fail hua'));
+        }).catch((e: any) => {
+          if (e?.code === 'PAYMENT_CANCELLED') setResult('❌ Payment cancel kiya');
+          else setResult('❌ ' + (e?.description || e?.message || 'Payment fail hua'));
+        });
     } catch (e: any) { setResult('❌ ' + (e?.message || 'Payment error')); }
   };
 
@@ -1269,8 +1272,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       payingRef.current = false; return;
     }
     try {
-      const res = await fetch(`${API}/api/wallet/pay`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: phone || '9999999999', amount: fareNum, ride_id: rideData.ride_id }) });
-      const data = await res.json();
+      const data = await apiPost('/api/wallet/pay', { phone: phone || '9999999999', amount: fareNum, ride_id: rideData.ride_id });
       if (data.success) {
         setWalletBalance(data.balance);
         // Advance screen immediately — never block the customer on payment-complete network call
@@ -1282,29 +1284,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         (async () => {
           for (let attempt = 0; attempt < 5; attempt++) {
             try {
-              const pcRes = await fetch(`${API}/api/rides/payment-complete`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ride_id: rideId, payment_method: 'wallet', phone: ph }),
-              });
-              const pcData = await pcRes.json();
+              const pcData = await apiPost('/api/rides/payment-complete', { ride_id: rideId, payment_method: 'wallet', phone: ph });
               if (pcData.cashbacks?.length) setCashbackEarned(pcData.cashbacks);
-              return; // Success — stop retrying
+              return;
             } catch (_e) {
               if (attempt < 4) await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
             }
           }
         })();
       } else {
-        setResult('❌ ' + (data.message || 'Payment fail'));
+        setResult('❌ ' + (data.message || 'Wallet payment fail'));
       }
-    } catch (_e) { setResult('❌ Server error'); }
+    } catch (_e) { setResult('❌ Server se connect nahi hua'); }
     payingRef.current = false;
   };
 
   const createScratchCard = async () => {
     try {
-      const res = await fetch(`${API}/api/scratch-card/create`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: phone || '9999999999', ride_id: rideData?.ride_id }) });
-      const data = await res.json();
+      const data = await apiPost('/api/scratch-card/create', { phone: phone || '9999999999', ride_id: rideData?.ride_id });
       if (data.success) { setScratchCard(data); setScratched(false); }
     } catch (_e) {}
   };
@@ -1312,22 +1309,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const scratchNow = async () => {
     if (!scratchCard || scratched) return;
     scratchAnim.stopAnimation(); setScratched(true);
-    try { await fetch(`${API}/api/scratch-card/scratch`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ card_id: scratchCard.card_id, phone: phone || '9999999999' }) }); loadWallet(phone); } catch (_e) {}
+    try {
+      await apiPost('/api/scratch-card/scratch', { card_id: scratchCard.card_id, phone: phone || '9999999999' });
+      loadWallet(phone);
+    } catch (_e) {}
   };
 
   const openRazorpayTopup = async (amt: number) => {
     if (amt < 1) return;
     if (!RazorpayCheckout) { Alert.alert('Error', 'Payment module load nahi hua. App restart karein.'); return; }
     try {
-      const r = await fetch(`${API}/api/wallet/topup/order`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, amount: amt }) });
-      const d = await r.json();
+      const d = await apiPost('/api/wallet/topup/order', { phone, amount: amt });
       if (!d.success) { Alert.alert('Payment Error', d.error || 'Payment start nahi hua'); return; }
       RazorpayCheckout.open({ key: d.key_id, amount: d.amount, currency: d.currency || 'INR', order_id: d.order_id, name: 'Sppero', description: `Wallet Recharge ₹${amt}`, prefill: { contact: phone }, theme: { color: '#e94560' } })
         .then(async (payment: any) => {
-          const vr = await fetch(`${API}/api/wallet/topup/verify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, razorpay_order_id: payment.razorpay_order_id, razorpay_payment_id: payment.razorpay_payment_id, razorpay_signature: payment.razorpay_signature, amount: amt }) });
-          const vd = await vr.json();
-          if (vd.success) { setWalletBalance(vd.balance); await loadWalletDetail(phone); }
-          else { Alert.alert('Payment Error', vd.error || 'Wallet update nahi hua'); }
+          try {
+            const vd = await apiPost('/api/wallet/topup/verify', { phone, razorpay_order_id: payment.razorpay_order_id, razorpay_payment_id: payment.razorpay_payment_id, razorpay_signature: payment.razorpay_signature, amount: amt });
+            if (vd.success) { setWalletBalance(vd.balance); await loadWalletDetail(phone); Alert.alert('✅ Wallet Recharged!', `₹${amt} aapke wallet mein add ho gaya!`); }
+            else { Alert.alert('Payment Error', vd.error || 'Wallet update nahi hua — support se contact karo'); }
+          } catch (_e) { Alert.alert('Network Error', 'Payment hua lekin verify nahi hua. Thodi der mein balance refresh karein.'); }
         }).catch((e: any) => { if (e?.code !== 'PAYMENT_CANCELLED') Alert.alert('Payment Error', e?.description || e?.message || 'Payment fail'); });
     } catch (_e) { Alert.alert('Error', 'Server se connect nahi hua. Internet check karein.'); }
   };
@@ -1356,11 +1356,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (_e) {}
   };
   const loadWallet = async (ph: string) => {
-    try { const r = await fetch(`${API}/api/wallet/balance?phone=${ph}`); const d = await r.json(); setWalletBalance(d.balance || 0); } catch (_e) {}
+    try { const d = await apiGet(`/api/wallet/balance?phone=${ph}`); setWalletBalance(d.balance || 0); } catch (_e) {}
   };
   const loadWalletDetail = async (ph: string) => {
     try {
-      const r = await fetch(`${API}/api/wallet/customer/detail?phone=${ph}`); const d = await r.json();
+      const d = await apiGet(`/api/wallet/customer/detail?phone=${ph}`);
       setWalletBalance(d.balance || 0); setWalletTxns(d.transactions || []); setWalletStats(d.stats || {});
     } catch (_e) {}
   };

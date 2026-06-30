@@ -1,9 +1,10 @@
 import { Animated, Image, Linking, Platform, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { Bouncy, DotBG, ScreenIn } from '../components/ui';
 import { s, C } from '../styles';
-import { API } from '../constants';
+import { apiPost } from '../../api';
 
 export function PaymentScreen() {
   const {
@@ -19,6 +20,9 @@ export function PaymentScreen() {
     handlePayment, payWithWallet, createScratchCard,
   } = useApp();
 
+  const [cashConfirming, setCashConfirming] = useState(false);
+  const [upiConfirming, setUpiConfirming]   = useState(false);
+
   const driverUpiId = rideData?.driver?.upi_id || '';
   const fareNum = Math.round(parseFloat(String(rideData?.fare ?? '').replace(/[^0-9.]/g, '') || '0') || fareCount);
   const upiLink = driverUpiId
@@ -29,12 +33,12 @@ export function PaymentScreen() {
     : '';
 
   const confirmUpiQrPaid = async () => {
+    if (upiConfirming) return;
+    setUpiConfirming(true);
     try {
-      await fetch(`${API}/api/rides/payment-complete`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ride_id: rideData.ride_id, payment_method: 'upi_qr', phone: phone || '9999999999' }),
-      });
+      await apiPost('/api/rides/payment-complete', { ride_id: rideData.ride_id, payment_method: 'upi_qr', phone: phone || '9999999999' });
     } catch (_e) {}
+    setUpiConfirming(false);
     setShowUpiQr(false);
     setPaymentDone(true); setScreen('postride'); createScratchCard();
   };
@@ -43,12 +47,12 @@ export function PaymentScreen() {
   const cashback = Math.max(5, Math.min(50, Math.round(fareNum * 0.05)));
 
   const payWithCash = async () => {
+    if (cashConfirming) return;
+    setCashConfirming(true);
     try {
-      await fetch(`${API}/api/rides/payment-complete`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ride_id: rideData.ride_id, payment_method: 'cash', phone: phone || '9999999999' }),
-      });
+      await apiPost('/api/rides/payment-complete', { ride_id: rideData.ride_id, payment_method: 'cash', phone: phone || '9999999999' });
     } catch (_e) {}
+    setCashConfirming(false);
     setPaymentDone(true); setScreen('postride'); createScratchCard();
   };
 
@@ -114,9 +118,11 @@ export function PaymentScreen() {
       </ScrollView>
 
       <View style={{ padding: 16, paddingBottom: 32, gap: 10 }}>
-        <TouchableOpacity onPress={confirmUpiQrPaid}
-          style={{ backgroundColor: C.green, borderRadius: 18, padding: 18, alignItems: 'center', elevation: 8, shadowColor: C.green, shadowOpacity: 0.4, shadowRadius: 12 }}>
-          <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900' }}>✅  Maine Pay Kar Diya — ₹{fareNum}</Text>
+        <TouchableOpacity onPress={confirmUpiQrPaid} disabled={upiConfirming}
+          style={{ backgroundColor: upiConfirming ? C.glass : C.green, borderRadius: 18, padding: 18, alignItems: 'center', elevation: upiConfirming ? 0 : 8, shadowColor: C.green, shadowOpacity: 0.4, shadowRadius: 12, borderWidth: upiConfirming ? 1 : 0, borderColor: C.glassBorder }}>
+          <Text style={{ color: upiConfirming ? C.textMuted : '#fff', fontSize: 17, fontWeight: '900' }}>
+            {upiConfirming ? '⏳ Confirm ho raha hai...' : `✅  Maine Pay Kar Diya — ₹${fareNum}`}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => setShowUpiQr(false)} style={{ borderRadius: 12, padding: 12, alignItems: 'center' }}>
           <Text style={{ color: C.textMuted, fontSize: 14 }}>← Wapas Jao</Text>
@@ -242,14 +248,14 @@ export function PaymentScreen() {
           </Bouncy>
 
           {/* ── Cash ── */}
-          <Bouncy onPress={payWithCash}>
+          <Bouncy onPress={payWithCash} style={{ opacity: cashConfirming ? 0.6 : 1 }}>
             <View style={{ borderRadius: 20, padding: 18, flexDirection: 'row', alignItems: 'center', backgroundColor: C.glassMid, borderWidth: 1, borderColor: C.glassBorder }}>
               <View style={{ width: 54, height: 54, borderRadius: 18, backgroundColor: 'rgba(16,185,129,0.12)', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
                 <Text style={{ fontSize: 26 }}>💵</Text>
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: C.text, fontWeight: '900', fontSize: 16, marginBottom: 3 }}>Cash</Text>
-                <Text style={{ color: C.textMuted, fontSize: 12 }}>Driver ko haath mein ₹{fareNum} do</Text>
+                <Text style={{ color: C.textMuted, fontSize: 12 }}>{cashConfirming ? '⏳ Confirming...' : `Driver ko haath mein ₹${fareNum} do`}</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={C.textDim} />
             </View>

@@ -22,7 +22,7 @@ export function WalletScreen() {
     rewardsDash, loadRewardsDash,
   } = useApp();
 
-  useEffect(() => { loadRewardsDash(phone); }, []);
+  useEffect(() => { loadWalletDetail(phone); loadRewardsDash(phone); }, []);
 
   const filteredTxns = walletTxns.filter((t: any) => {
     if (walletTxnTab === 'all') return true;
