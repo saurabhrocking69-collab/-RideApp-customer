@@ -33,9 +33,9 @@
   }
     },
     "plugins": [
-
       ["expo-notifications", { "icon": "./assets/icon.png", "color": "#e94560" }],
-      ["expo-location", { "locationAlwaysAndWhenInUsePermission": "Ride tracking ke liye location chahiye" }]
+      ["expo-location", { "locationAlwaysAndWhenInUsePermission": "Ride tracking ke liye location chahiye" }],
+      "./plugins/withRazorpayProguard"
     ],
     "web": {
       "favicon": "./assets/favicon.png"
