@@ -6,7 +6,7 @@ import * as Location from 'expo-location';
 import * as Clipboard from 'expo-clipboard';
 import * as Notifications from 'expo-notifications';
 import { io, Socket } from 'socket.io-client';
-import { apiGet, apiPost } from '../../api';
+import { apiGet, apiPost, externalGet } from '../../api';
 import { useRideStore } from '../../store';
 import { API, MAPS_KEY, RIDES, DEFAULT_HOURLY_PACKAGES } from '../constants';
 import { Screen, Tab, Coords, HourlyStep, ExtendStep, WalletTxnTab } from '../types';
@@ -993,12 +993,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!phone || phone.length < 10) { setResult('❌ Sahi phone number likho'); return; }
     setLoading(true);
     try {
-      const res = await fetch(`${API}/api/auth/send-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
-      const data = await res.json();
-      if (data.error) { setResult('❌ ' + data.error); setLoading(false); return; }
+      const data = await apiPost('/api/auth/send-otp', { phone });
+      if (data._error || data.error) { setResult('❌ ' + (data.message || data.error || 'Server error')); return; }
       setOtpSent(data.otp || ''); setScreen('otp'); setResult('');
     } catch { setResult('❌ Server connect nahi hua'); }
-    setLoading(false);
+    finally { setLoading(false); }
   };
 
   const verifyOtp = async (otpOverride?: string) => {
@@ -1006,8 +1005,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!otpToUse) { setResult('❌ OTP likho'); return; }
     setLoading(true);
     try {
-      const res = await fetch(`${API}/api/auth/verify-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, otp: otpToUse, name: userName || 'Rider' }) });
-      const data = await res.json();
+      const data = await apiPost('/api/auth/verify-otp', { phone, otp: otpToUse, name: userName || 'Rider' });
+      if (data._error) { setResult('❌ ' + (data.message || 'Server connect nahi hua')); shakeOtp(); return; }
       if (data.token) {
         await AsyncStorage.setItem('userPhone', phone);
         await AsyncStorage.setItem('userToken', data.token);
@@ -1033,7 +1032,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setResult('❌ ' + (data.error || 'OTP galat hai')); shakeOtp();
       }
     } catch { setResult('❌ Server connect nahi hua'); }
-    setLoading(false);
+    finally { setLoading(false); }
   };
 
   const completeOnboarding = async () => {
@@ -1191,9 +1190,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!pickup || !drop) { setResult('❌ Pickup aur Drop likho!'); return; }
     setLoading(true); setPaymentDone(false);
     try {
-      const res = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(pickup)}&destinations=${encodeURIComponent(drop)}&key=${MAPS_KEY}&mode=driving&departure_time=now`);
-      const ddata = await res.json();
-      const el = ddata.rows?.[0]?.elements?.[0];
+      const ddata = await externalGet(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(pickup)}&destinations=${encodeURIComponent(drop)}&key=${MAPS_KEY}&mode=driving&departure_time=now`);
+      const el = ddata._error ? null : ddata.rows?.[0]?.elements?.[0];
       const distanceKm = el?.status === 'OK' ? el.distance.value / 1000 : 5;
       if (!dropCoords) await geocodePlace(drop, 'drop');
       const data = await apiPost('/api/rides/book', {
@@ -1201,9 +1199,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         pickup_lat: pickupCoords?.lat, pickup_lng: pickupCoords?.lng, drop_lat: dropCoords?.lat, drop_lng: dropCoords?.lng,
         discount: promoDiscount, promo_code: promoDiscount > 0 ? promoCode : null
       });
-      if (data._error) { setResult('❌ ' + data.message); setLoading(false); return; }
+      if (data._error) { setResult('❌ ' + data.message); return; }
       if (promoDiscount > 0 && data.ride_id) {
-        try { await fetch(`${API}/api/promo/apply`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: promoCode, phone, ride_id: data.ride_id, discount: promoDiscount }) }); } catch (_e) {}
+        try { await apiPost('/api/promo/apply', { code: promoCode, phone, ride_id: data.ride_id, discount: promoDiscount }); } catch (_e) {}
       }
       setRideData(data); setScreen('matching'); setResult(''); setAltSuggest(null);
       AsyncStorage.setItem('activeStdRideId', String(data.ride_id)).catch(() => {});
@@ -1217,9 +1215,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       joinRideSocket(data.ride_id);
       ride.setRide(data); ride.startPolling(phone || '9999999999');
       setBookTime(Date.now()); setCancelTimer(60); setSurgeCount(0); setSurgeFare(''); setSearchElapsed(0);
-      try { const cs = await fetch(`${API}/api/customer/cancel-status?phone=${phone || '9999999999'}`); const csd = await cs.json(); setFreeCancelsLeft(csd.free_cancels_left ?? 3); } catch (_e) {}
+      try { const csd = await apiGet(`/api/customer/cancel-status?phone=${phone || '9999999999'}`); setFreeCancelsLeft(csd.free_cancels_left ?? 3); } catch (_e) {}
     } catch { setResult('❌ Server connect nahi hua!'); }
-    setLoading(false);
+    finally { setLoading(false); }
   };
 
   const surgeFareNow = async (amount: number) => {
