@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useRef, useEffect } from 'react';
-import { AppState, Alert, Linking, Platform, Share } from 'react-native';
+import { AppState, Alert, Linking, NativeModules, Platform, Share } from 'react-native';
 import { Animated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
@@ -12,7 +12,7 @@ import { API, MAPS_KEY, RIDES, DEFAULT_HOURLY_PACKAGES } from '../constants';
 import { Screen, Tab, Coords, HourlyStep, ExtendStep, WalletTxnTab } from '../types';
 
 let RazorpayCheckout: any = null;
-try { const _m = require('react-native-razorpay'); RazorpayCheckout = _m?.default || _m; } catch (_e) {}
+try { const _m = require('react-native-razorpay'); RazorpayCheckout = NativeModules?.RazorpayCheckout ? (_m?.default || _m) : null; } catch (_e) {}
 
 // ─── Context Type ───────────────────────────────────────────────────────────
 interface AppContextType {
@@ -1247,7 +1247,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const handlePayment = async () => {
     if (!RazorpayCheckout) { Alert.alert('Payment Error', 'Payment module load nahi hua. App restart karein.'); return; }
     try {
-      const fareNum = parseInt(String(rideData?.fare).replace(/[^0-9]/g, '')) || 0;
+      const fareNum = Math.round(parseFloat(String(rideData?.fare ?? '').replace(/[^0-9.]/g, '')) || 0) || fareCount;
       const order = await apiPost('/api/payment/create-order', { amount: fareNum, ride_id: rideData.ride_id });
       if (!order.success) { setResult('❌ ' + (order.error || 'Order create nahi hua')); return; }
       RazorpayCheckout.open({ description: 'Sppero Trip', currency: 'INR', key: order.key_id, amount: order.amount, order_id: order.order_id, name: 'Sppero', prefill: { contact: phone, name: userName || 'User' }, theme: { color: '#e94560' } })
@@ -1266,7 +1266,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const payWithWallet = async () => {
     if (payingRef.current) return; // Prevent double-tap during async call
     payingRef.current = true;
-    const fareNum = parseInt(String(rideData?.fare).replace(/[^0-9]/g, '')) || 0;
+    const fareNum = Math.round(parseFloat(String(rideData?.fare ?? '').replace(/[^0-9.]/g, '')) || 0) || fareCount;
     if (walletBalance < fareNum) {
       setResult(`❌ Balance kam hai! ₹${walletBalance} hai`);
       payingRef.current = false; return;

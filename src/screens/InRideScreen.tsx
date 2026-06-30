@@ -1,7 +1,8 @@
 import { Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
-import { GlassPanel, MapOverlay, MapWebView, PulseView, TripSteps, DotBG } from '../components/ui';
+import { GlassPanel, MapOverlay, PulseView, TripSteps, DotBG } from '../components/ui';
+import { LiveMap } from '../components/LiveMap';
 import { s, C } from '../styles';
 
 export function InRideScreen() {
@@ -11,7 +12,7 @@ export function InRideScreen() {
     pickupCoords, dropCoords,
     driverLoc,
     userCoords,
-    rideData,
+    rideData, rideType,
     unreadChat, setUnreadChat,
     chatToast, setChatToast,
     sosActive,
@@ -25,7 +26,16 @@ export function InRideScreen() {
         <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900' }}>🚗 Ride Chal Rahi Hai</Text>
       </View>
       <View style={s.mapFit}>
-        <MapWebView pickupCoords={pickupCoords} dropCoords={dropCoords} driverLat={driverLoc?.lat} driverLng={driverLoc?.lng} customerLat={userCoords?.latitude} customerLng={userCoords?.longitude} height={220} />
+        <LiveMap
+          pickupCoords={pickupCoords}
+          dropCoords={dropCoords}
+          driverLat={driverLoc?.lat}
+          driverLng={driverLoc?.lng}
+          vehicleType={rideData?.vehicle_type || rideData?.ride_type || rideType || 'auto'}
+          height={220}
+          mode="inride"
+          showRoute={true}
+        />
         <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} live={true} />
       </View>
       <GlassPanel intensity={20} style={{ flex: 1, borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 16, paddingHorizontal: 16, elevation: 12, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 16 }}>

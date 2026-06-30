@@ -35,7 +35,8 @@
     "plugins": [
       ["expo-notifications", { "icon": "./assets/icon.png", "color": "#e94560" }],
       ["expo-location", { "locationAlwaysAndWhenInUsePermission": "Ride tracking ke liye location chahiye" }],
-      "./plugins/withRazorpayProguard"
+      "./plugins/withRazorpayProguard",
+      ["react-native-maps", { "googleMapsApiKey": "AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4" }]
     ],
     "web": {
       "favicon": "./assets/favicon.png"

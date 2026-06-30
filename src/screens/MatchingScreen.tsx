@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { Bouncy, DotBG, FadeIn, FloatingDots, GlassPanel, PulseView, SlideUp, SuccessBurst, TripSteps } from '../components/ui';
+import { LiveMap } from '../components/LiveMap';
 import { s, C } from '../styles';
 import { apiPost } from '../../api';
 
@@ -74,10 +75,22 @@ export function MatchingScreen() {
         <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.10)', top: -60, right: -40 }} />
         <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900' }}>{rideData?.driver ? '🚗 Driver Mil Gaya!' : '🔍 Driver Dhundh Rahe Hain'}</Text>
       </View>
+      {/* Map — shows driver moving to pickup (when matched) or pickup pin alone */}
+      <LiveMap
+        pickupCoords={pickupCoords}
+        driverLat={driverLoc?.lat}
+        driverLng={driverLoc?.lng}
+        vehicleType={rideType}
+        userLat={userCoords?.latitude || userCoords?.lat}
+        userLng={userCoords?.longitude || userCoords?.lng}
+        height={180}
+        mode="matching"
+        showRoute={false}
+      />
       {!rideData?.driver && (
         <SearchAnim emoji={rideIcon(rideType)} label={VEHICLE_LABELS[rideType] || (rideType || '').replace(/_/g, ' ')} />
       )}
-      <View style={{ flex: 1, backgroundColor: C.bg, paddingTop: 16, paddingHorizontal: 16 }}>
+      <View style={{ flex: 1, backgroundColor: C.bg, paddingTop: 8, paddingHorizontal: 16 }}>
         <TripSteps step={rideData?.driver ? 1 : 0} />
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
           {rideData?.driver ? (

@@ -2,7 +2,8 @@ import { Animated, KeyboardAvoidingView, Platform, ScrollView, TextInput, Text, 
 import { useState, useRef, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
-import { Bouncy, GlassPanel, MapOverlay, MapWebView, RideVehicleIcon, DotBG } from '../components/ui';
+import { Bouncy, GlassPanel, MapOverlay, RideVehicleIcon, DotBG } from '../components/ui';
+import { LiveMap } from '../components/LiveMap';
 import { s, C } from '../styles';
 import { RIDES, MAPS_KEY } from '../constants';
 import { apiGet, externalGet } from '../../api';
@@ -145,7 +146,15 @@ export function BookingScreen() {
 
       {/* ─── Map — FIXED height, never resizes → zero flicker ─── */}
       <View style={{ height: MAP_H, width: '100%' }}>
-        <MapWebView pickupCoords={pickupCoords} dropCoords={dropCoords} height={MAP_H} />
+        <LiveMap
+          pickupCoords={pickupCoords}
+          dropCoords={dropCoords}
+          userLat={userCoords?.latitude || userCoords?.lat}
+          userLng={userCoords?.longitude || userCoords?.lng}
+          height={MAP_H}
+          mode="booking"
+          showRoute={!!(pickupCoords && dropCoords)}
+        />
         <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} />
       </View>
 
