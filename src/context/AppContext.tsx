@@ -595,8 +595,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!rideId || !['matching', 'inride'].includes(screen)) { setCancelInfo(null); return; }
     const poll = async () => {
       try {
-        const r = await fetch(`${API}/api/rides/cancel-info/${rideId}`);
-        const d = await r.json();
+        const d = await apiGet(`/api/rides/cancel-info/${rideId}`);
         if (d.fee !== undefined) setCancelInfo(d);
       } catch (_e) {}
     };

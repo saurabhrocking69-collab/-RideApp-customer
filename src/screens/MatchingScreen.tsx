@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { Animated, Dimensions, Image, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -39,7 +39,27 @@ export function MatchingScreen() {
     rideIcon,
   } = useApp();
 
+  // SuccessBurst auto-hide after 2s
+  const [showBurst, setShowBurst] = useState(true);
+  useEffect(() => {
+    if (!rideData?.driver) { setShowBurst(true); return; }
+    setShowBurst(true);
+    const t = setTimeout(() => setShowBurst(false), 2000);
+    return () => clearTimeout(t);
+  }, [rideData?.driver?.id ?? rideData?.driver]);
+
   if (showCancelModal) return <CancelModal />;
+
+  // Wait fare locals (derived from cancelInfo — separate system from cancel fee)
+  const driverArrived = cancelInfo?.driver_status === 'arrived';
+  const driverWaitSec = cancelInfo?.driver_wait_sec ?? 0;
+  const waitFareAdd = cancelInfo?.wait_fare_add ?? 0;
+  const waitFareFreeMin = cancelInfo?.wait_fare_free_min ?? 3;
+  const waitMin = Math.floor(driverWaitSec / 60);
+  const waitSecRem = driverWaitSec % 60;
+  const freeSecLeft = Math.max(0, waitFareFreeMin * 60 - driverWaitSec);
+  const origFare = cancelInfo?.wait_fare_orig ?? 0;
+  const newFare = cancelInfo?.wait_fare_new_total ?? origFare;
 
   return (
     <View style={s.screen}>
@@ -55,7 +75,7 @@ export function MatchingScreen() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
           {rideData?.driver ? (
             <>
-              <SuccessBurst />
+              {showBurst && <SuccessBurst />}
               <FadeIn delay={300} style={{ alignItems: 'center', marginBottom: 12 }}>
                 <Text style={{ fontSize: 18, fontWeight: '900', color: C.green, letterSpacing: 0.3 }}>Driver Mil Gaya! 🎉</Text>
                 <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }}>Aapka ride confirm ho gaya</Text>
@@ -135,25 +155,87 @@ export function MatchingScreen() {
                 </TouchableOpacity>
               )}
               {sosActive && <View style={[s.infoBox, { backgroundColor: C.redGlass, borderColor: C.redBorder }]}><Text style={{ fontSize: 13, color: C.red, fontWeight: '800' }}>🆘 Alert bheja! Police: 100 · Ambulance: 108</Text></View>}
+
+              {/* ─── Wait Timer — separate system ─── */}
+              {driverArrived && driverWaitSec > 0 && (
+                <View style={{
+                  backgroundColor: waitFareAdd > 0 ? 'rgba(255,152,0,0.10)' : 'rgba(76,175,80,0.10)',
+                  borderRadius: 14, padding: 14, marginBottom: 10,
+                  borderWidth: 1.5,
+                  borderColor: waitFareAdd > 0 ? 'rgba(255,152,0,0.45)' : 'rgba(76,175,80,0.45)',
+                }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Text style={{ fontSize: 22 }}>⏳</Text>
+                      <View>
+                        <Text style={{ fontWeight: '800', fontSize: 12, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 }}>Driver Wait Kar Raha Hai</Text>
+                        <Text style={{ fontSize: 22, fontWeight: '900', color: waitFareAdd > 0 ? '#E65100' : C.green, marginTop: 2, letterSpacing: 0.5 }}>
+                          {waitMin}m {waitSecRem}s
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={{ backgroundColor: waitFareAdd > 0 ? '#FF9800' : C.green, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 5 }}>
+                      <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>
+                        {waitFareAdd > 0 ? `+₹${waitFareAdd}` : 'FREE'}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={{ height: 6, backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: 3, overflow: 'hidden', marginBottom: 7 }}>
+                    <View style={{
+                      height: '100%', borderRadius: 3,
+                      width: `${Math.min(100, (driverWaitSec / (waitFareFreeMin * 60)) * 100)}%`,
+                      backgroundColor: waitFareAdd > 0 ? '#FF9800' : C.green,
+                    }} />
+                  </View>
+                  <Text style={{ fontSize: 11, color: C.textMuted, textAlign: 'center' }}>
+                    {waitFareAdd > 0
+                      ? `3 min free window khatam • ₹1/min wait charge lag raha`
+                      : `${Math.floor(freeSecLeft / 60)}m ${freeSecLeft % 60}s baad ₹1/min shuru hoga`}
+                  </Text>
+                </View>
+              )}
+
+              {/* ─── Fare Card — shows wait fare breakdown when applicable ─── */}
+              <View style={s.fareCard}>
+                <View style={[s.row, { justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: C.glassBorder }]}>
+                  <Text style={{ fontSize: 13, color: C.textMuted }}>Distance</Text>
+                  <Text style={{ fontSize: 13, color: C.text }}>{rideData.distance}</Text>
+                </View>
+                {waitFareAdd > 0 ? (
+                  <>
+                    <View style={[s.row, { justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: C.glassBorder }]}>
+                      <Text style={{ fontSize: 13, color: C.textMuted }}>Base Fare</Text>
+                      <Text style={{ fontSize: 13, color: C.text }}>₹{origFare}</Text>
+                    </View>
+                    <View style={[s.row, { justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: C.glassBorder }]}>
+                      <Text style={{ fontSize: 13, color: '#E65100' }}>⏳ Wait Charge ({cancelInfo?.wait_fare_billable_min} min × ₹1)</Text>
+                      <Text style={{ fontSize: 13, color: '#E65100', fontWeight: '700' }}>+₹{waitFareAdd}</Text>
+                    </View>
+                    <View style={[s.row, { justifyContent: 'space-between', paddingVertical: 8 }]}>
+                      <Text style={{ fontSize: 13, color: C.textMuted }}>Total Fare</Text>
+                      <Text style={{ fontSize: 16, color: C.yellow, fontWeight: '900' }}>₹{newFare}</Text>
+                    </View>
+                  </>
+                ) : (
+                  <View style={[s.row, { justifyContent: 'space-between', paddingVertical: 8 }]}>
+                    <Text style={{ fontSize: 13, color: C.textMuted }}>Total Fare</Text>
+                    <Text style={{ fontSize: 16, color: C.yellow, fontWeight: '800' }}>{rideData.fare}</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* ─── Cancel — separate system ─── */}
               <TouchableOpacity style={{ backgroundColor: C.pinkGlass, borderWidth: 1.5, borderColor: C.pinkBorder, borderRadius: 14, padding: 14, alignItems: 'center', marginBottom: 10 }} onPress={() => setShowCancelModal(true)}>
                 <Text style={{ color: C.pink, fontWeight: '800', fontSize: 14 }}>
                   ✕ Ride Cancel karein {cancelInfo ? (cancelInfo.is_free ? '(Free)' : `(₹${cancelInfo.fee})`) : cancelTimer > 0 ? '(Free)' : '(₹10)'}
                 </Text>
-                {cancelInfo?.driver_wait_sec > 0 && (
-                  <Text style={{ color: C.pink, fontSize: 11, marginTop: 3, opacity: 0.8 }}>
-                    Driver {Math.floor(cancelInfo.driver_wait_sec / 60)}m {cancelInfo.driver_wait_sec % 60}s se wait kar raha
+                {driverWaitSec > 0 && (
+                  <Text style={{ color: C.pink, fontSize: 11, marginTop: 3, opacity: 0.75 }}>
+                    Cancel fee alag • Wait charge alag hota hai
                   </Text>
                 )}
               </TouchableOpacity>
-              <View style={s.fareCard}>
-                {[['Distance',rideData.distance],['Total Fare',rideData.fare]].map(([lbl,val]: any,i: number) => (
-                  <View key={i} style={[s.row, { justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: i<1 ? 1 : 0, borderBottomColor: C.glassBorder }]}>
-                    <Text style={{ fontSize: 13, color: C.textMuted }}>{lbl}</Text>
-                    <Text style={[{ fontSize: 13, color: C.text }, i===1 && { fontWeight: '800', color: C.yellow, fontSize: 16 }]}>{val}</Text>
-                  </View>
-                ))}
-              </View>
-              <Text style={{ textAlign: 'center', color: C.textDim, fontSize: 12, marginTop: 8 }}>⏳ Driver OTP daalkar trip shuru karega...</Text>
+              <Text style={{ textAlign: 'center', color: C.textDim, fontSize: 12, marginTop: 4, marginBottom: 8 }}>⏳ Driver OTP daalkar trip shuru karega...</Text>
             </>
           ) : (
             <View style={{ paddingBottom: 24 }}>
