@@ -4,8 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { Bouncy, GlassPanel, MapOverlay, MapWebView, RideVehicleIcon, DotBG } from '../components/ui';
 import { s, C } from '../styles';
-import { RIDES } from '../constants';
-import { apiGet } from '../../api';
+import { RIDES, MAPS_KEY } from '../constants';
+import { apiGet, externalGet } from '../../api';
 
 const MAP_H = 200;
 
@@ -27,6 +27,7 @@ export function BookingScreen() {
     lastFetchKey,
     searchPlaces, geocodePlace, useMyLocation, swapLocations, applyPromo, bookRide,
     dropHistory,
+    userCoords,
   } = useApp();
 
   const selRide   = RIDES.find(r => r.id === rideType);
@@ -46,6 +47,8 @@ export function BookingScreen() {
   const [etaLoaded, setEtaLoaded]         = useState(false);
   const [showWaitModal, setShowWaitModal] = useState(false);
   const [waitConfirmed, setWaitConfirmed] = useState(false);
+  const [nearbyPlaces, setNearbyPlaces]   = useState<any[]>([]);
+  const [placesLoading, setPlacesLoading] = useState(false);
 
   useEffect(() => {
     if (!pickupCoords?.lat || !pickupCoords?.lng) { setDriverEta({}); setEtaLoaded(false); return; }
@@ -60,6 +63,43 @@ export function BookingScreen() {
     const timer = setInterval(fetchEta, 30000);
     return () => { cancelled = true; clearInterval(timer); };
   }, [pickupCoords?.lat, pickupCoords?.lng]);
+
+  useEffect(() => {
+    if (!userCoords?.lat || pickup) { setNearbyPlaces([]); return; }
+    let cancelled = false;
+    setPlacesLoading(true);
+    const fetchPlaces = async () => {
+      try {
+        const { lat, lng } = userCoords;
+        const [transit, malls] = await Promise.all([
+          externalGet(`https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=2500&type=transit_station&key=${MAPS_KEY}`),
+          externalGet(`https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=3500&type=shopping_mall&key=${MAPS_KEY}`),
+        ]);
+        if (cancelled) return;
+        const allPlaces: any[] = [];
+        (transit?.results || []).slice(0, 4).forEach((p: any) => allPlaces.push({ ...p, _type: 'transit' }));
+        (malls?.results || []).slice(0, 3).forEach((p: any) => allPlaces.push({ ...p, _type: 'mall' }));
+        setNearbyPlaces(allPlaces.filter(p => p.name && p.geometry?.location));
+      } catch (_e) {}
+      if (!cancelled) setPlacesLoading(false);
+    };
+    fetchPlaces();
+    return () => { cancelled = true; };
+  }, [userCoords?.lat, userCoords?.lng, pickup]);
+
+  const placeIcon = (p: any) => {
+    if (p._type === 'transit') return { emoji: '🚇', color: '#2563EB', bg: 'rgba(37,99,235,0.08)', border: 'rgba(37,99,235,0.25)' };
+    if (p._type === 'mall') return { emoji: '🛍️', color: '#7C3AED', bg: 'rgba(124,58,237,0.08)', border: 'rgba(124,58,237,0.25)' };
+    return { emoji: '📍', color: '#64748B', bg: 'rgba(100,116,139,0.06)', border: 'rgba(100,116,139,0.2)' };
+  };
+
+  const selectNearbyPlace = (place: any) => {
+    const loc = place.geometry?.location;
+    if (!loc) return;
+    setPickup(place.name);
+    setPickupCoords({ lat: loc.lat, lng: loc.lng });
+    setNearbyPlaces([]);
+  };
 
   const handleBook = () => {
     const eta = driverEta[rideType];
@@ -246,6 +286,41 @@ export function BookingScreen() {
                         <Text style={{ fontSize: 13, color: C.text, flex: 1, fontWeight: '500' }} numberOfLines={2}>{sg.text}</Text>
                       </TouchableOpacity>
                     ))}
+                  </View>
+                )}
+
+                {/* ─── Popular Nearby ─── */}
+                {nearbyPlaces.length > 0 && !pickup && (
+                  <View style={{ marginTop: 12, marginBottom: 4 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: C.textDim, letterSpacing: 0.8, textTransform: 'uppercase' }}>📍 Popular Nearby</Text>
+                    </View>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 4 }}>
+                      {nearbyPlaces.map((place, i) => {
+                        const ic = placeIcon(place);
+                        return (
+                          <TouchableOpacity
+                            key={i}
+                            onPress={() => selectNearbyPlace(place)}
+                            style={{
+                              flexDirection: 'row', alignItems: 'center', gap: 7,
+                              backgroundColor: ic.bg, borderRadius: 22,
+                              paddingHorizontal: 13, paddingVertical: 9,
+                              borderWidth: 1.5, borderColor: ic.border,
+                              maxWidth: 200, elevation: 2,
+                              shadowColor: ic.color, shadowOpacity: 0.12, shadowRadius: 6,
+                            }}>
+                            <Text style={{ fontSize: 16 }}>{ic.emoji}</Text>
+                            <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: '700', color: C.text, flexShrink: 1 }}>{place.name}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                  </View>
+                )}
+                {placesLoading && !pickup && nearbyPlaces.length === 0 && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, marginBottom: 4, paddingHorizontal: 4 }}>
+                    <Text style={{ fontSize: 11, color: C.textDim }}>📍 Nearby spots dhundh rahe hain...</Text>
                   </View>
                 )}
 

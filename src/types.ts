@@ -4,7 +4,7 @@ export type Screen =
   | 'chat' | 'referral' | 'saved' | 'policy' | 'hourly'
   | 'wallet' | 'hourly-info' | 'promo' | 'support' | 'safety'
   | 'complaints' | 'complaint-new' | 'complaint-detail'
-  | 'rewards';
+  | 'rewards' | 'scheduled';
 
 export type Tab = 'home' | 'live' | 'history' | 'profile';
 

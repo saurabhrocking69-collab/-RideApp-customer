@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ScrollView, View, Text, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, Image, Animated, Share } from 'react-native';
+import { ScrollView, View, Text, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, Image, Animated, Share, Dimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { apiPost, apiGet } from '../../api';
@@ -293,6 +293,121 @@ function BuddyBookModal() {
   );
 }
 
+const SCREEN_W = Dimensions.get('window').width;
+const BANNER_CARDS = [
+  {
+    id: 'schedule',
+    bg: ['#1a237e', '#283593'],
+    badge: '⏰ NEW',
+    title: 'Schedule a Ride',
+    sub: 'Airport, office, doctor — pehle se book karo',
+    cta: '📅 Book Now →',
+    emoji: '📅',
+    screen: 'scheduled' as const,
+  },
+  {
+    id: 'referral',
+    bg: ['#E91E63', '#c2185b'],
+    badge: '🎁 REFER & EARN',
+    title: '₹50 + ₹50 Reward',
+    sub: 'Dost ko invite karo, dono ko cash!',
+    cta: '🔗 Invite Friends →',
+    emoji: '🤝',
+    screen: 'referral' as const,
+  },
+  {
+    id: 'hourly',
+    bg: ['#7B1FA2', '#6A1B9A'],
+    badge: '⏱️ HOURLY',
+    title: 'Book by the Hour',
+    sub: '2h · 4h · 6h · Full Day package',
+    cta: '⏱️ Book Hourly →',
+    emoji: '🕐',
+    screen: 'hourly' as const,
+  },
+];
+
+function PromoBanner({ setScreen, loadReferral }: { setScreen: (s: any) => void; loadReferral: () => void }) {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+  const CARD_W = SCREEN_W - 32; // 16px padding each side
+
+  useEffect(() => {
+    const iv = setInterval(() => {
+      setActiveIdx(prev => {
+        const next = (prev + 1) % BANNER_CARDS.length;
+        scrollRef.current?.scrollTo({ x: next * CARD_W, animated: true });
+        return next;
+      });
+    }, 3800);
+    return () => clearInterval(iv);
+  }, []);
+
+  const dotAnim = useRef(BANNER_CARDS.map(() => new Animated.Value(0))).current;
+  useEffect(() => {
+    BANNER_CARDS.forEach((_, i) => {
+      Animated.timing(dotAnim[i], { toValue: i === activeIdx ? 1 : 0, duration: 220, useNativeDriver: false }).start();
+    });
+  }, [activeIdx]);
+
+  return (
+    <View style={{ marginBottom: 14 }}>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onMomentumScrollEnd={e => setActiveIdx(Math.round(e.nativeEvent.contentOffset.x / CARD_W))}
+        contentContainerStyle={{ paddingHorizontal: 0 }}
+        style={{ width: CARD_W }}
+      >
+        {BANNER_CARDS.map((card, i) => (
+          <TouchableOpacity
+            key={card.id}
+            activeOpacity={0.93}
+            onPress={() => { if (card.id === 'referral') loadReferral(); setScreen(card.screen); }}
+            style={{ width: CARD_W, borderRadius: 22, overflow: 'hidden', elevation: 8, shadowColor: card.bg[0], shadowOpacity: 0.35, shadowRadius: 14 }}>
+            {/* Background */}
+            <View style={{ backgroundColor: card.bg[0], padding: 20, paddingBottom: 0, minHeight: 130 }}>
+              {/* Decorative circles */}
+              <View style={{ position: 'absolute', width: 180, height: 180, borderRadius: 90, backgroundColor: 'rgba(255,255,255,0.07)', top: -60, right: -50 }} />
+              <View style={{ position: 'absolute', width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(255,255,255,0.05)', bottom: -20, left: 20 }} />
+              {/* Badge */}
+              <View style={{ backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start', marginBottom: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.28)' }}>
+                <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900', letterSpacing: 1.2 }}>{card.badge}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900', letterSpacing: 0.3 }}>{card.title}</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 4, lineHeight: 17 }}>{card.sub}</Text>
+                </View>
+                <Text style={{ fontSize: 48, marginLeft: 12 }}>{card.emoji}</Text>
+              </View>
+            </View>
+            <View style={{ backgroundColor: 'rgba(0,0,0,0.22)', paddingVertical: 10, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: '800' }}>{card.cta}</Text>
+              <View style={{ backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' }}>
+                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>TAP</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+      {/* Dot indicators */}
+      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 10 }}>
+        {BANNER_CARDS.map((_, i) => (
+          <Animated.View key={i} style={{
+            height: 6, borderRadius: 3,
+            width: dotAnim[i].interpolate({ inputRange: [0, 1], outputRange: [6, 20] }),
+            backgroundColor: i === activeIdx ? C.pink : C.glassBorder,
+          }} />
+        ))}
+      </View>
+    </View>
+  );
+}
+
 function HomeTab() {
   const {
     userName, phone,
@@ -311,6 +426,12 @@ function HomeTab() {
     storeStatus, paymentDone,
     referralData,
   } = useApp();
+
+  const [scheduledRides, setScheduledRides] = useState<any[]>([]);
+  useEffect(() => {
+    if (!phone) return;
+    apiGet(`/api/rides/scheduled/${phone}`).then(d => { if (!d._error) setScheduledRides(d.rides || []); }).catch(() => {});
+  }, [phone]);
 
   const GREETINGS = ['Namaste! 🙏', 'Chalein India ki sair? 🗺️', 'Safe Travels! 🛺', 'Sppero ke saath chalein! 🚀', 'Ride karo, India dekho! 🇮🇳'];
   const [greetIdx, setGreetIdx] = useState(0);
@@ -407,7 +528,12 @@ function HomeTab() {
             </View>
           </View>
 
+          {/* ── Animated Promo Banner ────────────────────────── */}
           <SlideUp delay={0}>
+            <PromoBanner setScreen={setScreen} loadReferral={loadReferral} />
+          </SlideUp>
+
+          <SlideUp delay={10}>
             <Bouncy onPress={() => setScreen('booking')} style={s.searchBox}>
               <Ionicons name="search" size={18} color={C.textMuted} style={{ marginRight: 10 }} />
               <Text style={s.searchPh}>Kahan jaana hai?</Text>
@@ -415,6 +541,38 @@ function HomeTab() {
                 <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>Book</Text>
               </View>
             </Bouncy>
+          </SlideUp>
+
+          {/* ── Quick action row: Schedule + Hourly ─────────── */}
+          <SlideUp delay={20}>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+              <TouchableOpacity onPress={() => setScreen('scheduled')}
+                style={{ flex: 1, backgroundColor: 'rgba(26,35,126,0.08)', borderRadius: 16, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(26,35,126,0.2)', elevation: 3 }}>
+                <Text style={{ fontSize: 24, marginBottom: 4 }}>📅</Text>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: '#1a237e' }}>Schedule</Text>
+                <Text style={{ fontSize: 9, color: C.textDim, marginTop: 2 }}>Pehle se book karo</Text>
+                {scheduledRides.length > 0 && (
+                  <View style={{ backgroundColor: '#1a237e', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, marginTop: 6 }}>
+                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900' }}>{scheduledRides.length} upcoming</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => {
+                setHourlyStep('book'); setHPickup(''); setHDrop(''); setHPickupCoords(null); setHDropCoords(null);
+                setHPickupSugg([]); setHDropSugg([]); setHRoundTrip(false); setHStayHours(1);
+                setHourlyBooking(null); setScreen('hourly');
+              }} style={{ flex: 1, backgroundColor: 'rgba(123,31,162,0.08)', borderRadius: 16, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(123,31,162,0.2)', elevation: 3 }}>
+                <Text style={{ fontSize: 24, marginBottom: 4 }}>⏱️</Text>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: '#7B1FA2' }}>By Hour</Text>
+                <Text style={{ fontSize: 9, color: C.textDim, marginTop: 2 }}>2h · 4h · 6h · Full Day</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => { loadReferral(); setScreen('referral'); }}
+                style={{ flex: 1, backgroundColor: C.pinkGlass, borderRadius: 16, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: C.pinkBorder, elevation: 3 }}>
+                <Text style={{ fontSize: 24, marginBottom: 4 }}>🎁</Text>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: C.pink }}>Refer</Text>
+                <Text style={{ fontSize: 9, color: C.textDim, marginTop: 2 }}>₹50 + ₹50</Text>
+              </TouchableOpacity>
+            </View>
           </SlideUp>
 
           {favouriteBuddy && (

@@ -50,6 +50,13 @@ export function MatchingScreen() {
 
   if (showCancelModal) return <CancelModal />;
 
+  const getDriverLevel = (rating: number) => {
+    if (rating >= 4.8) return { emoji: '💎', name: 'Platinum', color: '#9C27B0', bg: 'rgba(156,39,176,0.1)', border: 'rgba(156,39,176,0.3)' };
+    if (rating >= 4.7) return { emoji: '🥇', name: 'Gold', color: '#B45309', bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.35)' };
+    if (rating >= 4.5) return { emoji: '🥈', name: 'Silver', color: '#475569', bg: 'rgba(100,116,139,0.1)', border: 'rgba(100,116,139,0.3)' };
+    return { emoji: '🥉', name: 'Bronze', color: '#92400E', bg: 'rgba(205,127,50,0.1)', border: 'rgba(205,127,50,0.3)' };
+  };
+
   // Wait fare locals (derived from cancelInfo — separate system from cancel fee)
   const driverArrived = cancelInfo?.driver_status === 'arrived';
   const driverWaitSec = cancelInfo?.driver_wait_sec ?? 0;
@@ -100,6 +107,16 @@ export function MatchingScreen() {
                         <Text style={{ fontSize: 9, color: C.green, fontWeight: '800' }}>✓ VERIFIED</Text>
                       </View>
                     )}
+                    {(() => {
+                      const rating = parseFloat(rideData.driver.rating || '4.8');
+                      const lvl = getDriverLevel(rating);
+                      return (
+                        <View style={{ backgroundColor: lvl.bg, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: lvl.border, flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                          <Text style={{ fontSize: 10 }}>{lvl.emoji}</Text>
+                          <Text style={{ fontSize: 9, color: lvl.color, fontWeight: '800' }}>{lvl.name.toUpperCase()}</Text>
+                        </View>
+                      );
+                    })()}
                   </View>
                   <Text style={{ fontSize: 12, color: C.textMuted, fontWeight: '600', marginTop: 2 }}>
                     {rideData.driver.vehicle_brand ? `${rideData.driver.vehicle_brand} ` : ''}{rideData.driver.vehicle_model || ''}
