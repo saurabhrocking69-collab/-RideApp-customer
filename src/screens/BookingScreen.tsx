@@ -49,6 +49,16 @@ export function BookingScreen() {
   const [waitConfirmed, setWaitConfirmed] = useState(false);
   const [nearbyPlaces, setNearbyPlaces]   = useState<any[]>([]);
   const [placesLoading, setPlacesLoading] = useState(false);
+  const [surgeMultiplier, setSurgeMultiplier] = useState(1.0);
+  const [surgeLabel, setSurgeLabel]           = useState<string | null>(null);
+
+  // Fetch surge when pickup coords change
+  useEffect(() => {
+    if (!pickupCoords?.lat || !pickupCoords?.lng) { setSurgeMultiplier(1.0); setSurgeLabel(null); return; }
+    apiGet(`/api/rides/surge-check?lat=${pickupCoords.lat}&lng=${pickupCoords.lng}`)
+      .then(d => { if (!d._error) { setSurgeMultiplier(d.surge || 1.0); setSurgeLabel(d.label || null); } })
+      .catch(() => {});
+  }, [pickupCoords?.lat, pickupCoords?.lng]);
 
   useEffect(() => {
     if (!pickupCoords?.lat || !pickupCoords?.lng) { setDriverEta({}); setEtaLoaded(false); return; }
@@ -636,6 +646,20 @@ export function BookingScreen() {
               shadowOpacity: 0.08,
               shadowRadius: 14,
             }}>
+              {/* Surge banner */}
+              {surgeLabel && (
+                <View style={{ backgroundColor: '#FFF3E0', paddingHorizontal: 16, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 8, borderBottomWidth: 1, borderColor: '#FFB74D' }}>
+                  <Text style={{ fontSize: 16 }}>🔥</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#E65100', fontWeight: '900', fontSize: 12 }}>SURGE PRICING — {surgeLabel}</Text>
+                    <Text style={{ color: '#F57C00', fontSize: 10, marginTop: 1 }}>Aapke area mein abhi zyada demand hai</Text>
+                  </View>
+                  <View style={{ backgroundColor: '#FF6D00', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }}>
+                    <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>{surgeLabel}</Text>
+                  </View>
+                </View>
+              )}
+
               {/* Header row */}
               <View style={{ backgroundColor: '#FFF0F6', paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderColor: C.glassBorder }}>
                 <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.pinkBorder }}>
@@ -661,6 +685,12 @@ export function BookingScreen() {
                   <Text style={{ fontSize: 13, color: C.textMuted }}>Distance charge</Text>
                   <Text style={{ fontSize: 13, fontWeight: '600', color: C.text }}>₹{rawFare - estBase > 0 ? rawFare - estBase : '—'}</Text>
                 </View>
+                {surgeLabel && (
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ fontSize: 13, color: '#E65100', fontWeight: '700' }}>🔥 Surge ({surgeLabel})</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#E65100' }}>Applied</Text>
+                  </View>
+                )}
                 {discount > 0 && (
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                     <Text style={{ fontSize: 13, color: C.green, fontWeight: '700' }}>Discount{promoCode ? ` (${promoCode})` : ''}</Text>
