@@ -86,43 +86,47 @@ function TimePicker({ value, onChange }: { value: Date; onChange: (d: Date) => v
 
       {/* Time selector */}
       <Text style={{ fontSize: 11, fontWeight: '800', color: C.textDim, marginBottom: 8, letterSpacing: 0.8, textTransform: 'uppercase' }}>Time</Text>
+
+      {/* AM / PM toggle */}
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+        {(['AM','PM'] as const).map(ap => (
+          <TouchableOpacity key={ap} onPress={() => setSelAmPm(ap)}
+            style={{ flex: 1, paddingVertical: 11, borderRadius: 12, alignItems: 'center',
+              backgroundColor: selAmPm === ap ? C.pink : C.glass,
+              borderWidth: 1.5, borderColor: selAmPm === ap ? C.pink : C.glassBorder }}>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: selAmPm === ap ? '#fff' : C.textMuted }}>{ap}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Hours — 3×4 grid, no scroll */}
+      <Text style={{ fontSize: 10, fontWeight: '700', color: C.textDim, marginBottom: 6 }}>Hour</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+        {hours.map(h => (
+          <TouchableOpacity key={h} onPress={() => setSelHour(h)}
+            style={{ width: '30%', paddingVertical: 10, borderRadius: 10, alignItems: 'center',
+              backgroundColor: selHour === h ? C.pink : C.glass,
+              borderWidth: 1.5, borderColor: selHour === h ? C.pink : C.glassBorder }}>
+            <Text style={{ fontSize: 15, fontWeight: '800', color: selHour === h ? '#fff' : C.text }}>
+              {String(h).padStart(2, '0')}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Minutes — 4 buttons in a row */}
+      <Text style={{ fontSize: 10, fontWeight: '700', color: C.textDim, marginBottom: 6 }}>Minute</Text>
       <View style={{ flexDirection: 'row', gap: 8 }}>
-        {/* Hours */}
-        <ScrollView style={{ flex: 1, maxHeight: 120 }} showsVerticalScrollIndicator={false}>
-          {hours.map(h => (
-            <TouchableOpacity key={h} onPress={() => setSelHour(h)}
-              style={{ paddingVertical: 8, alignItems: 'center', borderRadius: 10,
-                backgroundColor: selHour === h ? C.pinkGlass : 'transparent',
-                borderWidth: selHour === h ? 1.5 : 0, borderColor: C.pink }}>
-              <Text style={{ fontSize: 15, fontWeight: selHour === h ? '800' : '500', color: selHour === h ? C.pink : C.text }}>{String(h).padStart(2,'0')}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-        <View style={{ justifyContent: 'center', paddingHorizontal: 4 }}>
-          <Text style={{ fontSize: 20, color: C.textDim, fontWeight: '300' }}>:</Text>
-        </View>
-        {/* Minutes */}
-        <View style={{ flex: 1, gap: 6 }}>
-          {mins.map(m => (
-            <TouchableOpacity key={m} onPress={() => setSelMin(m)}
-              style={{ paddingVertical: 8, alignItems: 'center', borderRadius: 10,
-                backgroundColor: selMin === m ? C.pinkGlass : 'transparent',
-                borderWidth: selMin === m ? 1.5 : 0, borderColor: C.pink }}>
-              <Text style={{ fontSize: 15, fontWeight: selMin === m ? '800' : '500', color: selMin === m ? C.pink : C.text }}>{String(m).padStart(2,'0')}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        {/* AM/PM */}
-        <View style={{ gap: 6 }}>
-          {(['AM','PM'] as const).map(ap => (
-            <TouchableOpacity key={ap} onPress={() => setSelAmPm(ap)}
-              style={{ paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12,
-                backgroundColor: selAmPm === ap ? C.pink : C.glass,
-                borderWidth: 1.5, borderColor: selAmPm === ap ? C.pink : C.glassBorder }}>
-              <Text style={{ fontSize: 13, fontWeight: '800', color: selAmPm === ap ? '#fff' : C.textMuted }}>{ap}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {mins.map(m => (
+          <TouchableOpacity key={m} onPress={() => setSelMin(m)}
+            style={{ flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center',
+              backgroundColor: selMin === m ? C.pink : C.glass,
+              borderWidth: 1.5, borderColor: selMin === m ? C.pink : C.glassBorder }}>
+            <Text style={{ fontSize: 15, fontWeight: '800', color: selMin === m ? '#fff' : C.text }}>
+              :{String(m).padStart(2, '0')}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
       {!!timeError && (
         <View style={{ backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: 10, padding: 10, marginTop: 10, borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)' }}>
