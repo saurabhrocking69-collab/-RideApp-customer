@@ -54,6 +54,7 @@ export function BookingScreen() {
   const [surgeMultiplier, setSurgeMultiplier] = useState(1.0);
   const [surgeLabel, setSurgeLabel]           = useState<string | null>(null);
   const [fareHistoryEntry, setFareHistoryEntry] = useState<{ fare: number; date: string } | null>(null);
+  const [nearbyDrivers, setNearbyDrivers]     = useState<{ lat: number; lng: number; vehicleType: string }[]>([]);
 
   // Load fare history for current pickup+drop+rideType combo
   useEffect(() => {
@@ -73,6 +74,23 @@ export function BookingScreen() {
       .then(d => { if (!d._error) { setSurgeMultiplier(d.surge || 1.0); setSurgeLabel(d.label || null); } })
       .catch(() => {});
   }, [pickupCoords?.lat, pickupCoords?.lng]);
+
+  // Fetch nearby available drivers to show on map
+  useEffect(() => {
+    const lat = pickupCoords?.lat || userCoords?.latitude || userCoords?.lat;
+    const lng = pickupCoords?.lng || userCoords?.longitude || userCoords?.lng;
+    if (!lat || !lng) { setNearbyDrivers([]); return; }
+    let cancelled = false;
+    apiGet(`/api/rides/nearby-drivers?lat=${lat}&lng=${lng}`)
+      .then(d => { if (!cancelled && !d._error) setNearbyDrivers(d.drivers || []); })
+      .catch(() => {});
+    const iv = setInterval(() => {
+      apiGet(`/api/rides/nearby-drivers?lat=${lat}&lng=${lng}`)
+        .then(d => { if (!cancelled && !d._error) setNearbyDrivers(d.drivers || []); })
+        .catch(() => {});
+    }, 20000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, [pickupCoords?.lat, pickupCoords?.lng, userCoords?.latitude || userCoords?.lat]);
 
   useEffect(() => {
     if (!pickupCoords?.lat || !pickupCoords?.lng) { setDriverEta({}); setEtaLoaded(false); return; }
@@ -131,6 +149,54 @@ export function BookingScreen() {
     bookRide();
   };
 
+  // Reverse geocode a coordinate to a human-readable address
+  const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
+    try {
+      const res = await externalGet(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${MAPS_KEY}`);
+      const result = res?.results?.[0];
+      if (!result) return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      const comps = result.address_components || [];
+      return (
+        comps.find((c: any) => c.types.includes('sublocality_level_1'))?.long_name ||
+        comps.find((c: any) => c.types.includes('sublocality'))?.long_name ||
+        comps.find((c: any) => c.types.includes('locality'))?.long_name ||
+        result.formatted_address?.split(',')[0] ||
+        result.formatted_address
+      );
+    } catch (_e) { return `${lat.toFixed(4)}, ${lng.toFixed(4)}`; }
+  };
+
+  // Tap on map: set drop if pickup is set, otherwise set pickup
+  const handleMapPress = async (coords: { lat: number; lng: number }) => {
+    if (pickupCoords && !dropCoords) {
+      const addr = await reverseGeocode(coords.lat, coords.lng);
+      setDrop(addr);
+      setDropCoords(coords);
+      setDropSugg([]);
+    } else if (!pickupCoords) {
+      const addr = await reverseGeocode(coords.lat, coords.lng);
+      setPickup(addr);
+      setPickupCoords(coords);
+      setPickupSugg([]);
+    }
+  };
+
+  // Draggable pickup pin — re-geocode on drag end
+  const handlePickupDragEnd = async (coords: { lat: number; lng: number }) => {
+    const addr = await reverseGeocode(coords.lat, coords.lng);
+    setPickup(addr);
+    setPickupCoords(coords);
+    setFareEstimates({}); setEta(''); lastFetchKey.current = '';
+  };
+
+  // Draggable drop pin — re-geocode on drag end
+  const handleDropDragEnd = async (coords: { lat: number; lng: number }) => {
+    const addr = await reverseGeocode(coords.lat, coords.lng);
+    setDrop(addr);
+    setDropCoords(coords);
+    setFareEstimates({}); setEta(''); lastFetchKey.current = '';
+  };
+
   // Sheet entrance: fade + slide-up on mount
   const sheetAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -150,9 +216,17 @@ export function BookingScreen() {
           dropCoords={dropCoords}
           userLat={userCoords?.latitude || userCoords?.lat}
           userLng={userCoords?.longitude || userCoords?.lng}
+          userAccuracy={(userCoords as any)?.accuracy}
           height={MAP_H}
           mode="booking"
           showRoute={!!(pickupCoords && dropCoords)}
+          nearbyDrivers={!pickupCoords || !dropCoords ? nearbyDrivers : []}
+          onMapPress={handleMapPress}
+          draggablePickup={!!pickupCoords}
+          onPickupDragEnd={handlePickupDragEnd}
+          draggableDrop={!!dropCoords}
+          onDropDragEnd={handleDropDragEnd}
+          showTapHint={!!pickupCoords && !dropCoords}
         />
         <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} />
         {/* Glass header — 90% transparent, floats over map tiles */}

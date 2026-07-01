@@ -434,6 +434,31 @@ function HomeTab() {
     apiGet(`/api/rides/scheduled/${phone}`).then(d => { if (!d._error) setScheduledRides(d.rides || []); }).catch(() => {});
   }, [phone]);
 
+  const [nearbyCount, setNearbyCount] = useState(0);
+  const nearbyAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const lat = (userCoords as any)?.latitude || (userCoords as any)?.lat;
+    const lng = (userCoords as any)?.longitude || (userCoords as any)?.lng;
+    if (!lat || !lng) return;
+    const fetch = () =>
+      apiGet(`/api/rides/nearby-drivers?lat=${lat}&lng=${lng}`)
+        .then(d => { if (!d._error) setNearbyCount(d.drivers?.length || 0); })
+        .catch(() => {});
+    fetch();
+    const iv = setInterval(fetch, 30000);
+    return () => clearInterval(iv);
+  }, [(userCoords as any)?.latitude || (userCoords as any)?.lat]);
+
+  // Pulse animation for live driver badge
+  useEffect(() => {
+    const pulse = () =>
+      Animated.sequence([
+        Animated.timing(nearbyAnim, { toValue: 1.18, duration: 600, useNativeDriver: true }),
+        Animated.timing(nearbyAnim, { toValue: 1,    duration: 600, useNativeDriver: true }),
+      ]).start(() => pulse());
+    pulse();
+  }, []);
+
   const GREETINGS = ['Namaste! 🙏', 'Chalein India ki sair? 🗺️', 'Safe Travels! 🛺', 'Sppero ke saath chalein! 🚀', 'Ride karo, India dekho! 🇮🇳'];
   const [greetIdx, setGreetIdx] = useState(0);
   const greetFade  = useRef(new Animated.Value(1)).current;
@@ -478,7 +503,21 @@ function HomeTab() {
               {GREETINGS[greetIdx]}
             </Animated.Text>
             <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900', letterSpacing: -0.5, marginTop: 3 }}>{userName || 'Rider'}</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.60)', fontSize: 10, marginTop: 3 }}>📍 India</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3 }}>
+              <Text style={{ color: 'rgba(255,255,255,0.60)', fontSize: 10 }}>📍 India</Text>
+              {nearbyCount > 0 && (
+                <Animated.View style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 4,
+                  backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 10,
+                  paddingHorizontal: 7, paddingVertical: 2,
+                  borderWidth: 1, borderColor: 'rgba(255,255,255,0.28)',
+                  transform: [{ scale: nearbyAnim }],
+                }}>
+                  <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#4ade80' }} />
+                  <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{nearbyCount} drivers nearby</Text>
+                </Animated.View>
+              )}
+            </View>
           </View>
           <TouchableOpacity onPress={() => { setTab('profile'); loadWallet(phone); }}
             style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.45)' }}>

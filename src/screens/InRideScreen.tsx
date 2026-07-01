@@ -126,9 +126,11 @@ export function InRideScreen() {
           driverLat={driverLoc?.lat}
           driverLng={driverLoc?.lng}
           vehicleType={vType}
-          height={220}
+          height={260}
           mode="inride"
           showRoute={true}
+          followDriver={true}
+          showTraffic={true}
         />
         <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} live={true} />
       </View>
