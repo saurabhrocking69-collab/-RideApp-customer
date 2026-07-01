@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Animated, Modal, ScrollView, Share, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
 import { Storage as AsyncStorage } from '../storage';
 import { useApp } from '../context/AppContext';
 import { Bouncy, Confetti, DotBG, FadeIn, ScreenIn, TripSteps } from '../components/ui';
@@ -44,14 +45,20 @@ export function PostRideScreen() {
   const gstAmt = Math.round((fareNum * 5 / 105) * 100) / 100;
   const baseAmt = Math.round((fareNum - gstAmt) * 100) / 100;
 
+  // Auto-load ride details on mount for trip stats card
+  useEffect(() => {
+    if (!rideData?.ride_id) return;
+    apiGet(`/api/rides/status/${rideData.ride_id}`)
+      .then(d => { if (d?.ride) setBillData(d.ride); })
+      .catch(() => {});
+  }, [rideData?.ride_id]);
+
   const openBill = async () => {
     setBillLoading(true);
     try {
       const d = await apiGet(`/api/rides/status/${rideData?.ride_id}`);
       setBillData(d.ride);
-    } catch (_e) {
-      setBillData(null);
-    }
+    } catch (_e) {}
     setBillLoading(false);
     setShowBill(true);
   };
@@ -108,26 +115,67 @@ _GST fare mein included hai — alag se charge nahi hota._
       <DotBG />
       <Confetti />
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
-        <View style={{ paddingTop: 52, paddingBottom: 36, backgroundColor: C.pink, borderBottomLeftRadius: 36, borderBottomRightRadius: 36, alignItems: 'center', overflow: 'hidden' }}>
+        <View style={{ paddingTop: 52, paddingBottom: 28, backgroundColor: C.pink, borderBottomLeftRadius: 36, borderBottomRightRadius: 36, alignItems: 'center', overflow: 'hidden' }}>
           <View style={{ position: 'absolute', width: 240, height: 240, borderRadius: 120, backgroundColor: 'rgba(255,255,255,0.10)', top: -80, right: -60 }} />
           <View style={{ position: 'absolute', width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(255,255,255,0.07)', bottom: -40, left: -40 }} />
-          <Text style={{ fontSize: 60 }}>{paymentDone ? '✅' : '🎉'}</Text>
-          <Text style={{ fontSize: 26, fontWeight: '900', color: '#fff', marginTop: 10 }}>{paymentDone ? 'Payment Done!' : 'Pahunch Gaye!'}</Text>
-          <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13, marginTop: 6, textAlign: 'center', paddingHorizontal: 24 }}>{pickup} → {drop}</Text>
-          <View style={{ marginTop: 12, backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 16, paddingHorizontal: 20, paddingVertical: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.40)' }}>
+
+          {/* Driver photo + completion emoji */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+            {rideData?.driver?.photo ? (
+              <Image source={{ uri: rideData.driver.photo }} style={{ width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: 'rgba(255,255,255,0.6)' }} contentFit="cover" />
+            ) : (
+              <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontSize: 28 }}>👤</Text>
+              </View>
+            )}
+            <View style={{ alignItems: 'flex-start' }}>
+              <Text style={{ fontSize: 24, fontWeight: '900', color: '#fff' }}>{paymentDone ? 'Payment Done!' : 'Pahunch Gaye! 🎉'}</Text>
+              {rideData?.driver?.name ? (
+                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 2 }}>
+                  Driver: {rideData.driver.name}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+
+          <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, marginBottom: 10, textAlign: 'center', paddingHorizontal: 24 }} numberOfLines={1}>{pickup} → {drop}</Text>
+
+          <View style={{ marginTop: 4, backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 16, paddingHorizontal: 20, paddingVertical: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.40)' }}>
             <Text style={{ color: '#fff', fontSize: 32, fontWeight: '900' }}>{rideData?.fare}</Text>
           </View>
 
           <TouchableOpacity
             onPress={openBill}
-            style={{ marginTop: 14, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 20, paddingHorizontal: 18, paddingVertical: 9, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)' }}>
+            style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 20, paddingHorizontal: 18, paddingVertical: 9, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)' }}>
             <Text style={{ fontSize: 16 }}>🧾</Text>
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>{billLoading ? 'Loading...' : 'Bill Dekho & Share'}</Text>
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>{billLoading ? 'Loading...' : 'Full Bill & Share'}</Text>
           </TouchableOpacity>
         </View>
 
         <View style={{ paddingHorizontal: 14, paddingTop: 16 }}>
           <TripSteps step={3} />
+        </View>
+
+        {/* Trip stats card — visible without opening modal */}
+        <View style={{ marginHorizontal: 14, marginTop: 4, backgroundColor: C.glass, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: C.glassBorder }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
+            {[
+              { icon: '📏', label: 'Distance', value: billData?.distance ? `${billData.distance} km` : rideData?.distance || '—' },
+              { icon: '🚗', label: 'Vehicle', value: vehicleType },
+              { icon: '💳', label: 'Payment', value: paymentLabel() },
+            ].map(item => (
+              <View key={item.label} style={{ alignItems: 'center', flex: 1 }}>
+                <Text style={{ fontSize: 22 }}>{item.icon}</Text>
+                <Text style={{ color: C.text, fontSize: 14, fontWeight: '800', marginTop: 4 }}>{item.value}</Text>
+                <Text style={{ color: C.textDim, fontSize: 10, marginTop: 2 }}>{item.label}</Text>
+              </View>
+            ))}
+          </View>
+          {(billData?.vehicle_no || rideData?.vehicle_no) ? (
+            <View style={{ marginTop: 12, borderTopWidth: 1, borderColor: C.glassBorder, paddingTop: 10, alignItems: 'center' }}>
+              <Text style={{ color: C.textDim, fontSize: 11 }}>Vehicle No.  <Text style={{ color: C.text, fontWeight: '800', letterSpacing: 1 }}>{billData?.vehicle_no || rideData?.vehicle_no}</Text></Text>
+            </View>
+          ) : null}
         </View>
 
         {scratchCard && (
