@@ -881,6 +881,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const st = data.status;
       if (st === 'matched' || st === 'arrived') {
         setAltSuggest(null);
+        // On driver arrived, immediately poll cancelInfo so wait countdown shows without waiting 10s
+        if (st === 'arrived') {
+          const arrivedRideId = activeRideIdRef.current;
+          if (arrivedRideId) {
+            apiGet(`/api/rides/cancel-info/${arrivedRideId}`)
+              .then((d: any) => { if (d.fee !== undefined) setCancelInfo(d); })
+              .catch(() => {});
+          }
+        }
         if (data.driver) {
           setRideData((p: any) => p ? { ...p, startOtp: data.start_otp || p?.startOtp, driver: data.driver } : p);
           useRideStore.setState({ rideStatus: st, startOtp: data.start_otp || '' });

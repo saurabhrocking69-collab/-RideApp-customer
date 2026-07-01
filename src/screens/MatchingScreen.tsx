@@ -160,7 +160,7 @@ export function MatchingScreen() {
   const origFare = cancelInfo?.wait_fare_orig ?? 0;
   const newFare = cancelInfo?.wait_fare_new_total ?? origFare;
 
-  const HEADER_H = Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 56 : 100;
+  const HEADER_H = Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 40 : 84;
   const MAP_TOTAL = 180 + HEADER_H;
 
   return (
@@ -176,14 +176,14 @@ export function MatchingScreen() {
           userLng={userCoords?.longitude || userCoords?.lng}
           height={MAP_TOTAL}
           mode="matching"
-          showRoute={false}
+          showRoute={true}
         />
         {/* Glass header — 90% transparent, floats over map */}
         <View style={{
           position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, overflow: 'hidden',
           backgroundColor: 'rgba(233,30,99,0.10)',
-          paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 12 : 54,
-          paddingBottom: 20, paddingHorizontal: 16,
+          paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 8 : 46,
+          paddingBottom: 10, paddingHorizontal: 16,
         }}>
           {/* Subtle decorative circle */}
           <View style={{ position: 'absolute', width: 180, height: 180, borderRadius: 90, backgroundColor: 'rgba(255,255,255,0.06)', top: -55, right: -35 }} />

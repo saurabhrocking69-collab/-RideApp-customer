@@ -115,12 +115,20 @@ export const LiveMap = memo(function LiveMap({
     } as any).start();
   }, [driverLat, driverLng]);
 
-  // Fetch route when both pickup and drop are set
+  // Fetch route — driver→pickup in matching mode, pickup→drop in booking/inride
   useEffect(() => {
-    if (!showRoute || !pickupCoords || !dropCoords) { setRouteCoords([]); setEtaText(''); setDistText(''); return; }
+    if (!showRoute) { setRouteCoords([]); setEtaText(''); setDistText(''); return; }
+    let origin: string | null = null;
+    let destination: string | null = null;
+    if (mode === 'matching' && driverLat != null && driverLng != null && pickupCoords) {
+      origin      = `${driverLat},${driverLng}`;
+      destination = `${pickupCoords.lat},${pickupCoords.lng}`;
+    } else if (pickupCoords && dropCoords) {
+      origin      = `${pickupCoords.lat},${pickupCoords.lng}`;
+      destination = `${dropCoords.lat},${dropCoords.lng}`;
+    }
+    if (!origin || !destination) { setRouteCoords([]); setEtaText(''); setDistText(''); return; }
     let cancelled = false;
-    const origin      = `${pickupCoords.lat},${pickupCoords.lng}`;
-    const destination = `${dropCoords.lat},${dropCoords.lng}`;
     fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&mode=driving&key=${MAPS_KEY}`)
       .then(r => r.json())
       .then(data => {
@@ -134,7 +142,10 @@ export const LiveMap = memo(function LiveMap({
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [pickupCoords?.lat, pickupCoords?.lng, dropCoords?.lat, dropCoords?.lng, showRoute]);
+  }, [pickupCoords?.lat, pickupCoords?.lng, dropCoords?.lat, dropCoords?.lng, showRoute, mode,
+      // Re-fetch route only when driver moves >~500m (lat/lng rounded to 3dp ≈ 111m precision)
+      driverLat != null ? Math.round(driverLat * 200) / 200 : null,
+      driverLng != null ? Math.round(driverLng * 200) / 200 : null]);
 
   // Fit map to show all relevant markers
   useEffect(() => {
