@@ -1206,7 +1206,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       AsyncStorage.setItem('activeStdRideId', String(data.ride_id)).catch(() => {});
       // Save fare to route history (for "last time ₹XX" display on BookingScreen)
       try {
-        const fareNum = parseFloat(String(data.fare ?? rawFare).replace(/[^0-9.]/g, ''));
+        const fareNum = parseFloat(String(data.fare ?? fareEstimates[rideType]?.fare).replace(/[^0-9.]/g, ''));
         if (fareNum > 0 && pickup && drop) {
           const histKey = 'sppero_fare_history';
           const existing = await AsyncStorage.getItem(histKey);
