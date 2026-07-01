@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
-import { Animated, Dimensions, Image, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Dimensions, Image, Linking, Platform, ScrollView, Share, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
@@ -7,6 +7,96 @@ import { Bouncy, DotBG, FadeIn, FloatingDots, GlassPanel, PulseView, SlideUp, Su
 import { LiveMap } from '../components/LiveMap';
 import { s, C } from '../styles';
 import { apiPost } from '../../api';
+import { API } from '../constants';
+
+// ── Parse Google Maps duration text → seconds ──────────────────────────────
+function parseEtaSec(text: string): number {
+  if (!text) return 0;
+  let s = 0;
+  const h = text.match(/(\d+)\s*hour/i);
+  const m = text.match(/(\d+)\s*min/i);
+  const sc = text.match(/(\d+)\s*sec/i);
+  if (h) s += parseInt(h[1]) * 3600;
+  if (m) s += parseInt(m[1]) * 60;
+  if (sc) s += parseInt(sc[1]);
+  return s;
+}
+
+// ── Live ETA Countdown ──────────────────────────────────────────────────────
+function ETACountdown({ etaText, distText, arrived }: { etaText: string; distText: string; arrived: boolean }) {
+  const [remaining, setRemaining] = useState(() => parseEtaSec(etaText));
+  const totalRef = useRef(parseEtaSec(etaText));
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Re-sync ETA when it updates from the API (only if difference > 30s to avoid jitter)
+  useEffect(() => {
+    if (arrived) return;
+    const parsed = parseEtaSec(etaText);
+    if (parsed > 0) {
+      setRemaining(r => {
+        if (r === 0 || Math.abs(parsed - r) > 30) {
+          totalRef.current = parsed;
+          return parsed;
+        }
+        return r;
+      });
+    }
+  }, [etaText, arrived]);
+
+  // Tick every second
+  useEffect(() => {
+    if (arrived) {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      return;
+    }
+    intervalRef.current = setInterval(() => {
+      setRemaining(r => (r <= 1 ? 0 : r - 1));
+    }, 1000);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [arrived]);
+
+  const mins = Math.floor(remaining / 60);
+  const secs = remaining % 60;
+  const total = totalRef.current || 1;
+  const pct   = Math.max(0, Math.min(1, remaining / total));
+  const color = arrived || remaining === 0 ? '#16A34A' : remaining <= 60 ? '#EF4444' : remaining <= 120 ? '#F59E0B' : '#16A34A';
+
+  if (arrived || remaining === 0) {
+    return (
+      <View style={{ backgroundColor: '#F0FDF4', borderRadius: 20, padding: 18, marginBottom: 10, alignItems: 'center', gap: 6, borderWidth: 1.5, borderColor: '#BBF7D0' }}>
+        <Text style={{ fontSize: 32 }}>✅</Text>
+        <Text style={{ color: '#15803D', fontSize: 17, fontWeight: '900' }}>Driver Aa Gaya!</Text>
+        <Text style={{ color: '#4ADE80', fontSize: 12, textAlign: 'center' }}>OTP share karke trip shuru karo</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ backgroundColor: color + '12', borderRadius: 20, padding: 16, marginBottom: 10, borderWidth: 1.5, borderColor: color + '30' }}>
+      {/* Depleting progress strip */}
+      <View style={{ height: 3, backgroundColor: 'rgba(0,0,0,0.07)', borderRadius: 2, marginBottom: 14, overflow: 'hidden' }}>
+        <View style={{ width: `${Math.round(pct * 100)}%`, height: '100%', backgroundColor: color, borderRadius: 2 }} />
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+        <View style={{ width: 58, height: 58, borderRadius: 18, backgroundColor: color + '18', borderWidth: 2, borderColor: color + '30', alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ fontSize: 28 }}>🚗</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: '#64748B', fontSize: 10, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase' }}>
+            driver pahunch raha hai
+          </Text>
+          <Text style={{ color: color, fontSize: 40, fontWeight: '900', letterSpacing: 1, lineHeight: 48, marginTop: 1 }}>
+            {String(mins).padStart(2, '0')}:{String(secs).padStart(2, '0')}
+          </Text>
+          {distText ? (
+            <Text style={{ color: '#94A3B8', fontSize: 11, marginTop: 2 }}>{distText} door • real-time</Text>
+          ) : null}
+        </View>
+        <PulseView><View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: color }} /></PulseView>
+      </View>
+    </View>
+  );
+}
 
 export function MatchingScreen() {
   const {
@@ -69,24 +159,39 @@ export function MatchingScreen() {
   const origFare = cancelInfo?.wait_fare_orig ?? 0;
   const newFare = cancelInfo?.wait_fare_new_total ?? origFare;
 
+  const HEADER_H = Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 56 : 100;
+  const MAP_TOTAL = 180 + HEADER_H;
+
   return (
     <View style={s.screen}>
-      <View style={{ backgroundColor: C.pink, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 52, paddingBottom: 20, paddingHorizontal: 16 }}>
-        <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.10)', top: -60, right: -40 }} />
-        <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900' }}>{rideData?.driver ? '🚗 Driver Mil Gaya!' : '🔍 Driver Dhundh Rahe Hain'}</Text>
+      {/* Map + floating transparent header — map fills area behind header */}
+      <View style={{ height: MAP_TOTAL }}>
+        <LiveMap
+          pickupCoords={pickupCoords}
+          driverLat={driverLoc?.lat}
+          driverLng={driverLoc?.lng}
+          vehicleType={rideType}
+          userLat={userCoords?.latitude || userCoords?.lat}
+          userLng={userCoords?.longitude || userCoords?.lng}
+          height={MAP_TOTAL}
+          mode="matching"
+          showRoute={false}
+        />
+        {/* Glass header — 90% transparent, floats over map */}
+        <View style={{
+          position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, overflow: 'hidden',
+          backgroundColor: 'rgba(233,30,99,0.10)',
+          paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 12 : 54,
+          paddingBottom: 20, paddingHorizontal: 16,
+        }}>
+          {/* Subtle decorative circle */}
+          <View style={{ position: 'absolute', width: 180, height: 180, borderRadius: 90, backgroundColor: 'rgba(255,255,255,0.06)', top: -55, right: -35 }} />
+          <Text style={{
+            color: '#fff', fontSize: 17, fontWeight: '900',
+            textShadowColor: 'rgba(0,0,0,0.55)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4,
+          }}>{rideData?.driver ? '🚗 Driver Mil Gaya!' : '🔍 Driver Dhundh Rahe Hain'}</Text>
+        </View>
       </View>
-      {/* Map — shows driver moving to pickup (when matched) or pickup pin alone */}
-      <LiveMap
-        pickupCoords={pickupCoords}
-        driverLat={driverLoc?.lat}
-        driverLng={driverLoc?.lng}
-        vehicleType={rideType}
-        userLat={userCoords?.latitude || userCoords?.lat}
-        userLng={userCoords?.longitude || userCoords?.lng}
-        height={180}
-        mode="matching"
-        showRoute={false}
-      />
       {!rideData?.driver && (
         <SearchAnim emoji={rideIcon(rideType)} label={VEHICLE_LABELS[rideType] || (rideType || '').replace(/_/g, ' ')} />
       )}
@@ -143,16 +248,11 @@ export function MatchingScreen() {
                   {driverDist ? <Text style={{ fontSize: 10, color: C.textDim, marginTop: 2 }}>{driverDist} door</Text> : null}
                 </View>
               </View></SlideUp>
-              {driverEta ? (
-                <View style={{ backgroundColor: C.greenGlass, borderRadius: 14, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: C.greenBorder }}>
-                  <Text style={{ fontSize: 20, marginRight: 10 }}>🚗</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: C.text, fontWeight: '800', fontSize: 14 }}>Aapka driver aa raha hai!</Text>
-                    <Text style={{ color: C.green, fontSize: 13, marginTop: 2 }}>⏱️ {driverEta} mein pahunchega · {driverDist} door</Text>
-                  </View>
-                  <PulseView><View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.green }} /></PulseView>
-                </View>
-              ) : null}
+              <ETACountdown
+                etaText={driverEta || ''}
+                distText={driverDist || ''}
+                arrived={driverArrived}
+              />
               {rideData?.startOtp && (
                 <View style={s.otpCard}>
                   <Text style={{ color: C.textMuted, fontSize: 12, marginBottom: 6 }}>🔐 Driver ko yeh OTP batao</Text>
@@ -168,6 +268,21 @@ export function MatchingScreen() {
                   <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 3 }}>Chat</Text>
                 </Bouncy>
                 <Bouncy style={s.actionBtn} onPress={callDriver}><Ionicons name="call" size={22} color={C.green} /><Text style={{ fontSize: 10, color: C.textMuted, marginTop: 3 }}>Call</Text></Bouncy>
+                <Bouncy style={s.actionBtn} onPress={() => {
+                  const d = rideData?.driver;
+                  const trackUrl = `${API}/track/${rideData?.ride_id || ''}`;
+                  const msg = `🚖 *Sppero — Live Tracking*\n\n` +
+                    `Driver: ${d?.name || 'Assigned'} | ${d?.vehicle_no || ''}\n` +
+                    (rideData?.startOtp ? `OTP: ${rideData.startOtp}\n` : '') +
+                    `📍 From: ${pickup}\n🎯 To: ${drop}\n\n` +
+                    `📡 *Live track karo:*\n${trackUrl}`;
+                  Share.share({ message: msg, url: trackUrl, title: 'Sppero Live Tracking' }).catch(() => {
+                    Linking.openURL(`https://wa.me/?text=${encodeURIComponent(msg)}`);
+                  });
+                }}>
+                  <Ionicons name="share-social" size={22} color="#3B82F6" />
+                  <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 3 }}>Share</Text>
+                </Bouncy>
                 <Bouncy style={s.actionBtn} onPress={triggerSOS}><Ionicons name="warning" size={22} color={C.red} /><Text style={{ fontSize: 10, color: C.textMuted, marginTop: 3 }}>SOS</Text></Bouncy>
               </View>
               {chatToast && (

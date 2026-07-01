@@ -1204,6 +1204,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       setRideData(data); setScreen('matching'); setResult(''); setAltSuggest(null);
       AsyncStorage.setItem('activeStdRideId', String(data.ride_id)).catch(() => {});
+      // Save fare to route history (for "last time ₹XX" display on BookingScreen)
+      try {
+        const fareNum = parseFloat(String(data.fare ?? rawFare).replace(/[^0-9.]/g, ''));
+        if (fareNum > 0 && pickup && drop) {
+          const histKey = 'sppero_fare_history';
+          const existing = await AsyncStorage.getItem(histKey);
+          const hist: any[] = existing ? JSON.parse(existing) : [];
+          const entry = { pickup, drop, fare: fareNum, rideType, date: new Date().toISOString() };
+          const updated = [entry, ...hist.filter(h => !(h.pickup === pickup && h.drop === drop && h.rideType === rideType))].slice(0, 50);
+          AsyncStorage.setItem(histKey, JSON.stringify(updated)).catch(() => {});
+        }
+      } catch (_e) {}
       // Save drop to local history (last 7, deduped)
       const _dropEntry = { text: drop, coords: dropCoords || null };
       setDropHistory(prev => {
@@ -1405,7 +1417,37 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ── Misc ─────────────────────────────────────────────────────────────────
   const triggerSOS = async () => {
     setSosActive(true);
-    try { await fetch(`${API}/api/sos`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, ride_id: rideData?.ride_id, lat: userCoords?.latitude, lng: userCoords?.longitude, type: 'emergency' }) }); } catch (_e) {}
+    // 1. Notify backend
+    try {
+      await fetch(`${API}/api/sos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, ride_id: rideData?.ride_id, lat: userCoords?.latitude, lng: userCoords?.longitude, type: 'emergency' }),
+      });
+    } catch (_e) {}
+    // 2. Send WhatsApp alert to every saved emergency contact
+    try {
+      const raw = await AsyncStorage.getItem('sppero_emergency_contacts');
+      const contacts: { name: string; phone: string }[] = raw ? JSON.parse(raw) : [];
+      if (contacts.length === 0) return;
+      const locUrl = userCoords
+        ? `https://maps.google.com/?q=${userCoords.latitude},${userCoords.longitude}`
+        : '';
+      const driverPart = rideData
+        ? `\nDriver: ${rideData.driver_name || 'Unknown'} | Vehicle: ${rideData.vehicle_no || 'Unknown'} | Ride #${rideData.ride_id}`
+        : '';
+      const message = `🆘 EMERGENCY — Mujhe turant madad chahiye!\nMain Sppero ride pe hun.${driverPart}\n📍 Meri abhi ki location:\n${locUrl}\n\nKripya mujhe call karo ya police (100) ko khaber karo.`;
+      const encoded = encodeURIComponent(message);
+      // Open WhatsApp for the first contact; others get alerted via SMS fallback
+      const first = contacts[0];
+      const waNum = first.phone.startsWith('91') ? first.phone : `91${first.phone}`;
+      await Linking.openURL(`https://wa.me/${waNum}?text=${encoded}`);
+      // SMS to remaining contacts (Android supports comma-separated)
+      if (contacts.length > 1) {
+        const numbers = contacts.slice(1).map(c => c.phone).join(',');
+        await Linking.openURL(`sms:${numbers}?body=${encoded}`).catch(() => {});
+      }
+    } catch (_e) {}
   };
   const applyReferral = async () => {
     if (!referralInput.trim()) return;

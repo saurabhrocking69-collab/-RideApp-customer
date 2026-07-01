@@ -1,6 +1,7 @@
-import { Animated, KeyboardAvoidingView, Platform, ScrollView, TextInput, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, KeyboardAvoidingView, Platform, ScrollView, StatusBar, TextInput, Text, TouchableOpacity, View } from 'react-native';
 import { useState, useRef, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useApp } from '../context/AppContext';
 import { Bouncy, GlassPanel, MapOverlay, RideVehicleIcon, DotBG } from '../components/ui';
 import { LiveMap } from '../components/LiveMap';
@@ -8,7 +9,7 @@ import { s, C } from '../styles';
 import { RIDES, MAPS_KEY } from '../constants';
 import { apiGet, externalGet } from '../../api';
 
-const MAP_H = 200;
+const MAP_H = 290; // includes ~90px for floating transparent header above visible map
 
 export function BookingScreen() {
   const {
@@ -52,6 +53,18 @@ export function BookingScreen() {
   const [placesLoading, setPlacesLoading] = useState(false);
   const [surgeMultiplier, setSurgeMultiplier] = useState(1.0);
   const [surgeLabel, setSurgeLabel]           = useState<string | null>(null);
+  const [fareHistoryEntry, setFareHistoryEntry] = useState<{ fare: number; date: string } | null>(null);
+
+  // Load fare history for current pickup+drop+rideType combo
+  useEffect(() => {
+    if (!pickup || !drop) { setFareHistoryEntry(null); return; }
+    AsyncStorage.getItem('sppero_fare_history').then(raw => {
+      if (!raw) return;
+      const hist: any[] = JSON.parse(raw);
+      const match = hist.find(h => h.pickup === pickup && h.drop === drop && h.rideType === rideType);
+      setFareHistoryEntry(match ? { fare: match.fare, date: match.date } : null);
+    }).catch(() => {});
+  }, [pickup, drop, rideType]);
 
   // Fetch surge when pickup coords change
   useEffect(() => {
@@ -130,21 +143,7 @@ export function BookingScreen() {
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <DotBG />
 
-      {/* ─── Top bar ─────────────────────────────────────── */}
-      <View style={s.topBar}>
-        <TouchableOpacity
-          onPress={() => { setScreen('home'); setPickupSugg([]); setDropSugg([]); setEta(''); setPromoCode(''); setPromoDiscount(0); setInstantApplied(false); setShowPromoInput(false); }}
-          style={s.backBtn}>
-          <Ionicons name="arrow-back" size={22} color="#fff" />
-        </TouchableOpacity>
-        <View style={{ flex: 1, alignItems: 'center' }}>
-          <Text style={s.topTitle}>Book a Ride</Text>
-          <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, marginTop: 1 }}>Live fares · All India</Text>
-        </View>
-        <View style={{ width: 36 }} />
-      </View>
-
-      {/* ─── Map — FIXED height, never resizes → zero flicker ─── */}
+      {/* ─── Map + floating transparent header ───────────── */}
       <View style={{ height: MAP_H, width: '100%' }}>
         <LiveMap
           pickupCoords={pickupCoords}
@@ -156,6 +155,33 @@ export function BookingScreen() {
           showRoute={!!(pickupCoords && dropCoords)}
         />
         <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} />
+        {/* Glass header — 90% transparent, floats over map tiles */}
+        <View style={{
+          position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
+          backgroundColor: 'rgba(233,30,99,0.10)',
+          paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 10 : 54,
+          paddingBottom: 16, paddingHorizontal: 16,
+          flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <TouchableOpacity
+            onPress={() => { setScreen('home'); setPickupSugg([]); setDropSugg([]); setEta(''); setPromoCode(''); setPromoDiscount(0); setInstantApplied(false); setShowPromoInput(false); }}
+            style={[s.backBtn, {
+              width: 36, height: 36, borderRadius: 12,
+              backgroundColor: 'rgba(15,23,42,0.45)',
+              alignItems: 'center', justifyContent: 'center',
+            }]}>
+            <Ionicons name="arrow-back" size={20} color="#fff" />
+          </TouchableOpacity>
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Text style={[s.topTitle, { textShadowColor: 'rgba(0,0,0,0.55)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 }]}>
+              Book a Ride
+            </Text>
+            <Text style={{ color: 'rgba(255,255,255,0.90)', fontSize: 11, marginTop: 1, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 }}>
+              Live fares · All India
+            </Text>
+          </View>
+          <View style={{ width: 36 }} />
+        </View>
       </View>
 
       {/* ─── Bottom sheet — glass panel floating over map ─── */}
@@ -681,6 +707,13 @@ export function BookingScreen() {
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={{ color: C.yellow, fontWeight: '900', fontSize: 22 }}>₹{finalFare}</Text>
                   {discount > 0 && <Text style={{ color: C.textDim, fontSize: 11, textDecorationLine: 'line-through' }}>₹{rawFare}</Text>}
+                  {fareHistoryEntry && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, backgroundColor: C.greenGlass, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: C.greenBorder }}>
+                      <Text style={{ fontSize: 9, color: C.green, fontWeight: '700' }}>
+                        Pehle: ₹{fareHistoryEntry.fare}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </View>
 

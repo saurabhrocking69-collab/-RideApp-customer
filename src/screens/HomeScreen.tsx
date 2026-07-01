@@ -1374,6 +1374,7 @@ function ProfileTab() {
         {[
           { label: 'Refer & Earn',       sub: 'Dost ko bulao, ₹50 pao',          icon: 'gift',          onPress: () => { loadReferral(); setScreen('referral'); }, iconColor: C.pink },
           { label: 'Cashback Rewards',   sub: 'Rides pe cashback earn karo',      icon: 'cash',          onPress: () => setScreen('rewards'),                     iconColor: C.green, iconBg: C.greenGlass, iconBorder: C.greenBorder },
+          { label: 'Ride Budget',        sub: 'Monthly kharch track karo',        icon: 'bar-chart',     onPress: () => setScreen('budget'),                       iconColor: C.purple, iconBg: C.purpleGlass, iconBorder: C.purpleBorder },
           { label: 'Saved Places',       sub: 'Home, Office save karo',           icon: 'bookmark',      onPress: () => { loadSaved(); setScreen('saved'); },      iconColor: C.yellow },
           { label: 'Cancellation Policy',sub: 'Cancel rules aur fees',            icon: 'receipt',       onPress: () => setScreen('policy'),                       iconColor: C.pink },
           { label: 'Promo Codes',        sub: 'Discount codes apply karo',        icon: 'pricetag',      onPress: () => { setPromoScreenCode(''); setPromoScreenMsg(''); setScreen('promo'); }, iconColor: C.yellow },
