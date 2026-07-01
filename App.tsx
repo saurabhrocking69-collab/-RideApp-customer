@@ -1,7 +1,42 @@
-import { useEffect, useRef } from 'react';
-import { BackHandler, ToastAndroid } from 'react-native';
+import { Component, ReactNode, useEffect, useRef } from 'react';
+import { BackHandler, ToastAndroid, View, Text, TouchableOpacity } from 'react-native';
 import { AppProvider, useApp } from './src/context/AppContext';
 import { Router } from './src/Router';
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { crashed: boolean }> {
+  state = { crashed: false };
+
+  static getDerivedStateFromError() {
+    return { crashed: true };
+  }
+
+  componentDidCatch(error: Error, info: any) {
+    console.error('[Sppero] Crash:', error.message, info?.componentStack?.slice(0, 300));
+  }
+
+  render() {
+    if (this.state.crashed) {
+      return (
+        <View style={{ flex: 1, backgroundColor: '#0F172A', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+          <Text style={{ fontSize: 56 }}>😵</Text>
+          <Text style={{ color: '#F1F5F9', fontSize: 20, fontWeight: '800', marginTop: 16, textAlign: 'center' }}>
+            Kuch gadbad ho gayi
+          </Text>
+          <Text style={{ color: '#94A3B8', fontSize: 14, marginTop: 8, textAlign: 'center', lineHeight: 22 }}>
+            App mein ek choti problem aayi. Dobara try karo.
+          </Text>
+          <TouchableOpacity
+            onPress={() => this.setState({ crashed: false })}
+            style={{ marginTop: 28, backgroundColor: '#E91E63', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 14 }}
+          >
+            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>Dobara Try Karo</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function BackHandlerWrapper() {
   const { screen, setScreen, tab, setTab, rideData, hourlyStep } = useApp();
@@ -61,7 +96,9 @@ function BackHandlerWrapper() {
 function App() {
   return (
     <AppProvider>
-      <BackHandlerWrapper />
+      <ErrorBoundary>
+        <BackHandlerWrapper />
+      </ErrorBoundary>
     </AppProvider>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { ScrollView, View, Text, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, Image, Animated, Share, Dimensions } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ScrollView, View, Text, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, Animated, Share, Dimensions } from 'react-native';
+import { Image } from 'expo-image';
+import { Storage as AsyncStorage } from '../storage';
 import { Ionicons } from '@expo/vector-icons';
 import { apiPost, apiGet } from '../../api';
 import { useRideStore } from '../../store';

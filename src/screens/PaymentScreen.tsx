@@ -1,4 +1,5 @@
-import { Animated, Image, Linking, Platform, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Linking, Platform, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
@@ -86,7 +87,7 @@ export function PaymentScreen() {
         {driverUpiId ? (
           <View style={{ alignItems: 'center' }}>
             <View style={{ backgroundColor: C.glassMid, borderRadius: 24, padding: 18, elevation: 8, borderWidth: 1.5, borderColor: C.glassBorder, alignItems: 'center', width: '100%', maxWidth: 320, alignSelf: 'center' }}>
-              <Image source={{ uri: qrUrl }} style={{ width: 252, height: 252, borderRadius: 16 }} resizeMode="contain" />
+              <Image source={{ uri: qrUrl }} style={{ width: 252, height: 252, borderRadius: 16 }} contentFit="contain" />
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 14, gap: 8 }}>
                 <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.green }} />
                 <Text style={{ fontSize: 12, color: C.textMuted, fontWeight: '600' }}>Scan with any UPI app</Text>

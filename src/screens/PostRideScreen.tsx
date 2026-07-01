@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Animated, Modal, ScrollView, Share, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Storage as AsyncStorage } from '../storage';
 import { useApp } from '../context/AppContext';
 import { Bouncy, Confetti, DotBG, FadeIn, ScreenIn, TripSteps } from '../components/ui';
 import { s, C } from '../styles';

@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
-import { Animated, Dimensions, Image, Linking, Platform, ScrollView, Share, StatusBar, Text, TouchableOpacity, View } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Animated, Dimensions, Linking, Platform, ScrollView, Share, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Storage as AsyncStorage } from '../storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { Bouncy, DotBG, FadeIn, FloatingDots, GlassPanel, PulseView, SlideUp, SuccessBurst, TripSteps } from '../components/ui';

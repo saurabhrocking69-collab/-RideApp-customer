@@ -1,7 +1,7 @@
 import { Animated, KeyboardAvoidingView, Platform, ScrollView, StatusBar, TextInput, Text, TouchableOpacity, View } from 'react-native';
 import { useState, useRef, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Storage as AsyncStorage } from '../storage';
 import { useApp } from '../context/AppContext';
 import { Bouncy, GlassPanel, MapOverlay, RideVehicleIcon, DotBG } from '../components/ui';
 import { LiveMap } from '../components/LiveMap';

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, ScrollView, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Storage as AsyncStorage } from '../storage';
 import { useApp } from '../context/AppContext';
 import { DotBG, ScreenIn } from '../components/ui';
 import { s, C } from '../styles';

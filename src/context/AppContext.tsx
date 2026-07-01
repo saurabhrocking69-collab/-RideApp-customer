@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useRef, useEffect } from 'react';
 import { AppState, Alert, Linking, Platform, Share } from 'react-native';
 import { Animated } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Storage as AsyncStorage } from '../storage';
 import * as Location from 'expo-location';
 import * as Clipboard from 'expo-clipboard';
 import * as Notifications from 'expo-notifications';
