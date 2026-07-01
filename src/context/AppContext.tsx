@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useRef, useEffect } from 'react';
-import { AppState, Alert, Linking, NativeModules, Platform, Share } from 'react-native';
+import { AppState, Alert, Linking, Platform, Share } from 'react-native';
 import { Animated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
@@ -12,7 +12,7 @@ import { API, MAPS_KEY, RIDES, DEFAULT_HOURLY_PACKAGES } from '../constants';
 import { Screen, Tab, Coords, HourlyStep, ExtendStep, WalletTxnTab } from '../types';
 
 let RazorpayCheckout: any = null;
-try { const _m = require('react-native-razorpay'); RazorpayCheckout = NativeModules?.RazorpayCheckout ? (_m?.default || _m) : null; } catch (_e) {}
+try { const _m = require('react-native-razorpay'); RazorpayCheckout = _m?.default || _m || null; } catch (_e) {}
 
 // ─── Context Type ───────────────────────────────────────────────────────────
 interface AppContextType {
