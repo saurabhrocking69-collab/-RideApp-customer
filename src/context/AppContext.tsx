@@ -7,6 +7,8 @@ import * as Clipboard from 'expo-clipboard';
 import * as Notifications from 'expo-notifications';
 import { io, Socket } from 'socket.io-client';
 import { apiGet, apiPost, externalGet } from '../../api';
+import { saveNotification } from '../components/NotificationCenter';
+import type { ToastNotif } from '../components/NotificationToast';
 import { useRideStore } from '../../store';
 import { API, MAPS_KEY, RIDES, DEFAULT_HOURLY_PACKAGES } from '../constants';
 import { Screen, Tab, Coords, HourlyStep, ExtendStep, WalletTxnTab } from '../types';
@@ -78,6 +80,8 @@ interface AppContextType {
   surging: boolean; setSurging: (v: boolean) => void;
   surgeBarAnim: Animated.Value;
   surgeBarAnimRef: React.MutableRefObject<Animated.CompositeAnimation | null>;
+  // Notification toast (foreground in-app)
+  notifToast: ToastNotif | null; setNotifToast: (n: ToastNotif | null) => void;
   // Chat
   chatMsgs: any[]; setChatMsgs: (m: any[]) => void;
   chatInput: string; setChatInput: (i: string) => void;
@@ -380,6 +384,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const surgeBarAnim    = useRef(new Animated.Value(0)).current;
   const surgeBarAnimRef = useRef<Animated.CompositeAnimation | null>(null);
 
+  // ── Notification toast ──────────────────────────────────────────────────
+  const [notifToast, setNotifToast] = useState<ToastNotif | null>(null);
+
   // ── Chat ────────────────────────────────────────────────────────────────
   const [chatMsgs, setChatMsgs] = useState<any[]>([]);
   const [chatInput, setChatInput] = useState('');
@@ -552,16 +559,39 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     Notifications.setNotificationHandler({
       handleNotification: async () => ({ shouldShowAlert: true, shouldPlaySound: true, shouldSetBadge: true, shouldShowBanner: true, shouldShowList: true }),
     });
-    const sub1 = Notifications.addNotificationReceivedListener(_n => {});
+    // Foreground notification handler — save to center + show in-app toast
+    const sub1 = Notifications.addNotificationReceivedListener(n => {
+      const content = n.request.content;
+      const data    = content.data as any;
+      const toast: ToastNotif = {
+        id:    n.request.identifier,
+        title: content.title || 'Sppero',
+        body:  content.body  || '',
+        type:  data?.type,
+        ts:    Date.now(),
+      };
+      saveNotification({ ...toast, read: false });
+      setNotifToast(toast);
+    });
+
+    // Notification tap handler — navigate to correct screen
     const handleNotifTap = async (response: any) => {
       const data = response?.notification?.request?.content?.data as any;
       if (!data?.type) return;
       const rideId = data.ride_id;
       if (rideId) await AsyncStorage.setItem('activeStdRideId', String(rideId)).catch(() => {});
-      if (['ride_matched','driver_arrived'].includes(data.type)) setScreen('matching');
-      else if (data.type === 'trip_started') setScreen('inride');
-      else if (data.type === 'trip_completed' && rideDataRef.current?.ride_id) setScreen('payment');
-      else if (data.type === 'ride_cancelled') setScreen('home');
+      // Ride flow
+      if (['ride_matched', 'driver_arrived'].includes(data.type)) setScreen('matching');
+      else if (data.type === 'trip_started')                       setScreen('inride');
+      else if (data.type === 'trip_completed')                     setScreen('payment');
+      else if (data.type === 'ride_cancelled')                     setScreen('home');
+      else if (data.type === 'no_driver_found')                    setScreen('home');
+      else if (data.type === 'extension_accepted')                 setScreen('matching');
+      // Wallet / payments
+      else if (['cashback_earned', 'refund', 'wallet_topup'].includes(data.type)) setScreen('home');
+      // Account / complaints
+      else if (['account_restricted', 'payment_dispute', 'warning', 'suspended'].includes(data.type)) setScreen('home');
+      else if (['complaint_update', 'complaint_resolved'].includes(data.type)) setScreen('home');
     };
     const sub2 = Notifications.addNotificationResponseReceivedListener(handleNotifTap);
     Notifications.getLastNotificationResponseAsync().then(r => { if (r) handleNotifTap(r); });
@@ -1552,6 +1582,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     freeCancelsLeft, setFreeCancelsLeft, cancelInfo, setCancelInfo, bookTime, setBookTime,
     searchElapsed, setSearchElapsed, surgeCount, setSurgeCount,
     surgeFare, setSurgeFare, surging, setSurging, surgeBarAnim, surgeBarAnimRef,
+    notifToast, setNotifToast,
     chatMsgs, setChatMsgs, chatInput, setChatInput, unreadChat, setUnreadChat, lastChatCount, chatToast, setChatToast,
     rating, setRating, tip, setTip, review, setReview,
     paymentDone, setPaymentDone, showUpiQr, setShowUpiQr, fareCount, setFareCount,

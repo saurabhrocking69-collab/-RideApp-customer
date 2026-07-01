@@ -1,6 +1,7 @@
 import { View } from 'react-native';
 import { useApp } from './context/AppContext';
 import { OfflineBanner } from './components/OfflineBanner';
+import { NotificationToast } from './components/NotificationToast';
 import { SplashScreen } from './screens/SplashScreen';
 import { OnboardingScreen, LoginScreen, OtpScreen } from './screens/AuthScreens';
 import { HomeScreen } from './screens/HomeScreen';
@@ -52,12 +53,27 @@ function ActiveScreen() {
   return <HomeScreen />;
 }
 
-// OfflineBanner renders as position:absolute overlay on top of any screen
+// Global overlays rendered on top of all screens
 export function Router() {
+  const { notifToast, setNotifToast, screen, setScreen } = useApp();
+
+  const handleNotifTap = (n: typeof notifToast) => {
+    if (!n) return;
+    if (['ride_matched', 'driver_arrived', 'extension_accepted'].includes(n.type || '')) setScreen('matching');
+    else if (n.type === 'trip_started') setScreen('inride');
+    else if (n.type === 'trip_completed') setScreen('payment');
+    else setScreen('home');
+  };
+
   return (
     <View style={{ flex: 1 }}>
       <ActiveScreen />
       <OfflineBanner />
+      <NotificationToast
+        notif={notifToast}
+        onDismiss={() => setNotifToast(null)}
+        onTap={n => { setNotifToast(null); handleNotifTap(n); }}
+      />
     </View>
   );
 }

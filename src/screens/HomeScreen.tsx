@@ -10,6 +10,7 @@ import { Bouncy, GlassPanel, PulseView, LucknowCityCard, SlideUp, CountUp, Empty
 import { s, C } from '../styles';
 import { MAPS_KEY } from '../constants';
 import { useNearbyDrivers } from '../offline';
+import { NotifBell, NotificationCenter, getUnreadCount } from '../components/NotificationCenter';
 
 function NavBar() {
   const { tab, screen, setScreen, setTab, loadHistory, phone, rideData, storeStatus, hourlyBooking } = useApp();
@@ -441,6 +442,11 @@ function HomeTab() {
   const { data: nearbyDriversData } = useNearbyDrivers(userLat, userLng);
   const nearbyCount = Array.isArray(nearbyDriversData) ? nearbyDriversData.length : 0;
 
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [unreadNotif, setUnreadNotif] = useState(() => getUnreadCount());
+  // Refresh unread count when screen comes into view
+  useEffect(() => { setUnreadNotif(getUnreadCount()); }, [screen]);
+
   // Pulse animation for live driver badge
   useEffect(() => {
     const pulse = () =>
@@ -511,10 +517,13 @@ function HomeTab() {
               )}
             </View>
           </View>
-          <TouchableOpacity onPress={() => { setTab('profile'); loadWallet(phone); }}
-            style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.45)' }}>
-            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 19 }}>{(userName || 'R')[0].toUpperCase()}</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <NotifBell onPress={() => { setNotifOpen(true); setUnreadNotif(0); }} unread={unreadNotif} />
+            <TouchableOpacity onPress={() => { setTab('profile'); loadWallet(phone); }}
+              style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.45)' }}>
+              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 19 }}>{(userName || 'R')[0].toUpperCase()}</Text>
+            </TouchableOpacity>
+          </View>
         </Animated.View>
         {/* Mini pill — fades in when scrolled */}
         <Animated.View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 14, paddingBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 10, opacity: miniAlpha }}>
@@ -939,6 +948,11 @@ function HomeTab() {
       </Animated.ScrollView>
       <View style={s.navFloat}><NavBar /></View>
       <BuddyBookModal />
+      <NotificationCenter
+        visible={notifOpen}
+        onClose={() => setNotifOpen(false)}
+        phone={phone}
+      />
     </View>
   );
 }
