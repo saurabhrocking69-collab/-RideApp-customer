@@ -3,11 +3,12 @@ import {
   Animated, KeyboardAvoidingView, Modal, Platform, ScrollView,
   Text, TextInput, TouchableOpacity, View, Alert,
 } from 'react-native';
+import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { GlassPanel, DotBG, SlideUp } from '../components/ui';
 import { s, C } from '../styles';
-import { apiGet, apiPost } from '../../api';
+import { apiGet, apiPost, API } from '../../api';
 import { MAPS_KEY, RIDES } from '../constants';
 import { externalGet } from '../../api';
 
@@ -138,7 +139,7 @@ function TimePicker({ value, onChange }: { value: Date; onChange: (d: Date) => v
 }
 
 export function ScheduledRideScreen() {
-  const { setScreen, phone, userCoords } = useApp();
+  const { setScreen, phone, userCoords, appConfig } = useApp();
 
   // Form state
   const defaultTime = new Date(Date.now() + 60 * 60 * 1000); // 1hr from now
@@ -160,18 +161,42 @@ export function ScheduledRideScreen() {
   const [msg, setMsg]             = useState('');
   const [scheduled, setScheduled] = useState<any[]>([]);
   const [listLoading, setListLoading] = useState(false);
-  const [fareEst, setFareEst]     = useState<number | null>(null);
+  const [fareEst, setFareEst]         = useState<number | null>(null);
+  const [fareBreakdown, setFareBreakdown] = useState<any>(null);
+  const [fareLoading, setFareLoading] = useState(false);
 
-  // Recalculate fare estimate whenever coords or vehicle change
+  // Real fare from server whenever coords or vehicle change
   useEffect(() => {
-    if (pickupCoords && dropCoords) {
-      const distKm = haversineKm(pickupCoords.lat, pickupCoords.lng, dropCoords.lat, dropCoords.lng);
-      const v = VEHICLE_OPTIONS.find(o => o.id === vehicle);
-      if (v) setFareEst(Math.round(v.base + distKm * v.perKm));
-    } else {
-      setFareEst(null);
-    }
+    if (!pickupCoords || !dropCoords) { setFareEst(null); setFareBreakdown(null); return; }
+    setFareLoading(true);
+    fetch(`${API}/api/fare-estimate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pickup_lat: pickupCoords.lat, pickup_lng: pickupCoords.lng, drop_lat: dropCoords.lat, drop_lng: dropCoords.lng, ride_type: vehicle }),
+    })
+      .then(r => r.json())
+      .then(d => {
+        if (d.fare) { setFareEst(d.fare); setFareBreakdown(d); }
+        else { setFareEst(null); setFareBreakdown(null); }
+      })
+      .catch(() => { setFareEst(null); setFareBreakdown(null); })
+      .finally(() => setFareLoading(false));
   }, [pickupCoords, dropCoords, vehicle]);
+
+  const useCurrentLocationPickup = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') { Alert.alert('Permission', 'Location permission chahiye'); return; }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const { latitude: lat, longitude: lng } = loc.coords;
+      setPickupCoords({ lat, lng });
+      const r = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${MAPS_KEY}&language=en`);
+      const d = await r.json();
+      const addr = d.results?.[0]?.formatted_address || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      setPickup(addr);
+      setPickupSugg([]);
+    } catch { Alert.alert('Error', 'Location nahi mili — manually daalo'); }
+  };
 
   useEffect(() => { loadScheduled(); }, []);
 
@@ -362,13 +387,19 @@ export function ScheduledRideScreen() {
             {/* Pickup */}
             <View style={{ backgroundColor: C.bgCard, borderRadius: 18, padding: 16, marginBottom: 12, elevation: 4, borderWidth: 1, borderColor: C.glassBorder }}>
               <Text style={{ fontSize: 13, fontWeight: '800', color: C.textMuted, marginBottom: 10 }}>📍 Pickup Location</Text>
-              <TextInput
-                style={{ borderWidth: 1.5, borderColor: pickup ? C.green : C.glassBorder, borderRadius: 12, padding: 12, fontSize: 14, color: C.text, backgroundColor: C.glass }}
-                placeholder="Kahan se pickup?"
-                placeholderTextColor={C.textDim}
-                value={pickup}
-                onChangeText={t => { setPickup(t); setPickupCoords(null); searchPlaces(t, 'pickup'); }}
-              />
+              <View style={{ backgroundColor: C.glass, borderRadius: 12, borderWidth: 1.5, borderColor: pickup ? C.green : C.glassBorder, overflow: 'hidden' }}>
+                <TextInput
+                  style={{ fontSize: 14, color: C.text, padding: 12 }}
+                  placeholder="Kahan se pickup?"
+                  placeholderTextColor={C.textDim}
+                  value={pickup}
+                  onChangeText={t => { setPickup(t); setPickupCoords(null); searchPlaces(t, 'pickup'); }}
+                />
+                <TouchableOpacity onPress={useCurrentLocationPickup} style={{ flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderColor: C.glassBorder, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: C.pinkGlass }}>
+                  <Text style={{ fontSize: 14, marginRight: 6 }}>🎯</Text>
+                  <Text style={{ fontSize: 12, color: C.pink, fontWeight: '700' }}>Current Location Use Karo</Text>
+                </TouchableOpacity>
+              </View>
               {pickupSugg.length > 0 && (
                 <View style={{ backgroundColor: C.bgCard, borderRadius: 12, marginTop: 4, borderWidth: 1, borderColor: C.glassBorder, elevation: 8 }}>
                   {pickupSugg.slice(0, 5).map((sg, i) => (
@@ -429,6 +460,24 @@ export function ScheduledRideScreen() {
                   📅 {fmt(schedTime)}
                 </Text>
               </View>
+              {(() => {
+                const h = schedTime.getHours();
+                const isPeak = (h >= 7 && h < 10) || (h >= 17 && h < 21);
+                const isNight = h >= 22 || h < 6;
+                if (isPeak) return (
+                  <View style={{ backgroundColor: 'rgba(245,158,11,0.12)', borderRadius: 10, padding: 10, marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
+                    <Text style={{ fontSize: 16 }}>🚦</Text>
+                    <Text style={{ color: '#F59E0B', fontSize: 12, flex: 1 }}>Peak traffic hours — surge pricing lag sakti hai. Thoda pehle ya baad schedule karo.</Text>
+                  </View>
+                );
+                if (isNight) return (
+                  <View style={{ backgroundColor: 'rgba(99,102,241,0.12)', borderRadius: 10, padding: 10, marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(99,102,241,0.3)' }}>
+                    <Text style={{ fontSize: 16 }}>🌙</Text>
+                    <Text style={{ color: '#818CF8', fontSize: 12, flex: 1 }}>Raat ka time — 1.2x night surcharge apply hogi. Driver dhundhne mein thoda zyada waqt lag sakta hai.</Text>
+                  </View>
+                );
+                return null;
+              })()}
             </View>
 
             {/* Notes */}
@@ -445,13 +494,29 @@ export function ScheduledRideScreen() {
             </View>
 
             {/* Fare Estimate */}
-            {fareEst !== null && (
-              <View style={{ backgroundColor: C.greenGlass, borderRadius: 16, padding: 14, marginBottom: 14, borderWidth: 1.5, borderColor: C.greenBorder, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <View>
-                  <Text style={{ fontSize: 11, fontWeight: '800', color: C.green, textTransform: 'uppercase', letterSpacing: 0.8 }}>Estimated Fare</Text>
-                  <Text style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>Final fare may vary slightly</Text>
+            {fareLoading && (
+              <View style={{ backgroundColor: C.glass, borderRadius: 16, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: C.glassBorder, alignItems: 'center' }}>
+                <Text style={{ color: C.textMuted, fontSize: 13 }}>⏳ Fare calculate ho raha hai...</Text>
+              </View>
+            )}
+            {!fareLoading && fareEst !== null && fareBreakdown && (
+              <View style={{ backgroundColor: C.greenGlass, borderRadius: 16, padding: 14, marginBottom: 14, borderWidth: 1.5, borderColor: C.greenBorder }}>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: C.green, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 }}>💰 Fare Breakdown</Text>
+                {[
+                  ['Base Fare',                           `₹${fareBreakdown.base_fare}`],
+                  [`Distance (${fareBreakdown.distance_km} km × ₹${fareBreakdown.per_km_rate}/km)`, `₹${Math.round(fareBreakdown.distance_km * fareBreakdown.per_km_rate)}`],
+                  ...(fareBreakdown.is_night ? [[`🌙 Night Surcharge (${fareBreakdown.night_multiplier}x)`, 'Applied']] : []),
+                ].map(([k, v], i) => (
+                  <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: C.greenBorder }}>
+                    <Text style={{ color: C.textMuted, fontSize: 12 }}>{k}</Text>
+                    <Text style={{ color: C.text, fontSize: 12, fontWeight: '600' }}>{v}</Text>
+                  </View>
+                ))}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingTop: 10, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: C.green }}>Estimated Total</Text>
+                  <Text style={{ fontSize: 26, fontWeight: '900', color: C.green }}>₹{fareEst}</Text>
                 </View>
-                <Text style={{ fontSize: 28, fontWeight: '900', color: C.green }}>₹{fareEst}</Text>
+                <Text style={{ fontSize: 10, color: C.textDim, marginTop: 4, textAlign: 'center' }}>Final fare may vary slightly based on actual route</Text>
               </View>
             )}
 

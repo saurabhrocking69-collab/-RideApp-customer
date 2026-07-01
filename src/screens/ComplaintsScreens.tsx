@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -83,15 +83,19 @@ const CATEGORIES = [
 // ─── ComplaintsScreen — list ──────────────────────────────────────────────────
 export function ComplaintsScreen() {
   const { phone, setScreen, complaints, setComplaints, cmpLoading, setCmpLoading, setCmpDetail, setCmpType, setCmpDesc } = useApp();
+  const [listRefreshing, setListRefreshing] = useState(false);
 
-  useEffect(() => {
+  const loadComplaints = useCallback(async (silent = false) => {
     if (!phone) return;
-    setCmpLoading(true);
-    apiGet(`/api/complaints?phone=${encodeURIComponent(phone)}`)
-      .then(d => { if (!d._error && Array.isArray(d.complaints)) setComplaints(d.complaints); })
-      .catch(() => {})
-      .finally(() => setCmpLoading(false));
+    if (!silent) setCmpLoading(true); else setListRefreshing(true);
+    try {
+      const d = await apiGet(`/api/complaints?phone=${encodeURIComponent(phone)}`);
+      if (!d._error && Array.isArray(d.complaints)) setComplaints(d.complaints);
+    } catch {}
+    if (!silent) setCmpLoading(false); else setListRefreshing(false);
   }, [phone]);
+
+  useEffect(() => { loadComplaints(); }, [phone]);
 
   return (
     <ScreenIn style={s.screen}>
@@ -106,7 +110,8 @@ export function ComplaintsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={{ flex: 1, padding: 14 }} contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView style={{ flex: 1, padding: 14 }} contentContainerStyle={{ paddingBottom: 40 }}
+        refreshControl={<RefreshControl refreshing={listRefreshing} onRefresh={() => loadComplaints(true)} colors={[C.pink]} tintColor={C.pink} />}>
         {cmpLoading && (
           <View style={{ alignItems: 'center', paddingTop: 60 }}>
             <ActivityIndicator size="large" color={C.pink} />
@@ -466,6 +471,21 @@ export function NewComplaintScreen() {
 export function ComplaintDetailScreen() {
   const { phone, setScreen, cmpDetail, setCmpDetail, cmpMsg, setCmpMsg, setComplaints } = useApp();
 
+  // hooks must be at the top — before any early returns
+  const [uploading, setUploading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // auto-refresh on mount to get latest status & messages from server
+  useEffect(() => {
+    const id = cmpDetail?.complaint?.id;
+    if (!id || !phone) return;
+    setRefreshing(true);
+    apiGet(`/api/complaints/${id}?phone=${encodeURIComponent(phone)}`)
+      .then(r => { if (r && !r._error && !r.error) setCmpDetail(r); })
+      .catch(() => {})
+      .finally(() => setRefreshing(false));
+  }, []);
+
   if (!cmpDetail) return null;
   const c = cmpDetail.complaint;
   if (!c) return (
@@ -485,14 +505,11 @@ export function ComplaintDetailScreen() {
   const sm = STATUS_META[c?.status] || { color: '#999', label: c?.status, icon: '❓' };
   const isAuto = c?.source === 'system_auto';
 
-  const [uploading, setUploading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-
   const refresh = async () => {
     setRefreshing(true);
     try {
       const r = await apiGet(`/api/complaints/${c.id}?phone=${encodeURIComponent(phone)}`);
-      setCmpDetail(r);
+      if (r && !r._error && !r.error) setCmpDetail(r);
     } catch {}
     setRefreshing(false);
   };
@@ -523,15 +540,17 @@ export function ComplaintDetailScreen() {
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
         <Text style={s.topTitle}>Complaint Detail</Text>
-        <TouchableOpacity onPress={refresh} style={{ padding: 4 }}>
-          <Ionicons name="refresh" size={20} color="#fff" />
+        <TouchableOpacity onPress={refresh} disabled={refreshing} style={{ padding: 4, opacity: refreshing ? 0.5 : 1 }}>
+          {refreshing
+            ? <ActivityIndicator size="small" color="#fff" />
+            : <Ionicons name="refresh" size={20} color="#fff" />}
         </TouchableOpacity>
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, paddingBottom: 40 }}>
 
         {/* Status card */}
-        <View style={{ backgroundColor: sm.color, borderRadius: 16, padding: 16, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <View style={{ backgroundColor: sm.color, borderRadius: 16, padding: 16, marginBottom: 6, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <Text style={{ fontSize: 26 }}>{sm.icon}</Text>
           <View style={{ flex: 1 }}>
             <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>{sm.label}</Text>
@@ -543,6 +562,9 @@ export function ComplaintDetailScreen() {
             </View>
           )}
         </View>
+        <Text style={{ color: C.textDim, fontSize: 10, textAlign: 'right', marginBottom: 10 }}>
+          🕐 Updated: {new Date(c.updated_at || c.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+        </Text>
 
         {/* Auto-detected badge */}
         {isAuto && (

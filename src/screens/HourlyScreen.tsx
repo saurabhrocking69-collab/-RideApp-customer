@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Platform, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Storage } from '../storage';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
@@ -65,6 +66,25 @@ export function HourlyScreen() {
     return () => clearInterval(iv);
   }, [hourlyStep, hourlyBooking?.id, hourlyBooking?.status]);
 
+  // Load & auto-poll chat messages while chat panel is open
+  useEffect(() => {
+    if (!hChatOpen || !hourlyBooking?.id) return;
+    let active = true;
+    const load = async () => {
+      try {
+        const d = await apiGet(`/api/hourly/chat/${hourlyBooking.id}`);
+        if (active) {
+          const msgs = d.messages || [];
+          setHChatMsgs(msgs);
+          setHChatUnread(0);
+        }
+      } catch (_e) {}
+    };
+    load();
+    const iv = setInterval(load, 4000);
+    return () => { active = false; clearInterval(iv); };
+  }, [hChatOpen, hourlyBooking?.id]);
+
   const useCurrentLocationPickup = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -116,7 +136,7 @@ export function HourlyScreen() {
       const data = await apiPost('/api/hourly/book', body);
       if (data.success) {
         setHourlyBooking({ id: data.booking_id, fare: data.fare, km_included: data.km_included, status: 'pending', vehicle_type: hVehicle, package_hours: hPackageHours, pickup: hPickup, drop_location: hDrop, is_roundtrip: hRoundTrip, stay_hours: hStayHours });
-        require('@react-native-async-storage/async-storage').default.setItem('activeHourlyId', String(data.booking_id)).catch(() => {});
+        Storage.setItem('activeHourlyId', String(data.booking_id)).catch(() => {});
         joinHourlySocket(data.booking_id);
         setHourlyStep('waiting');
         loadWallet(phone);
