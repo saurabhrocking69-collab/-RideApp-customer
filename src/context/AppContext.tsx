@@ -1112,7 +1112,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       let finalStatus = existing;
       if (existing !== 'granted') { const { status } = await Notifications.requestPermissionsAsync(); finalStatus = status; }
       if (finalStatus !== 'granted') return;
-      const token = (await Notifications.getExpoPushTokenAsync({ projectId: '8f1a5733-b0fe-466b-ab3e-862983570572' })).data;
+      let token: string | null = null;
+      try {
+        // Native device FCM token — direct Firebase Admin path, no Expo relay latency
+        const dt = await Notifications.getDevicePushTokenAsync();
+        token = dt.data as string;
+      } catch (_e) {
+        // Fallback: Expo relay (works in Expo Go / emulator)
+        try {
+          const et = await Notifications.getExpoPushTokenAsync({ projectId: '8f1a5733-b0fe-466b-ab3e-862983570572' });
+          token = et.data;
+        } catch (_e2) {}
+      }
+      if (!token) return;
       await apiPost('/api/auth/save-fcm-token', { phone: userPhone, token, role: 'customer' });
     } catch (_e) {}
   };
