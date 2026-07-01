@@ -1255,6 +1255,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     finally { setSwitchingVehicle(false); }
   };
 
+  // ── Razorpay error → friendly message (never shows raw JSON to user) ─────
+  const rzpErr = (e: any): { cancelled: boolean; msg: string } => {
+    const code   = String(e?.code   || '').toUpperCase();
+    const reason = String(e?.reason || e?.error?.reason || '').toLowerCase();
+    const desc   = String(e?.description || e?.error?.description || '').toLowerCase();
+    const isCancelled =
+      code === 'PAYMENT_CANCELLED' ||
+      reason.includes('cancel') ||
+      desc.includes('cancel') ||
+      (code === 'BAD_REQUEST_ERROR' && reason === 'payment_error' && (!e?.description || e?.description === 'undefined'));
+    if (isCancelled)   return { cancelled: true,  msg: 'Payment aapne cancel kiya' };
+    if (code === 'NETWORK_ERROR') return { cancelled: false, msg: 'Internet slow tha. Dobara try karo — paise nahi kate.' };
+    if (code === 'SERVER_ERROR')  return { cancelled: false, msg: 'Payment server se connect nahi hua. Thodi der mein try karo.' };
+    return { cancelled: false, msg: 'Payment nahi hua. Dobara try karo — paise nahi kate honge.' };
+  };
+
   // ── Payment ──────────────────────────────────────────────────────────────
   const handlePayment = async () => {
     if (!RazorpayCheckout) { Alert.alert('Payment Error', 'Payment module load nahi hua. App restart karein.'); return; }
@@ -1269,10 +1285,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setPaymentDone(true); setScreen('postride'); createScratchCard();
           AsyncStorage.removeItem('activeStdRideId').catch(() => {});
         }).catch((e: any) => {
-          if (e?.code === 'PAYMENT_CANCELLED') setResult('❌ Payment cancel kiya');
-          else setResult('❌ ' + (e?.description || e?.message || 'Payment fail hua'));
+          const { cancelled, msg } = rzpErr(e);
+          setResult(cancelled ? '❌ Payment cancel kiya' : `❌ ${msg}`);
         });
-    } catch (e: any) { setResult('❌ ' + (e?.message || 'Payment error')); }
+    } catch (e: any) { setResult('❌ Payment nahi hua. Dobara try karo.'); }
   };
 
   const payWithWallet = async () => {
@@ -1338,9 +1354,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           try {
             const vd = await apiPost('/api/wallet/topup/verify', { phone, razorpay_order_id: payment.razorpay_order_id, razorpay_payment_id: payment.razorpay_payment_id, razorpay_signature: payment.razorpay_signature, amount: amt });
             if (vd.success) { setWalletBalance(vd.balance); await loadWalletDetail(phone); Alert.alert('✅ Wallet Recharged!', `₹${amt} aapke wallet mein add ho gaya!`); }
-            else { Alert.alert('Payment Error', vd.error || 'Wallet update nahi hua — support se contact karo'); }
+            else { Alert.alert('Payment Fail', 'Payment verify nahi hua. Balance thodi der mein refresh ho jayega.'); }
           } catch (_e) { Alert.alert('Network Error', 'Payment hua lekin verify nahi hua. Thodi der mein balance refresh karein.'); }
-        }).catch((e: any) => { if (e?.code !== 'PAYMENT_CANCELLED') Alert.alert('Payment Error', e?.description || e?.message || 'Payment fail'); });
+        }).catch((e: any) => {
+          const { cancelled, msg } = rzpErr(e);
+          if (!cancelled) Alert.alert('Payment Fail', msg);
+          // cancelled = user tapped back — silent, no alert needed
+        });
     } catch (_e) { Alert.alert('Error', 'Server se connect nahi hua. Internet check karein.'); }
   };
 
