@@ -25,12 +25,17 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.saurabhspero.rideappmobile3",
-      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "RECEIVE_BOOT_COMPLETED", "VIBRATE", "POST_NOTIFICATIONS"]
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "RECEIVE_BOOT_COMPLETED", "VIBRATE", "POST_NOTIFICATIONS"],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4"
+        }
+      }
     },
     "config": {
-  "googleMaps": {
-    "apiKey": "AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4"
-  }
+      "googleMaps": {
+        "apiKey": "AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4"
+      }
     },
     "plugins": [
       ["expo-notifications", { "icon": "./assets/icon.png", "color": "#e94560" }],
