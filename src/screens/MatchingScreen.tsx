@@ -161,41 +161,48 @@ export function MatchingScreen() {
   const newFare = cancelInfo?.wait_fare_new_total ?? origFare;
 
   const HEADER_H = Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 40 : 84;
-  const MAP_TOTAL = 180 + HEADER_H;
+  const SEARCH_H = 262;
+  const MAP_H    = 240 + HEADER_H;
 
   return (
     <View style={s.screen}>
-      {/* Map + floating transparent header — map fills area behind header */}
-      <View style={{ height: MAP_TOTAL }}>
-        <LiveMap
-          pickupCoords={pickupCoords}
-          driverLat={driverLoc?.lat}
-          driverLng={driverLoc?.lng}
-          vehicleType={rideType}
-          userLat={userCoords?.latitude || userCoords?.lat}
-          userLng={userCoords?.longitude || userCoords?.lng}
-          height={MAP_TOTAL}
-          mode="matching"
-          showRoute={true}
-        />
-        {/* Glass header — 90% transparent, floats over map */}
+      {/* Hero: SearchAnim when searching, LiveMap when driver assigned */}
+      <View style={{ height: rideData?.driver ? MAP_H : SEARCH_H }}>
+        {rideData?.driver ? (
+          <LiveMap
+            pickupCoords={pickupCoords}
+            dropCoords={dropCoords}
+            driverLat={driverLoc?.lat}
+            driverLng={driverLoc?.lng}
+            vehicleType={rideType}
+            userLat={userCoords?.latitude || userCoords?.lat}
+            userLng={userCoords?.longitude || userCoords?.lng}
+            userAccuracy={(userCoords as any)?.accuracy}
+            height={MAP_H}
+            mode="matching"
+            showRoute={true}
+            followDriver={true}
+            showTraffic={false}
+          />
+        ) : (
+          <SearchAnim emoji={rideIcon(rideType)} label={VEHICLE_LABELS[rideType] || (rideType || '').replace(/_/g, ' ')} />
+        )}
+        {/* Glass header — floats over SearchAnim (paper style) or LiveMap (pink tint) */}
         <View style={{
           position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, overflow: 'hidden',
-          backgroundColor: 'rgba(233,30,99,0.10)',
+          backgroundColor: rideData?.driver ? 'rgba(233,30,99,0.10)' : 'rgba(244,239,227,0.88)',
           paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 8 : 46,
           paddingBottom: 10, paddingHorizontal: 16,
         }}>
-          {/* Subtle decorative circle */}
           <View style={{ position: 'absolute', width: 180, height: 180, borderRadius: 90, backgroundColor: 'rgba(255,255,255,0.06)', top: -55, right: -35 }} />
           <Text style={{
-            color: '#fff', fontSize: 17, fontWeight: '900',
-            textShadowColor: 'rgba(0,0,0,0.55)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4,
+            fontSize: 17, fontWeight: '900',
+            color: rideData?.driver ? '#fff' : '#2d1f0e',
+            textShadowColor: rideData?.driver ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.5)',
+            textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4,
           }}>{rideData?.driver ? '🚗 Driver Mil Gaya!' : '🔍 Driver Dhundh Rahe Hain'}</Text>
         </View>
       </View>
-      {!rideData?.driver && (
-        <SearchAnim emoji={rideIcon(rideType)} label={VEHICLE_LABELS[rideType] || (rideType || '').replace(/_/g, ' ')} />
-      )}
       <View style={{ flex: 1, backgroundColor: C.bg, paddingTop: 8, paddingHorizontal: 16 }}>
         <TripSteps step={rideData?.driver ? 1 : 0} />
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
