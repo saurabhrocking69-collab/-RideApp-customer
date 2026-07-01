@@ -1,4 +1,6 @@
+import { View } from 'react-native';
 import { useApp } from './context/AppContext';
+import { OfflineBanner } from './components/OfflineBanner';
 import { SplashScreen } from './screens/SplashScreen';
 import { OnboardingScreen, LoginScreen, OtpScreen } from './screens/AuthScreens';
 import { HomeScreen } from './screens/HomeScreen';
@@ -19,35 +21,43 @@ import { RewardsScreen } from './screens/RewardsScreen';
 import { ScheduledRideScreen } from './screens/ScheduledRideScreen';
 import { BudgetScreen } from './screens/BudgetScreen';
 
-export function Router() {
+function ActiveScreen() {
   const { screen } = useApp();
-
-  if (screen === 'splash')          return <SplashScreen />;
-  if (screen === 'onboarding')      return <OnboardingScreen />;
-  if (screen === 'login')           return <LoginScreen />;
-  if (screen === 'otp')             return <OtpScreen />;
-  if (screen === 'home')            return <HomeScreen />;
-  if (screen === 'booking')         return <BookingScreen />;
-  if (screen === 'matching')        return <MatchingScreen />;
-  if (screen === 'inride')          return <InRideScreen />;
-  if (screen === 'payment')         return <PaymentScreen />;
-  if (screen === 'postride')        return <PostRideScreen />;
-  if (screen === 'hourly')          return <HourlyScreen />;
-  if (screen === 'hourly-info')     return <HourlyInfoScreen />;
-  if (screen === 'wallet')          return <WalletScreen />;
-  if (screen === 'promo')           return <PromoScreen />;
-  if (screen === 'safety')          return <SafetyScreen />;
-  if (screen === 'support')         return <SupportScreen />;
-  if (screen === 'complaints')      return <ComplaintsScreen />;
-  if (screen === 'complaint-new')   return <NewComplaintScreen />;
+  if (screen === 'splash')           return <SplashScreen />;
+  if (screen === 'onboarding')       return <OnboardingScreen />;
+  if (screen === 'login')            return <LoginScreen />;
+  if (screen === 'otp')              return <OtpScreen />;
+  if (screen === 'home')             return <HomeScreen />;
+  if (screen === 'booking')          return <BookingScreen />;
+  if (screen === 'matching')         return <MatchingScreen />;
+  if (screen === 'inride')           return <InRideScreen />;
+  if (screen === 'payment')          return <PaymentScreen />;
+  if (screen === 'postride')         return <PostRideScreen />;
+  if (screen === 'hourly')           return <HourlyScreen />;
+  if (screen === 'hourly-info')      return <HourlyInfoScreen />;
+  if (screen === 'wallet')           return <WalletScreen />;
+  if (screen === 'promo')            return <PromoScreen />;
+  if (screen === 'safety')           return <SafetyScreen />;
+  if (screen === 'support')          return <SupportScreen />;
+  if (screen === 'complaints')       return <ComplaintsScreen />;
+  if (screen === 'complaint-new')    return <NewComplaintScreen />;
   if (screen === 'complaint-detail') return <ComplaintDetailScreen />;
-  if (screen === 'referral')        return <ReferralScreen />;
-  if (screen === 'policy')          return <PolicyScreen />;
-  if (screen === 'saved')           return <SavedPlacesScreen />;
-  if (screen === 'chat')            return <ChatScreen />;
-  if (screen === 'rewards')         return <RewardsScreen />;
-  if (screen === 'scheduled')       return <ScheduledRideScreen />;
-  if (screen === 'budget')          return <BudgetScreen />;
-
+  if (screen === 'referral')         return <ReferralScreen />;
+  if (screen === 'policy')           return <PolicyScreen />;
+  if (screen === 'saved')            return <SavedPlacesScreen />;
+  if (screen === 'chat')             return <ChatScreen />;
+  if (screen === 'rewards')          return <RewardsScreen />;
+  if (screen === 'scheduled')        return <ScheduledRideScreen />;
+  if (screen === 'budget')           return <BudgetScreen />;
   return <HomeScreen />;
+}
+
+// OfflineBanner renders as position:absolute overlay on top of any screen
+export function Router() {
+  return (
+    <View style={{ flex: 1 }}>
+      <ActiveScreen />
+      <OfflineBanner />
+    </View>
+  );
 }

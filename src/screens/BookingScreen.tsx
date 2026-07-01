@@ -8,6 +8,7 @@ import { LiveMap } from '../components/LiveMap';
 import { s, C } from '../styles';
 import { RIDES, MAPS_KEY } from '../constants';
 import { apiGet, externalGet } from '../../api';
+import { useNearbyDrivers } from '../offline';
 
 const MAP_H = 290; // includes ~90px for floating transparent header above visible map
 
@@ -54,8 +55,6 @@ export function BookingScreen() {
   const [surgeMultiplier, setSurgeMultiplier] = useState(1.0);
   const [surgeLabel, setSurgeLabel]           = useState<string | null>(null);
   const [fareHistoryEntry, setFareHistoryEntry] = useState<{ fare: number; date: string } | null>(null);
-  const [nearbyDrivers, setNearbyDrivers]     = useState<{ lat: number; lng: number; vehicleType: string }[]>([]);
-
   // Load fare history for current pickup+drop+rideType combo
   useEffect(() => {
     if (!pickup || !drop) { setFareHistoryEntry(null); return; }
@@ -75,22 +74,11 @@ export function BookingScreen() {
       .catch(() => {});
   }, [pickupCoords?.lat, pickupCoords?.lng]);
 
-  // Fetch nearby available drivers to show on map
-  useEffect(() => {
-    const lat = pickupCoords?.lat || userCoords?.latitude || userCoords?.lat;
-    const lng = pickupCoords?.lng || userCoords?.longitude || userCoords?.lng;
-    if (!lat || !lng) { setNearbyDrivers([]); return; }
-    let cancelled = false;
-    apiGet(`/api/rides/nearby-drivers?lat=${lat}&lng=${lng}`)
-      .then(d => { if (!cancelled && !d._error) setNearbyDrivers(d.drivers || []); })
-      .catch(() => {});
-    const iv = setInterval(() => {
-      apiGet(`/api/rides/nearby-drivers?lat=${lat}&lng=${lng}`)
-        .then(d => { if (!cancelled && !d._error) setNearbyDrivers(d.drivers || []); })
-        .catch(() => {});
-    }, 20000);
-    return () => { cancelled = true; clearInterval(iv); };
-  }, [pickupCoords?.lat, pickupCoords?.lng, userCoords?.latitude || userCoords?.lat]);
+  // Nearby drivers — cached hook (auto-refreshes every 20s, shows stale instantly)
+  const nbLat = pickupCoords?.lat || userCoords?.latitude || userCoords?.lat;
+  const nbLng = pickupCoords?.lng || userCoords?.longitude || userCoords?.lng;
+  const { data: nearbyDriversData } = useNearbyDrivers(nbLat, nbLng);
+  const nearbyDrivers = (Array.isArray(nearbyDriversData) ? nearbyDriversData : []) as { lat: number; lng: number; vehicleType: string }[];
 
   useEffect(() => {
     if (!pickupCoords?.lat || !pickupCoords?.lng) { setDriverEta({}); setEtaLoaded(false); return; }

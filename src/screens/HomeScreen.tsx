@@ -9,6 +9,7 @@ import { useApp } from '../context/AppContext';
 import { Bouncy, GlassPanel, PulseView, LucknowCityCard, SlideUp, CountUp, EmptyAnim, DotBG, GlowPulse, ShineCard } from '../components/ui';
 import { s, C } from '../styles';
 import { MAPS_KEY } from '../constants';
+import { useNearbyDrivers } from '../offline';
 
 function NavBar() {
   const { tab, screen, setScreen, setTab, loadHistory, phone, rideData, storeStatus, hourlyBooking } = useApp();
@@ -434,20 +435,11 @@ function HomeTab() {
     apiGet(`/api/rides/scheduled/${phone}`).then(d => { if (!d._error) setScheduledRides(d.rides || []); }).catch(() => {});
   }, [phone]);
 
-  const [nearbyCount, setNearbyCount] = useState(0);
   const nearbyAnim = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
-    const lat = (userCoords as any)?.latitude || (userCoords as any)?.lat;
-    const lng = (userCoords as any)?.longitude || (userCoords as any)?.lng;
-    if (!lat || !lng) return;
-    const fetch = () =>
-      apiGet(`/api/rides/nearby-drivers?lat=${lat}&lng=${lng}`)
-        .then(d => { if (!d._error) setNearbyCount(d.drivers?.length || 0); })
-        .catch(() => {});
-    fetch();
-    const iv = setInterval(fetch, 30000);
-    return () => clearInterval(iv);
-  }, [(userCoords as any)?.latitude || (userCoords as any)?.lat]);
+  const userLat = (userCoords as any)?.latitude || (userCoords as any)?.lat;
+  const userLng = (userCoords as any)?.longitude || (userCoords as any)?.lng;
+  const { data: nearbyDriversData } = useNearbyDrivers(userLat, userLng);
+  const nearbyCount = Array.isArray(nearbyDriversData) ? nearbyDriversData.length : 0;
 
   // Pulse animation for live driver badge
   useEffect(() => {
