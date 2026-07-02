@@ -339,38 +339,70 @@ export function PaymentScreen() {
             <View style={{ flex: 1, height: 1, backgroundColor: '#E2E8F0' }} />
           </View>
 
-          {/* ── Wallet ── */}
-          <Bouncy onPress={walletSufficient ? payWithWallet : undefined} style={{ opacity: walletSufficient ? 1 : 0.65, marginBottom: 10 }}>
-            <View style={{
-              borderRadius: 18, padding: 16, flexDirection: 'row', alignItems: 'center',
-              backgroundColor: walletSufficient ? 'rgba(22,163,74,0.08)' : '#F8FAFC',
-              borderWidth: walletSufficient ? 2 : 1,
-              borderColor: walletSufficient ? '#22C55E' : '#E2E8F0',
-              elevation: walletSufficient ? 4 : 1,
-              shadowColor: '#22C55E', shadowOpacity: walletSufficient ? 0.2 : 0, shadowRadius: 8,
-            }}>
-              <View style={{ width: 48, height: 48, borderRadius: 15, backgroundColor: walletSufficient ? 'rgba(22,163,74,0.15)' : '#F1F5F9', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                <Text style={{ fontSize: 22 }}>💰</Text>
+          {/* ── Wallet — highlighted card ── */}
+          <Bouncy onPress={walletSufficient ? payWithWallet : undefined} style={{ marginBottom: 12 }}>
+            <View style={{ borderRadius: 22, overflow: 'hidden', elevation: walletSufficient ? 8 : 2, shadowColor: '#16A34A', shadowOpacity: walletSufficient ? 0.28 : 0, shadowRadius: 12 }}>
+              {/* Cashback banner — always visible */}
+              <View style={{ backgroundColor: walletSufficient ? '#16A34A' : '#94A3B8', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 7, gap: 6 }}>
+                <Text style={{ fontSize: 14 }}>🎁</Text>
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '900', flex: 1 }}>
+                  ₹5 Cashback Instantly — Wallet se pay karo!
+                </Text>
+                <View style={{ backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
+                  <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900' }}>BEST DEAL</Text>
+                </View>
               </View>
-              <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 2 }}>
-                  <Text style={{ color: C.text, fontWeight: '900', fontSize: 15 }}>Sppero Wallet</Text>
-                  {walletSufficient && (
-                    <View style={{ backgroundColor: '#22C55E', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
-                      <Text style={{ color: '#fff', fontSize: 8, fontWeight: '900' }}>INSTANT</Text>
-                    </View>
+
+              {/* Card body */}
+              <View style={{
+                padding: 16, flexDirection: 'row', alignItems: 'center',
+                backgroundColor: walletSufficient ? '#F0FDF4' : '#F8FAFC',
+                borderWidth: walletSufficient ? 2 : 1,
+                borderTopWidth: 0,
+                borderColor: walletSufficient ? '#22C55E' : '#E2E8F0',
+              }}>
+                {/* Wallet icon */}
+                <View style={{
+                  width: 54, height: 54, borderRadius: 18, marginRight: 14,
+                  backgroundColor: walletSufficient ? '#DCFCE7' : '#F1F5F9',
+                  alignItems: 'center', justifyContent: 'center',
+                  borderWidth: 2, borderColor: walletSufficient ? '#86EFAC' : '#E2E8F0',
+                }}>
+                  <Text style={{ fontSize: 24 }}>💰</Text>
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <Text style={{ color: C.text, fontWeight: '900', fontSize: 16 }}>Sppero Wallet</Text>
+                    {walletSufficient && (
+                      <View style={{ backgroundColor: '#22C55E', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
+                        <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900' }}>TAP TO PAY</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={{ color: walletSufficient ? '#15803D' : '#94A3B8', fontSize: 13, fontWeight: '700' }}>
+                    Balance: ₹{walletBalance}
+                    {walletSufficient ? ` · Covers ₹${fareNum} ✓` : ' — balance kam hai'}
+                  </Text>
+                  {walletSufficient ? (
+                    <Text style={{ color: '#16A34A', fontSize: 12, marginTop: 3, fontWeight: '600' }}>
+                      + ₹5 scratch card turant milega 🎉
+                    </Text>
+                  ) : (
+                    <TouchableOpacity onPress={() => setScreen('wallet')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <Text style={{ color: C.pink, fontSize: 13, fontWeight: '900', marginTop: 4 }}>
+                        + Recharge Karo & ₹5 Cashback Pao →
+                      </Text>
+                    </TouchableOpacity>
                   )}
                 </View>
-                <Text style={{ color: walletSufficient ? '#16A34A' : '#94A3B8', fontSize: 12 }}>
-                  ₹{walletBalance} balance{walletSufficient ? ` · ₹${cashback} cashback!` : ' — kam hai'}
-                </Text>
-                {!walletSufficient && (
-                  <TouchableOpacity onPress={() => setScreen('wallet')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                    <Text style={{ color: C.pink, fontSize: 12, fontWeight: '800', marginTop: 3 }}>Recharge Karo →</Text>
-                  </TouchableOpacity>
-                )}
+
+                <Ionicons
+                  name={walletSufficient ? 'arrow-forward-circle' : 'chevron-forward'}
+                  size={walletSufficient ? 32 : 22}
+                  color={walletSufficient ? '#22C55E' : '#CBD5E1'}
+                />
               </View>
-              <Ionicons name={walletSufficient ? 'arrow-forward-circle' : 'chevron-forward'} size={walletSufficient ? 28 : 20} color={walletSufficient ? '#22C55E' : '#CBD5E1'} />
             </View>
           </Bouncy>
 
