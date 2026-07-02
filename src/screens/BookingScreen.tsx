@@ -95,7 +95,7 @@ export function BookingScreen() {
   }, [pickupCoords?.lat, pickupCoords?.lng]);
 
   useEffect(() => {
-    if (!userCoords?.lat || pickup) { setNearbyPlaces([]); return; }
+    if (!userCoords?.latitude || pickup) { setNearbyPlaces([]); return; }
     let cancelled = false;
     setPlacesLoading(true);
     const fetchPlaces = async () => {

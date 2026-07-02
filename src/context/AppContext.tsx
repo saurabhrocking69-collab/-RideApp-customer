@@ -840,7 +840,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (activeRideIdRef.current) socketRef.current.emit('joinRide', { rideId: activeRideIdRef.current });
         return;
       }
+      // Already attempting to reconnect — don't spawn a second socket
+      if ((socketRef.current as any).active) return;
       socketRef.current.disconnect();
+      socketRef.current = null;
     }
     const s = io(API, { transports: ['polling', 'websocket'], reconnection: true, reconnectionAttempts: Infinity, reconnectionDelay: 2000, reconnectionDelayMax: 10000, timeout: 10000 });
 
@@ -903,7 +906,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (data.cashbacks?.length) setCashbackEarned(data.cashbacks);
         setPaymentDone(true);
         setScreen('postride');
-        createScratchCard();
         AsyncStorage.removeItem('activeStdRideId').catch(() => {});
       }
     });
@@ -1229,7 +1231,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const applyPromo = async () => {
     if (!promoCode) return;
     try {
-      const res = await fetch(`${API}/api/promo/validate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: promoCode, fare: 100, phone }) });
+      const res = await fetch(`${API}/api/promo/validate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: promoCode, fare: fareEstimates[rideType]?.fare ?? 100, phone }) });
       const data = await res.json();
       if (data.valid) { setPromoDiscount(data.discount); setResult(`✅ ${data.message}`); }
       else { setPromoDiscount(0); setResult('❌ ' + data.message); }
@@ -1243,10 +1245,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const ddata = await externalGet(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(pickup)}&destinations=${encodeURIComponent(drop)}&key=${MAPS_KEY}&mode=driving&departure_time=now`);
       const el = ddata._error ? null : ddata.rows?.[0]?.elements?.[0];
       const distanceKm = el?.status === 'OK' ? el.distance.value / 1000 : 5;
-      if (!dropCoords) await geocodePlace(drop, 'drop');
+      // Resolve drop coords inline — can't read state immediately after setDropCoords
+      let dropLat = dropCoords?.lat;
+      let dropLng = dropCoords?.lng;
+      if (!dropLat || !dropLng) {
+        try {
+          const gr = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(drop)}&key=${MAPS_KEY}`);
+          const gd = await gr.json();
+          const loc = gd.results?.[0]?.geometry?.location;
+          if (loc) { dropLat = loc.lat; dropLng = loc.lng; setDropCoords({ lat: dropLat, lng: dropLng }); }
+        } catch (_e) {}
+      }
       const data = await apiPost('/api/rides/book', {
         passenger_phone: phone || '9999999999', pickup, drop_location: drop, ride_type: rideType, distance: distanceKm,
-        pickup_lat: pickupCoords?.lat, pickup_lng: pickupCoords?.lng, drop_lat: dropCoords?.lat, drop_lng: dropCoords?.lng,
+        pickup_lat: pickupCoords?.lat, pickup_lng: pickupCoords?.lng, drop_lat: dropLat, drop_lng: dropLng,
         discount: promoDiscount, promo_code: promoDiscount > 0 ? promoCode : null
       });
       if (data._error) { setResult('❌ ' + data.message); return; }

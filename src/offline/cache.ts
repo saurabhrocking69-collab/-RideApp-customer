@@ -56,7 +56,7 @@ export const TTL = {
   APP_CONFIG:       60 * 60 * 1000,   // 1 hr
   PROMO_LIST:       15 * 60 * 1000,   // 15 min
   USER_PROFILE:     24 * 60 * 60 * 1000, // 24 hr
-  DROP_HISTORY:     Infinity,          // permanent
+  DROP_HISTORY:     10 * 365 * 24 * 60 * 60 * 1000,  // 10 years — effectively permanent, but JSON-safe
 };
 
 // Typed cache keys

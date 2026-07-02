@@ -3,6 +3,7 @@ import { Animated, Modal, ScrollView, Text, TouchableOpacity, View, Platform } f
 import { Ionicons } from '@expo/vector-icons';
 import { C } from '../styles';
 import { Cache, KEY, TTL } from '../offline';
+import { API } from '../constants';
 
 export interface InAppNotif {
   id: string;
@@ -120,7 +121,7 @@ export function NotificationCenter({ visible, onClose, phone }: CenterProps) {
 
     // Also fetch backend in-app notifications and merge
     if (phone) {
-      fetch(`https://rideapp-backend-production-5e1c.up.railway.app/api/notifications?target=${phone}`)
+      fetch(`${API}/api/notifications?target=${phone}`)
         .then(r => r.json())
         .then(d => {
           if (!Array.isArray(d.notifications)) return;

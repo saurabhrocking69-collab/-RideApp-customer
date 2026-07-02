@@ -85,7 +85,10 @@ export function InRideScreen() {
   } = useApp();
 
   const [elapsed, setElapsed] = useState(0);
-  const startRef = useRef(Date.now());
+  // Use ride's server-side started_at so timer survives chat navigation and remounts
+  const startRef = useRef(
+    rideData?.started_at ? new Date(rideData.started_at).getTime() : Date.now()
+  );
 
   useEffect(() => {
     const id = setInterval(() => {
