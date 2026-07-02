@@ -428,6 +428,7 @@ function HomeTab() {
     rideIcon, customerRating, walletBalance,
     storeStatus, paymentDone,
     referralData,
+    screen,
   } = useApp();
 
   const [scheduledRides, setScheduledRides] = useState<any[]>([]);
