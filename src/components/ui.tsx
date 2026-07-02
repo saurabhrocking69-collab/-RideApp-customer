@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, Animated, StyleSheet, useWindowDimensions
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import { MAPS_KEY } from '../constants';
-import { C } from '../styles';
+import { C, R, SHADOW } from '../styles';
 
 // ─── GlassPanel ──────────────────────────────────────────────────────────────
 // Glassmorphism via semi-transparent bg + white border + shadow.
@@ -16,16 +16,14 @@ export const GlassPanel = ({ children, style, tint = 'light' }: {
 }) => (
   <View style={[{
     backgroundColor: tint === 'dark'
-      ? 'rgba(18,18,32,0.84)'
-      : 'rgba(255,255,255,0.90)',
+      ? 'rgba(26,13,46,0.88)'
+      : 'rgba(255,255,255,0.92)',
     borderWidth: 1,
     borderColor: tint === 'dark'
-      ? 'rgba(255,255,255,0.13)'
-      : 'rgba(255,255,255,0.72)',
-    shadowColor: tint === 'dark' ? '#000' : C.pink,
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 8,
+      ? 'rgba(255,255,255,0.10)'
+      : 'rgba(255,255,255,0.80)',
+    ...SHADOW.md,
+    shadowColor: tint === 'dark' ? '#2E1461' : C.pink,
   }, style]}>
     {children}
   </View>
@@ -133,11 +131,12 @@ export const PulseView = ({ children, style }: any) => {
 // ─── Bouncy Button ───────────────────────────────────────────────────────────
 export const Bouncy = ({ children, onPress, style, disabled }: any) => {
   const scale = useRef(new Animated.Value(1)).current;
-  const pressIn = () => Animated.spring(scale, { toValue: 0.95, friction: 5, useNativeDriver: true }).start();
-  const pressOut = () => Animated.spring(scale, { toValue: 1, friction: 4, useNativeDriver: true }).start();
+  // Tight press-in, springy release — (.34, 1.56, .64, 1) feel in RN spring terms
+  const pressIn  = () => Animated.spring(scale, { toValue: 0.95, friction: 10, tension: 200, useNativeDriver: true }).start();
+  const pressOut = () => Animated.spring(scale, { toValue: 1,    friction: 5,  tension: 120, useNativeDriver: true }).start();
   return (
     <Animated.View style={{ transform: [{ scale }] }}>
-      <TouchableOpacity onPress={onPress} onPressIn={pressIn} onPressOut={pressOut} style={style} disabled={disabled} activeOpacity={0.85}>
+      <TouchableOpacity onPress={onPress} onPressIn={pressIn} onPressOut={pressOut} style={style} disabled={disabled} activeOpacity={1}>
         {children}
       </TouchableOpacity>
     </Animated.View>
