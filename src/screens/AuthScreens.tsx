@@ -3,7 +3,7 @@ import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { Bouncy, DotBG } from '../components/ui';
-import { C } from '../styles';
+import { C, T, SP, R } from '../styles';
 
 export function OnboardingScreen() {
   const {
@@ -116,18 +116,23 @@ export function LoginScreen() {
             </Text>
           </View>
           <Text style={{ color: C.textMuted, fontSize: 14, letterSpacing: 0.2, textAlign: 'center', lineHeight: 22 }}>India ka sabse fast aur safe ride 🇮🇳{'\n'}Aapka safar, aapke rules</Text>
-          <View style={{ flexDirection: 'row', gap: 12, marginTop: 24 }}>
-            {['🛺', '🏍️', '🚗', '🚙'].map((v, i) => (
-              <View key={i} style={{ backgroundColor: C.glass, borderRadius: 16, padding: 12, borderWidth: 1, borderColor: C.glassBorder, elevation: 3, shadowColor: C.pink, shadowOpacity: 0.1, shadowRadius: 6 }}>
-                <Text style={{ fontSize: 24 }}>{v}</Text>
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 24 }}>
+            {[
+              { e: '🛺', bg: C.pinkGlass,   border: C.pinkBorder   },
+              { e: '🏍️', bg: C.saffGlass,   border: C.saffBorder   },
+              { e: '🚗', bg: C.plumGlass,   border: C.plumBorder   },
+              { e: '🚙', bg: C.purpleGlass, border: C.purpleBorder },
+            ].map(({ e, bg, border }, i) => (
+              <View key={i} style={{ flex: 1, backgroundColor: bg, borderRadius: R.md, paddingVertical: 12, alignItems: 'center', borderWidth: 1.5, borderColor: border, elevation: 3, shadowColor: C.plum, shadowOpacity: 0.08, shadowRadius: 6 }}>
+                <Text style={{ fontSize: 24 }}>{e}</Text>
               </View>
             ))}
           </View>
         </Animated.View>
 
         <Animated.View style={{ backgroundColor: C.bgCard, borderTopLeftRadius: 36, borderTopRightRadius: 36, flex: 1, padding: 28, paddingBottom: 40, borderTopWidth: 1, borderColor: C.glassBorder, transform: [{ translateY: loginCardAnim }] }}>
-          <Text style={{ fontSize: 20, fontWeight: '900', color: C.text, marginBottom: 6, letterSpacing: -0.3 }}>Apna number daalo 📱</Text>
-          <Text style={{ color: C.textMuted, fontSize: 13.5, marginBottom: 24, lineHeight: 20 }}>Hum aapko OTP bhejenge — koi password nahi</Text>
+          <Text style={{ ...T.headline, color: C.text, marginBottom: 6 }}>Apna number daalo 📱</Text>
+          <Text style={{ ...T.body, color: C.textMuted, marginBottom: SP.lg }}>Hum aapko OTP bhejenge — koi password nahi</Text>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 2, borderColor: phone.length === 10 ? C.pink : C.glassBorder, borderRadius: 18, paddingHorizontal: 16, backgroundColor: phone.length === 10 ? C.pinkGlass : C.glass, marginBottom: 22 }}>
             <View style={{ paddingRight: 12, borderRightWidth: 1.5, borderRightColor: C.glassBorder, marginRight: 12 }}>
@@ -218,17 +223,18 @@ export function OtpScreen() {
         </View>
 
         <View style={{ backgroundColor: C.bgCard, borderTopLeftRadius: 36, borderTopRightRadius: 36, flex: 1, padding: 28, paddingBottom: 36, borderTopWidth: 1, borderColor: C.glassBorder }}>
-          <Text style={{ fontSize: 11, fontWeight: '800', color: C.textMuted, marginBottom: 16, letterSpacing: 1.4 }}>6-DIGIT OTP DAALO</Text>
+          <Text style={{ ...T.label, color: C.textMuted, marginBottom: SP.md }}>6-DIGIT OTP DAALO</Text>
 
-          <Animated.View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 22, transform: [{ translateX: otpShakeAnim }] }}>
+          <Animated.View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 22, gap: 6, transform: [{ translateX: otpShakeAnim }] }}>
             {otpDigits.map((digit: string, i: number) => (
               <TextInput
                 key={i}
                 ref={(ref) => { otpRefs.current[i] = ref; }}
                 style={{
-                  width: 46, height: 60, borderRadius: 16, textAlign: 'center', fontSize: 24, fontWeight: '900',
+                  flex: 1, height: 68, borderRadius: R.sm, textAlign: 'center', fontSize: 28, fontWeight: '900' as const,
                   borderWidth: 2.5, borderColor: digit ? C.pink : C.glassBorder,
-                  backgroundColor: digit ? C.pinkGlass : C.glass, color: C.text,
+                  backgroundColor: digit ? C.pinkGlass : C.glassMid, color: C.text,
+                  elevation: digit ? 4 : 0, shadowColor: C.pink, shadowOpacity: digit ? 0.22 : 0, shadowRadius: 8,
                 }}
                 keyboardType="number-pad" maxLength={1} value={digit}
                 onChangeText={(t) => handleOtpChange(t, i)}

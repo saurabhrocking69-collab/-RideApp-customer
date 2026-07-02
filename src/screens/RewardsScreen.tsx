@@ -2,7 +2,8 @@ import { useEffect, useRef } from 'react';
 import { Animated, Platform, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
-import { ScreenIn } from '../components/ui';
+import { Bouncy, ScreenIn } from '../components/ui';
+import { C, T, SP, R, SHADOW } from '../styles';
 
 const RULES = [
   {
@@ -11,8 +12,9 @@ const RULES = [
     label: '₹100+ Ride',
     desc: 'Complete any ride above ₹100',
     cashback: 10,
-    color: '#7B1FA2',
-    bg: '#F3E5F5',
+    color: C.purple,
+    bg: C.purpleGlass,
+    border: C.purpleBorder,
     how: 'Automatic on every qualifying ride',
   },
   {
@@ -21,8 +23,9 @@ const RULES = [
     label: '2nd Ride Today',
     desc: 'Complete your 2nd ride of the day',
     cashback: 10,
-    color: '#1976D2',
-    bg: '#E3F2FD',
+    color: C.plum,
+    bg: C.plumGlass,
+    border: C.plumBorder,
     how: 'Credited after 2nd completed ride',
   },
   {
@@ -31,8 +34,9 @@ const RULES = [
     label: '3rd Ride Streak',
     desc: 'Complete your 3rd ride of the day',
     cashback: 15,
-    color: '#E64A19',
-    bg: '#FBE9E7',
+    color: C.saffron,
+    bg: C.saffGlass,
+    border: C.saffBorder,
     how: 'Credited after 3rd completed ride',
   },
   {
@@ -41,8 +45,9 @@ const RULES = [
     label: 'Wallet Pay Bonus',
     desc: 'Pay with wallet on rides ₹50+',
     cashback: 5,
-    color: '#2E7D32',
-    bg: '#E8F5E9',
+    color: C.green,
+    bg: C.greenGlass,
+    border: C.greenBorder,
     how: 'Auto-credited on wallet payment',
   },
 ];
@@ -86,70 +91,69 @@ export function RewardsScreen() {
     wallet_pay: 'Wallet Pay Bonus',
   };
 
+  const progressColor = ridesT >= 3 ? C.yellow : ridesT >= 2 ? C.green : C.pink;
+
   return (
-    <ScreenIn style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
-      {/* Header */}
+    <ScreenIn style={{ flex: 1, backgroundColor: C.bg }}>
+      {/* ── Plum header ── */}
       <Animated.View style={{
         opacity: headerAnim,
         transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }],
-        backgroundColor: '#1a1a2e',
+        backgroundColor: C.plum,
         paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 12 : 52,
-        paddingBottom: 24,
-        paddingHorizontal: 18,
+        paddingBottom: SP.lg,
+        paddingHorizontal: SP.md,
+        overflow: 'hidden',
       }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
-          <TouchableOpacity onPress={() => { setScreen('home'); setTab('profile'); }}
-            style={{ marginRight: 14, padding: 7, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10 }}>
+        <View style={{ position: 'absolute', width: 260, height: 260, borderRadius: 130, backgroundColor: 'rgba(255,45,120,0.08)', top: -100, right: -70 }} />
+        <View style={{ position: 'absolute', width: 140, height: 140, borderRadius: 70, backgroundColor: 'rgba(255,255,255,0.03)', bottom: -50, left: -30 }} />
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: SP.lg }}>
+          <Bouncy onPress={() => { setScreen('home'); setTab('profile'); }}
+            style={{ marginRight: 14, padding: 8, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: R.sm, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.22)' }}>
             <Ionicons name="arrow-back" size={20} color="#fff" />
-          </TouchableOpacity>
-          <Text style={{ color: '#fff', fontSize: 20, fontWeight: '800', flex: 1 }}>🎁 Cashback Rewards</Text>
-          <TouchableOpacity onPress={() => loadRewardsDash(phone)} style={{ padding: 8 }}>
-            <Ionicons name="refresh" size={18} color="rgba(255,255,255,0.7)" />
-          </TouchableOpacity>
+          </Bouncy>
+          <View style={{ flex: 1 }}>
+            <Text style={{ ...T.title, color: '#fff' }}>Cashback Rewards</Text>
+            <Text style={{ ...T.caption, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>Har ride pe automatic cashback</Text>
+          </View>
+          <Bouncy onPress={() => loadRewardsDash(phone)}
+            style={{ padding: 8, backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: R.sm, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.18)' }}>
+            <Ionicons name="refresh" size={18} color="#fff" />
+          </Bouncy>
         </View>
 
         {/* Stats row */}
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 16, padding: 16, alignItems: 'center' }}>
-            <Text style={{ color: '#FFD700', fontSize: 26, fontWeight: '900' }}>₹{totalCashback.toFixed(0)}</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 11, marginTop: 3, textAlign: 'center' }}>Total Cashback{'\n'}Earned</Text>
-          </View>
-          <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 16, padding: 16, alignItems: 'center' }}>
-            <Text style={{ color: '#4CAF50', fontSize: 26, fontWeight: '900' }}>₹{walletBal.toFixed(0)}</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 11, marginTop: 3, textAlign: 'center' }}>Wallet{'\n'}Balance</Text>
-          </View>
-          <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 16, padding: 16, alignItems: 'center' }}>
-            <Text style={{ color: '#e94560', fontSize: 26, fontWeight: '900' }}>{ridesT}</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 11, marginTop: 3, textAlign: 'center' }}>Rides{'\n'}Today</Text>
-          </View>
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: SP.md }}>
+          {[
+            { val: `₹${totalCashback.toFixed(0)}`, label: 'Total Earned', color: C.yellow, bg: 'rgba(245,158,11,0.18)', border: 'rgba(245,158,11,0.35)' },
+            { val: `₹${walletBal.toFixed(0)}`,     label: 'Wallet Bal',   color: C.green,  bg: 'rgba(5,150,105,0.18)',  border: 'rgba(5,150,105,0.35)'  },
+            { val: `${ridesT}`,                     label: 'Rides Today',  color: C.pink,   bg: 'rgba(255,45,120,0.18)', border: 'rgba(255,45,120,0.35)' },
+          ].map((s, i) => (
+            <View key={i} style={{ flex: 1, backgroundColor: s.bg, borderRadius: R.md, padding: 12, alignItems: 'center', borderWidth: 1.5, borderColor: s.border }}>
+              <Text style={{ color: s.color, fontSize: 22, fontWeight: '900', fontVariant: ['tabular-nums'] }}>{s.val}</Text>
+              <Text style={{ ...T.label, color: 'rgba(255,255,255,0.55)', marginTop: 4, textAlign: 'center' }}>{s.label}</Text>
+            </View>
+          ))}
         </View>
 
-        {/* Today's progress bar */}
-        <View style={{ marginTop: 18 }}>
+        {/* Today's progress */}
+        <View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-            <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '600' }}>Today's Ride Progress</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>{ridesT}/3 rides</Text>
+            <Text style={{ ...T.caption, color: 'rgba(255,255,255,0.65)' }}>Today's Ride Progress</Text>
+            <Text style={{ ...T.caption, color: 'rgba(255,255,255,0.4)' }}>{ridesT}/3 rides</Text>
           </View>
-          <View style={{ height: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 4, overflow: 'hidden' }}>
-            <View style={{
-              height: 8,
-              borderRadius: 4,
-              width: `${Math.min(100, (ridesT / 3) * 100)}%`,
-              backgroundColor: ridesT >= 3 ? '#FFD700' : ridesT >= 2 ? '#4CAF50' : '#e94560',
-            }} />
+          <View style={{ height: 8, backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: R.full, overflow: 'hidden' }}>
+            <View style={{ height: 8, borderRadius: R.full, width: `${Math.min(100, (ridesT / 3) * 100)}%`, backgroundColor: progressColor }} />
           </View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
             {[1, 2, 3].map(n => (
               <View key={n} style={{ alignItems: 'center' }}>
-                <View style={{
-                  width: 22, height: 22, borderRadius: 11,
-                  backgroundColor: ridesT >= n ? '#FFD700' : 'rgba(255,255,255,0.15)',
-                  alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <Text style={{ fontSize: 10, fontWeight: '800', color: ridesT >= n ? '#1a1a2e' : 'rgba(255,255,255,0.4)' }}>{n}</Text>
+                <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: ridesT >= n ? progressColor : 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: ridesT >= n ? progressColor : 'rgba(255,255,255,0.2)' }}>
+                  <Text style={{ ...T.label, color: ridesT >= n ? C.plum : 'rgba(255,255,255,0.35)' }}>{n}</Text>
                 </View>
-                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 9, marginTop: 3 }}>
-                  {n === 1 ? '' : n === 2 ? '₹10' : '₹15'}
+                <Text style={{ ...T.label, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>
+                  {n === 1 ? '—' : n === 2 ? '₹10' : '₹15'}
                 </Text>
               </View>
             ))}
@@ -157,106 +161,85 @@ export function RewardsScreen() {
         </View>
       </Animated.View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-        {/* How to earn */}
-        <Text style={{ fontSize: 16, fontWeight: '800', color: '#1a1a2e', marginHorizontal: 16, marginTop: 20, marginBottom: 12 }}>
-          How to Earn Cashback
-        </Text>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40, paddingTop: SP.md }}>
+
+        {/* ── How to earn ── */}
+        <Text style={{ ...T.bodyBold, color: C.text, marginHorizontal: SP.md, marginBottom: SP.sm }}>How to Earn Cashback</Text>
         {RULES.map((rule, i) => {
           const claimed = ruleMap[rule.id] ?? false;
           return (
             <Animated.View key={rule.id} style={{
               opacity: cardAnims[i],
               transform: [{ translateX: cardAnims[i].interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }],
-              marginHorizontal: 16, marginBottom: 10,
-              backgroundColor: '#fff',
-              borderRadius: 16,
-              elevation: 2,
-              shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.07, shadowRadius: 4,
-              overflow: 'hidden',
+              marginHorizontal: SP.md, marginBottom: SP.sm,
+              backgroundColor: C.bgCard, borderRadius: R.md,
+              borderWidth: 1.5, borderColor: claimed ? C.greenBorder : rule.border,
+              overflow: 'hidden', ...SHADOW.sm,
             }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16 }}>
-                <View style={{ width: 52, height: 52, borderRadius: 14, backgroundColor: rule.bg, alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', padding: SP.md }}>
+                <View style={{ width: 52, height: 52, borderRadius: R.sm, backgroundColor: rule.bg, alignItems: 'center', justifyContent: 'center', marginRight: 14, borderWidth: 1.5, borderColor: rule.border }}>
                   <Text style={{ fontSize: 26 }}>{rule.icon}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', flex: 1 }}>{rule.label}</Text>
-                    <View style={{ backgroundColor: claimed ? '#E8F5E9' : rule.bg, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 }}>
-                      <Text style={{ fontSize: 13, fontWeight: '900', color: claimed ? '#2E7D32' : rule.color }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                    <Text style={{ ...T.bodyBold, color: C.text, flex: 1 }}>{rule.label}</Text>
+                    <View style={{ backgroundColor: claimed ? C.greenGlass : rule.bg, borderRadius: R.full, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: claimed ? C.greenBorder : rule.border }}>
+                      <Text style={{ ...T.caption, color: claimed ? C.green : rule.color, fontWeight: '900' as const }}>
                         {claimed ? '✓ Earned' : `+₹${rule.cashback}`}
                       </Text>
                     </View>
                   </View>
-                  <Text style={{ fontSize: 12, color: '#666', lineHeight: 17 }}>{rule.desc}</Text>
-                  <Text style={{ fontSize: 10, color: '#aaa', marginTop: 4 }}>{rule.how}</Text>
+                  <Text style={{ ...T.caption, color: C.textMuted, lineHeight: 18 }}>{rule.desc}</Text>
+                  <Text style={{ fontSize: 10, color: C.textDim, marginTop: 3 }}>{rule.how}</Text>
                 </View>
               </View>
-              {claimed && (
-                <View style={{ height: 3, backgroundColor: '#4CAF50' }} />
-              )}
+              {claimed && <View style={{ height: 3, backgroundColor: C.green }} />}
             </Animated.View>
           );
         })}
 
-        {/* Wallet pay motivation */}
-        <View style={{
-          marginHorizontal: 16, marginTop: 8, marginBottom: 16,
-          backgroundColor: '#1a1a2e',
-          borderRadius: 16,
-          padding: 18,
-          flexDirection: 'row',
-          alignItems: 'center',
-        }}>
-          <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+        {/* ── Wallet pay motivation ── */}
+        <View style={{ marginHorizontal: SP.md, marginTop: SP.xs, marginBottom: SP.md, backgroundColor: C.plum, borderRadius: R.md, padding: SP.md, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', ...SHADOW.md }}>
+          <View style={{ position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,45,120,0.10)', top: -40, right: -20 }} />
+          <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center', marginRight: 14, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.22)' }}>
             <Text style={{ fontSize: 24 }}>👛</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: '#FFD700', fontWeight: '800', fontSize: 14 }}>Pay with Wallet = More Savings</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 3, lineHeight: 18 }}>
-              Wallet se pay karo aur ₹5 extra cashback pao on every ride ₹50+
+            <Text style={{ ...T.bodyBold, color: C.yellow }}>Wallet se pay = zyada savings</Text>
+            <Text style={{ ...T.caption, color: 'rgba(255,255,255,0.6)', marginTop: 3, lineHeight: 18 }}>
+              Har ₹50+ ride pe wallet se pay karo aur ₹5 extra cashback pao
             </Text>
           </View>
-          <TouchableOpacity onPress={() => setScreen('wallet')}
-            style={{ backgroundColor: '#e94560', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 }}>
-            <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>Add{'\n'}Money</Text>
-          </TouchableOpacity>
+          <Bouncy onPress={() => setScreen('wallet')}
+            style={{ backgroundColor: C.pink, borderRadius: R.sm, paddingHorizontal: 12, paddingVertical: 9, elevation: 6, shadowColor: C.pink, shadowOpacity: 0.45, shadowRadius: 8 }}>
+            <Text style={{ ...T.label, color: '#fff' }}>ADD{'\n'}MONEY</Text>
+          </Bouncy>
         </View>
 
-        {/* Cashback History */}
-        <Text style={{ fontSize: 16, fontWeight: '800', color: '#1a1a2e', marginHorizontal: 16, marginBottom: 12 }}>
-          Cashback History
-        </Text>
+        {/* ── Cashback History ── */}
+        <Text style={{ ...T.bodyBold, color: C.text, marginHorizontal: SP.md, marginBottom: SP.sm }}>Cashback History</Text>
         {history.length === 0 ? (
-          <View style={{ alignItems: 'center', padding: 32, backgroundColor: '#fff', marginHorizontal: 16, borderRadius: 16 }}>
+          <View style={{ alignItems: 'center', padding: SP.xxl, backgroundColor: C.bgCard, marginHorizontal: SP.md, borderRadius: R.md, borderWidth: 1, borderColor: C.glassBorder }}>
             <Text style={{ fontSize: 40 }}>🎁</Text>
-            <Text style={{ fontSize: 15, fontWeight: '700', color: '#1a1a2e', marginTop: 12 }}>Koi cashback abhi nahi mila</Text>
-            <Text style={{ fontSize: 12, color: '#999', marginTop: 6, textAlign: 'center', lineHeight: 18 }}>
+            <Text style={{ ...T.bodyBold, color: C.text, marginTop: 12 }}>Koi cashback abhi nahi mila</Text>
+            <Text style={{ ...T.caption, color: C.textMuted, marginTop: 6, textAlign: 'center', lineHeight: 18 }}>
               Pehli ride karo aur cashback earn karna shuru karo!
             </Text>
           </View>
         ) : history.map((h: any, i: number) => (
-          <View key={i} style={{
-            marginHorizontal: 16, marginBottom: 8,
-            backgroundColor: '#fff',
-            borderRadius: 14,
-            padding: 14,
-            flexDirection: 'row',
-            alignItems: 'center',
-            elevation: 1,
-          }}>
-            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#E8F5E9', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-              <Text style={{ fontSize: 18 }}>💚</Text>
+          <View key={i} style={{ marginHorizontal: SP.md, marginBottom: SP.sm, backgroundColor: C.bgCard, borderRadius: R.md, padding: SP.md, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: C.glassBorder, ...SHADOW.sm }}>
+            <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: C.greenGlass, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1.5, borderColor: C.greenBorder }}>
+              <Text style={{ color: C.green, fontSize: 18, fontWeight: '900' }}>₹</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 13, fontWeight: '700', color: '#1a1a2e' }}>
+              <Text style={{ ...T.bodyBold, color: C.text }}>
                 {ruleLabel[h.rule_type] || h.rule_type}
               </Text>
-              <Text style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>
-                {h.fare ? `Ride fare ₹${parseFloat(h.fare).toFixed(0)} · ` : ''}{fmtDate(h.created_at)}
+              <Text style={{ ...T.caption, color: C.textDim, marginTop: 2 }}>
+                {h.fare ? `Ride ₹${parseFloat(h.fare).toFixed(0)} · ` : ''}{fmtDate(h.created_at)}
               </Text>
             </View>
-            <Text style={{ fontSize: 16, fontWeight: '900', color: '#2E7D32' }}>+₹{parseFloat(h.amount).toFixed(0)}</Text>
+            <Text style={{ fontSize: 16, fontWeight: '900' as const, color: C.green }}>+₹{parseFloat(h.amount).toFixed(0)}</Text>
           </View>
         ))}
       </ScrollView>

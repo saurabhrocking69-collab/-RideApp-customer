@@ -206,7 +206,7 @@ export function BudgetScreen() {
 
         {/* ── Budget goal ── */}
         <View style={{
-          backgroundColor: overBudget ? 'rgba(239,68,68,0.06)' : C.bgCard,
+          backgroundColor: overBudget ? C.redGlass : C.bgCard,
           borderRadius: 20, padding: 18, marginBottom: 14,
           elevation: 4, borderWidth: 1.5,
           borderColor: overBudget ? C.redBorder : C.glassBorder,

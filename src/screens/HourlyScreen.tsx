@@ -5,7 +5,7 @@ import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { Bouncy, DotBG, FloatingDots, PulseView, RideVehicleIcon, ScreenIn } from '../components/ui';
-import { s, C } from '../styles';
+import { s, C, T, SP, R, SHADOW } from '../styles';
 import { MAPS_KEY } from '../constants';
 import { apiGet, apiPost } from '../../api';
 
@@ -207,9 +207,9 @@ export function HourlyScreen() {
     return (
       <ScreenIn style={s.screen}>
         <DotBG />
-        <View style={{ backgroundColor: C.pink, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 52, paddingBottom: 20, paddingHorizontal: 16, alignItems: 'center' }}>
-          <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.10)', top: -60, right: -40 }} />
-          <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900' }}>⏱️ Trip Complete!</Text>
+        <View style={{ backgroundColor: C.plum, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 52, paddingBottom: SP.md, paddingHorizontal: SP.md, alignItems: 'center' }}>
+          <View style={{ position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(255,45,120,0.09)', top: -80, right: -50 }} />
+          <Text style={{ ...T.title, color: '#fff' }}>Trip Complete!</Text>
         </View>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
           <View style={{ alignItems: 'center', marginBottom: 24 }}>
@@ -279,9 +279,9 @@ export function HourlyScreen() {
   // ── ACTIVE TRIP ──
   if (hourlyStep === 'active') return (
     <ScreenIn style={s.screen}>
-      <View style={{ backgroundColor: C.pink, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 52, paddingBottom: 20, paddingHorizontal: 16, alignItems: 'center' }}>
-        <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.10)', top: -60, right: -40 }} />
-        <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900' }}>⏱️ Hourly Trip</Text>
+      <View style={{ backgroundColor: C.plum, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 52, paddingBottom: SP.md, paddingHorizontal: SP.md, alignItems: 'center' }}>
+        <View style={{ position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(255,45,120,0.09)', top: -80, right: -50 }} />
+        <Text style={{ ...T.title, color: '#fff' }}>Hourly Trip</Text>
       </View>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
         {(() => {
@@ -349,7 +349,7 @@ export function HourlyScreen() {
 
         {chatToast && !hChatOpen && (
           <TouchableOpacity
-            style={{ backgroundColor: '#1a1a2e', borderRadius: 14, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: 'rgba(233,69,96,0.45)', elevation: 8 }}
+            style={{ backgroundColor: C.bgDark, borderRadius: R.sm, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: C.pinkBorder, elevation: 8 }}
             onPress={() => { setChatToast(null); setHChatOpen(true); setHChatUnread(0); }}>
             <Ionicons name="chatbubble" size={16} color={C.pink} />
             <Text style={{ color: '#fff', fontSize: 13, flex: 1, fontWeight: '600' }} numberOfLines={1}>{chatToast}</Text>
@@ -666,9 +666,9 @@ export function HourlyScreen() {
     const driverAccepted = hourlyBooking?.status === 'matched';
     return (
       <ScreenIn style={s.screen}>
-        <View style={{ backgroundColor: C.pink, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 52, paddingBottom: 20, paddingHorizontal: 16, alignItems: 'center' }}>
-          <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.10)', top: -60, right: -40 }} />
-          <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900' }}>⏱️ Driver Dhundh Rahe Hain</Text>
+        <View style={{ backgroundColor: C.plum, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 52, paddingBottom: SP.md, paddingHorizontal: SP.md, alignItems: 'center' }}>
+          <View style={{ position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(255,45,120,0.09)', top: -80, right: -50 }} />
+          <Text style={{ ...T.title, color: '#fff' }}>Driver Dhundh Rahe Hain</Text>
         </View>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <PulseView><Text style={{ fontSize: 72, marginBottom: 16 }}>⏱️</Text></PulseView>
@@ -712,13 +712,13 @@ export function HourlyScreen() {
   // ── BOOKING FORM ──
   return (
     <ScreenIn style={s.screen}>
-      <View style={{ backgroundColor: C.pink, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 52, paddingBottom: 20, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center' }}>
-        <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.10)', top: -60, right: -40 }} />
-        <TouchableOpacity onPress={() => setScreen('home')} style={{ marginRight: 14, padding: 8, backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 10 }}>
+      <View style={{ backgroundColor: C.plum, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 52, paddingBottom: SP.md, paddingHorizontal: SP.md, flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(255,45,120,0.09)', top: -80, right: -50 }} />
+        <TouchableOpacity onPress={() => setScreen('home')} style={{ marginRight: 14, padding: 8, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: R.xs, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.22)' }}>
           <Ionicons name="arrow-back" size={20} color="#fff" />
         </TouchableOpacity>
-        <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900', flex: 1 }}>⏱️ Book by Hour</Text>
-        <TouchableOpacity onPress={() => setScreen('hourly-info')} style={{ padding: 8 }}><Text style={{ fontSize: 20 }}>ℹ️</Text></TouchableOpacity>
+        <Text style={{ ...T.title, color: '#fff', flex: 1 }}>Book by Hour</Text>
+        <TouchableOpacity onPress={() => setScreen('hourly-info')} style={{ padding: 8, backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: R.xs, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.18)' }}><Text style={{ fontSize: 18 }}>ℹ️</Text></TouchableOpacity>
       </View>
       <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16, paddingBottom: 50 }}>
         <Text style={[s.secTitle, { color: C.textMuted, letterSpacing: 1 }]}>VEHICLE TYPE</Text>

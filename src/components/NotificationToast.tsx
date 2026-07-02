@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { C } from '../styles';
 
 export interface ToastNotif {
   id: string;
@@ -17,21 +18,21 @@ interface Props {
 }
 
 const TYPE_ICON: Record<string, { icon: string; color: string }> = {
-  ride_matched:       { icon: 'car',              color: '#10B981' },
+  ride_matched:       { icon: 'car',              color: C.green },
   driver_arrived:     { icon: 'location',          color: '#3B82F6' },
   trip_started:       { icon: 'navigate',          color: '#8B5CF6' },
-  trip_completed:     { icon: 'checkmark-circle',  color: '#10B981' },
-  ride_cancelled:     { icon: 'close-circle',      color: '#EF4444' },
-  no_driver_found:    { icon: 'alert-circle',      color: '#F59E0B' },
-  cashback_earned:    { icon: 'gift',              color: '#F59E0B' },
-  extension_accepted: { icon: 'refresh-circle',    color: '#10B981' },
-  payment_dispute:    { icon: 'warning',           color: '#EF4444' },
-  account_restricted: { icon: 'ban',               color: '#EF4444' },
+  trip_completed:     { icon: 'checkmark-circle',  color: C.green },
+  ride_cancelled:     { icon: 'close-circle',      color: C.red },
+  no_driver_found:    { icon: 'alert-circle',      color: C.yellow },
+  cashback_earned:    { icon: 'gift',              color: C.yellow },
+  extension_accepted: { icon: 'refresh-circle',    color: C.green },
+  payment_dispute:    { icon: 'warning',           color: C.red },
+  account_restricted: { icon: 'ban',               color: C.red },
   complaint_update:   { icon: 'document-text',     color: '#6366F1' },
-  refund:             { icon: 'wallet',            color: '#10B981' },
-  wallet_topup:       { icon: 'wallet',            color: '#10B981' },
-  warning:            { icon: 'warning',           color: '#F59E0B' },
-  default:            { icon: 'notifications',     color: '#FF2D78' },
+  refund:             { icon: 'wallet',            color: C.green },
+  wallet_topup:       { icon: 'wallet',            color: C.green },
+  warning:            { icon: 'warning',           color: C.yellow },
+  default:            { icon: 'notifications',     color: C.pink },
 };
 
 export function NotificationToast({ notif, onDismiss, onTap }: Props) {
@@ -76,7 +77,7 @@ export function NotificationToast({ notif, onDismiss, onTap }: Props) {
         activeOpacity={0.92}
         onPress={() => { dismiss(); onTap(notif); }}
         style={{
-          backgroundColor: '#1a1a2e',
+          backgroundColor: C.bgDark,
           borderRadius: 18, padding: 14,
           flexDirection: 'row', alignItems: 'center', gap: 12,
           borderWidth: 1.5, borderColor: cfg.color + '40',

@@ -79,7 +79,7 @@ function PickupMarker({ dragging }: { dragging?: boolean }) {
 function DropMarker({ dragging }: { dragging?: boolean }) {
   return (
     <View style={styles.dropOuter}>
-      <View style={[styles.dropPin, dragging && { backgroundColor: '#ff0066' }]}>
+      <View style={[styles.dropPin, dragging && { backgroundColor: C.pink }]}>
         <View style={styles.dropHole} />
       </View>
       <View style={styles.dropTail} />
@@ -326,7 +326,7 @@ export const LiveMap = memo(function LiveMap({
         {remainingCoords.length > 1 && (
           <Polyline
             coordinates={remainingCoords}
-            strokeColor={mode === 'matching' ? C.pink : mode === 'booking' ? C.pink : '#10B981'}
+            strokeColor={mode === 'matching' ? C.pink : mode === 'booking' ? C.pink : C.green}
             strokeWidth={mode === 'booking' ? 3 : 4}
             lineDashPattern={mode === 'booking' ? [10, 6] : undefined}
             lineCap="round"
@@ -480,10 +480,10 @@ const styles = StyleSheet.create({
   pickupRing: {
     width: 22, height: 22, borderRadius: 11,
     backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
-    elevation: 5, shadowColor: '#10B981', shadowOpacity: 0.30, shadowRadius: 6,
-    borderWidth: 2.5, borderColor: '#10B981',
+    elevation: 5, shadowColor: C.green, shadowOpacity: 0.30, shadowRadius: 6,
+    borderWidth: 2.5, borderColor: C.green,
   },
-  pickupDot: { width: 9, height: 9, borderRadius: 4.5, backgroundColor: '#10B981' },
+  pickupDot: { width: 9, height: 9, borderRadius: 4.5, backgroundColor: C.green },
 
   // Drop — pink teardrop pin
   dropOuter: { alignItems: 'center' },
@@ -511,9 +511,9 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)', gap: 6,
   },
   etaDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: C.green },
-  etaTime: { fontSize: 13, fontWeight: '900', color: '#0F172A' },
-  etaSep: { width: 1, height: 12, backgroundColor: '#E2E8F0' },
-  etaDist: { fontSize: 12, color: '#64748B', fontWeight: '600' },
+  etaTime: { fontSize: 13, fontWeight: '900', color: C.text },
+  etaSep: { width: 1, height: 12, backgroundColor: C.glassBorder },
+  etaDist: { fontSize: 12, color: C.textMuted, fontWeight: '600' },
 
   // Tap hint
   tapHint: {

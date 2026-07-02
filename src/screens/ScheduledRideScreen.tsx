@@ -7,7 +7,7 @@ import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { GlassPanel, DotBG, SlideUp } from '../components/ui';
-import { s, C } from '../styles';
+import { s, C, T, R, SP, SHADOW } from '../styles';
 import { apiGet, apiPost, API } from '../../api';
 import { MAPS_KEY, RIDES } from '../constants';
 import { externalGet } from '../../api';
@@ -131,7 +131,7 @@ function TimePicker({ value, onChange }: { value: Date; onChange: (d: Date) => v
       </View>
       {!!timeError && (
         <View style={{ backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: 10, padding: 10, marginTop: 10, borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)' }}>
-          <Text style={{ color: '#EF4444', fontSize: 12, fontWeight: '700', textAlign: 'center' }}>{timeError}</Text>
+          <Text style={{ color: C.red, fontSize: 12, fontWeight: '700', textAlign: 'center' }}>{timeError}</Text>
         </View>
       )}
     </View>
@@ -286,24 +286,24 @@ export function ScheduledRideScreen() {
       <DotBG />
 
       {/* Top bar */}
-      <View style={{ backgroundColor: C.pink, paddingTop: Platform.OS === 'android' ? 44 : 52, paddingBottom: 18, paddingHorizontal: 16 }}>
-        <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.10)', top: -60, right: -40 }} />
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => setScreen('home')} style={{ marginRight: 14, padding: 4 }}>
-            <Ionicons name="arrow-back" size={22} color="#fff" />
+      <View style={{ backgroundColor: C.plum, paddingTop: Platform.OS === 'android' ? 44 : 52, paddingBottom: SP.md, paddingHorizontal: SP.md, overflow: 'hidden' }}>
+        <View style={{ position: 'absolute', width: 240, height: 240, borderRadius: 120, backgroundColor: 'rgba(255,45,120,0.09)', top: -80, right: -60 }} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: SP.md }}>
+          <TouchableOpacity onPress={() => setScreen('home')} style={{ marginRight: 14, padding: 8, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: R.sm, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.22)' }}>
+            <Ionicons name="arrow-back" size={20} color="#fff" />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>📅 Scheduled Rides</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 2 }}>Pehle se book karo, tension-free!</Text>
+            <Text style={{ ...T.title, color: '#fff' }}>Scheduled Rides</Text>
+            <Text style={{ ...T.caption, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>Pehle se book karo, tension-free!</Text>
           </View>
         </View>
-        <View style={{ flexDirection: 'row', marginTop: 14, gap: 8 }}>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
           {(['list', 'form'] as const).map(t => (
             <TouchableOpacity key={t} onPress={() => setStep(t)}
-              style={{ flex: 1, paddingVertical: 9, borderRadius: 12, alignItems: 'center',
-                backgroundColor: step === t ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.10)',
-                borderWidth: step === t ? 2 : 1, borderColor: step === t ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.25)' }}>
-              <Text style={{ color: '#fff', fontWeight: step === t ? '900' : '600', fontSize: 13 }}>
+              style={{ flex: 1, paddingVertical: 10, borderRadius: R.sm, alignItems: 'center',
+                backgroundColor: step === t ? 'rgba(255,255,255,0.20)' : 'rgba(255,255,255,0.07)',
+                borderWidth: 1.5, borderColor: step === t ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.15)' }}>
+              <Text style={{ ...T.caption, color: '#fff', fontWeight: step === t ? '900' as const : '600' as const }}>
                 {t === 'list' ? '📋 Meri Rides' : '➕ Naya Schedule'}
               </Text>
             </TouchableOpacity>
@@ -467,7 +467,7 @@ export function ScheduledRideScreen() {
                 if (isPeak) return (
                   <View style={{ backgroundColor: 'rgba(245,158,11,0.12)', borderRadius: 10, padding: 10, marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
                     <Text style={{ fontSize: 16 }}>🚦</Text>
-                    <Text style={{ color: '#F59E0B', fontSize: 12, flex: 1 }}>Peak traffic hours — surge pricing lag sakti hai. Thoda pehle ya baad schedule karo.</Text>
+                    <Text style={{ color: C.yellow, fontSize: 12, flex: 1 }}>Peak traffic hours — surge pricing lag sakti hai. Thoda pehle ya baad schedule karo.</Text>
                   </View>
                 );
                 if (isNight) return (

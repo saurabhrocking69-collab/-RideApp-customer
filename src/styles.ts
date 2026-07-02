@@ -21,6 +21,7 @@ export const C = {
   bgCard:  '#FFFFFF',   // Card surfaces — pure white pops on F5F2FF
   bgDeep:  '#EAE5FF',   // Hero sections, tinted areas
   bgPlum:  '#F0EBF8',   // Plum-tinted surface for premium cards
+  bgDark:  '#1A0D2E',   // Deep plum — bill modal, dark overlays
 
   // Glass tokens — light-mode cards with subtle depth
   glass:       '#FFFFFF',
@@ -140,7 +141,7 @@ export const s = StyleSheet.create({
 
   // ── Top bar ───────────────────────────────────────────────────────────────
   topBar: {
-    backgroundColor: C.pink,
+    backgroundColor: C.plum,
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 10 : 54,
     paddingBottom: SP.md,
     paddingHorizontal: SP.md,
@@ -148,7 +149,7 @@ export const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     overflow: 'hidden',
-    ...SHADOW.pink,
+    ...SHADOW.plum,
   },
   topTitle: { color: '#fff', fontSize: 17, fontWeight: '900', flex: 1, textAlign: 'center', letterSpacing: 0.2 },
   greeting: { color: C.text, fontSize: 15, fontWeight: '700' },

@@ -5,7 +5,7 @@ import { Storage as AsyncStorage } from '../storage';
 import { useApp } from '../context/AppContext';
 import { Bouncy, GlassPanel, MapOverlay, RideVehicleIcon, DotBG } from '../components/ui';
 import { LiveMap } from '../components/LiveMap';
-import { s, C } from '../styles';
+import { s, C, T, R, SP, SHADOW } from '../styles';
 import { RIDES, MAPS_KEY } from '../constants';
 import { apiGet, externalGet } from '../../api';
 import { useNearbyDrivers } from '../offline';
@@ -34,6 +34,13 @@ export function BookingScreen() {
   } = useApp();
 
   const selRide   = RIDES.find(r => r.id === rideType);
+  const cardAnims = useRef<Record<string, Animated.Value>>(
+    Object.fromEntries(RIDES.map((r: any) => [r.id, new Animated.Value(1)]))
+  ).current;
+  const cardEntryAnims = useRef<Record<string, { ty: Animated.Value; op: Animated.Value }>>(
+    Object.fromEntries(RIDES.map((r: any) => [r.id, { ty: new Animated.Value(38), op: new Animated.Value(0) }]))
+  ).current;
+  const bookPulseAnim = useRef(new Animated.Value(1)).current;
   const _est      = fareEstimates[rideType];
   const rawFare   = (_est?.fare ?? _est) || 0;
   const estBase   = _est?.base_fare ?? appConfig?.fares?.[rideType]?.base_fare ?? selRide?.base ?? 0;
@@ -93,6 +100,33 @@ export function BookingScreen() {
     const timer = setInterval(fetchEta, 30000);
     return () => { cancelled = true; clearInterval(timer); };
   }, [pickupCoords?.lat, pickupCoords?.lng]);
+
+  // Staggered card entry on mount
+  useEffect(() => {
+    Animated.stagger(75, RIDES.map((r: any) =>
+      Animated.parallel([
+        Animated.spring(cardEntryAnims[r.id].ty, { toValue: 0, friction: 7, tension: 120, useNativeDriver: true }),
+        Animated.timing(cardEntryAnims[r.id].op, { toValue: 1, duration: 230, useNativeDriver: true }),
+      ])
+    )).start();
+  }, []);
+
+  // Breathing pulse on book button when ready
+  useEffect(() => {
+    if (hasFare && !loading) {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.delay(1400),
+          Animated.spring(bookPulseAnim, { toValue: 1.035, friction: 3, tension: 280, useNativeDriver: true }),
+          Animated.spring(bookPulseAnim, { toValue: 1, friction: 3, tension: 280, useNativeDriver: true }),
+        ])
+      );
+      pulse.start();
+      return () => pulse.stop();
+    } else {
+      bookPulseAnim.setValue(1);
+    }
+  }, [hasFare, loading]);
 
   useEffect(() => {
     if (!userCoords?.latitude || pickup) { setNearbyPlaces([]); return; }
@@ -546,13 +580,13 @@ export function BookingScreen() {
               .sort((a, b) => (a.info?.eta_min || 999) - (b.info?.eta_min || 999))[0];
             if (!nearest) return null;
             return (
-              <View style={{ backgroundColor: 'rgba(16,185,129,0.08)', borderRadius: 12, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
+              <View style={{ backgroundColor: C.greenGlass, borderRadius: R.sm, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: C.greenBorder }}>
                 <Text style={{ fontSize: 16 }}>💡</Text>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#059669', flex: 1 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: C.green, flex: 1 }}>
                   {nearest.r.label} sabse paas — ~{nearest.info?.eta_min} min mein aayega
                 </Text>
                 {rideType !== nearest.r.id && (
-                  <TouchableOpacity onPress={() => setRideType(nearest.r.id)} style={{ backgroundColor: '#059669', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 }}>
+                  <TouchableOpacity onPress={() => setRideType(nearest.r.id)} style={{ backgroundColor: C.green, borderRadius: R.xs, paddingHorizontal: 10, paddingVertical: 5 }}>
                     <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900' }}>Select</Text>
                   </TouchableOpacity>
                 )}
@@ -566,102 +600,115 @@ export function BookingScreen() {
               const isLux = r.id === 'luxury';
               const cfgBase = appConfig?.fares?.[r.id]?.base_fare ?? r.base;
               const fareText = fareLoading ? '...' : fareEstimates[r.id] ? `₹${fareEstimates[r.id].fare ?? fareEstimates[r.id]}` : `₹${cfgBase}+`;
+              const anim = cardAnims[r.id];
+              const entry = cardEntryAnims[r.id];
               return (
-                <TouchableOpacity
-                  key={r.id}
-                  onPress={() => setRideType(r.id)}
-                  activeOpacity={0.72}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    backgroundColor: isSel ? '#FFF0F6' : C.bgCard,
-                    borderRadius: 18,
-                    padding: 14,
-                    gap: 14,
-                    borderWidth: isSel ? 2 : 1,
-                    borderColor: isSel ? C.pink : isLux ? 'rgba(124,58,237,0.3)' : C.glassBorder,
-                    elevation: isSel ? 8 : 2,
-                    shadowColor: isSel ? C.pink : '#000',
-                    shadowOpacity: isSel ? 0.18 : 0.04,
-                    shadowRadius: isSel ? 12 : 6,
-                  }}>
+                <Animated.View key={r.id} style={{ transform: [{ scale: anim }, { translateY: entry.ty }], opacity: entry.op }}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setRideType(r.id);
+                      RIDES.forEach((ride: any) => {
+                        Animated.spring(cardAnims[ride.id], {
+                          toValue: ride.id === r.id ? 1.015 : 1,
+                          friction: 5, tension: 180, useNativeDriver: true,
+                        }).start();
+                      });
+                    }}
+                    activeOpacity={1}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: isSel ? C.pinkGlass : C.bgCard,
+                      borderRadius: R.md,
+                      padding: SP.md,
+                      gap: SP.md - 2,
+                      borderWidth: isSel ? 1.5 : 1,
+                      borderColor: isSel ? C.pink : isLux ? 'rgba(124,58,237,0.3)' : C.glassBorder,
+                      overflow: 'hidden',
+                      ...(isSel ? SHADOW.pink : SHADOW.sm),
+                    }}>
 
-                  {/* Icon circle */}
-                  <View style={{
-                    width: 52, height: 52, borderRadius: 26,
-                    backgroundColor: isSel ? C.pinkGlass : C.glassMid,
-                    alignItems: 'center', justifyContent: 'center',
-                    borderWidth: 1.5,
-                    borderColor: isSel ? C.pinkBorder : isLux ? 'rgba(124,58,237,0.25)' : C.glassBorder,
-                  }}>
-                    <RideVehicleIcon id={r.id} size={26} color={isSel ? C.pink : isLux ? C.purple : C.textMuted} />
-                  </View>
+                    {/* Left accent strip */}
+                    <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3.5, backgroundColor: isSel ? C.pink : 'transparent', borderTopLeftRadius: R.md, borderBottomLeftRadius: R.md }} />
 
-                  {/* Label + desc + eta */}
-                  <View style={{ flex: 1 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <Text style={{ fontSize: 14, fontWeight: '800', color: isSel ? C.text : C.textMuted }}>{r.label}</Text>
-                      {r.tag && (
-                        <View style={{ backgroundColor: isLux ? C.purple : r.tagColor, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-                          <Text style={{ color: '#fff', fontSize: 8, fontWeight: '900', letterSpacing: 0.5 }}>{r.tag}</Text>
-                        </View>
-                      )}
+                    {/* Icon circle */}
+                    <View style={{
+                      width: 56, height: 56, borderRadius: 28,
+                      backgroundColor: isSel ? C.pinkGlass : isLux ? C.purpleGlass : C.glassMid,
+                      alignItems: 'center', justifyContent: 'center',
+                      borderWidth: isSel ? 2 : 1.5,
+                      borderColor: isSel ? C.pink : isLux ? C.purpleBorder : C.glassBorder,
+                    }}>
+                      <RideVehicleIcon id={r.id} size={27} color={isSel ? C.pink : isLux ? C.purple : C.textMuted} />
                     </View>
-                    <Text style={{ color: C.textDim, fontSize: 12, marginTop: 2 }}>{r.desc}</Text>
-                    {!etaLoaded ? (
-                      <Text style={{ color: C.textDim, fontSize: 11, marginTop: 3 }}>🕐 {r.eta}</Text>
-                    ) : (() => {
-                      const info = driverEta[r.id];
-                      if (!info) {
-                        const bestAlt = RIDES
-                          .filter(alt => alt.id !== r.id && driverEta[alt.id])
-                          .sort((a, b) => ((driverEta[a.id]?.eta_min || 999) - (driverEta[b.id]?.eta_min || 999)))[0];
-                        return (
-                          <View style={{ marginTop: 4 }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#6B7280' }} />
-                              <Text style={{ fontSize: 10, color: '#6B7280', fontWeight: '600' }}>Is area mein abhi available nahi</Text>
+
+                    {/* Label + desc + eta */}
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <Text style={{ ...T.bodyBold, fontSize: 15, color: isSel ? C.text : C.textMuted }}>{r.label}</Text>
+                        {r.tag && (
+                          <View style={{ backgroundColor: isLux ? C.purple : r.tagColor, borderRadius: R.xs - 2, paddingHorizontal: 6, paddingVertical: 2 }}>
+                            <Text style={{ color: '#fff', fontSize: 8, fontWeight: '900', letterSpacing: 0.5 }}>{r.tag}</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={{ ...T.caption, color: C.textDim, marginTop: 2 }}>{r.desc}</Text>
+                      {!etaLoaded ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
+                          <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: C.textDim }} />
+                          <Text style={{ fontSize: 10, color: C.textDim }}>{r.eta}</Text>
+                        </View>
+                      ) : (() => {
+                        const info = driverEta[r.id];
+                        if (!info) {
+                          const bestAlt = RIDES
+                            .filter(alt => alt.id !== r.id && driverEta[alt.id])
+                            .sort((a, b) => ((driverEta[a.id]?.eta_min || 999) - (driverEta[b.id]?.eta_min || 999)))[0];
+                          return (
+                            <View style={{ marginTop: 4 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#6B7280' }} />
+                                <Text style={{ fontSize: 10, color: '#6B7280', fontWeight: '600' }}>Is area mein abhi available nahi</Text>
+                              </View>
+                              {bestAlt && (
+                                <TouchableOpacity
+                                  onPress={() => setRideType(bestAlt.id)}
+                                  style={{ marginTop: 5, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.pinkGlass, borderRadius: R.xs - 2, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' }}>
+                                  <Text style={{ fontSize: 10, color: C.pink, fontWeight: '800' }}>
+                                    {bestAlt.label} try karo · ~{driverEta[bestAlt.id]?.eta_min} min
+                                  </Text>
+                                  <Ionicons name="arrow-forward" size={10} color={C.pink} />
+                                </TouchableOpacity>
+                              )}
                             </View>
-                            {bestAlt && (
-                              <TouchableOpacity
-                                onPress={() => setRideType(bestAlt.id)}
-                                style={{ marginTop: 5, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(233,69,96,0.08)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' }}>
-                                <Text style={{ fontSize: 10, color: C.pink, fontWeight: '800' }}>
-                                  {bestAlt.label} try karo · ~{driverEta[bestAlt.id]?.eta_min} min
-                                </Text>
-                                <Ionicons name="arrow-forward" size={10} color={C.pink} />
-                              </TouchableOpacity>
-                            )}
+                          );
+                        }
+                        const isFar = info.dist_km > 5;
+                        return (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 }}>
+                            <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: isFar ? C.yellow : C.green }} />
+                            <Text style={{ fontSize: 10, color: isFar ? C.yellow : C.green, fontWeight: '800' }}>
+                              {isFar ? `${info.dist_km} km door · ~${info.eta_min} min wait` : `~${info.eta_min} min · ${info.dist_km} km paas`}
+                            </Text>
                           </View>
                         );
-                      }
-                      const isFar = info.dist_km > 5;
-                      return (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 }}>
-                          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: isFar ? '#F59E0B' : '#10B981' }} />
-                          <Text style={{ fontSize: 10, color: isFar ? '#F59E0B' : '#10B981', fontWeight: '800' }}>
-                            {isFar
-                              ? `${info.dist_km} km door · ~${info.eta_min} min wait`
-                              : `~${info.eta_min} min · ${info.dist_km} km paas`}
-                          </Text>
-                        </View>
-                      );
-                    })()}
-                  </View>
+                      })()}
+                    </View>
 
-                  {/* Fare + selected indicator */}
-                  <View style={{ alignItems: 'flex-end', minWidth: 64 }}>
-                    <Text style={{
-                      fontSize: 18, fontWeight: '900',
-                      color: fareLoading ? C.textDim : isSel ? C.yellow : isLux ? C.purple : C.textMuted,
-                    }}>{fareText}</Text>
-                    {isSel ? (
-                      <View style={{ marginTop: 6, width: 24, height: 24, borderRadius: 12, backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center', elevation: 3, shadowColor: C.pink, shadowOpacity: 0.4, shadowRadius: 4 }}>
-                        <Ionicons name="checkmark" size={13} color="#fff" />
-                      </View>
-                    ) : null}
-                  </View>
-                </TouchableOpacity>
+                    {/* Fare + selection pill */}
+                    <View style={{ alignItems: 'flex-end', minWidth: 62 }}>
+                      <Text style={{
+                        fontSize: 19, fontWeight: '900',
+                        color: fareLoading ? C.textDim : isSel ? C.pink : isLux ? C.purple : C.textMuted,
+                      }}>{fareText}</Text>
+                      {isSel ? (
+                        <View style={{ marginTop: 5, backgroundColor: C.pink, borderRadius: R.full, paddingHorizontal: 8, paddingVertical: 3, elevation: 4, shadowColor: C.pink, shadowOpacity: 0.4, shadowRadius: 6 }}>
+                          <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900', letterSpacing: 0.5 }}>SELECTED</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  </TouchableOpacity>
+                </Animated.View>
               );
             })}
           </View>
@@ -674,12 +721,12 @@ export function BookingScreen() {
             if (info) {
               const isFar = info.dist_km > 5;
               return (
-                <View style={{ backgroundColor: isFar ? 'rgba(245,158,11,0.08)' : 'rgba(16,185,129,0.08)', borderRadius: 16, padding: 14, marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1.5, borderColor: isFar ? 'rgba(245,158,11,0.28)' : 'rgba(16,185,129,0.25)' }}>
-                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: isFar ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ backgroundColor: isFar ? C.yellowGlass : C.greenGlass, borderRadius: R.sm, padding: 14, marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1.5, borderColor: isFar ? C.yellowBorder : C.greenBorder }}>
+                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: isFar ? C.yellowGlass : C.greenGlass, alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={{ fontSize: 20 }}>{isFar ? '🕐' : '✅'}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '800', color: isFar ? '#F59E0B' : '#10B981' }}>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: isFar ? C.yellow : C.green }}>
                       {selLabel} driver {isFar ? 'thoda door hai' : 'paas mein hai'}
                     </Text>
                     <Text style={{ fontSize: 11, color: C.textDim, marginTop: 3 }}>
@@ -694,21 +741,21 @@ export function BookingScreen() {
               .filter(r => driverEta[r.id])
               .sort((a, b) => ((driverEta[a.id]?.eta_min || 999) - (driverEta[b.id]?.eta_min || 999)));
             if (availables.length === 0) return (
-              <View style={{ backgroundColor: 'rgba(239,68,68,0.07)', borderRadius: 16, padding: 14, marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1.5, borderColor: 'rgba(239,68,68,0.22)' }}>
-                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(239,68,68,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{ backgroundColor: C.redGlass, borderRadius: R.sm, padding: 14, marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1.5, borderColor: C.redBorder }}>
+                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: C.redGlass, alignItems: 'center', justifyContent: 'center' }}>
                   <Text style={{ fontSize: 20 }}>😕</Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#EF4444' }}>Is area mein koi driver online nahi</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: C.red }}>Is area mein koi driver online nahi</Text>
                   <Text style={{ fontSize: 11, color: C.textDim, marginTop: 3 }}>Thodi der baad dobara try karein</Text>
                 </View>
               </View>
             );
             return (
-              <View style={{ backgroundColor: 'rgba(245,158,11,0.07)', borderRadius: 16, padding: 14, marginTop: 10, borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.28)' }}>
+              <View style={{ backgroundColor: C.yellowGlass, borderRadius: R.sm, padding: 14, marginTop: 10, borderWidth: 1.5, borderColor: C.yellowBorder }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                   <Text style={{ fontSize: 16 }}>⚡</Text>
-                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#B45309', flex: 1 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: C.yellow, flex: 1 }}>
                     {selLabel} abhi available nahi — ye try karo:
                   </Text>
                 </View>
@@ -745,20 +792,20 @@ export function BookingScreen() {
             }}>
               {/* Surge banner */}
               {surgeLabel && (
-                <View style={{ backgroundColor: '#FFF3E0', paddingHorizontal: 16, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 8, borderBottomWidth: 1, borderColor: '#FFB74D' }}>
+                <View style={{ backgroundColor: C.saffGlass, paddingHorizontal: 16, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 8, borderBottomWidth: 1, borderColor: C.saffBorder }}>
                   <Text style={{ fontSize: 16 }}>🔥</Text>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: '#E65100', fontWeight: '900', fontSize: 12 }}>SURGE PRICING — {surgeLabel}</Text>
-                    <Text style={{ color: '#F57C00', fontSize: 10, marginTop: 1 }}>Aapke area mein abhi zyada demand hai</Text>
+                    <Text style={{ color: C.saffron, fontWeight: '900', fontSize: 12 }}>SURGE PRICING — {surgeLabel}</Text>
+                    <Text style={{ color: C.saffron, fontSize: 10, marginTop: 1, opacity: 0.8 }}>Aapke area mein abhi zyada demand hai</Text>
                   </View>
-                  <View style={{ backgroundColor: '#FF6D00', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }}>
+                  <View style={{ backgroundColor: C.saffron, borderRadius: R.xs, paddingHorizontal: 8, paddingVertical: 4 }}>
                     <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>{surgeLabel}</Text>
                   </View>
                 </View>
               )}
 
               {/* Header row */}
-              <View style={{ backgroundColor: '#FFF0F6', paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderColor: C.glassBorder }}>
+              <View style={{ backgroundColor: C.pinkGlass, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderColor: C.glassBorder }}>
                 <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.pinkBorder }}>
                   <RideVehicleIcon id={selRide.id} size={19} color={C.pink} />
                 </View>
@@ -791,8 +838,8 @@ export function BookingScreen() {
                 </View>
                 {surgeLabel && (
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <Text style={{ fontSize: 13, color: '#E65100', fontWeight: '700' }}>🔥 Surge ({surgeLabel})</Text>
-                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#E65100' }}>Applied</Text>
+                    <Text style={{ fontSize: 13, color: C.saffron, fontWeight: '700' }}>🔥 Surge ({surgeLabel})</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: C.saffron }}>Applied</Text>
                   </View>
                 )}
                 {discount > 0 && (
@@ -878,12 +925,13 @@ export function BookingScreen() {
           borderTopWidth: 1,
           borderTopColor: C.glassBorder,
         }}>
+          <Animated.View style={{ transform: [{ scale: bookPulseAnim }] }}>
           <Bouncy
             style={[{ borderRadius: 18, overflow: 'hidden' }, loading && { opacity: 0.72 }]}
             onPress={handleBook}
             disabled={loading}>
             <View style={{
-              backgroundColor: loading ? C.glassMid : hasFare ? C.pink : '#C0C6D4',
+              backgroundColor: loading ? C.glassMid : hasFare ? C.pink : C.glassMid,
               paddingVertical: 17,
               paddingHorizontal: 24,
               borderRadius: 18,
@@ -909,6 +957,7 @@ export function BookingScreen() {
               </View>
             </View>
           </Bouncy>
+          </Animated.View>
         </View>
       </GlassPanel>
       </Animated.View>
@@ -920,39 +969,39 @@ export function BookingScreen() {
         const selLabel = RIDES.find(r => r.id === rideType)?.label || 'Ride';
         return (
           <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end', zIndex: 999 }}>
-            <View style={{ backgroundColor: '#0F172A', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, borderTopWidth: 1.5, borderColor: '#1E293B' }}>
+            <View style={{ backgroundColor: C.bgDark, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, borderTopWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)' }}>
 
               {/* Warning icon + title */}
               <View style={{ alignItems: 'center', marginBottom: 20 }}>
-                <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(245,158,11,0.12)', alignItems: 'center', justifyContent: 'center', marginBottom: 12, borderWidth: 2, borderColor: 'rgba(245,158,11,0.35)' }}>
+                <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: C.yellowGlass, alignItems: 'center', justifyContent: 'center', marginBottom: 12, borderWidth: 2, borderColor: C.yellowBorder }}>
                   <Text style={{ fontSize: 28 }}>⚠️</Text>
                 </View>
-                <Text style={{ fontSize: 19, fontWeight: '900', color: '#F1F5F9' }}>Driver Thoda Door Hai</Text>
-                <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 4 }}>{selLabel} driver aapke pickup se bahar hai</Text>
+                <Text style={{ fontSize: 19, fontWeight: '900', color: '#fff' }}>Driver Thoda Door Hai</Text>
+                <Text style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>{selLabel} driver aapke pickup se bahar hai</Text>
               </View>
 
               {/* Distance / ETA info card */}
-              <View style={{ backgroundColor: 'rgba(245,158,11,0.07)', borderRadius: 16, padding: 16, marginBottom: 18, borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.22)', gap: 12 }}>
+              <View style={{ backgroundColor: C.yellowGlass, borderRadius: R.sm, padding: 16, marginBottom: 18, borderWidth: 1.5, borderColor: C.yellowBorder, gap: 12 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 13, color: '#94A3B8' }}>Driver kitna door hai</Text>
+                  <Text style={{ fontSize: 13, color: C.textDim }}>Driver kitna door hai</Text>
                   <View style={{ backgroundColor: 'rgba(245,158,11,0.15)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '900', color: '#F59E0B' }}>{info?.dist_km} km</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '900', color: C.yellow }}>{info?.dist_km} km</Text>
                   </View>
                 </View>
                 <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.06)' }} />
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 13, color: '#94A3B8' }}>Estimated wait time</Text>
+                  <Text style={{ fontSize: 13, color: C.textDim }}>Estimated wait time</Text>
                   <View style={{ backgroundColor: 'rgba(245,158,11,0.15)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '900', color: '#F59E0B' }}>~{info?.eta_min} min</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '900', color: C.yellow }}>~{info?.eta_min} min</Text>
                   </View>
                 </View>
                 {extraMin > 0 && (
                   <>
                     <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.06)' }} />
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Text style={{ fontSize: 13, color: '#94A3B8' }}>Normal se extra</Text>
+                      <Text style={{ fontSize: 13, color: C.textDim }}>Normal se extra</Text>
                       <View style={{ backgroundColor: 'rgba(239,68,68,0.15)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
-                        <Text style={{ fontSize: 14, fontWeight: '900', color: '#EF4444' }}>+{extraMin} min zyada</Text>
+                        <Text style={{ fontSize: 14, fontWeight: '900', color: C.red }}>+{extraMin} min zyada</Text>
                       </View>
                     </View>
                   </>
@@ -963,11 +1012,11 @@ export function BookingScreen() {
               <TouchableOpacity
                 onPress={() => setWaitConfirmed(v => !v)}
                 activeOpacity={0.8}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 20, backgroundColor: waitConfirmed ? 'rgba(16,185,129,0.10)' : 'rgba(255,255,255,0.04)', borderRadius: 14, padding: 16, borderWidth: 1.5, borderColor: waitConfirmed ? 'rgba(16,185,129,0.40)' : '#1E293B' }}>
-                <View style={{ width: 26, height: 26, borderRadius: 7, backgroundColor: waitConfirmed ? '#10B981' : 'transparent', borderWidth: 2.5, borderColor: waitConfirmed ? '#10B981' : '#475569', alignItems: 'center', justifyContent: 'center' }}>
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 20, backgroundColor: waitConfirmed ? C.greenGlass : 'rgba(255,255,255,0.04)', borderRadius: 14, padding: 16, borderWidth: 1.5, borderColor: waitConfirmed ? C.greenBorder : 'rgba(255,255,255,0.08)' }}>
+                <View style={{ width: 26, height: 26, borderRadius: 7, backgroundColor: waitConfirmed ? C.green : 'transparent', borderWidth: 2.5, borderColor: waitConfirmed ? C.green : 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' }}>
                   {waitConfirmed && <Ionicons name="checkmark" size={15} color="#fff" />}
                 </View>
-                <Text style={{ flex: 1, fontSize: 13, fontWeight: '700', color: waitConfirmed ? '#10B981' : '#CBD5E1', lineHeight: 19 }}>
+                <Text style={{ flex: 1, fontSize: 13, fontWeight: '700', color: waitConfirmed ? C.green : 'rgba(255,255,255,0.75)', lineHeight: 19 }}>
                   Haan, main wait karunga — booking ke baad ride cancel nahi karunga
                 </Text>
               </TouchableOpacity>
@@ -976,14 +1025,14 @@ export function BookingScreen() {
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <TouchableOpacity
                   onPress={() => setShowWaitModal(false)}
-                  style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 14, paddingVertical: 16, alignItems: 'center', borderWidth: 1, borderColor: '#1E293B' }}>
-                  <Text style={{ fontWeight: '700', color: '#64748B', fontSize: 14 }}>Wapas Jao</Text>
+                  style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 14, paddingVertical: 16, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
+                  <Text style={{ fontWeight: '700', color: C.textMuted, fontSize: 14 }}>Wapas Jao</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => { setShowWaitModal(false); bookRide(); }}
                   disabled={!waitConfirmed}
-                  style={{ flex: 2, backgroundColor: waitConfirmed ? C.pink : '#1E293B', borderRadius: 14, paddingVertical: 16, alignItems: 'center', elevation: waitConfirmed ? 8 : 0, shadowColor: C.pink, shadowOpacity: waitConfirmed ? 0.45 : 0, shadowRadius: 12 }}>
-                  <Text style={{ fontWeight: '900', color: waitConfirmed ? '#fff' : '#334155', fontSize: 15 }}>
+                  style={{ flex: 2, backgroundColor: waitConfirmed ? C.pink : C.glassMid, borderRadius: 14, paddingVertical: 16, alignItems: 'center', elevation: waitConfirmed ? 8 : 0, shadowColor: C.pink, shadowOpacity: waitConfirmed ? 0.45 : 0, shadowRadius: 12 }}>
+                  <Text style={{ fontWeight: '900', color: waitConfirmed ? '#fff' : C.textMuted, fontSize: 15 }}>
                     {waitConfirmed ? 'Book Karo →' : 'Pehle Confirm Karo'}
                   </Text>
                 </TouchableOpacity>

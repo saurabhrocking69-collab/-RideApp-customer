@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { Bouncy, DotBG, ScreenIn } from '../components/ui';
-import { s, C } from '../styles';
+import { s, C, T, R, SP, SHADOW } from '../styles';
 import { apiPost } from '../../api';
 
 const { width: W } = Dimensions.get('window');
@@ -67,7 +67,7 @@ export function PaymentScreen() {
 
   // ── QR Full-screen Overlay ──────────────────────────────────────────────────
   if (showUpiQr) return (
-    <ScreenIn style={{ flex: 1, backgroundColor: '#0A0A14' }}>
+    <ScreenIn style={{ flex: 1, backgroundColor: C.bgDark }}>
       {/* QR Header */}
       <View style={{
         paddingTop: SB_HEIGHT + 14, paddingBottom: 18, paddingHorizontal: 18,
@@ -124,11 +124,11 @@ export function PaymentScreen() {
                 style={{ width: 256, height: 256, borderRadius: 12 }}
                 contentFit="contain"
               />
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14, backgroundColor: '#F0FDF4', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6 }}>
-                <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#16A34A' }} />
-                <Text style={{ color: '#15803D', fontSize: 11, fontWeight: '700' }}>Secure UPI Payment</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14, backgroundColor: C.greenGlass, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6 }}>
+                <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: C.green }} />
+                <Text style={{ color: C.green, fontSize: 11, fontWeight: '700' }}>Secure UPI Payment</Text>
               </View>
-              <Text style={{ color: '#94A3B8', fontSize: 10, marginTop: 6 }}>{driverUpiId}</Text>
+              <Text style={{ color: C.textDim, fontSize: 10, marginTop: 6 }}>{driverUpiId}</Text>
             </View>
 
             {/* UPI App row */}
@@ -171,9 +171,9 @@ export function PaymentScreen() {
             </TouchableOpacity>
           </>
         ) : (
-          <View style={{ backgroundColor: 'rgba(245,158,11,0.12)', borderRadius: 20, padding: 28, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.3)' }}>
+          <View style={{ backgroundColor: C.yellowGlass, borderRadius: 20, padding: 28, alignItems: 'center', borderWidth: 1.5, borderColor: C.yellowBorder }}>
             <Text style={{ fontSize: 40, marginBottom: 10 }}>⚠️</Text>
-            <Text style={{ color: '#F59E0B', fontSize: 15, fontWeight: '800', textAlign: 'center' }}>Driver ka UPI ID set nahi hai</Text>
+            <Text style={{ color: C.yellow, fontSize: 15, fontWeight: '800', textAlign: 'center' }}>Driver ka UPI ID set nahi hai</Text>
             <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, textAlign: 'center', marginTop: 6 }}>Cash ya Wallet se pay karo</Text>
           </View>
         )}
@@ -185,14 +185,14 @@ export function PaymentScreen() {
           onPress={confirmUpiQrPaid}
           disabled={upiConfirming}
           style={{
-            backgroundColor: upiConfirming ? 'rgba(255,255,255,0.08)' : '#16A34A',
-            borderRadius: 20, padding: 18, alignItems: 'center',
+            backgroundColor: upiConfirming ? 'rgba(255,255,255,0.08)' : C.green,
+            borderRadius: R.md, padding: 18, alignItems: 'center',
             elevation: upiConfirming ? 0 : 10,
-            shadowColor: '#16A34A', shadowOpacity: 0.45, shadowRadius: 14,
+            shadowColor: C.green, shadowOpacity: 0.45, shadowRadius: 14,
             borderWidth: upiConfirming ? 1 : 0, borderColor: 'rgba(255,255,255,0.1)',
           }}
         >
-          <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900' }}>
+          <Text style={{ ...T.title, color: '#fff' }}>
             {upiConfirming ? '⏳ Confirm ho raha hai...' : `✅  Maine Pay Kar Diya — ₹${fareNum}`}
           </Text>
         </TouchableOpacity>
@@ -248,7 +248,7 @@ export function PaymentScreen() {
 
           {/* Wallet promo bar */}
           {walletSufficient && (
-            <View style={{ marginTop: 12, backgroundColor: 'rgba(22,163,74,0.88)', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 8, elevation: 4, shadowColor: '#16a34a', shadowOpacity: 0.5, shadowRadius: 8 }}>
+            <View style={{ marginTop: 12, backgroundColor: C.green, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 8, elevation: 4, shadowColor: C.green, shadowOpacity: 0.5, shadowRadius: 8 }}>
               <Text style={{ fontSize: 16 }}>💰</Text>
               <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12, flex: 1 }}>Wallet se pay karo · ₹{cashback} scratch card milega!</Text>
               <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.7)" />
@@ -265,7 +265,7 @@ export function PaymentScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14, marginTop: 4 }}>
                 <View style={{ width: 4, height: 22, backgroundColor: C.pink, borderRadius: 3 }} />
                 <Text style={{ color: C.text, fontSize: 17, fontWeight: '900', flex: 1 }}>UPI Se Pay Karo</Text>
-                <View style={{ backgroundColor: '#16A34A', borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <View style={{ backgroundColor: C.green, borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                   <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#fff' }} />
                   <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900', letterSpacing: 0.5 }}>FASTEST</Text>
                 </View>
@@ -323,27 +323,27 @@ export function PaymentScreen() {
               </TouchableOpacity>
             </>
           ) : (
-            <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 18, padding: 18, marginBottom: 16, borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.25)', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ backgroundColor: C.yellowGlass, borderRadius: 18, padding: 18, marginBottom: 16, borderWidth: 1.5, borderColor: C.yellowBorder, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <Text style={{ fontSize: 28 }}>⚠️</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: '#B45309', fontSize: 14, fontWeight: '800' }}>UPI Available Nahi</Text>
-                <Text style={{ color: '#92400E', fontSize: 12, marginTop: 2 }}>Driver ka UPI nahi hai — Wallet ya Cash use karo</Text>
+                <Text style={{ color: C.yellow, fontSize: 14, fontWeight: '800' }}>UPI Available Nahi</Text>
+                <Text style={{ color: C.yellow, fontSize: 12, marginTop: 2, opacity: 0.75 }}>Driver ka UPI nahi hai — Wallet ya Cash use karo</Text>
               </View>
             </View>
           )}
 
           {/* ── Divider ── */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-            <View style={{ flex: 1, height: 1, backgroundColor: '#E2E8F0' }} />
-            <Text style={{ color: '#94A3B8', fontSize: 11, fontWeight: '700', letterSpacing: 0.5 }}>DUSRE TARIKE</Text>
-            <View style={{ flex: 1, height: 1, backgroundColor: '#E2E8F0' }} />
+            <View style={{ flex: 1, height: 1, backgroundColor: C.glassBorder }} />
+            <Text style={{ ...T.label, color: C.textDim }}>DUSRE TARIKE</Text>
+            <View style={{ flex: 1, height: 1, backgroundColor: C.glassBorder }} />
           </View>
 
           {/* ── Wallet — highlighted card ── */}
           <Bouncy onPress={walletSufficient ? payWithWallet : undefined} style={{ marginBottom: 12 }}>
-            <View style={{ borderRadius: 22, overflow: 'hidden', elevation: walletSufficient ? 8 : 2, shadowColor: '#16A34A', shadowOpacity: walletSufficient ? 0.28 : 0, shadowRadius: 12 }}>
+            <View style={{ borderRadius: 22, overflow: 'hidden', elevation: walletSufficient ? 8 : 2, shadowColor: C.green, shadowOpacity: walletSufficient ? 0.28 : 0, shadowRadius: 12 }}>
               {/* Cashback banner — always visible */}
-              <View style={{ backgroundColor: walletSufficient ? '#16A34A' : '#94A3B8', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 7, gap: 6 }}>
+              <View style={{ backgroundColor: walletSufficient ? C.green : C.textDim, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 7, gap: 6 }}>
                 <Text style={{ fontSize: 14 }}>🎁</Text>
                 <Text style={{ color: '#fff', fontSize: 12, fontWeight: '900', flex: 1 }}>
                   ₹5 Cashback Instantly — Wallet se pay karo!
@@ -355,42 +355,42 @@ export function PaymentScreen() {
 
               {/* Card body */}
               <View style={{
-                padding: 16, flexDirection: 'row', alignItems: 'center',
-                backgroundColor: walletSufficient ? '#F0FDF4' : '#F8FAFC',
+                padding: SP.md, flexDirection: 'row', alignItems: 'center',
+                backgroundColor: walletSufficient ? C.greenGlass : C.glassMid,
                 borderWidth: walletSufficient ? 2 : 1,
                 borderTopWidth: 0,
-                borderColor: walletSufficient ? '#22C55E' : '#E2E8F0',
+                borderColor: walletSufficient ? C.greenBorder : C.glassBorder,
               }}>
                 {/* Wallet icon */}
                 <View style={{
-                  width: 54, height: 54, borderRadius: 18, marginRight: 14,
-                  backgroundColor: walletSufficient ? '#DCFCE7' : '#F1F5F9',
+                  width: 54, height: 54, borderRadius: R.sm, marginRight: 14,
+                  backgroundColor: walletSufficient ? C.greenGlass : C.glassHigh,
                   alignItems: 'center', justifyContent: 'center',
-                  borderWidth: 2, borderColor: walletSufficient ? '#86EFAC' : '#E2E8F0',
+                  borderWidth: 2, borderColor: walletSufficient ? C.greenBorder : C.glassBorder,
                 }}>
                   <Text style={{ fontSize: 24 }}>💰</Text>
                 </View>
 
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <Text style={{ color: C.text, fontWeight: '900', fontSize: 16 }}>Sppero Wallet</Text>
+                    <Text style={{ ...T.bodyBold, color: C.text }}>Sppero Wallet</Text>
                     {walletSufficient && (
-                      <View style={{ backgroundColor: '#22C55E', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
-                        <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900' }}>TAP TO PAY</Text>
+                      <View style={{ backgroundColor: C.green, borderRadius: R.xs, paddingHorizontal: 8, paddingVertical: 3 }}>
+                        <Text style={{ ...T.label, color: '#fff' }}>TAP TO PAY</Text>
                       </View>
                     )}
                   </View>
-                  <Text style={{ color: walletSufficient ? '#15803D' : '#94A3B8', fontSize: 13, fontWeight: '700' }}>
+                  <Text style={{ ...T.caption, color: walletSufficient ? C.green : C.textDim, fontWeight: '700' as const }}>
                     Balance: ₹{walletBalance}
                     {walletSufficient ? ` · Covers ₹${fareNum} ✓` : ' — balance kam hai'}
                   </Text>
                   {walletSufficient ? (
-                    <Text style={{ color: '#16A34A', fontSize: 12, marginTop: 3, fontWeight: '600' }}>
+                    <Text style={{ ...T.caption, color: C.green, marginTop: 3 }}>
                       + ₹5 scratch card turant milega 🎉
                     </Text>
                   ) : (
                     <TouchableOpacity onPress={() => setScreen('wallet')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                      <Text style={{ color: C.pink, fontSize: 13, fontWeight: '900', marginTop: 4 }}>
+                      <Text style={{ ...T.caption, color: C.pink, fontWeight: '900' as const, marginTop: 4 }}>
                         + Recharge Karo & ₹5 Cashback Pao →
                       </Text>
                     </TouchableOpacity>
@@ -400,7 +400,7 @@ export function PaymentScreen() {
                 <Ionicons
                   name={walletSufficient ? 'arrow-forward-circle' : 'chevron-forward'}
                   size={walletSufficient ? 32 : 22}
-                  color={walletSufficient ? '#22C55E' : '#CBD5E1'}
+                  color={walletSufficient ? C.green : C.textDim}
                 />
               </View>
             </View>
@@ -408,40 +408,40 @@ export function PaymentScreen() {
 
           {/* ── Online / Razorpay ── */}
           <Bouncy onPress={handlePayment} style={{ marginBottom: 10 }}>
-            <View style={{ borderRadius: 18, padding: 16, flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' }}>
-              <View style={{ width: 48, height: 48, borderRadius: 15, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+            <View style={{ borderRadius: R.md, padding: SP.md, flexDirection: 'row', alignItems: 'center', backgroundColor: C.glassMid, borderWidth: 1.5, borderColor: C.glassBorder, ...SHADOW.sm }}>
+              <View style={{ width: 48, height: 48, borderRadius: R.sm, backgroundColor: C.plumGlass, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1.5, borderColor: C.plumBorder }}>
                 <Text style={{ fontSize: 22 }}>💳</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: C.text, fontWeight: '900', fontSize: 15, marginBottom: 2 }}>Online Payment</Text>
-                <Text style={{ color: '#94A3B8', fontSize: 11 }}>Razorpay · Card · Net Banking</Text>
+                <Text style={{ ...T.bodyBold, color: C.text, marginBottom: 2 }}>Online Payment</Text>
+                <Text style={{ ...T.caption, color: C.textDim }}>Razorpay · Card · Net Banking</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#CBD5E1" />
+              <Ionicons name="chevron-forward" size={20} color={C.textDim} />
             </View>
           </Bouncy>
 
           {/* ── Cash ── */}
           <Bouncy onPress={payWithCash} style={{ opacity: cashConfirming ? 0.6 : 1, marginBottom: 10 }}>
-            <View style={{ borderRadius: 18, padding: 16, flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' }}>
-              <View style={{ width: 48, height: 48, borderRadius: 15, backgroundColor: '#F0FDF4', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+            <View style={{ borderRadius: R.md, padding: SP.md, flexDirection: 'row', alignItems: 'center', backgroundColor: C.glassMid, borderWidth: 1.5, borderColor: C.glassBorder, ...SHADOW.sm }}>
+              <View style={{ width: 48, height: 48, borderRadius: R.sm, backgroundColor: C.greenGlass, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1.5, borderColor: C.greenBorder }}>
                 <Text style={{ fontSize: 22 }}>💵</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: C.text, fontWeight: '900', fontSize: 15, marginBottom: 2 }}>Cash</Text>
-                <Text style={{ color: '#94A3B8', fontSize: 11 }}>
+                <Text style={{ ...T.bodyBold, color: C.text, marginBottom: 2 }}>Cash</Text>
+                <Text style={{ ...T.caption, color: C.textDim }}>
                   {cashConfirming ? '⏳ Confirming...' : `Driver ko ₹${fareNum} naqdh do`}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#CBD5E1" />
+              <Ionicons name="chevron-forward" size={20} color={C.textDim} />
             </View>
           </Bouncy>
 
           {result ? <Text style={[s.err, { marginTop: 6 }]}>{result}</Text> : null}
 
           {/* Security footer */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#F8FAFC', borderRadius: 14, padding: 12, marginTop: 8, borderWidth: 1, borderColor: '#E2E8F0' }}>
-            <Ionicons name="shield-checkmark" size={18} color="#16A34A" />
-            <Text style={{ color: '#64748B', fontSize: 11, flex: 1, lineHeight: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.greenGlass, borderRadius: R.sm, padding: 12, marginTop: 8, borderWidth: 1.5, borderColor: C.greenBorder }}>
+            <Ionicons name="shield-checkmark" size={18} color={C.green} />
+            <Text style={{ ...T.caption, color: C.textMuted, flex: 1, lineHeight: 16 }}>
               Sppero ka payment system 100% secure hai · Razorpay PCI-DSS compliant
             </Text>
           </View>

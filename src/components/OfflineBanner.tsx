@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Text, View } from 'react-native';
 import { useNetwork } from '../offline/useNetwork';
+import { C } from '../styles';
 
 export function OfflineBanner() {
   const { isOnline, strength } = useNetwork();
@@ -23,7 +24,7 @@ export function OfflineBanner() {
 
   if (!visible) return null;
 
-  const bg    = !isOnline ? '#DC2626' : '#16A34A';
+  const bg    = !isOnline ? C.red : C.green;
   const label = !isOnline
     ? (strength === 'weak' ? '⚠️ Weak signal — cached data dikh raha hai' : '📵 Offline — cached data dikh raha hai')
     : '✅ Wapas Online!';

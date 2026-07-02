@@ -8,6 +8,7 @@ import * as Notifications from 'expo-notifications';
 import { io, Socket } from 'socket.io-client';
 import { apiGet, apiPost, externalGet } from '../../api';
 import { saveNotification } from '../components/NotificationCenter';
+import { C } from '../styles';
 import type { ToastNotif } from '../components/NotificationToast';
 import { useRideStore } from '../../store';
 import { API, MAPS_KEY, RIDES, DEFAULT_HOURLY_PACKAGES } from '../constants';
@@ -553,7 +554,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         name: 'Sppero Notifications',
         importance: Notifications.AndroidImportance.MAX,
         sound: 'default', vibrationPattern: [0, 250, 250, 250], enableVibrate: true,
-        lightColor: '#e94560', lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+        lightColor: C.pink, lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       });
     }
     Notifications.setNotificationHandler({
@@ -1341,7 +1342,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const fareNum = Math.round(parseFloat(String(rideData?.fare ?? '').replace(/[^0-9.]/g, '')) || 0) || fareCount;
       const order = await apiPost('/api/payment/create-order', { amount: fareNum, ride_id: rideData.ride_id });
       if (!order.success) { setResult('❌ ' + (order.error || 'Order create nahi hua')); return; }
-      RazorpayCheckout.open({ description: 'Sppero Trip', currency: 'INR', key: order.key_id, amount: order.amount, order_id: order.order_id, name: 'Sppero', prefill: { contact: phone, name: userName || 'User' }, theme: { color: '#e94560' } })
+      RazorpayCheckout.open({ description: 'Sppero Trip', currency: 'INR', key: order.key_id, amount: order.amount, order_id: order.order_id, name: 'Sppero', prefill: { contact: phone, name: userName || 'User' }, theme: { color: C.pink } })
         .then(async (data: any) => {
           apiPost('/api/payment/verify', { ride_id: rideData.ride_id, razorpay_payment_id: data.razorpay_payment_id, razorpay_order_id: data.razorpay_order_id, razorpay_signature: data.razorpay_signature, amount: fareNum, method: 'online' }).catch(() => {});
           apiPost('/api/rides/payment-complete', { ride_id: rideData.ride_id, payment_method: 'online', phone: phone || '9999999999' }).catch(() => {});
@@ -1412,7 +1413,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       const d = await apiPost('/api/wallet/topup/order', { phone, amount: amt });
       if (!d.success) { Alert.alert('Payment Error', d.error || 'Payment start nahi hua'); return; }
-      RazorpayCheckout.open({ key: d.key_id, amount: d.amount, currency: d.currency || 'INR', order_id: d.order_id, name: 'Sppero', description: `Wallet Recharge ₹${amt}`, prefill: { contact: phone }, theme: { color: '#e94560' } })
+      RazorpayCheckout.open({ key: d.key_id, amount: d.amount, currency: d.currency || 'INR', order_id: d.order_id, name: 'Sppero', description: `Wallet Recharge ₹${amt}`, prefill: { contact: phone }, theme: { color: C.pink } })
         .then(async (payment: any) => {
           try {
             const vd = await apiPost('/api/wallet/topup/verify', { phone, razorpay_order_id: payment.razorpay_order_id, razorpay_payment_id: payment.razorpay_payment_id, razorpay_signature: payment.razorpay_signature, amount: amt });

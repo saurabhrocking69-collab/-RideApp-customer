@@ -13,9 +13,9 @@ const STATUS_META: Record<string, { color: string; label: string; icon: string }
   open:               { color: '#F59E0B', label: 'Open',             icon: '📬' },
   under_review:       { color: '#3B82F6', label: 'Under Review',     icon: '🔍' },
   awaiting_response:  { color: '#8B5CF6', label: 'Awaiting Reply',   icon: '💬' },
-  evidence_requested: { color: '#EF4444', label: 'Evidence Needed',  icon: '📎' },
+  evidence_requested: { color: C.red,     label: 'Evidence Needed',  icon: '📎' },
   escalated:          { color: '#DC2626', label: 'Escalated',        icon: '🚨' },
-  resolved:           { color: '#059669', label: 'Resolved',         icon: '✅' },
+  resolved:           { color: C.green,   label: 'Resolved',         icon: '✅' },
   closed:             { color: '#6B7280', label: 'Closed',           icon: '📁' },
   appealed:           { color: '#EC4899', label: 'Appealed',         icon: '⚖️' },
 };
@@ -38,7 +38,7 @@ const CATEGORIES = [
   },
   {
     id: 'payment', icon: '💰', label: 'Payment Problem',
-    color: '#059669', bg: 'rgba(5,150,105,0.08)', border: 'rgba(5,150,105,0.28)',
+    color: C.green, bg: C.greenGlass, border: C.greenBorder,
     sla: '24 ghante',
     types: [
       { id: 'overcharging', label: 'Extra Fare Manga', desc: 'Agreed fare se zyada charge kiya' },
@@ -64,7 +64,7 @@ const CATEGORIES = [
   },
   {
     id: 'vehicle', icon: '🚗', label: 'Vehicle Issue',
-    color: '#FF2D78', bg: 'rgba(255,45,120,0.08)', border: 'rgba(255,45,120,0.25)',
+    color: C.pink, bg: C.pinkGlass, border: C.pinkBorder,
     sla: '72 ghante',
     types: [
       { id: 'vehicle_condition', label: 'Dirty / Unsafe Vehicle', desc: 'Gaanda ya unsafe gaadi' },
@@ -491,9 +491,9 @@ export function ComplaintDetailScreen() {
   if (!c) return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
       <Text style={{ fontSize: 32, marginBottom: 12 }}>⚠️</Text>
-      <Text style={{ fontSize: 16, fontWeight: '700', color: '#333', marginBottom: 8 }}>Complaint load nahi hui</Text>
-      <Text style={{ fontSize: 13, color: '#666', textAlign: 'center', marginBottom: 20 }}>{cmpDetail?.error || 'Server se data nahi mila'}</Text>
-      <TouchableOpacity onPress={() => setScreen('complaints')} style={{ backgroundColor: '#e94560', borderRadius: 10, paddingVertical: 12, paddingHorizontal: 24 }}>
+      <Text style={{ fontSize: 16, fontWeight: '700', color: C.text, marginBottom: 8 }}>Complaint load nahi hui</Text>
+      <Text style={{ fontSize: 13, color: C.textMuted, textAlign: 'center', marginBottom: 20 }}>{cmpDetail?.error || 'Server se data nahi mila'}</Text>
+      <TouchableOpacity onPress={() => setScreen('complaints')} style={{ backgroundColor: C.red, borderRadius: 10, paddingVertical: 12, paddingHorizontal: 24 }}>
         <Text style={{ color: '#fff', fontWeight: '800' }}>← Wapas Jao</Text>
       </TouchableOpacity>
     </View>
@@ -581,10 +581,10 @@ export function ComplaintDetailScreen() {
           <View style={{ backgroundColor: '#FFF7ED', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 2, borderColor: '#FB923C', flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
             <Text style={{ fontSize: 26 }}>📎</Text>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 14, fontWeight: '900', color: '#EA580C', marginBottom: 4 }}>Admin ne Proof Manga Hai!</Text>
+              <Text style={{ fontSize: 14, fontWeight: '900', color: C.saffron, marginBottom: 4 }}>Admin ne Proof Manga Hai!</Text>
               <Text style={{ fontSize: 12, color: '#9A3412', lineHeight: 18 }}>Apni complaint prove karne ke liye screenshot ya photo upload karo. Bina proof ke complaint close ho sakti hai.</Text>
               <TouchableOpacity onPress={uploadEvidence} disabled={uploading}
-                style={{ backgroundColor: '#EA580C', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 20, marginTop: 12, alignItems: 'center', opacity: uploading ? 0.6 : 1 }}>
+                style={{ backgroundColor: C.saffron, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 20, marginTop: 12, alignItems: 'center', opacity: uploading ? 0.6 : 1 }}>
                 <Text style={{ color: '#fff', fontWeight: '900', fontSize: 13 }}>{uploading ? '⏳ Uploading...' : '📸 Photo/Screenshot Upload Karo'}</Text>
               </TouchableOpacity>
             </View>
@@ -638,7 +638,7 @@ export function ComplaintDetailScreen() {
             <Text style={{ fontSize: 13, fontWeight: '800', color: C.text, marginBottom: 8 }}>📎 Evidence Upload Karo</Text>
             <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 12, lineHeight: 18 }}>Screenshot, photo, ya koi bhi proof upload karo jo aapki complaint support kare (max 5)</Text>
             <TouchableOpacity onPress={uploadEvidence} disabled={uploading}
-              style={{ backgroundColor: c.status === 'evidence_requested' ? '#EA580C' : C.pink, borderRadius: 12, paddingVertical: 12, alignItems: 'center', opacity: uploading ? 0.6 : 1 }}>
+              style={{ backgroundColor: c.status === 'evidence_requested' ? C.saffron : C.pink, borderRadius: 12, paddingVertical: 12, alignItems: 'center', opacity: uploading ? 0.6 : 1 }}>
               <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>{uploading ? '⏳ Uploading...' : '📸 Photo Upload Karo'}</Text>
             </TouchableOpacity>
           </View>

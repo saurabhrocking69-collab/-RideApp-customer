@@ -51,21 +51,21 @@ function timeAgo(ts: number): string {
 
 // ── Icon config ───────────────────────────────────────────────────────────────
 const ICON_CFG: Record<string, { icon: string; color: string; bg: string }> = {
-  ride_matched:       { icon: 'car',             color: '#10B981', bg: '#10B98115' },
-  driver_arrived:     { icon: 'location',         color: '#3B82F6', bg: '#3B82F615' },
-  trip_started:       { icon: 'navigate',         color: '#8B5CF6', bg: '#8B5CF615' },
-  trip_completed:     { icon: 'checkmark-circle', color: '#10B981', bg: '#10B98115' },
-  ride_cancelled:     { icon: 'close-circle',     color: '#EF4444', bg: '#EF444415' },
-  no_driver_found:    { icon: 'alert-circle',     color: '#F59E0B', bg: '#F59E0B15' },
-  cashback_earned:    { icon: 'gift',             color: '#F59E0B', bg: '#F59E0B15' },
-  extension_accepted: { icon: 'refresh-circle',   color: '#10B981', bg: '#10B98115' },
-  payment_dispute:    { icon: 'warning',          color: '#EF4444', bg: '#EF444415' },
-  account_restricted: { icon: 'ban',              color: '#EF4444', bg: '#EF444415' },
-  complaint_update:   { icon: 'document-text',    color: '#6366F1', bg: '#6366F115' },
-  refund:             { icon: 'wallet',           color: '#10B981', bg: '#10B98115' },
-  wallet_topup:       { icon: 'wallet',           color: '#10B981', bg: '#10B98115' },
-  warning:            { icon: 'warning',          color: '#F59E0B', bg: '#F59E0B15' },
-  default:            { icon: 'notifications',    color: '#FF2D78', bg: '#FF2D7815' },
+  ride_matched:       { icon: 'car',             color: C.green,     bg: C.greenGlass },
+  driver_arrived:     { icon: 'location',         color: '#3B82F6',  bg: '#3B82F615' },
+  trip_started:       { icon: 'navigate',         color: '#8B5CF6',  bg: '#8B5CF615' },
+  trip_completed:     { icon: 'checkmark-circle', color: C.green,     bg: C.greenGlass },
+  ride_cancelled:     { icon: 'close-circle',     color: C.red,       bg: C.redGlass },
+  no_driver_found:    { icon: 'alert-circle',     color: C.yellow,    bg: C.yellowGlass },
+  cashback_earned:    { icon: 'gift',             color: C.yellow,    bg: C.yellowGlass },
+  extension_accepted: { icon: 'refresh-circle',   color: C.green,     bg: C.greenGlass },
+  payment_dispute:    { icon: 'warning',          color: C.red,       bg: C.redGlass },
+  account_restricted: { icon: 'ban',              color: C.red,       bg: C.redGlass },
+  complaint_update:   { icon: 'document-text',    color: '#6366F1',  bg: '#6366F115' },
+  refund:             { icon: 'wallet',           color: C.green,     bg: C.greenGlass },
+  wallet_topup:       { icon: 'wallet',           color: C.green,     bg: C.greenGlass },
+  warning:            { icon: 'warning',          color: C.yellow,    bg: C.yellowGlass },
+  default:            { icon: 'notifications',    color: C.pink,      bg: C.pinkGlass },
 };
 
 // ── Bell button (used in HomeScreen header) ───────────────────────────────────
@@ -92,7 +92,7 @@ export function NotifBell({ onPress, unread }: BellProps) {
         <View style={{
           position: 'absolute', top: 0, right: 0,
           minWidth: 16, height: 16, borderRadius: 8,
-          backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center',
+          backgroundColor: C.red, alignItems: 'center', justifyContent: 'center',
           paddingHorizontal: 3, borderWidth: 1.5, borderColor: C.pink,
         }}>
           <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900' }}>{unread > 9 ? '9+' : unread}</Text>
@@ -163,7 +163,7 @@ export function NotificationCenter({ visible, onClose, phone }: CenterProps) {
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' }}>
         <TouchableOpacity style={{ flex: 1 }} onPress={onClose} activeOpacity={1} />
         <Animated.View style={{
-          backgroundColor: C.bg || '#0f0f1a',
+          backgroundColor: C.bg || C.bgDark,
           borderTopLeftRadius: 28, borderTopRightRadius: 28,
           maxHeight: '80%',
           transform: [{ translateY: slideY }],
@@ -174,8 +174,8 @@ export function NotificationCenter({ visible, onClose, phone }: CenterProps) {
             <View style={{ width: 38, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.15)', alignSelf: 'center', position: 'absolute', top: 8, left: '50%', marginLeft: -19 }} />
             <Text style={{ flex: 1, color: '#fff', fontSize: 17, fontWeight: '900', marginTop: 8 }}>Notifications</Text>
             {notifs.length > 0 && (
-              <TouchableOpacity onPress={clearAll} style={{ marginTop: 8, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: 'rgba(255,45,120,0.12)', borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255,45,120,0.25)' }}>
-                <Text style={{ color: '#FF2D78', fontSize: 11, fontWeight: '800' }}>Clear All</Text>
+              <TouchableOpacity onPress={clearAll} style={{ marginTop: 8, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: C.pinkGlass, borderRadius: 10, borderWidth: 1, borderColor: C.pinkBorder }}>
+                <Text style={{ color: C.pink, fontSize: 11, fontWeight: '800' }}>Clear All</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity onPress={onClose} style={{ marginTop: 8, marginLeft: 8, padding: 4 }}>
@@ -196,10 +196,10 @@ export function NotificationCenter({ visible, onClose, phone }: CenterProps) {
                 return (
                   <View key={n.id} style={{
                     flexDirection: 'row', alignItems: 'flex-start', gap: 12,
-                    backgroundColor: n.read ? 'rgba(255,255,255,0.04)' : 'rgba(255,45,120,0.07)',
+                    backgroundColor: n.read ? 'rgba(255,255,255,0.04)' : C.pinkGlass,
                     borderRadius: 16, padding: 14, marginBottom: 8,
                     borderWidth: 1,
-                    borderColor: n.read ? 'rgba(255,255,255,0.07)' : 'rgba(255,45,120,0.18)',
+                    borderColor: n.read ? 'rgba(255,255,255,0.07)' : C.pinkBorder,
                   }}>
                     <View style={{ width: 38, height: 38, borderRadius: 11, backgroundColor: cfg.bg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: cfg.color + '30' }}>
                       <Ionicons name={cfg.icon as any} size={18} color={cfg.color} />
@@ -207,7 +207,7 @@ export function NotificationCenter({ visible, onClose, phone }: CenterProps) {
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <Text style={{ flex: 1, color: '#fff', fontSize: 13, fontWeight: '800' }} numberOfLines={1}>{n.title}</Text>
-                        {!n.read && <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#FF2D78' }} />}
+                        {!n.read && <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: C.pink }} />}
                       </View>
                       <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 3, lineHeight: 17 }} numberOfLines={3}>{n.body}</Text>
                       <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, marginTop: 5, fontWeight: '600' }}>{timeAgo(n.ts)}</Text>

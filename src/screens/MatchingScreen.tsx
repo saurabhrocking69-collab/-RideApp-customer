@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { Bouncy, DotBG, FadeIn, FloatingDots, GlassPanel, PulseView, SlideUp, SuccessBurst, TripSteps } from '../components/ui';
 import { LiveMap } from '../components/LiveMap';
-import { s, C } from '../styles';
+import { s, C, T, SP, R, SHADOW } from '../styles';
 import { apiPost } from '../../api';
 import { API } from '../constants';
 
@@ -28,6 +28,13 @@ function ETACountdown({ etaText, distText, arrived }: { etaText: string; distTex
   const [remaining, setRemaining] = useState(() => parseEtaSec(etaText));
   const totalRef = useRef(parseEtaSec(etaText));
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const progressAnim = useRef(new Animated.Value(1)).current;
+
+  // Smooth depleting bar — spring to new pct on each tick
+  useEffect(() => {
+    const pct = Math.max(0, Math.min(1, remaining / (totalRef.current || 1)));
+    Animated.timing(progressAnim, { toValue: pct, duration: 900, useNativeDriver: false }).start();
+  }, [remaining]);
 
   // Re-sync ETA when it updates from the API (only if difference > 30s to avoid jitter)
   useEffect(() => {
@@ -60,41 +67,72 @@ function ETACountdown({ etaText, distText, arrived }: { etaText: string; distTex
   const secs = remaining % 60;
   const total = totalRef.current || 1;
   const pct   = Math.max(0, Math.min(1, remaining / total));
-  const color = arrived || remaining === 0 ? '#16A34A' : remaining <= 60 ? '#EF4444' : remaining <= 120 ? '#F59E0B' : '#16A34A';
+  const color = arrived || remaining === 0 ? C.green : remaining <= 60 ? C.red : remaining <= 120 ? C.yellow : C.green;
 
   if (arrived || remaining === 0) {
     return (
-      <View style={{ backgroundColor: '#F0FDF4', borderRadius: 20, padding: 18, marginBottom: 10, alignItems: 'center', gap: 6, borderWidth: 1.5, borderColor: '#BBF7D0' }}>
+      <View style={{ backgroundColor: C.greenGlass, borderRadius: 20, padding: 18, marginBottom: 10, alignItems: 'center', gap: 6, borderWidth: 1.5, borderColor: C.greenBorder }}>
         <Text style={{ fontSize: 32 }}>✅</Text>
-        <Text style={{ color: '#15803D', fontSize: 17, fontWeight: '900' }}>Driver Aa Gaya!</Text>
-        <Text style={{ color: '#4ADE80', fontSize: 12, textAlign: 'center' }}>OTP share karke trip shuru karo</Text>
+        <Text style={{ color: C.green, fontSize: 17, fontWeight: '900' }}>Driver Aa Gaya!</Text>
+        <Text style={{ color: C.green, fontSize: 12, textAlign: 'center', opacity: 0.7 }}>OTP share karke trip shuru karo</Text>
       </View>
     );
   }
 
   return (
     <View style={{ backgroundColor: color + '12', borderRadius: 20, padding: 16, marginBottom: 10, borderWidth: 1.5, borderColor: color + '30' }}>
-      {/* Depleting progress strip */}
+      {/* Depleting progress strip — animated */}
       <View style={{ height: 3, backgroundColor: 'rgba(0,0,0,0.07)', borderRadius: 2, marginBottom: 14, overflow: 'hidden' }}>
-        <View style={{ width: `${Math.round(pct * 100)}%`, height: '100%', backgroundColor: color, borderRadius: 2 }} />
+        <Animated.View style={{ width: progressAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }), height: '100%', backgroundColor: color, borderRadius: 2 }} />
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
         <View style={{ width: 58, height: 58, borderRadius: 18, backgroundColor: color + '18', borderWidth: 2, borderColor: color + '30', alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ fontSize: 28 }}>🚗</Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: '#64748B', fontSize: 10, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase' }}>
+          <Text style={{ color: C.textMuted, fontSize: 10, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase' }}>
             driver pahunch raha hai
           </Text>
           <Text style={{ color: color, fontSize: 40, fontWeight: '900', letterSpacing: 1, lineHeight: 48, marginTop: 1 }}>
             {String(mins).padStart(2, '0')}:{String(secs).padStart(2, '0')}
           </Text>
           {distText ? (
-            <Text style={{ color: '#94A3B8', fontSize: 11, marginTop: 2 }}>{distText} door • real-time</Text>
+            <Text style={{ color: C.textDim, fontSize: 11, marginTop: 2 }}>{distText} door • real-time</Text>
           ) : null}
         </View>
         <PulseView><View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: color }} /></PulseView>
       </View>
+    </View>
+  );
+}
+
+// ── OTP digit pop-in animation ───────────────────────────────────────────────
+function OtpDisplay({ otp }: { otp: string | number }) {
+  const digits = String(otp).split('');
+  const anims = useRef(digits.map(() => new Animated.Value(0))).current;
+
+  useEffect(() => {
+    anims.forEach(a => a.setValue(0));
+    Animated.stagger(130, anims.map(a =>
+      Animated.spring(a, { toValue: 1, friction: 4, tension: 260, useNativeDriver: true })
+    )).start();
+  }, [String(otp)]);
+
+  return (
+    <View style={{ flexDirection: 'row', gap: 8 }}>
+      {digits.map((digit, i) => (
+        <Animated.View key={i} style={{
+          width: 52, height: 68, backgroundColor: C.plumGlass, borderRadius: R.sm,
+          borderWidth: 2, borderColor: C.plumBorder, alignItems: 'center', justifyContent: 'center',
+          elevation: 3, shadowColor: C.plum, shadowOpacity: 0.12, shadowRadius: 8,
+          opacity: anims[i],
+          transform: [{
+            scale: anims[i].interpolate({ inputRange: [0, 0.65, 0.88, 1], outputRange: [0, 1.28, 0.9, 1] }),
+          }],
+        }}>
+          <Text style={{ fontSize: 30, fontWeight: '900' as const, color: C.plum, letterSpacing: 0 }}>{digit}</Text>
+        </Animated.View>
+      ))}
     </View>
   );
 }
@@ -213,70 +251,148 @@ export function MatchingScreen() {
                 <Text style={{ fontSize: 18, fontWeight: '900', color: C.green, letterSpacing: 0.3 }}>Driver Mil Gaya! 🎉</Text>
                 <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }}>Aapka ride confirm ho gaya</Text>
               </FadeIn>
-              <SlideUp><View style={s.driverCard}>
-                <View style={{ position: 'relative' }}>
-                  {rideData.driver.photo
-                    ? <Image source={{ uri: rideData.driver.photo }} style={{ width: 50, height: 50, borderRadius: 25 }} />
-                    : <View style={s.driverAvatar}><Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>{(rideData.driver.name||'D')[0].toUpperCase()}</Text></View>
-                  }
-                  {rideData.driver.verified && (
-                    <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: C.green, borderRadius: 10, width: 20, height: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.bg }}>
-                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>✓</Text>
-                    </View>
-                  )}
-                </View>
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                    <Text style={s.driverName}>{rideData.driver.name}</Text>
-                    {rideData.driver.verified && (
-                      <View style={{ backgroundColor: C.greenGlass, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: C.greenBorder }}>
-                        <Text style={{ fontSize: 9, color: C.green, fontWeight: '800' }}>✓ VERIFIED</Text>
+              <SlideUp>
+                <View style={{
+                  backgroundColor: C.bgCard,
+                  borderRadius: R.lg,
+                  marginBottom: 12,
+                  overflow: 'hidden',
+                  borderWidth: 1.5,
+                  borderColor: C.pinkBorder,
+                  ...SHADOW.md,
+                  shadowColor: C.pink,
+                }}>
+                  {/* Pink header — ETA displayed prominently */}
+                  <View style={{
+                    backgroundColor: C.pinkGlass,
+                    paddingHorizontal: SP.md,
+                    paddingVertical: 10,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    borderBottomWidth: 1,
+                    borderBottomColor: C.pinkBorder,
+                  }}>
+                    <Text style={{ ...T.label, color: C.pink }}>DRIVER CONFIRMED</Text>
+                    <PulseView>
+                      <View style={{
+                        flexDirection: 'row', alignItems: 'center', gap: 5,
+                        backgroundColor: C.pink, borderRadius: R.full,
+                        paddingHorizontal: 12, paddingVertical: 5,
+                        elevation: 4, shadowColor: C.pink, shadowOpacity: 0.4, shadowRadius: 6,
+                      }}>
+                        <Text style={{ color: '#fff', fontSize: 12, fontWeight: '900' }}>
+                          {driverEta || (eta ? eta.split('·')[0].trim() : '...')}
+                        </Text>
+                        <Text style={{ color: 'rgba(255,255,255,0.70)', fontSize: 9 }}>away</Text>
                       </View>
-                    )}
-                    {(() => {
-                      const rating = parseFloat(rideData.driver.rating || '4.8');
-                      const lvl = getDriverLevel(rating);
-                      return (
-                        <View style={{ backgroundColor: lvl.bg, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: lvl.border, flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                          <Text style={{ fontSize: 10 }}>{lvl.emoji}</Text>
-                          <Text style={{ fontSize: 9, color: lvl.color, fontWeight: '800' }}>{lvl.name.toUpperCase()}</Text>
-                        </View>
-                      );
-                    })()}
+                    </PulseView>
                   </View>
-                  <Text style={{ fontSize: 12, color: C.textMuted, fontWeight: '600', marginTop: 2 }}>
-                    {rideData.driver.vehicle_brand ? `${rideData.driver.vehicle_brand} ` : ''}{rideData.driver.vehicle_model || ''}
-                  </Text>
-                  <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 1 }}>🚗 {rideData.driver.vehicle_no}</Text>
-                  <Text style={{ fontSize: 12, color: C.yellow, marginTop: 2 }}>⭐ {rideData.driver.rating ? parseFloat(rideData.driver.rating).toFixed(1) : '4.8'}</Text>
+
+                  {/* Avatar + driver info row */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', padding: SP.md, gap: SP.md }}>
+                    {/* Avatar with pink ring + level badge */}
+                    <View style={{ position: 'relative' }}>
+                      <View style={{
+                        width: 68, height: 68, borderRadius: 34,
+                        borderWidth: 2.5, borderColor: C.pink,
+                        alignItems: 'center', justifyContent: 'center',
+                        backgroundColor: C.pinkGlass,
+                      }}>
+                        {rideData.driver.photo
+                          ? <Image source={{ uri: rideData.driver.photo }} style={{ width: 63, height: 63, borderRadius: 31.5 }} />
+                          : <Text style={{ color: C.pink, fontSize: 26, fontWeight: '900' }}>{(rideData.driver.name||'D')[0].toUpperCase()}</Text>
+                        }
+                      </View>
+                      {(() => {
+                        const rating = parseFloat(rideData.driver.rating || '4.8');
+                        const lvl = getDriverLevel(rating);
+                        return (
+                          <View style={{
+                            position: 'absolute', bottom: -3, right: -3,
+                            width: 26, height: 26, borderRadius: 13,
+                            backgroundColor: lvl.bg, borderWidth: 2, borderColor: C.bgCard,
+                            alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            <Text style={{ fontSize: 13 }}>{lvl.emoji}</Text>
+                          </View>
+                        );
+                      })()}
+                    </View>
+
+                    {/* Driver info */}
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <Text style={{ ...T.title, color: C.text }}>{rideData.driver.name}</Text>
+                        {rideData.driver.verified && (
+                          <View style={{ backgroundColor: C.greenGlass, borderRadius: R.xs, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: C.greenBorder }}>
+                            <Text style={{ fontSize: 9, color: C.green, fontWeight: '800' }}>✓ VERIFIED</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={{ ...T.caption, color: C.textMuted, marginTop: 3 }}>
+                        {[rideData.driver.vehicle_brand, rideData.driver.vehicle_model].filter(Boolean).join(' ')}
+                        {rideData.driver.vehicle_no ? ` · ${rideData.driver.vehicle_no}` : ''}
+                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 5 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(245,158,11,0.10)', borderRadius: R.full, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(245,158,11,0.28)' }}>
+                          <Text style={{ fontSize: 11 }}>⭐</Text>
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: '#92400E' }}>
+                            {rideData.driver.rating ? parseFloat(rideData.driver.rating).toFixed(1) : '4.8'}
+                          </Text>
+                        </View>
+                        {driverDist && (
+                          <Text style={{ ...T.caption, color: C.textDim }}>· {driverDist} away</Text>
+                        )}
+                      </View>
+                    </View>
+                  </View>
                 </View>
-                <View style={{ alignItems: 'center' }}>
-                  <PulseView><Text style={{ fontSize: 18, fontWeight: '800', color: C.pink }}>{driverEta || (eta ? eta.split('·')[0].trim() : '...')}</Text></PulseView>
-                  <Text style={{ fontSize: 10, color: C.textMuted }}>arriving</Text>
-                  {driverDist ? <Text style={{ fontSize: 10, color: C.textDim, marginTop: 2 }}>{driverDist} door</Text> : null}
-                </View>
-              </View></SlideUp>
+              </SlideUp>
               <ETACountdown
                 etaText={driverEta || ''}
                 distText={driverDist || ''}
                 arrived={driverArrived}
               />
               {rideData?.startOtp && (
-                <View style={s.otpCard}>
-                  <Text style={{ color: C.textMuted, fontSize: 12, marginBottom: 6 }}>🔐 Driver ko yeh OTP batao</Text>
-                  <Text style={{ color: C.text, fontSize: 34, fontWeight: 'bold', letterSpacing: 10 }}>{rideData.startOtp}</Text>
+                <View style={{
+                  backgroundColor: C.bgCard, borderRadius: R.md, paddingHorizontal: SP.md, paddingVertical: SP.md,
+                  alignItems: 'center', marginBottom: 12, borderWidth: 2, borderColor: C.plumBorder, ...SHADOW.md,
+                }}>
+                  <Text style={{ ...T.label, color: C.textMuted, marginBottom: 14 }}>🔐 DRIVER KO YEH OTP BATAO</Text>
+                  <OtpDisplay otp={rideData.startOtp} />
+                  <Text style={{ ...T.caption, color: C.textDim, marginTop: 10 }}>Trip start hone par driver dalega</Text>
                 </View>
               )}
-              <View style={s.actionRow}>
-                <Bouncy style={s.actionBtn} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
-                  <View>
-                    <Ionicons name="chatbubble" size={22} color={C.textMuted} />
+              <View style={{
+                flexDirection: 'row',
+                backgroundColor: C.bgCard,
+                borderRadius: R.md,
+                padding: SP.sm + SP.xs,
+                marginBottom: 10,
+                borderWidth: 1,
+                borderColor: C.glassBorder,
+                ...SHADOW.sm,
+              }}>
+                {/* Chat */}
+                <Bouncy style={{ flex: 1, alignItems: 'center', gap: 5 }} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
+                  <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: C.plumGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.plumBorder }}>
+                    <Ionicons name="chatbubble" size={20} color={C.plum} />
                     {unreadChat > 0 && <View style={s.chatBadge}><Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{unreadChat}</Text></View>}
                   </View>
-                  <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 3 }}>Chat</Text>
+                  <Text style={{ ...T.label, color: C.textMuted }}>Chat</Text>
                 </Bouncy>
-                <Bouncy style={s.actionBtn} onPress={callDriver}><Ionicons name="call" size={22} color={C.green} /><Text style={{ fontSize: 10, color: C.textMuted, marginTop: 3 }}>Call</Text></Bouncy>
-                <Bouncy style={s.actionBtn} onPress={() => {
+
+                {/* Call */}
+                <Bouncy style={{ flex: 1, alignItems: 'center', gap: 5 }} onPress={callDriver}>
+                  <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: C.greenGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.greenBorder }}>
+                    <Ionicons name="call" size={20} color={C.green} />
+                  </View>
+                  <Text style={{ ...T.label, color: C.textMuted }}>Call</Text>
+                </Bouncy>
+
+                {/* Share */}
+                <Bouncy style={{ flex: 1, alignItems: 'center', gap: 5 }} onPress={() => {
                   const d = rideData?.driver;
                   const trackUrl = `${API}/track/${rideData?.ride_id || ''}`;
                   const msg = `🚖 *Sppero — Live Tracking*\n\n` +
@@ -288,14 +404,23 @@ export function MatchingScreen() {
                     Linking.openURL(`https://wa.me/?text=${encodeURIComponent(msg)}`);
                   });
                 }}>
-                  <Ionicons name="share-social" size={22} color="#3B82F6" />
-                  <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 3 }}>Share</Text>
+                  <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: 'rgba(59,130,246,0.07)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(59,130,246,0.22)' }}>
+                    <Ionicons name="share-social" size={20} color="#3B82F6" />
+                  </View>
+                  <Text style={{ ...T.label, color: C.textMuted }}>Share</Text>
                 </Bouncy>
-                <Bouncy style={s.actionBtn} onPress={triggerSOS}><Ionicons name="warning" size={22} color={C.red} /><Text style={{ fontSize: 10, color: C.textMuted, marginTop: 3 }}>SOS</Text></Bouncy>
+
+                {/* SOS */}
+                <Bouncy style={{ flex: 1, alignItems: 'center', gap: 5 }} onPress={triggerSOS}>
+                  <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: C.redGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.redBorder }}>
+                    <Ionicons name="warning" size={20} color={C.red} />
+                  </View>
+                  <Text style={{ ...T.label, color: C.red }}>SOS</Text>
+                </Bouncy>
               </View>
               {chatToast && (
                 <TouchableOpacity
-                  style={{ backgroundColor: '#1a1a2e', borderRadius: 14, padding: 14, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: 'rgba(233,69,96,0.45)', elevation: 8 }}
+                  style={{ backgroundColor: C.bgDark, borderRadius: R.sm, padding: 14, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: C.pinkBorder, elevation: 8 }}
                   onPress={() => { setChatToast(null); setUnreadChat(0); setScreen('chat'); }}>
                   <Ionicons name="chatbubble" size={16} color={C.pink} />
                   <Text style={{ color: '#fff', fontSize: 13, flex: 1, fontWeight: '600' }} numberOfLines={1}>{chatToast}</Text>
@@ -312,22 +437,22 @@ export function MatchingScreen() {
               {/* ─── Wait Timer — separate system ─── */}
               {driverArrived && driverWaitSec > 0 && (
                 <View style={{
-                  backgroundColor: waitFareAdd > 0 ? 'rgba(255,152,0,0.10)' : 'rgba(76,175,80,0.10)',
+                  backgroundColor: waitFareAdd > 0 ? C.saffGlass : C.greenGlass,
                   borderRadius: 14, padding: 14, marginBottom: 10,
                   borderWidth: 1.5,
-                  borderColor: waitFareAdd > 0 ? 'rgba(255,152,0,0.45)' : 'rgba(76,175,80,0.45)',
+                  borderColor: waitFareAdd > 0 ? C.saffBorder : C.greenBorder,
                 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                       <Text style={{ fontSize: 22 }}>⏳</Text>
                       <View>
                         <Text style={{ fontWeight: '800', fontSize: 12, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 }}>Driver Wait Kar Raha Hai</Text>
-                        <Text style={{ fontSize: 22, fontWeight: '900', color: waitFareAdd > 0 ? '#E65100' : C.green, marginTop: 2, letterSpacing: 0.5 }}>
+                        <Text style={{ fontSize: 22, fontWeight: '900', color: waitFareAdd > 0 ? C.saffron : C.green, marginTop: 2, letterSpacing: 0.5 }}>
                           {waitMin}m {waitSecRem}s
                         </Text>
                       </View>
                     </View>
-                    <View style={{ backgroundColor: waitFareAdd > 0 ? '#FF9800' : C.green, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 5 }}>
+                    <View style={{ backgroundColor: waitFareAdd > 0 ? C.saffron : C.green, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 5 }}>
                       <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>
                         {waitFareAdd > 0 ? `+₹${waitFareAdd}` : 'FREE'}
                       </Text>
@@ -337,7 +462,7 @@ export function MatchingScreen() {
                     <View style={{
                       height: '100%', borderRadius: 3,
                       width: `${Math.min(100, (driverWaitSec / (waitFareFreeMin * 60)) * 100)}%`,
-                      backgroundColor: waitFareAdd > 0 ? '#FF9800' : C.green,
+                      backgroundColor: waitFareAdd > 0 ? C.saffron : C.green,
                     }} />
                   </View>
                   <Text style={{ fontSize: 11, color: C.textMuted, textAlign: 'center' }}>
@@ -361,8 +486,8 @@ export function MatchingScreen() {
                       <Text style={{ fontSize: 13, color: C.text }}>₹{origFare}</Text>
                     </View>
                     <View style={[s.row, { justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: C.glassBorder }]}>
-                      <Text style={{ fontSize: 13, color: '#E65100' }}>⏳ Wait Charge ({cancelInfo?.wait_fare_billable_min} min × ₹1)</Text>
-                      <Text style={{ fontSize: 13, color: '#E65100', fontWeight: '700' }}>+₹{waitFareAdd}</Text>
+                      <Text style={{ fontSize: 13, color: C.saffron }}>⏳ Wait Charge ({cancelInfo?.wait_fare_billable_min} min × ₹1)</Text>
+                      <Text style={{ fontSize: 13, color: C.saffron, fontWeight: '700' }}>+₹{waitFareAdd}</Text>
                     </View>
                     <View style={[s.row, { justifyContent: 'space-between', paddingVertical: 8 }]}>
                       <Text style={{ fontSize: 13, color: C.textMuted }}>Total Fare</Text>

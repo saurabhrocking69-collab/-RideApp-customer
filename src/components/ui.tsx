@@ -31,9 +31,9 @@ export const GlassPanel = ({ children, style, tint = 'light' }: {
 
 // ─── RideVehicleIcon ─────────────────────────────────────────────────────────
 export const RideVehicleIcon = ({ id, size = 26, color = '#fff' }: { id: string; size?: number; color?: string }) => {
-  if (id === 'bike' || id === 'green_bike') return <MaterialCommunityIcons name="motorbike" size={size} color={id === 'green_bike' ? '#059669' : color} />;
-  if (id === 'auto' || id === 'eriksha') return <MaterialCommunityIcons name="rickshaw" size={size} color={id === 'eriksha' ? '#059669' : color} />;
-  if (id === 'electric_auto') return <Ionicons name="leaf" size={size} color="#059669" />;
+  if (id === 'bike' || id === 'green_bike') return <MaterialCommunityIcons name="motorbike" size={size} color={id === 'green_bike' ? C.green : color} />;
+  if (id === 'auto' || id === 'eriksha') return <MaterialCommunityIcons name="rickshaw" size={size} color={id === 'eriksha' ? C.green : color} />;
+  if (id === 'electric_auto') return <Ionicons name="leaf" size={size} color={C.green} />;
   if (id === 'luxury') return <Ionicons name="diamond" size={size - 4} color={color} />;
   return <Ionicons name="car-sport" size={size} color={color} />;
 };
@@ -560,11 +560,11 @@ export const MapOverlay = ({ hasRoute, pickup, drop, live = false }: any) => {
       )}
       {hasRoute && (
         <GlassPanel intensity={20} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 12, paddingVertical: 9, flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#059669', marginRight: 6 }} />
-          <Text style={{ color: '#1A1A2E', fontSize: 11, flex: 1, fontWeight: '600' }} numberOfLines={1}>{pickup}</Text>
-          <Text style={{ color: '#94A3B8', fontSize: 12, marginHorizontal: 5 }}>→</Text>
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF2D78', marginRight: 6 }} />
-          <Text style={{ color: '#1A1A2E', fontSize: 11, flex: 1, fontWeight: '600' }} numberOfLines={1}>{drop}</Text>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.green, marginRight: 6 }} />
+          <Text style={{ color: C.text, fontSize: 11, flex: 1, fontWeight: '600' }} numberOfLines={1}>{pickup}</Text>
+          <Text style={{ color: C.textDim, fontSize: 12, marginHorizontal: 5 }}>→</Text>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.pink, marginRight: 6 }} />
+          <Text style={{ color: C.text, fontSize: 11, flex: 1, fontWeight: '600' }} numberOfLines={1}>{drop}</Text>
         </GlassPanel>
       )}
     </View>
@@ -688,6 +688,32 @@ export const GlowPulse = ({ color = C.pink, size = 12 }: any) => {
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <Animated.View style={{ position: 'absolute', width: size, height: size, borderRadius: size / 2, backgroundColor: color, opacity, transform: [{ scale }] }} />
       <View style={{ width: size * 0.5, height: size * 0.5, borderRadius: size / 4, backgroundColor: color }} />
+    </View>
+  );
+};
+
+// ─── SkeletonBox — shimmer placeholder for loading states ───────────────────
+export const SkeletonBox = ({ width, height = 16, radius = 8, style }: {
+  width?: number;
+  height?: number;
+  radius?: number;
+  style?: any;
+}) => {
+  const shimmer = useRef(new Animated.Value(0)).current;
+  const { width: W } = useWindowDimensions();
+  const w = width ?? W - 64;
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(shimmer, { toValue: 1, duration: 1100, useNativeDriver: true, easing: Easing.linear })
+    ).start();
+  }, []);
+  return (
+    <View style={[{ width: w, height, borderRadius: radius, backgroundColor: C.glassMid, overflow: 'hidden' }, style]}>
+      <Animated.View style={{
+        position: 'absolute', top: 0, bottom: 0, width: 80,
+        backgroundColor: 'rgba(255,255,255,0.72)',
+        transform: [{ translateX: shimmer.interpolate({ inputRange: [0, 1], outputRange: [-80, w + 80] }) }],
+      }} />
     </View>
   );
 };

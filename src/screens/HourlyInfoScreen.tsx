@@ -17,7 +17,7 @@ export function HourlyInfoScreen() {
       </View>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 50 }}>
         <View style={{ backgroundColor: C.bgCard, borderRadius: 18, padding: 18, marginBottom: 16, borderWidth: 1, borderColor: C.glassBorder }}>
-          <Text style={{ color: C.pink, fontSize: 16, fontWeight: '900', marginBottom: 14 }}>🚀 Kaise Kaam Karta Hai?</Text>
+          <Text style={{ color: C.plum, fontSize: 16, fontWeight: '900', marginBottom: 14 }}>🚀 Kaise Kaam Karta Hai?</Text>
           {[
             ['1️⃣', 'Package select karo', '2h, 4h, 6h, 8h (same day) ya 1-3 din (multi-day)'],
             ['2️⃣', 'Pickup location daalo', 'Drop optional hai — driver aapke saath rahega'],
@@ -102,7 +102,7 @@ export function HourlyInfoScreen() {
           ))}
         </View>
 
-        <View style={{ backgroundColor: 'C.glassMid', borderRadius: 18, padding: 18, marginBottom: 14, borderLeftWidth: 4, borderLeftColor: C.purple, borderWidth: 1, borderColor: 'C.glassBorder' }}>
+        <View style={{ backgroundColor: C.glassMid, borderRadius: 18, padding: 18, marginBottom: 14, borderLeftWidth: 4, borderLeftColor: C.purple, borderWidth: 1, borderColor: C.glassBorder }}>
           <Text style={{ color: C.purple, fontSize: 15, fontWeight: '900', marginBottom: 12 }}>🔄 Time Extension — Aur Time Chahiye?</Text>
           {[
             ['⏱️', 'Extend request', 'Active ride mein "+1h / +2h / +3h" option se request bhejein'],

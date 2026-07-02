@@ -93,7 +93,7 @@ export function PolicyScreen() {
           <Text style={{ fontSize: 15, fontWeight: '800', color: C.yellow, marginBottom: 8 }}>⚠️ Trust Score</Text>
           <Text style={{ fontSize: 13, color: C.textMuted, lineHeight: 20 }}>Bar-bar cancel karne se aapka trust score girta hai. Kam trust score wale customers ko booking mein dikkat ho sakti hai. Kripya zaruri hone par hi cancel karein.</Text>
         </View>
-        <View style={{ backgroundColor: 'C.glassMid', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: 'C.glassBorder' }}>
+        <View style={{ backgroundColor: C.glassMid, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: C.glassBorder }}>
           <Text style={{ fontSize: 13, color: C.purple, lineHeight: 20 }}>💡 Cancel karte waqt aapko hamesha dikhega ki kitni fee lagegi aur kitne free cancels bache hain.</Text>
         </View>
       </ScrollView>
@@ -119,7 +119,7 @@ export function SavedPlacesScreen() {
         <View style={{ width: 36 }} />
       </View>
       <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 30 }}>
-        <View style={{ backgroundColor: 'C.glassMid', borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: 'C.glassBorder' }}>
+        <View style={{ backgroundColor: C.glassMid, borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: C.glassBorder }}>
           <Text style={{ fontSize: 13, color: C.purple }}>💡 Booking screen se pickup set karke yahan aao, phir save karo.</Text>
         </View>
         {pickup ? (

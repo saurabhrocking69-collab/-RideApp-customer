@@ -7,7 +7,7 @@ import { apiPost, apiGet } from '../../api';
 import { useRideStore } from '../../store';
 import { useApp } from '../context/AppContext';
 import { Bouncy, GlassPanel, PulseView, LucknowCityCard, SlideUp, CountUp, EmptyAnim, DotBG, GlowPulse, ShineCard } from '../components/ui';
-import { s, C } from '../styles';
+import { s, C, T, SP, R, SHADOW } from '../styles';
 import { MAPS_KEY } from '../constants';
 import { useNearbyDrivers } from '../offline';
 import { NotifBell, NotificationCenter, getUnreadCount } from '../components/NotificationCenter';
@@ -22,19 +22,33 @@ function NavBar() {
     { t: 'history', ion: 'time',     lbl: 'Trips'   },
     { t: 'profile', ion: 'person',   lbl: 'Profile' },
   ];
+  // Spring-scale icons when active tab changes
+  const iconScales = useRef([0,1,2,3].map(() => new Animated.Value(1))).current;
+  useEffect(() => {
+    navTabs.forEach(({ t }, i) => {
+      Animated.spring(iconScales[i], {
+        toValue: (t === tab && screen === 'home') ? 1.22 : 1,
+        friction: 5, tension: 200, useNativeDriver: true,
+      }).start();
+    });
+  }, [tab, screen]);
+
   return (
     <GlassPanel intensity={16} style={[s.nav, { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.6)' }]}>
-      {navTabs.map(({ t, ion, lbl }) => {
+      {navTabs.map(({ t, ion, lbl }, i) => {
         const active = tab === t && screen === 'home';
         const col = active ? C.pink : C.textDim;
         return (
-          <TouchableOpacity key={t} style={s.navItem} onPress={() => { setScreen('home'); setTab(t as any); if (t === 'history') loadHistory(phone); }} activeOpacity={0.65}>
-            <View style={{ position: 'relative', alignItems: 'center' }}>
+          <TouchableOpacity key={t} style={s.navItem} onPress={() => {
+            setScreen('home'); setTab(t as any);
+            if (t === 'history') loadHistory(phone);
+          }} activeOpacity={1}>
+            <Animated.View style={{ position: 'relative', alignItems: 'center', transform: [{ scale: iconScales[i] }] }}>
               <Ionicons name={(active ? ion : `${ion}-outline`) as any} size={24} color={col} />
               {t === 'live' && hasLive && !active && (
                 <View style={{ position: 'absolute', top: -2, right: -6, width: 9, height: 9, borderRadius: 5, backgroundColor: C.pink, borderWidth: 1.5, borderColor: C.bg }} />
               )}
-            </View>
+            </Animated.View>
             <Text style={[s.navLbl, active && s.navActive]}>{lbl}</Text>
             {active && <View style={{ width: 18, height: 3, borderRadius: 2, backgroundColor: C.pink, marginTop: 4 }} />}
           </TouchableOpacity>
@@ -310,7 +324,7 @@ const BANNER_CARDS = [
   },
   {
     id: 'referral',
-    bg: ['#E91E63', '#c2185b'],
+    bg: [C.pink, '#c2185b'],
     badge: '🎁 REFER & EARN',
     title: '₹50 + ₹50 Reward',
     sub: 'Dost ko invite karo, dono ko cash!',
@@ -512,7 +526,7 @@ function HomeTab() {
                   borderWidth: 1, borderColor: 'rgba(255,255,255,0.28)',
                   transform: [{ scale: nearbyAnim }],
                 }}>
-                  <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#4ade80' }} />
+                  <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: C.green }} />
                   <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{nearbyCount} drivers nearby</Text>
                 </Animated.View>
               )}
@@ -585,35 +599,41 @@ function HomeTab() {
             </Bouncy>
           </SlideUp>
 
-          {/* ── Quick action row: Schedule + Hourly ─────────── */}
+          {/* ── Quick action row: Schedule + Hourly + Refer ─── */}
           <SlideUp delay={20}>
             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
-              <TouchableOpacity onPress={() => setScreen('scheduled')}
-                style={{ flex: 1, backgroundColor: 'rgba(26,35,126,0.08)', borderRadius: 16, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(26,35,126,0.2)', elevation: 3 }}>
-                <Text style={{ fontSize: 24, marginBottom: 4 }}>📅</Text>
-                <Text style={{ fontSize: 12, fontWeight: '800', color: '#1a237e' }}>Schedule</Text>
+              <Bouncy onPress={() => setScreen('scheduled')}
+                style={{ flex: 1, backgroundColor: C.plumGlass, borderRadius: 16, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: C.plumBorder, elevation: 3, shadowColor: C.plum, shadowOpacity: 0.12, shadowRadius: 8 }}>
+                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(46,20,97,0.12)', alignItems: 'center', justifyContent: 'center', marginBottom: 6, borderWidth: 1.5, borderColor: C.plumBorder }}>
+                  <Text style={{ fontSize: 20 }}>📅</Text>
+                </View>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: C.plum }}>Schedule</Text>
                 <Text style={{ fontSize: 9, color: C.textDim, marginTop: 2 }}>Pehle se book karo</Text>
                 {scheduledRides.length > 0 && (
-                  <View style={{ backgroundColor: '#1a237e', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, marginTop: 6 }}>
+                  <View style={{ backgroundColor: C.plum, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, marginTop: 6 }}>
                     <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900' }}>{scheduledRides.length} upcoming</Text>
                   </View>
                 )}
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => {
+              </Bouncy>
+              <Bouncy onPress={() => {
                 setHourlyStep('book'); setHPickup(''); setHDrop(''); setHPickupCoords(null); setHDropCoords(null);
                 setHPickupSugg([]); setHDropSugg([]); setHRoundTrip(false); setHStayHours(1);
                 setHourlyBooking(null); setScreen('hourly');
-              }} style={{ flex: 1, backgroundColor: 'rgba(123,31,162,0.08)', borderRadius: 16, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(123,31,162,0.2)', elevation: 3 }}>
-                <Text style={{ fontSize: 24, marginBottom: 4 }}>⏱️</Text>
-                <Text style={{ fontSize: 12, fontWeight: '800', color: '#7B1FA2' }}>By Hour</Text>
-                <Text style={{ fontSize: 9, color: C.textDim, marginTop: 2 }}>2h · 4h · 6h · Full Day</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => { loadReferral(); setScreen('referral'); }}
-                style={{ flex: 1, backgroundColor: C.pinkGlass, borderRadius: 16, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: C.pinkBorder, elevation: 3 }}>
-                <Text style={{ fontSize: 24, marginBottom: 4 }}>🎁</Text>
+              }} style={{ flex: 1, backgroundColor: C.purpleGlass, borderRadius: 16, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: C.purpleBorder, elevation: 3, shadowColor: C.purple, shadowOpacity: 0.12, shadowRadius: 8 }}>
+                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(124,58,237,0.10)', alignItems: 'center', justifyContent: 'center', marginBottom: 6, borderWidth: 1.5, borderColor: C.purpleBorder }}>
+                  <Text style={{ fontSize: 20 }}>⏱️</Text>
+                </View>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: C.purple }}>By Hour</Text>
+                <Text style={{ fontSize: 9, color: C.textDim, marginTop: 2 }}>2h · 4h · Full Day</Text>
+              </Bouncy>
+              <Bouncy onPress={() => { loadReferral(); setScreen('referral'); }}
+                style={{ flex: 1, backgroundColor: C.pinkGlass, borderRadius: 16, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: C.pinkBorder, elevation: 3, shadowColor: C.pink, shadowOpacity: 0.12, shadowRadius: 8 }}>
+                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,45,120,0.12)', alignItems: 'center', justifyContent: 'center', marginBottom: 6, borderWidth: 1.5, borderColor: C.pinkBorder }}>
+                  <Text style={{ fontSize: 20 }}>🎁</Text>
+                </View>
                 <Text style={{ fontSize: 12, fontWeight: '800', color: C.pink }}>Refer</Text>
                 <Text style={{ fontSize: 9, color: C.textDim, marginTop: 2 }}>₹50 + ₹50</Text>
-              </TouchableOpacity>
+              </Bouncy>
             </View>
           </SlideUp>
 
@@ -694,10 +714,10 @@ function HomeTab() {
 
           <SlideUp delay={120}>
             <TouchableOpacity activeOpacity={0.92} onPress={() => { loadReferral(); setScreen('referral'); }}
-              style={{ borderRadius: 22, marginBottom: 14, overflow: 'hidden', elevation: 10, shadowColor: '#E91E63', shadowOpacity: 0.35, shadowRadius: 18 }}>
+              style={{ borderRadius: 22, marginBottom: 14, overflow: 'hidden', elevation: 10, shadowColor: C.pink, shadowOpacity: 0.35, shadowRadius: 18 }}>
 
               {/* Main body */}
-              <View style={{ backgroundColor: '#E91E63', padding: 18 }}>
+              <View style={{ backgroundColor: C.pink, padding: 18 }}>
                 {/* Decorative bubbles */}
                 <View style={{ position: 'absolute', width: 150, height: 150, borderRadius: 75, backgroundColor: 'rgba(255,255,255,0.08)', top: -50, right: -40 }} />
                 <View style={{ position: 'absolute', width: 90, height: 90, borderRadius: 45, backgroundColor: 'rgba(255,215,0,0.10)', bottom: -30, left: 10 }} />
@@ -844,15 +864,15 @@ function HomeTab() {
           {!favouriteBuddy && (
             <SlideUp delay={160}>
               <TouchableOpacity activeOpacity={0.93} onPress={() => setTab('history')}
-                style={{ borderRadius: 22, marginBottom: 14, overflow: 'hidden', elevation: 8, shadowColor: '#E91E63', shadowOpacity: 0.18, shadowRadius: 14 }}>
+                style={{ borderRadius: 22, marginBottom: 14, overflow: 'hidden', elevation: 8, shadowColor: C.pink, shadowOpacity: 0.18, shadowRadius: 14 }}>
 
                 {/* Main banner body */}
-                <View style={{ backgroundColor: '#100818', padding: 18, paddingBottom: 0 }}>
+                <View style={{ backgroundColor: C.bgDark, padding: 18, paddingBottom: 0 }}>
 
                   {/* Top badge row */}
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
                     <View style={{ backgroundColor: 'rgba(233,30,99,0.18)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(233,30,99,0.4)', marginRight: 10 }}>
-                      <Text style={{ color: '#E91E63', fontSize: 10, fontWeight: '900', letterSpacing: 1.2 }}>✨ SPPERO EXCLUSIVE</Text>
+                      <Text style={{ color: C.pink, fontSize: 10, fontWeight: '900', letterSpacing: 1.2 }}>✨ SPPERO EXCLUSIVE</Text>
                     </View>
                     <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.07)' }} />
                     <Text style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginLeft: 10 }}>Free</Text>
@@ -879,7 +899,7 @@ function HomeTab() {
                         <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', marginBottom: 6 }}>
                           <Text style={{ fontSize: 22 }}>{icon}</Text>
                         </View>
-                        <View style={{ backgroundColor: '#E91E63', borderRadius: 8, paddingHorizontal: 5, paddingVertical: 1, marginBottom: 4 }}>
+                        <View style={{ backgroundColor: C.pink, borderRadius: 8, paddingHorizontal: 5, paddingVertical: 1, marginBottom: 4 }}>
                           <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900' }}>STEP {num}</Text>
                         </View>
                         <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800', textAlign: 'center' }}>{title}</Text>
@@ -909,7 +929,7 @@ function HomeTab() {
                 </View>
 
                 {/* CTA strip */}
-                <View style={{ backgroundColor: '#E91E63', paddingHorizontal: 18, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View style={{ backgroundColor: C.pink, paddingHorizontal: 18, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                   <View>
                     <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>🕐 Trips tab mein Buddy banao</Text>
                     <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 2 }}>Ride ke baad driver ko mark karo</Text>
@@ -973,7 +993,7 @@ function LiveTab() {
   const hasHourly = !!hourlyBooking && ['pending','matched','active'].includes(hourlyBooking?.status);
   const stdStatus = storeStatus !== 'idle' ? storeStatus : (rideData?.ride_id ? 'requested' : 'idle');
   const stdStatusMap: any = {
-    requested: { label: 'Driver dhoondh rahe hain...', color: '#f57c00', glassColor: C.yellowGlass, border: C.yellowBorder, icon: '🔍' },
+    requested: { label: 'Driver dhoondh rahe hain...', color: C.saffron, glassColor: C.saffGlass, border: C.saffBorder, icon: '🔍' },
     matched:   { label: 'Driver aa raha hai',          color: C.purple,  glassColor: C.glassMid,            border: C.glassBorder,          icon: '🚗' },
     arrived:   { label: 'Driver pahunch gaya!',        color: C.green,   glassColor: C.greenGlass,  border: C.greenBorder,  icon: '📍' },
     started:   { label: 'Trip chal rahi hai',          color: C.purple,  glassColor: 'rgba(124,58,237,0.10)', border: 'rgba(124,58,237,0.30)', icon: '🛣️' },
@@ -1259,7 +1279,7 @@ _GST fare mein included hai — alag se charge nahi hota._
       {/* Bill Modal */}
       <Modal visible={showBill} transparent animationType="slide" onRequestClose={closeBill}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
-          <View style={{ backgroundColor: '#0d0d1a', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: 32 }}>
+          <View style={{ backgroundColor: C.bgDark, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: 32 }}>
             <View style={{ width: 40, height: 4, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 4 }} />
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 8 }}>
 
@@ -1378,20 +1398,44 @@ function ProfileTab() {
     setComplaints, setCmpLoading,
   } = useApp();
 
+  const ratingVal = customerRating?.rating ? parseFloat(customerRating.rating).toFixed(1) : '5.0';
+  const rideCount = customerRating?.count || 0;
+
   return (
     <View style={s.screen}>
-      <View style={{ backgroundColor: C.pink, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 56, paddingBottom: 28, paddingHorizontal: 20 }}>
-        <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.10)', top: -60, right: -40 }} />
-        <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>👤 Profile</Text>
-      </View>
-      <ScrollView style={{ flex: 1, padding: 14 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
-        <View style={s.profileHero}>
-          <View style={s.profileAvatar}><Text style={{ color: '#fff', fontSize: 34, fontWeight: '800' }}>{(userName||'R')[0].toUpperCase()}</Text></View>
-          <Text style={s.profileName}>{userName || 'Rider'}</Text>
-          <Text style={s.profilePhone}>+91 {phone}</Text>
-          <View style={s.badge}><Text style={{ color: C.yellow, fontWeight: '800' }}>⭐ {customerRating?.rating ? parseFloat(customerRating.rating).toFixed(1) : '5.0'} Rating{customerRating?.count > 0 ? ` · ${customerRating.count} rides` : ''}</Text></View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+
+        {/* ── Plum hero ─────────────────────────────────────────── */}
+        <View style={{ backgroundColor: C.plum, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 56, paddingBottom: 52, paddingHorizontal: SP.lg }}>
+          <View style={{ position: 'absolute', width: 280, height: 280, borderRadius: 140, backgroundColor: 'rgba(255,45,120,0.10)', top: -100, right: -80 }} />
+          <View style={{ position: 'absolute', width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(255,255,255,0.04)', bottom: -60, left: -40 }} />
+          <Text style={{ ...T.title, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.5, marginBottom: SP.lg }}>PROFILE</Text>
+          <View style={{ alignItems: 'center' }}>
+            <View style={{ width: 90, height: 90, borderRadius: 45, backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: 3, borderColor: C.pink, alignItems: 'center', justifyContent: 'center', elevation: 10, shadowColor: C.pink, shadowOpacity: 0.5, shadowRadius: 16 }}>
+              <Text style={{ color: '#fff', fontSize: 38, fontWeight: '900' }}>{(userName||'R')[0].toUpperCase()}</Text>
+            </View>
+          </View>
         </View>
 
+        {/* ── Name card — overlaps hero ──────────────────────────── */}
+        <View style={{ backgroundColor: C.bgCard, borderRadius: R.xl, paddingHorizontal: SP.lg, paddingTop: SP.xl, paddingBottom: SP.md, marginHorizontal: SP.md, marginTop: -36, alignItems: 'center', borderWidth: 1.5, borderColor: C.glassBorder, ...SHADOW.md, marginBottom: SP.md }}>
+          <Text style={{ ...T.headline, color: C.text }}>{userName || 'Rider'}</Text>
+          <Text style={{ ...T.caption, color: C.textMuted, marginTop: 4 }}>+91 {phone}</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+            <View style={{ backgroundColor: C.yellowGlass, borderRadius: R.sm, paddingVertical: 6, paddingHorizontal: 14, borderWidth: 1.5, borderColor: C.yellowBorder, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <Text style={{ fontSize: 13 }}>⭐</Text>
+              <Text style={{ ...T.caption, color: C.yellow }}>{ratingVal} Rating</Text>
+            </View>
+            {rideCount > 0 && (
+              <View style={{ backgroundColor: C.pinkGlass, borderRadius: R.sm, paddingVertical: 6, paddingHorizontal: 14, borderWidth: 1.5, borderColor: C.pinkBorder, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Text style={{ fontSize: 13 }}>🛺</Text>
+                <Text style={{ ...T.caption, color: C.pink }}>{rideCount} rides</Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        <View style={{ paddingHorizontal: SP.md }}>
         <ShineCard style={[s.walletCard, { marginBottom: 14 }]}>
           <TouchableOpacity onPress={() => { loadWalletDetail(phone); loadLoyalty(phone); setScreen('wallet'); }} activeOpacity={0.85}>
             <View style={s.row}>
@@ -1427,7 +1471,7 @@ function ProfileTab() {
           { label: 'Promo Codes',        sub: 'Discount codes apply karo',        icon: 'pricetag',      onPress: () => { setPromoScreenCode(''); setPromoScreenMsg(''); setScreen('promo'); }, iconColor: C.yellow },
           { label: 'Notifications',      sub: 'Alerts — Enabled ✓',              icon: 'notifications', onPress: () => Alert.alert('🔔 Notifications', 'Aapki sabhi ride notifications, wallet alerts aur offers automatically enable hain.'), iconColor: C.pink },
           { label: 'Safety',             sub: 'Emergency contacts & SOS',         icon: 'shield',        onPress: () => setScreen('safety'),                       iconColor: C.red },
-          { label: 'My Complaints',      sub: 'File & track ride complaints',     icon: 'alert-circle',  onPress: async () => { setCmpLoading(true); try { const r = await apiGet(`/api/complaints?phone=${encodeURIComponent(phone)}`); setComplaints(r.complaints||[]); } catch {} setCmpLoading(false); setScreen('complaints'); }, iconColor: '#DC2626', iconBg: 'rgba(220,38,38,0.08)', iconBorder: 'rgba(220,38,38,0.25)' },
+          { label: 'My Complaints',      sub: 'File & track ride complaints',     icon: 'alert-circle',  onPress: async () => { setCmpLoading(true); try { const r = await apiGet(`/api/complaints?phone=${encodeURIComponent(phone)}`); setComplaints(r.complaints||[]); } catch {} setCmpLoading(false); setScreen('complaints'); }, iconColor: C.red, iconBg: C.redGlass, iconBorder: C.redBorder },
           { label: 'Support',            sub: '24x7 help',                        icon: 'call',          onPress: () => setScreen('support'),                      iconColor: C.green },
         ].map((item, i) => (
           <Bouncy key={i} style={s.menuItem} onPress={item.onPress}>
@@ -1449,6 +1493,7 @@ function ProfileTab() {
         }}>
           <Text style={{ color: C.pink, fontWeight: '800', fontSize: 14 }}>🚪 Logout</Text>
         </Bouncy>
+        </View>
       </ScrollView>
       <View style={s.navFloat}><NavBar /></View>
     </View>

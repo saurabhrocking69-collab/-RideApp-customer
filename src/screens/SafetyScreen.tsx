@@ -54,7 +54,7 @@ function HoldSOSButton({ onActivate }: { onActivate: () => void }) {
     Animated.timing(scale, { toValue: 1, duration: 200, useNativeDriver: true }).start();
   };
 
-  const arcColor = progress.interpolate({ inputRange: [0, 1], outputRange: ['rgba(239,68,68,0.3)', '#EF4444'] });
+  const arcColor = progress.interpolate({ inputRange: [0, 1], outputRange: ['rgba(239,68,68,0.3)', C.red] });
 
   return (
     <Animated.View style={{ transform: [{ scale }] }}>

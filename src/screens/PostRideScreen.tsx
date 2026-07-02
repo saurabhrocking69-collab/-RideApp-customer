@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Animated, Modal, ScrollView, Share, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Storage as AsyncStorage } from '../storage';
 import { useApp } from '../context/AppContext';
-import { Bouncy, Confetti, DotBG, FadeIn, ScreenIn, TripSteps } from '../components/ui';
-import { s, C } from '../styles';
+import { Bouncy, Confetti, CountUp, DotBG, FadeIn, ScreenIn, TripSteps } from '../components/ui';
+import { s, C, T, SP, R, SHADOW } from '../styles';
 import { API } from '../constants';
 import { apiGet } from '../../api';
 
@@ -43,6 +43,14 @@ export function PostRideScreen() {
 
   const fareNum = Math.round(parseFloat(String(rideData?.fare ?? billData?.fare ?? 0).replace(/[^0-9.]/g, '')) || 0);
   const gstAmt = Math.round((fareNum * 5 / 105) * 100) / 100;
+
+  // Star entry animation — stagger spring pop-in on mount
+  const localStarAnims = useRef([0,1,2,3,4].map(() => new Animated.Value(0))).current;
+  useEffect(() => {
+    Animated.stagger(120, localStarAnims.map(a =>
+      Animated.spring(a, { toValue: 1, friction: 5, tension: 190, useNativeDriver: true })
+    )).start();
+  }, []);
   const baseAmt = Math.round((fareNum - gstAmt) * 100) / 100;
 
   // Auto-load ride details on mount for trip stats card
@@ -140,16 +148,17 @@ _GST fare mein included hai — alag se charge nahi hota._
 
           <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, marginBottom: 10, textAlign: 'center', paddingHorizontal: 24 }} numberOfLines={1}>{pickup} → {drop}</Text>
 
-          <View style={{ marginTop: 4, backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 16, paddingHorizontal: 20, paddingVertical: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.40)' }}>
-            <Text style={{ color: '#fff', fontSize: 32, fontWeight: '900' }}>{rideData?.fare}</Text>
+          <View style={{ marginTop: 6, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: R.md, paddingHorizontal: SP.lg, paddingVertical: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.38)', alignItems: 'center' }}>
+            <Text style={{ ...T.label, color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>TOTAL PAID</Text>
+            <CountUp to={fareNum} prefix="₹" style={{ ...T.display, color: '#fff', letterSpacing: -1 }} />
           </View>
 
-          <TouchableOpacity
+          <Bouncy
             onPress={openBill}
-            style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 20, paddingHorizontal: 18, paddingVertical: 9, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)' }}>
+            style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 20, paddingHorizontal: 18, paddingVertical: 9, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)' }}>
             <Text style={{ fontSize: 16 }}>🧾</Text>
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>{billLoading ? 'Loading...' : 'Full Bill & Share'}</Text>
-          </TouchableOpacity>
+            <Text style={{ ...T.bodyBold, color: '#fff' }}>{billLoading ? 'Loading...' : 'Full Bill & Share'}</Text>
+          </Bouncy>
         </View>
 
         <View style={{ paddingHorizontal: 14, paddingTop: 16 }}>
@@ -193,7 +202,7 @@ _GST fare mein included hai — alag se charge nahi hota._
                 ) : (
                   <View style={{ alignItems: 'center' }}>
                     <Text style={{ fontSize: 40 }}>🎟️</Text>
-                    <Text style={{ fontSize: 18, fontWeight: '900', color: '#000', marginTop: 6 }}>Scratch Card Jeeta!</Text>
+                    <Text style={{ fontSize: 18, fontWeight: '900', color: C.text, marginTop: 6 }}>Scratch Card Jeeta!</Text>
                     <Text style={{ fontSize: 13, color: 'rgba(0,0,0,0.7)', marginTop: 4 }}>👆 Tap karke scratch karo</Text>
                   </View>
                 )}
@@ -221,19 +230,21 @@ _GST fare mein included hai — alag se charge nahi hota._
               ))}
               <TouchableOpacity onPress={() => setScreen('rewards')}
                 style={{ marginTop: 12, backgroundColor: C.green, borderRadius: 10, paddingVertical: 9, alignItems: 'center', elevation: 4, shadowColor: C.green, shadowOpacity: 0.35, shadowRadius: 8 }}>
-                <Text style={{ color: '#000', fontWeight: '900', fontSize: 13 }}>View All Rewards →</Text>
+                <Text style={{ color: C.text, fontWeight: '900', fontSize: 13 }}>View All Rewards →</Text>
               </TouchableOpacity>
             </View>
           </FadeIn>
         )}
 
-        <View style={{ marginHorizontal: 14, marginTop: 16, backgroundColor: C.glass, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: C.glassBorder }}>
-          <Text style={{ fontSize: 15, fontWeight: '800', color: C.text, textAlign: 'center', marginBottom: 14 }}>Driver ko Rate Karo</Text>
-          <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 16, gap: 4 }}>
+        <View style={{ marginHorizontal: 14, marginTop: 16, backgroundColor: C.bgCard, borderRadius: R.md, padding: SP.md, borderWidth: 1.5, borderColor: C.glassBorder, ...SHADOW.sm }}>
+          <Text style={{ ...T.title, color: C.text, textAlign: 'center', marginBottom: SP.md }}>Driver ko Rate Karo</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: SP.md, gap: 4 }}>
             {[1,2,3,4,5].map(star => (
-              <TouchableOpacity key={star} onPress={() => { setRating(star); animateStar(star - 1); }} style={{ padding: 3 }}>
-                <Animated.Text style={{ fontSize: 38, color: star <= rating ? C.yellow : C.glassMid, transform: [{ scale: starAnims[star - 1] }] }}>★</Animated.Text>
-              </TouchableOpacity>
+              <Animated.View key={star} style={{ opacity: localStarAnims[star-1], transform: [{ scale: localStarAnims[star-1].interpolate({ inputRange: [0, 0.6, 0.85, 1], outputRange: [0, 1.35, 0.88, 1] }) }] }}>
+                <TouchableOpacity onPress={() => { setRating(star); animateStar(star - 1); }} style={{ padding: 4 }}>
+                  <Animated.Text style={{ fontSize: 40, color: star <= rating ? C.yellow : C.glassMid, transform: [{ scale: starAnims[star - 1] }] }}>★</Animated.Text>
+                </TouchableOpacity>
+              </Animated.View>
             ))}
           </View>
           <TextInput
@@ -262,16 +273,17 @@ _GST fare mein included hai — alag se charge nahi hota._
             );
           })()}
 
-          <Text style={{ fontSize: 14, fontWeight: '800', color: C.textMuted, marginTop: 8, marginBottom: 10 }}>💰 Tip do (optional)</Text>
+          <Text style={{ ...T.bodyBold, color: C.textMuted, marginTop: SP.sm, marginBottom: 10 }}>💰 Tip do (optional)</Text>
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
             {[0, 10, 20, 50].map(t => (
-              <TouchableOpacity key={t}
-                style={{ flex: 1, paddingVertical: 10, borderRadius: 12, borderWidth: 1.5, alignItems: 'center',
-                  backgroundColor: tip === t ? C.pinkGlass : C.glass,
-                  borderColor: tip === t ? C.pinkBorder : C.glassBorder }}
+              <Bouncy key={t}
+                style={{ flex: 1, paddingVertical: 11, borderRadius: R.sm, borderWidth: 1.5, alignItems: 'center',
+                  backgroundColor: tip === t ? C.pinkGlass : C.glassMid,
+                  borderColor: tip === t ? C.pinkBorder : C.glassBorder,
+                  elevation: tip === t ? 4 : 0, shadowColor: C.pink, shadowOpacity: tip === t ? 0.2 : 0, shadowRadius: 6 }}
                 onPress={() => setTip(t)}>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: tip === t ? C.pink : C.textMuted }}>{t === 0 ? 'Skip' : '₹' + t}</Text>
-              </TouchableOpacity>
+                <Text style={{ ...T.bodyBold, color: tip === t ? C.pink : C.textMuted }}>{t === 0 ? 'Skip' : '₹' + t}</Text>
+              </Bouncy>
             ))}
           </View>
 
@@ -299,8 +311,8 @@ _GST fare mein included hai — alag se charge nahi hota._
 
       {/* Bill Modal */}
       <Modal visible={showBill} transparent animationType="slide" onRequestClose={() => setShowBill(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
-          <View style={{ backgroundColor: '#0d0d1a', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: 32 }}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: C.bgDark, borderTopLeftRadius: R.lg, borderTopRightRadius: R.lg, paddingBottom: 32 }}>
 
             {/* Handle */}
             <View style={{ width: 40, height: 4, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 4 }} />

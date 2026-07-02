@@ -3,7 +3,7 @@ import { Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, Vie
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { CountUp, DotBG, FadeIn, ScreenIn, ShineCard } from '../components/ui';
-import { s, C } from '../styles';
+import { s, C, T, R, SP } from '../styles';
 
 const SB_H = Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 0;
 
@@ -44,20 +44,20 @@ export function WalletScreen() {
       <DotBG />
 
       {/* ── Header ── */}
-      <View style={{ backgroundColor: C.pink, paddingTop: SB_H + 14, paddingBottom: 22, paddingHorizontal: 18, overflow: 'hidden' }}>
-        <View style={{ position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(255,255,255,0.10)', top: -70, right: -50 }} />
-        <View style={{ position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,255,255,0.06)', bottom: -50, left: -20 }} />
+      <View style={{ backgroundColor: C.plum, paddingTop: SB_H + 14, paddingBottom: 22, paddingHorizontal: 18, overflow: 'hidden' }}>
+        <View style={{ position: 'absolute', width: 240, height: 240, borderRadius: 120, backgroundColor: 'rgba(255,45,120,0.10)', top: -80, right: -60 }} />
+        <View style={{ position: 'absolute', width: 130, height: 130, borderRadius: 65, backgroundColor: 'rgba(255,255,255,0.04)', bottom: -50, left: -20 }} />
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity onPress={() => { setScreen('home'); setTab('profile'); }}
-            style={{ marginRight: 14, padding: 9, backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.40)' }}>
+            style={{ marginRight: 14, padding: 9, backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: R.sm, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.28)' }}>
             <Ionicons name="arrow-back" size={20} color="#fff" />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900' }}>💰 My Wallet</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 11, marginTop: 1 }}>Add money · Pay rides · Earn rewards</Text>
+            <Text style={{ ...T.title, color: '#fff' }}>My Wallet</Text>
+            <Text style={{ ...T.caption, color: 'rgba(255,255,255,0.55)', marginTop: 2 }}>Add money · Pay rides · Earn rewards</Text>
           </View>
           <TouchableOpacity onPress={() => loadWalletDetail(phone)}
-            style={{ padding: 9, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.28)' }}>
+            style={{ padding: 9, backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: R.sm, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.22)' }}>
             <Ionicons name="refresh" size={18} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -97,13 +97,13 @@ export function WalletScreen() {
         {/* ── Stats ── */}
         <View style={{ flexDirection: 'row', gap: 8, marginHorizontal: 16, marginTop: 12 }}>
           {[
-            { label: 'Total Added', value: `₹${parseFloat(walletStats?.total_credited || 0).toFixed(0)}`, color: C.green, icon: '↓' },
-            { label: 'Total Spent', value: `₹${parseFloat(walletStats?.total_spent || 0).toFixed(0)}`, color: C.pink, icon: '↑' },
-            { label: 'Rewards', value: `₹${parseFloat(walletStats?.total_rewards || 0).toFixed(0)}`, color: C.yellow, icon: '🎁' },
+            { label: 'Total Added', value: `₹${parseFloat(walletStats?.total_credited || 0).toFixed(0)}`, color: C.green, bg: C.greenGlass, border: C.greenBorder },
+            { label: 'Total Spent', value: `₹${parseFloat(walletStats?.total_spent || 0).toFixed(0)}`, color: C.pink, bg: C.pinkGlass, border: C.pinkBorder },
+            { label: 'Rewards', value: `₹${parseFloat(walletStats?.total_rewards || 0).toFixed(0)}`, color: C.yellow, bg: C.yellowGlass, border: C.yellowBorder },
           ].map((stat, i) => (
-            <View key={i} style={{ flex: 1, backgroundColor: C.glassMid, borderRadius: 16, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: C.glassBorder }}>
-              <Text style={{ color: stat.color, fontSize: 18, fontWeight: '900' }}>{stat.value}</Text>
-              <Text style={{ color: C.textDim, fontSize: 9, marginTop: 4, letterSpacing: 0.5, textTransform: 'uppercase' }}>{stat.label}</Text>
+            <View key={i} style={{ flex: 1, backgroundColor: stat.bg, borderRadius: R.md, padding: 12, alignItems: 'center', borderWidth: 1.5, borderColor: stat.border }}>
+              <Text style={{ color: stat.color, fontSize: 18, fontWeight: '900', fontVariant: ['tabular-nums'] }}>{stat.value}</Text>
+              <Text style={{ ...T.label, color: stat.color, opacity: 0.7, marginTop: 4 }}>{stat.label}</Text>
             </View>
           ))}
         </View>

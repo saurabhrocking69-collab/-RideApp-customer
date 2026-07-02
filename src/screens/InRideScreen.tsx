@@ -3,9 +3,9 @@ import { Platform, ScrollView, Text, TouchableOpacity, View, Animated, Vibration
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useApp } from '../context/AppContext';
-import { GlassPanel, MapOverlay, PulseView, TripSteps, DotBG } from '../components/ui';
+import { Bouncy, GlassPanel, MapOverlay, PulseView, TripSteps, DotBG } from '../components/ui';
 import { LiveMap } from '../components/LiveMap';
-import { s, C } from '../styles';
+import { s, C, T, SP, R, SHADOW } from '../styles';
 
 function InlineSOSButton({ onActivate, active }: { onActivate: () => void; active: boolean }) {
   const progress = useRef(new Animated.Value(0)).current;
@@ -110,15 +110,25 @@ export function InRideScreen() {
   return (
     <View style={s.screen}>
       <View style={{
-        backgroundColor: C.pink, overflow: 'hidden',
+        backgroundColor: C.plum, overflow: 'hidden',
         paddingTop: Platform.OS === 'android' ? 46 : 52,
-        paddingBottom: 14, paddingHorizontal: 16,
+        paddingBottom: 16, paddingHorizontal: SP.md,
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.10)', top: -60, right: -40 }} />
-        <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }}>🚗 Ride Chal Rahi Hai</Text>
-        <View style={{ backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 }}>
-          <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800', fontVariant: ['tabular-nums'] }}>⏱ {formatElapsed(elapsed)}</Text>
+        <View style={{ position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(255,255,255,0.06)', top: -80, right: -60 }} />
+        <View style={{ position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,45,120,0.12)', bottom: -50, left: -30 }} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.22)' }}>
+            <Text style={{ fontSize: 18 }}>{vEmoji}</Text>
+          </View>
+          <View>
+            <Text style={{ ...T.bodyBold, color: '#fff' }}>Ride Chal Rahi Hai</Text>
+            <Text style={{ ...T.caption, color: 'rgba(255,255,255,0.55)', marginTop: 1 }}>{vType.charAt(0).toUpperCase() + vType.slice(1)}</Text>
+          </View>
+        </View>
+        <View style={{ backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: R.sm, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.25)', flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+          <PulseView><View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: C.green }} /></PulseView>
+          <Text style={{ ...T.bodyBold, color: '#fff', fontVariant: ['tabular-nums'] }}>{formatElapsed(elapsed)}</Text>
         </View>
       </View>
 
@@ -149,60 +159,71 @@ export function InRideScreen() {
           {/* Driver card */}
           {driver && (
             <View style={{
-              backgroundColor: C.glass, borderRadius: 18, padding: 14, marginBottom: 10,
+              backgroundColor: C.bgCard, borderRadius: R.md, padding: SP.md, marginBottom: 10,
               flexDirection: 'row', alignItems: 'center', gap: 12,
-              borderWidth: 1, borderColor: C.glassBorder,
+              borderWidth: 1.5, borderColor: C.glassBorder, ...SHADOW.sm,
             }}>
-              {driver.photo ? (
-                <Image source={{ uri: driver.photo }} style={{ width: 52, height: 52, borderRadius: 26 }} contentFit="cover" />
-              ) : (
-                <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900' }}>{(driver.name || 'D')[0].toUpperCase()}</Text>
-                </View>
-              )}
+              <View style={{ position: 'relative' }}>
+                {driver.photo ? (
+                  <Image source={{ uri: driver.photo }} style={{ width: 56, height: 56, borderRadius: 28, borderWidth: 2.5, borderColor: C.pink }} contentFit="cover" />
+                ) : (
+                  <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center', borderWidth: 2.5, borderColor: 'rgba(255,45,120,0.35)' }}>
+                    <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900' }}>{(driver.name || 'D')[0].toUpperCase()}</Text>
+                  </View>
+                )}
+                <View style={{ position: 'absolute', bottom: -2, right: -2, width: 16, height: 16, borderRadius: 8, backgroundColor: C.green, borderWidth: 2, borderColor: '#fff' }} />
+              </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: C.text, fontSize: 15, fontWeight: '800' }}>{driver.name || 'Driver'}</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
-                  <Text style={{ fontSize: 13 }}>{vEmoji}</Text>
-                  <Text style={{ color: C.textMuted, fontSize: 12, fontWeight: '600', textTransform: 'capitalize' }}>{vType}</Text>
+                <Text style={{ ...T.title, color: C.text }}>{driver.name || 'Driver'}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                  <View style={{ backgroundColor: C.pinkGlass, borderRadius: R.xs, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: C.pinkBorder, flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                    <Text style={{ fontSize: 11 }}>{vEmoji}</Text>
+                    <Text style={{ ...T.caption, color: C.pink, textTransform: 'capitalize' }}>{vType}</Text>
+                  </View>
                   {rideData?.vehicle_no ? (
-                    <View style={{ backgroundColor: C.glassMid, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-                      <Text style={{ color: C.textDim, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 }}>{rideData.vehicle_no}</Text>
+                    <View style={{ backgroundColor: C.plumGlass, borderRadius: R.xs, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: C.plumBorder }}>
+                      <Text style={{ ...T.caption, color: C.plum, letterSpacing: 0.5 }}>{rideData.vehicle_no}</Text>
                     </View>
                   ) : null}
                 </View>
               </View>
-              <View style={{ alignItems: 'center' }}>
-                <Text style={{ color: C.yellow, fontSize: 18, fontWeight: '900' }}>★</Text>
-                <Text style={{ color: C.textMuted, fontSize: 11, fontWeight: '700' }}>
-                  {driver.rating ? Number(driver.rating).toFixed(1) : '—'}
-                </Text>
-              </View>
+              {driver.rating ? (
+                <View style={{ backgroundColor: C.yellowGlass, borderRadius: R.xs, paddingHorizontal: 8, paddingVertical: 5, borderWidth: 1, borderColor: C.yellowBorder, alignItems: 'center' }}>
+                  <Text style={{ color: C.yellow, fontSize: 16, lineHeight: 18 }}>★</Text>
+                  <Text style={{ ...T.caption, color: C.yellow, marginTop: 1 }}>{Number(driver.rating).toFixed(1)}</Text>
+                </View>
+              ) : null}
             </View>
           )}
 
           {/* Live trip stats */}
           <View style={{
-            backgroundColor: C.greenGlass, borderRadius: 16, padding: 14,
-            marginBottom: 10, borderWidth: 1, borderColor: C.greenBorder,
+            backgroundColor: C.greenGlass, borderRadius: R.md, padding: SP.md,
+            marginBottom: 10, borderWidth: 1.5, borderColor: C.greenBorder,
             flexDirection: 'row', alignItems: 'center',
           }}>
-            <PulseView style={{ marginRight: 8 }}>
-              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.green }} />
+            <PulseView style={{ marginRight: 10 }}>
+              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.green, elevation: 2, shadowColor: C.green, shadowOpacity: 0.6, shadowRadius: 4 }} />
             </PulseView>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: C.green, fontSize: 14, fontWeight: '800' }}>🚗 Chal Rahi Hai</Text>
+              <Text style={{ ...T.bodyBold, color: C.green }}>Live — Chal Rahi Hai</Text>
               {(rideData?.distance || driverDist) ? (
-                <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>
-                  📏 {rideData?.distance || driverDist}
-                  {rideData?.fare ? `  ·  💰 ${rideData.fare}` : ''}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                  <View style={{ backgroundColor: 'rgba(0,200,83,0.12)', borderRadius: R.xs, paddingHorizontal: 6, paddingVertical: 2 }}>
+                    <Text style={{ ...T.caption, color: C.green }}>📏 {rideData?.distance || driverDist}</Text>
+                  </View>
+                  {rideData?.fare ? (
+                    <View style={{ backgroundColor: C.pinkGlass, borderRadius: R.xs, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: C.pinkBorder }}>
+                      <Text style={{ ...T.caption, color: C.pink }}>₹ {String(rideData.fare).replace('₹', '')}</Text>
+                    </View>
+                  ) : null}
+                </View>
               ) : null}
             </View>
             {driverEta ? (
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={{ color: C.textDim, fontSize: 10 }}>ETA</Text>
-                <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>{driverEta}</Text>
+              <View style={{ backgroundColor: C.green, borderRadius: R.sm, paddingHorizontal: 10, paddingVertical: 6, alignItems: 'center', elevation: 3, shadowColor: C.green, shadowOpacity: 0.4, shadowRadius: 6 }}>
+                <Text style={{ ...T.label, color: '#fff' }}>ETA</Text>
+                <Text style={{ ...T.bodyBold, color: '#fff', marginTop: 1 }}>{driverEta}</Text>
               </View>
             ) : null}
           </View>
@@ -224,25 +245,29 @@ export function InRideScreen() {
           </View>
 
           {/* Action row: Chat | Call | SOS */}
-          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
-            <TouchableOpacity
-              onPress={() => { setUnreadChat(0); setScreen('chat'); }}
-              style={[s.actionBtn, { flex: 1, borderRadius: 16, paddingVertical: 14, position: 'relative' }]}>
-              <View>
-                <Ionicons name="chatbubble" size={22} color={C.textMuted} />
+          <View style={{
+            flexDirection: 'row', backgroundColor: C.bgCard, borderRadius: R.md,
+            padding: SP.sm + SP.xs, marginBottom: 10, gap: 0,
+            borderWidth: 1, borderColor: C.glassBorder, ...SHADOW.sm,
+          }}>
+            <Bouncy style={{ flex: 1, alignItems: 'center', gap: 5 }} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
+              <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: C.plumGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.plumBorder, position: 'relative' }}>
+                <Ionicons name="chatbubble" size={20} color={C.plum} />
                 {unreadChat > 0 && (
                   <View style={s.chatBadge}>
                     <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{unreadChat}</Text>
                   </View>
                 )}
               </View>
-              <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 3 }}>Chat</Text>
-            </TouchableOpacity>
+              <Text style={{ ...T.label, color: C.textMuted }}>Chat</Text>
+            </Bouncy>
 
-            <TouchableOpacity onPress={callDriver} style={[s.actionBtn, { flex: 1, borderRadius: 16, paddingVertical: 14 }]}>
-              <Ionicons name="call" size={22} color={C.green} />
-              <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 3 }}>Call</Text>
-            </TouchableOpacity>
+            <Bouncy style={{ flex: 1, alignItems: 'center', gap: 5 }} onPress={callDriver}>
+              <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: C.greenGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.greenBorder }}>
+                <Ionicons name="call" size={20} color={C.green} />
+              </View>
+              <Text style={{ ...T.label, color: C.textMuted }}>Call</Text>
+            </Bouncy>
 
             <InlineSOSButton onActivate={handleSOS} active={sosActive} />
           </View>
@@ -250,7 +275,7 @@ export function InRideScreen() {
           {/* SOS active banner */}
           {sosActive && (
             <View style={{
-              backgroundColor: 'rgba(239,68,68,0.12)', borderRadius: 14, padding: 14,
+              backgroundColor: C.redGlass, borderRadius: 14, padding: 14,
               flexDirection: 'row', alignItems: 'center', gap: 10,
               borderWidth: 1.5, borderColor: C.red, marginBottom: 10,
             }}>
@@ -266,9 +291,9 @@ export function InRideScreen() {
           {chatToast && (
             <TouchableOpacity
               style={{
-                backgroundColor: '#1a1a2e', borderRadius: 14, padding: 14, marginTop: 4,
+                backgroundColor: C.bgDark, borderRadius: R.sm, padding: 14, marginTop: 4,
                 flexDirection: 'row', alignItems: 'center', gap: 10,
-                borderWidth: 1, borderColor: 'rgba(233,69,96,0.45)', elevation: 8,
+                borderWidth: 1, borderColor: C.pinkBorder, elevation: 8,
               }}
               onPress={() => { setChatToast(null); setUnreadChat(0); setScreen('chat'); }}>
               <Ionicons name="chatbubble" size={16} color={C.pink} />

@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 12,
   },
   pinkBar: {
-    backgroundColor: '#FF2D78',
+    backgroundColor: C.pink,
   },
   taglineText: {
     color: 'rgba(255,255,255,0.42)',
