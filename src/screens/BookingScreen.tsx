@@ -254,7 +254,7 @@ export function BookingScreen() {
         {/* Glass header — 90% transparent, floats over map tiles */}
         <View style={{
           position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
-          backgroundColor: 'rgba(233,30,99,0.10)',
+          backgroundColor: C.pinkGlass,
           paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 10 : 54,
           paddingBottom: 16, paddingHorizontal: 16,
           flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -860,7 +860,7 @@ export function BookingScreen() {
                 <TouchableOpacity
                   onPress={() => { setPromoDiscount(10); setPromoCode('SPPERO10'); setInstantApplied(true); }}
                   style={{ marginHorizontal: 16, marginBottom: 14, backgroundColor: C.greenGlass, borderRadius: 14, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: C.greenBorder, borderStyle: 'dashed' }}>
-                  <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: C.green + '22', alignItems: 'center', justifyContent: 'center' }}>
+                  <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: C.greenGlass, alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={{ fontSize: 17 }}>🎁</Text>
                   </View>
                   <View style={{ flex: 1 }}>
@@ -984,14 +984,14 @@ export function BookingScreen() {
               <View style={{ backgroundColor: C.yellowGlass, borderRadius: R.sm, padding: 16, marginBottom: 18, borderWidth: 1.5, borderColor: C.yellowBorder, gap: 12 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Text style={{ fontSize: 13, color: C.textDim }}>Driver distance</Text>
-                  <View style={{ backgroundColor: 'rgba(245,158,11,0.15)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
+                  <View style={{ backgroundColor: C.yellowGlass, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
                     <Text style={{ fontSize: 14, fontWeight: '900', color: C.yellow }}>{info?.dist_km} km</Text>
                   </View>
                 </View>
                 <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.06)' }} />
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Text style={{ fontSize: 13, color: C.textDim }}>Estimated wait time</Text>
-                  <View style={{ backgroundColor: 'rgba(245,158,11,0.15)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
+                  <View style={{ backgroundColor: C.yellowGlass, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
                     <Text style={{ fontSize: 14, fontWeight: '900', color: C.yellow }}>~{info?.eta_min} min</Text>
                   </View>
                 </View>
@@ -1000,7 +1000,7 @@ export function BookingScreen() {
                     <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.06)' }} />
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Text style={{ fontSize: 13, color: C.textDim }}>Extra wait</Text>
-                      <View style={{ backgroundColor: 'rgba(239,68,68,0.15)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
+                      <View style={{ backgroundColor: C.redGlass, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
                         <Text style={{ fontSize: 14, fontWeight: '900', color: C.red }}>+{extraMin} min longer</Text>
                       </View>
                     </View>
