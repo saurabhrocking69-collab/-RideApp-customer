@@ -3,31 +3,33 @@ import { BackHandler, ToastAndroid, View, Text, TouchableOpacity } from 'react-n
 import { AppProvider, useApp } from './src/context/AppContext';
 import { Router } from './src/Router';
 
-class ErrorBoundary extends Component<{ children: ReactNode }, { crashed: boolean }> {
-  state = { crashed: false };
+class ErrorBoundary extends Component<{ children: ReactNode }, { crashed: boolean; msg: string }> {
+  state = { crashed: false, msg: '' };
 
-  static getDerivedStateFromError() {
-    return { crashed: true };
+  static getDerivedStateFromError(error: Error) {
+    return { crashed: true, msg: error?.message || 'Unknown error' };
   }
 
   componentDidCatch(error: Error, info: any) {
-    console.error('[Sppero] Crash:', error.message, info?.componentStack?.slice(0, 300));
+    console.error('[Sppero] Crash:', error.message, info?.componentStack?.slice(0, 400));
   }
 
   render() {
     if (this.state.crashed) {
       return (
         <View style={{ flex: 1, backgroundColor: '#0F172A', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
-          <Text style={{ fontSize: 56 }}>😵</Text>
-          <Text style={{ color: '#F1F5F9', fontSize: 20, fontWeight: '800', marginTop: 16, textAlign: 'center' }}>
+          <Text style={{ fontSize: 52 }}>⚠️</Text>
+          <Text style={{ color: '#F1F5F9', fontSize: 18, fontWeight: '800', marginTop: 16, textAlign: 'center' }}>
             Kuch gadbad ho gayi
           </Text>
-          <Text style={{ color: '#94A3B8', fontSize: 14, marginTop: 8, textAlign: 'center', lineHeight: 22 }}>
-            App mein ek choti problem aayi. Dobara try karo.
-          </Text>
+          <View style={{ marginTop: 12, backgroundColor: '#1E293B', borderRadius: 10, padding: 14, width: '100%', borderWidth: 1, borderColor: '#334155' }}>
+            <Text style={{ color: '#94A3B8', fontSize: 11, fontFamily: 'monospace', lineHeight: 17 }} selectable>
+              {this.state.msg}
+            </Text>
+          </View>
           <TouchableOpacity
-            onPress={() => this.setState({ crashed: false })}
-            style={{ marginTop: 28, backgroundColor: '#E91E63', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 14 }}
+            onPress={() => this.setState({ crashed: false, msg: '' })}
+            style={{ marginTop: 24, backgroundColor: '#FF2D78', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 14 }}
           >
             <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>Dobara Try Karo</Text>
           </TouchableOpacity>

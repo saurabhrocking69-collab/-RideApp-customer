@@ -443,6 +443,7 @@ function HomeTab() {
     storeStatus, paymentDone,
     referralData,
     screen,
+    userCoords,
   } = useApp();
 
   const [scheduledRides, setScheduledRides] = useState<any[]>([]);
