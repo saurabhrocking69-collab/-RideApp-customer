@@ -266,7 +266,7 @@ export const s = StyleSheet.create({
   },
   searchIcon: { fontSize: 18, marginRight: 10 },
   searchPh:   { color: C.textMuted, fontSize: 14, flex: 1 },
-  mapFit:     { height: 260, width: '100%', backgroundColor: '#E0EEFF' },
+  mapFit:     { height: 260, width: '100%', backgroundColor: '#0D0618' },
 
   // ── Quick actions ─────────────────────────────────────────────────────────
   quickRow: { flexDirection: 'row', gap: 10, marginBottom: SP.sm + SP.xs },

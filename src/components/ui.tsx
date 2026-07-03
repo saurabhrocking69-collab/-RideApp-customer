@@ -482,7 +482,7 @@ const CITY_MAP_HTML = `<!DOCTYPE html>
 </html>`;
 
 export const CityMapView = ({ height = 260 }: { height?: number }) => (
-  <WebView source={{ html: CITY_MAP_HTML }} style={{ height, width: '100%', backgroundColor: '#f0f2f5' }} scrollEnabled={false} javaScriptEnabled domStorageEnabled />
+  <WebView source={{ html: CITY_MAP_HTML }} style={{ height, width: '100%', backgroundColor: '#0D0618' }} scrollEnabled={false} javaScriptEnabled domStorageEnabled />
 );
 
 // ─── SlideUp ──────────────────────────────────────────────────────────────────

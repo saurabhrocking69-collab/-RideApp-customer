@@ -578,11 +578,11 @@ export function ComplaintDetailScreen() {
         )}
 
         {c.status === 'evidence_requested' && (
-          <View style={{ backgroundColor: '#FFF7ED', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 2, borderColor: '#FB923C', flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+          <View style={{ backgroundColor: 'rgba(255,122,0,0.10)', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1.5, borderColor: 'rgba(255,122,0,0.35)', flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
             <Text style={{ fontSize: 26 }}>📎</Text>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 14, fontWeight: '900', color: C.saffron, marginBottom: 4 }}>Admin Requested Evidence!</Text>
-              <Text style={{ fontSize: 12, color: '#9A3412', lineHeight: 18 }}>Upload a screenshot or photo to support your complaint. Complaints may be closed without evidence.</Text>
+              <Text style={{ fontSize: 12, color: 'rgba(255,122,0,0.75)', lineHeight: 18 }}>Upload a screenshot or photo to support your complaint. Complaints may be closed without evidence.</Text>
               <TouchableOpacity onPress={uploadEvidence} disabled={uploading}
                 style={{ backgroundColor: C.saffron, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 20, marginTop: 12, alignItems: 'center', opacity: uploading ? 0.6 : 1 }}>
                 <Text style={{ color: '#fff', fontWeight: '900', fontSize: 13 }}>{uploading ? '⏳ Uploading...' : '📸 Upload Photo / Screenshot'}</Text>

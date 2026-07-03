@@ -667,8 +667,8 @@ export function BookingScreen() {
                           return (
                             <View style={{ marginTop: 4 }}>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                                <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#6B7280' }} />
-                                <Text style={{ fontSize: 10, color: '#6B7280', fontWeight: '600' }}>Not available in this area right now</Text>
+                                <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: C.textMuted }} />
+                                <Text style={{ fontSize: 10, color: C.textMuted, fontWeight: '600' }}>Not available in this area right now</Text>
                               </View>
                               {bestAlt && (
                                 <TouchableOpacity

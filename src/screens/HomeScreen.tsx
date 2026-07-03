@@ -751,17 +751,17 @@ function HomeTab() {
                   </View>
                   <View style={{ alignItems: 'center', gap: 10, marginLeft: 14 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFD700' }}>
+                      <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.yellow }}>
                         <Text style={{ fontSize: 20 }}>👤</Text>
                       </View>
-                      <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFD700', alignItems: 'center', justifyContent: 'center', marginHorizontal: -5, zIndex: 1, elevation: 3 }}>
+                      <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: C.yellow, alignItems: 'center', justifyContent: 'center', marginHorizontal: -5, zIndex: 1, elevation: 3 }}>
                         <Text style={{ fontSize: 12, fontWeight: '900', color: '#222' }}>+</Text>
                       </View>
                       <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.45)' }}>
                         <Text style={{ fontSize: 20 }}>🙋</Text>
                       </View>
                     </View>
-                    <View style={{ backgroundColor: '#FFD700', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 9, elevation: 4, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 4 }}>
+                    <View style={{ backgroundColor: C.yellow, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 9, elevation: 4, shadowColor: C.yellow, shadowOpacity: 0.35, shadowRadius: 8 }}>
                       <Text style={{ color: '#111', fontSize: 12, fontWeight: '900' }}>Invite →</Text>
                     </View>
                   </View>

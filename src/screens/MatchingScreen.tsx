@@ -610,18 +610,18 @@ export function MatchingScreen() {
                 return (
                   <SlideUp>
                     <View style={{ paddingHorizontal: 20, marginBottom: 14 }}>
-                      <View style={{ backgroundColor: C.bg, borderRadius: 20, padding: 18, borderWidth: 1.5, borderColor: '#FF5722', elevation: 6, shadowColor: '#FF5722', shadowOpacity: 0.15, shadowRadius: 12 }}>
+                      <View style={{ backgroundColor: C.bg, borderRadius: 20, padding: 18, borderWidth: 1.5, borderColor: C.saffron, elevation: 6, shadowColor: C.saffron, shadowOpacity: 0.18, shadowRadius: 12 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#FF5722', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,122,0,0.18)', borderWidth: 1.5, borderColor: C.saffron, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
                             <Text style={{ fontSize: 20 }}>⚡</Text>
                           </View>
                           <View style={{ flex: 1 }}>
                             <Text style={{ color: C.text, fontSize: 15, fontWeight: '900' }}>No driver found!</Text>
-                            <Text style={{ color: '#E65100', fontSize: 12, marginTop: 1 }}>
+                            <Text style={{ color: C.saffron, fontSize: 12, marginTop: 1 }}>
                               Increase fare to attract more drivers
                             </Text>
                           </View>
-                          <View style={{ backgroundColor: '#FF5722', borderRadius: 10, paddingHorizontal: 9, paddingVertical: 4 }}>
+                          <View style={{ backgroundColor: 'rgba(255,122,0,0.18)', borderWidth: 1, borderColor: C.saffron, borderRadius: 10, paddingHorizontal: 9, paddingVertical: 4 }}>
                             <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900' }}>{3 - surgeCount}/3</Text>
                           </View>
                         </View>
@@ -635,11 +635,11 @@ export function MatchingScreen() {
                               onPress={() => { setServerSurgeOffer(null); surgeFareNow(opt.amount); }}
                               disabled={surging}
                               style={{
-                                backgroundColor: surging ? '#2a2a4a' : opt.bg,
+                                backgroundColor: surging ? 'rgba(255,255,255,0.05)' : opt.bg,
                                 borderRadius: 14, padding: 14,
                                 flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
                                 borderWidth: opt.amount === serverSurgeOffer.amt ? 2.5 : 1.5,
-                                borderColor: surging ? '#3a3a5a' : opt.amount === serverSurgeOffer.amt ? opt.btnBg : opt.border,
+                                borderColor: surging ? 'rgba(255,255,255,0.10)' : opt.amount === serverSurgeOffer.amt ? opt.btnBg : opt.border,
                                 opacity: surging ? 0.6 : 1,
                               }}>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -651,7 +651,7 @@ export function MatchingScreen() {
                                   <Text style={{ fontSize: 11, color: surging ? C.textDim : C.textMuted }}>New fare: ₹{opt.newFare}</Text>
                                 </View>
                               </View>
-                              <View style={{ backgroundColor: surging ? '#555' : opt.btnBg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8 }}>
+                              <View style={{ backgroundColor: surging ? 'rgba(255,255,255,0.12)' : opt.btnBg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8 }}>
                                 <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>₹{opt.newFare}</Text>
                               </View>
                             </Bouncy>
