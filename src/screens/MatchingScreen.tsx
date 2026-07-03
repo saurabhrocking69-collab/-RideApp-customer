@@ -212,6 +212,33 @@ export function MatchingScreen() {
     return () => clearTimeout(t);
   }, [rideData?.driver?.id ?? rideData?.driver]);
 
+  // Chat bounce — pulses when there are unread messages
+  const chatBounceAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (unreadChat > 0) {
+      const loop = Animated.loop(Animated.sequence([
+        Animated.spring(chatBounceAnim, { toValue: 1.14, friction: 3, tension: 300, useNativeDriver: true }),
+        Animated.spring(chatBounceAnim, { toValue: 1, friction: 3, tension: 300, useNativeDriver: true }),
+        Animated.delay(1800),
+      ]));
+      loop.start();
+      return () => loop.stop();
+    } else {
+      chatBounceAnim.setValue(1);
+    }
+  }, [unreadChat]);
+
+  // Action card entrance animation
+  const actionSlide = useRef(new Animated.Value(32)).current;
+  const actionOpacity = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!rideData?.driver) return;
+    Animated.parallel([
+      Animated.spring(actionSlide, { toValue: 0, friction: 7, tension: 120, useNativeDriver: true }),
+      Animated.timing(actionOpacity, { toValue: 1, duration: 280, useNativeDriver: true }),
+    ]).start();
+  }, [!!rideData?.driver]);
+
   if (showCancelModal) return <CancelModal />;
 
   const getDriverLevel = (rating: number) => {
@@ -262,7 +289,7 @@ export function MatchingScreen() {
         {/* Glass header — floats over SearchAnim (paper style) or LiveMap (pink tint) */}
         <View style={{
           position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, overflow: 'hidden',
-          backgroundColor: rideData?.driver ? 'rgba(233,30,99,0.10)' : 'rgba(13,6,24,0.82)',
+          backgroundColor: rideData?.driver ? C.pinkGlass : 'rgba(13,6,24,0.82)',
           paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 8 : 46,
           paddingBottom: 10, paddingHorizontal: 16,
         }}>
@@ -369,9 +396,9 @@ export function MatchingScreen() {
                         {rideData.driver.vehicle_no ? ` · ${rideData.driver.vehicle_no}` : ''}
                       </Text>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 5 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(245,158,11,0.10)', borderRadius: R.full, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(245,158,11,0.28)' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: C.yellowGlass, borderRadius: R.full, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: C.yellowBorder }}>
                           <Text style={{ fontSize: 11 }}>⭐</Text>
-                          <Text style={{ fontSize: 12, fontWeight: '800', color: '#92400E' }}>
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: C.yellow }}>
                             {rideData.driver.rating ? parseFloat(rideData.driver.rating).toFixed(1) : '4.8'}
                           </Text>
                         </View>
@@ -398,60 +425,105 @@ export function MatchingScreen() {
                   <Text style={{ ...T.caption, color: C.textDim, marginTop: 10 }}>Driver will enter this to start the trip</Text>
                 </View>
               )}
-              <View style={{
-                flexDirection: 'row',
-                backgroundColor: C.bgCard,
-                borderRadius: R.md,
-                padding: SP.sm + SP.xs,
-                marginBottom: 10,
-                borderWidth: 1,
-                borderColor: C.glassBorder,
-                ...SHADOW.sm,
-              }}>
-                {/* Chat */}
-                <Bouncy style={{ flex: 1, alignItems: 'center', gap: 5 }} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
-                  <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: C.plumGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.plumBorder }}>
-                    <Ionicons name="chatbubble" size={20} color={C.plum} />
-                    {unreadChat > 0 && <View style={s.chatBadge}><Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{unreadChat}</Text></View>}
-                  </View>
-                  <Text style={{ ...T.label, color: C.textMuted }}>Chat</Text>
-                </Bouncy>
+              {/* ─── Action section with entrance animation ─── */}
+              <Animated.View style={{ opacity: actionOpacity, transform: [{ translateY: actionSlide }] }}>
 
-                {/* Call */}
-                <Bouncy style={{ flex: 1, alignItems: 'center', gap: 5 }} onPress={callDriver}>
-                  <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: C.greenGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.greenBorder }}>
-                    <Ionicons name="call" size={20} color={C.green} />
-                  </View>
-                  <Text style={{ ...T.label, color: C.textMuted }}>Call</Text>
-                </Bouncy>
+                {/* Row: Chat · Call · Share */}
+                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
 
-                {/* Share */}
-                <Bouncy style={{ flex: 1, alignItems: 'center', gap: 5 }} onPress={() => {
-                  const d = rideData?.driver;
-                  const trackUrl = `${API}/track/${rideData?.ride_id || ''}`;
-                  const msg = `🚖 *Sppero — Live Tracking*\n\n` +
-                    `Driver: ${d?.name || 'Assigned'} | ${d?.vehicle_no || ''}\n` +
-                    (rideData?.startOtp ? `OTP: ${rideData.startOtp}\n` : '') +
-                    `📍 From: ${pickup}\n🎯 To: ${drop}\n\n` +
-                    `📡 *Live track:*\n${trackUrl}`;
-                  Share.share({ message: msg, url: trackUrl, title: 'Sppero Live Tracking' }).catch(() => {
-                    Linking.openURL(`https://wa.me/?text=${encodeURIComponent(msg)}`);
-                  });
-                }}>
-                  <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: 'rgba(59,130,246,0.07)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(59,130,246,0.22)' }}>
-                    <Ionicons name="share-social" size={20} color="#3B82F6" />
-                  </View>
-                  <Text style={{ ...T.label, color: C.textMuted }}>Share</Text>
-                </Bouncy>
+                  {/* Chat */}
+                  <Bouncy style={{ flex: 1 }} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
+                    <Animated.View style={{
+                      backgroundColor: C.bgCard, borderRadius: 18,
+                      paddingVertical: 16, alignItems: 'center', gap: 9,
+                      borderWidth: 1.5, borderColor: unreadChat > 0 ? C.plumBorder : C.glassBorder,
+                      elevation: 4, shadowColor: C.plum, shadowOpacity: 0.12, shadowRadius: 8,
+                      transform: [{ scale: chatBounceAnim }],
+                    }}>
+                      <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: C.plumGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.plumBorder }}>
+                        <Ionicons name="chatbubble" size={23} color={C.plum} />
+                        {unreadChat > 0 && <View style={s.chatBadge}><Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{unreadChat}</Text></View>}
+                      </View>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: unreadChat > 0 ? C.plum : C.textMuted, letterSpacing: 0.3 }}>Chat</Text>
+                    </Animated.View>
+                  </Bouncy>
 
-                {/* SOS */}
-                <Bouncy style={{ flex: 1, alignItems: 'center', gap: 5 }} onPress={triggerSOS}>
-                  <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: C.redGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.redBorder }}>
-                    <Ionicons name="warning" size={20} color={C.red} />
+                  {/* Call */}
+                  <Bouncy style={{ flex: 1 }} onPress={callDriver}>
+                    <View style={{
+                      backgroundColor: C.bgCard, borderRadius: 18,
+                      paddingVertical: 16, alignItems: 'center', gap: 9,
+                      borderWidth: 1.5, borderColor: C.glassBorder,
+                      elevation: 4, shadowColor: C.green, shadowOpacity: 0.12, shadowRadius: 8,
+                    }}>
+                      <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: C.greenGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.greenBorder }}>
+                        <Ionicons name="call" size={23} color={C.green} />
+                      </View>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: C.textMuted, letterSpacing: 0.3 }}>Call</Text>
+                    </View>
+                  </Bouncy>
+
+                  {/* Share */}
+                  <Bouncy style={{ flex: 1 }} onPress={() => {
+                    const d = rideData?.driver;
+                    const trackUrl = `${API}/track/${rideData?.ride_id || ''}`;
+                    const msg = `🚖 *Sppero — Live Tracking*\n\n` +
+                      `Driver: ${d?.name || 'Assigned'} | ${d?.vehicle_no || ''}\n` +
+                      (rideData?.startOtp ? `OTP: ${rideData.startOtp}\n` : '') +
+                      `📍 From: ${pickup}\n🎯 To: ${drop}\n\n` +
+                      `📡 *Live track:*\n${trackUrl}`;
+                    Share.share({ message: msg, url: trackUrl, title: 'Sppero Live Tracking' }).catch(() => {
+                      Linking.openURL(`https://wa.me/?text=${encodeURIComponent(msg)}`);
+                    });
+                  }}>
+                    <View style={{
+                      backgroundColor: C.bgCard, borderRadius: 18,
+                      paddingVertical: 16, alignItems: 'center', gap: 9,
+                      borderWidth: 1.5, borderColor: C.glassBorder,
+                      elevation: 4, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8,
+                    }}>
+                      <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: C.glassMid, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.glassBorder }}>
+                        <Ionicons name="share-social" size={23} color={C.textMuted} />
+                      </View>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: C.textMuted, letterSpacing: 0.3 }}>Share</Text>
+                    </View>
+                  </Bouncy>
+
+                </View>
+
+                {/* SOS — full width, prominent, clearly separate from utility actions */}
+                <TouchableOpacity
+                  activeOpacity={0.82}
+                  onPress={triggerSOS}
+                  style={{
+                    backgroundColor: sosActive ? 'rgba(239,68,68,0.22)' : C.redGlass,
+                    borderRadius: 18, paddingVertical: 16, paddingHorizontal: 20,
+                    marginBottom: 10, borderWidth: 2, borderColor: C.red,
+                    flexDirection: 'row', alignItems: 'center', gap: 14,
+                    elevation: sosActive ? 14 : 7,
+                    shadowColor: C.red, shadowOpacity: sosActive ? 0.60 : 0.32, shadowRadius: 14,
+                  }}>
+                  <PulseView>
+                    <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(239,68,68,0.20)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.red }}>
+                      <Ionicons name="warning" size={25} color={C.red} />
+                    </View>
+                  </PulseView>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: C.red, fontSize: 14, fontWeight: '900' }}>
+                      {sosActive ? '🆘 Alert Sent!' : 'Emergency SOS'}
+                    </Text>
+                    <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 2 }}>
+                      {sosActive ? 'Police: 100 · Ambulance: 108' : 'Tap to alert police + emergency contacts'}
+                    </Text>
                   </View>
-                  <Text style={{ ...T.label, color: C.red }}>SOS</Text>
-                </Bouncy>
-              </View>
+                  {!sosActive && (
+                    <View style={{ backgroundColor: C.red, borderRadius: 12, paddingHorizontal: 13, paddingVertical: 8, elevation: 4, shadowColor: C.red, shadowOpacity: 0.5, shadowRadius: 8 }}>
+                      <Text style={{ color: '#fff', fontWeight: '900', fontSize: 13 }}>SOS</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+
+              </Animated.View>
               {chatToast && (
                 <TouchableOpacity
                   style={{ backgroundColor: C.bgDark, borderRadius: R.sm, padding: 14, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: C.pinkBorder, elevation: 8 }}
@@ -466,8 +538,6 @@ export function MatchingScreen() {
                   <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>💬 {unreadChat} new message from driver — tap to read</Text>
                 </TouchableOpacity>
               )}
-              {sosActive && <View style={[s.infoBox, { backgroundColor: C.redGlass, borderColor: C.redBorder }]}><Text style={{ fontSize: 13, color: C.red, fontWeight: '800' }}>🆘 Alert sent! Police: 100 · Ambulance: 108</Text></View>}
-
               {/* ─── Wait Timer — separate system ─── */}
               {driverArrived && driverWaitSec > 0 && (
                 <View style={{
@@ -492,7 +562,7 @@ export function MatchingScreen() {
                       </Text>
                     </View>
                   </View>
-                  <View style={{ height: 6, backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: 3, overflow: 'hidden', marginBottom: 7 }}>
+                  <View style={{ height: 6, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden', marginBottom: 7 }}>
                     <View style={{
                       height: '100%', borderRadius: 3,
                       width: `${Math.min(100, (driverWaitSec / (waitFareFreeMin * 60)) * 100)}%`,
@@ -585,7 +655,7 @@ export function MatchingScreen() {
                       width: surgeBarAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
                       backgroundColor: surgeBarAnim.interpolate({
                         inputRange: [0, 0.6, 0.8, 1],
-                        outputRange: ['#4CAF50', '#FFC107', '#FF9800', '#FF5722'],
+                        outputRange: [C.green, C.yellow, C.saffron, C.pink],
                       }),
                     }} />
                   </View>
@@ -949,11 +1019,11 @@ function CancelModal() {
             </Text>
           </View>
           {waitSec > 0 && (
-            <View style={{ backgroundColor: 'rgba(239,68,68,0.08)', borderRadius: 10, padding: 10, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(239,68,68,0.25)', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={{ backgroundColor: C.redGlass, borderRadius: 10, padding: 10, marginBottom: 12, borderWidth: 1, borderColor: C.redBorder, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Text style={{ fontSize: 18 }}>⏱️</Text>
               <View>
-                <Text style={{ fontSize: 12, fontWeight: '800', color: '#DC2626' }}>Driver has been waiting {waitMin}m {waitSecRem}s</Text>
-                {!isFree && <Text style={{ fontSize: 11, color: '#9B1C1C', marginTop: 2 }}>Longer wait = higher fee</Text>}
+                <Text style={{ fontSize: 12, fontWeight: '800', color: C.red }}>Driver has been waiting {waitMin}m {waitSecRem}s</Text>
+                {!isFree && <Text style={{ fontSize: 11, color: C.red, marginTop: 2, opacity: 0.7 }}>Longer wait = higher fee</Text>}
               </View>
             </View>
           )}

@@ -20,7 +20,7 @@ function InlineSOSButton({ onActivate, active }: { onActivate: () => void; activ
     Vibration.vibrate(60);
     animRef.current = Animated.parallel([
       Animated.timing(progress, { toValue: 1, duration: 2000, useNativeDriver: false }),
-      Animated.timing(scale, { toValue: 0.92, duration: 200, useNativeDriver: true }),
+      Animated.timing(scale, { toValue: 0.97, duration: 200, useNativeDriver: true }),
     ]);
     animRef.current.start();
     holdRef.current = setTimeout(() => {
@@ -38,22 +38,51 @@ function InlineSOSButton({ onActivate, active }: { onActivate: () => void; activ
     Animated.timing(scale, { toValue: 1, duration: 150, useNativeDriver: true }).start();
   };
 
-  const bgColor = progress.interpolate({ inputRange: [0, 1], outputRange: [C.redGlass, 'rgba(239,68,68,0.22)'] });
-  const borderC = progress.interpolate({ inputRange: [0, 1], outputRange: [C.redBorder, C.red] });
+  const fillWidth = progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
 
   return (
-    <Animated.View style={{ transform: [{ scale }], flex: 1 }}>
-      <TouchableOpacity activeOpacity={1} onPressIn={startHold} onPressOut={cancelHold} style={{ flex: 1 }}>
+    <Animated.View style={{ transform: [{ scale }], marginBottom: 10 }}>
+      <TouchableOpacity activeOpacity={1} onPressIn={startHold} onPressOut={cancelHold}>
         <Animated.View style={{
-          flex: 1, borderRadius: 16, alignItems: 'center', justifyContent: 'center',
-          paddingVertical: 14, backgroundColor: active ? 'rgba(239,68,68,0.18)' : bgColor,
-          borderWidth: 1.5, borderColor: active ? C.red : borderC,
-          elevation: active ? 8 : 4, shadowColor: C.red, shadowOpacity: active ? 0.5 : 0.2, shadowRadius: 8,
+          borderRadius: 18, flexDirection: 'row', alignItems: 'center',
+          paddingVertical: 16, paddingHorizontal: 20, gap: 14, overflow: 'hidden',
+          backgroundColor: active ? 'rgba(239,68,68,0.22)' : C.redGlass,
+          borderWidth: 2, borderColor: C.red,
+          elevation: active ? 14 : 7,
+          shadowColor: C.red, shadowOpacity: active ? 0.60 : 0.32, shadowRadius: 14,
         }}>
-          <Ionicons name="warning" size={22} color={C.red} />
-          <Text style={{ fontSize: 10, color: C.red, marginTop: 3, fontWeight: '800' }}>
-            {active ? '🆘 Sent!' : holding ? 'Hold...' : 'Hold SOS'}
-          </Text>
+          {/* Fill bar sweeps left-to-right while holding */}
+          {holding && !active && (
+            <Animated.View style={{
+              position: 'absolute', top: 0, left: 0, bottom: 0,
+              backgroundColor: 'rgba(239,68,68,0.18)', width: fillWidth,
+            }} />
+          )}
+
+          {/* Icon */}
+          <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(239,68,68,0.20)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.red }}>
+            <Ionicons name="warning" size={25} color={C.red} />
+          </View>
+
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: C.red, fontSize: 14, fontWeight: '900' }}>
+              {active ? '🆘 Alert Sent!' : holding ? 'Sending SOS...' : 'Hold for Emergency SOS'}
+            </Text>
+            <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 2 }}>
+              {active ? 'Police: 100 · Ambulance: 108' : 'Hold 2s · Alerts police + emergency contacts'}
+            </Text>
+          </View>
+
+          {!active && !holding && (
+            <View style={{ backgroundColor: C.red, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 7 }}>
+              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>HOLD</Text>
+            </View>
+          )}
+          {holding && !active && (
+            <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(239,68,68,0.28)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.red }}>
+              <Text style={{ color: C.red, fontWeight: '900', fontSize: 11 }}>2s</Text>
+            </View>
+          )}
         </Animated.View>
       </TouchableOpacity>
     </Animated.View>
@@ -85,10 +114,25 @@ export function InRideScreen() {
   } = useApp();
 
   const [elapsed, setElapsed] = useState(0);
-  // Use ride's server-side started_at so timer survives chat navigation and remounts
   const startRef = useRef(
     rideData?.started_at ? new Date(rideData.started_at).getTime() : Date.now()
   );
+
+  // Chat bounce — pulses when there are unread messages
+  const chatBounceAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (unreadChat > 0) {
+      const loop = Animated.loop(Animated.sequence([
+        Animated.spring(chatBounceAnim, { toValue: 1.14, friction: 3, tension: 300, useNativeDriver: true }),
+        Animated.spring(chatBounceAnim, { toValue: 1, friction: 3, tension: 300, useNativeDriver: true }),
+        Animated.delay(1800),
+      ]));
+      loop.start();
+      return () => loop.stop();
+    } else {
+      chatBounceAnim.setValue(1);
+    }
+  }, [unreadChat]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -205,10 +249,10 @@ export function InRideScreen() {
             flexDirection: 'row', alignItems: 'center',
           }}>
             <PulseView style={{ marginRight: 10 }}>
-              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#00D4A8', elevation: 2, shadowColor: '#00D4A8', shadowOpacity: 0.7, shadowRadius: 6 }} />
+              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.mint, elevation: 2, shadowColor: C.mint, shadowOpacity: 0.7, shadowRadius: 6 }} />
             </PulseView>
             <View style={{ flex: 1 }}>
-              <Text style={{ ...T.bodyBold, color: '#00D4A8' }}>Live — In Progress</Text>
+              <Text style={{ ...T.bodyBold, color: C.mint }}>Live — In Progress</Text>
               {(rideData?.distance || driverDist) ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
                   <View style={{ backgroundColor: 'rgba(0,200,83,0.12)', borderRadius: R.xs, paddingHorizontal: 6, paddingVertical: 2 }}>
@@ -246,33 +290,47 @@ export function InRideScreen() {
             </View>
           </View>
 
-          {/* Action row: Chat | Call | SOS */}
-          <View style={{
-            flexDirection: 'row', backgroundColor: C.bgCard, borderRadius: R.md,
-            padding: SP.sm + SP.xs, marginBottom: 10, gap: 0,
-            borderWidth: 1, borderColor: C.glassBorder, ...SHADOW.sm,
-          }}>
-            <Bouncy style={{ flex: 1, alignItems: 'center', gap: 5 }} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
-              <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: C.plumGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.plumBorder, position: 'relative' }}>
-                <Ionicons name="chatbubble" size={20} color={C.plum} />
-                {unreadChat > 0 && (
-                  <View style={s.chatBadge}>
-                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{unreadChat}</Text>
-                  </View>
-                )}
-              </View>
-              <Text style={{ ...T.label, color: C.textMuted }}>Chat</Text>
+          {/* ─── Utility row: Chat · Call ─── */}
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
+
+            <Bouncy style={{ flex: 1 }} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
+              <Animated.View style={{
+                backgroundColor: C.bgCard, borderRadius: 18,
+                paddingVertical: 16, alignItems: 'center', gap: 9,
+                borderWidth: 1.5, borderColor: unreadChat > 0 ? C.plumBorder : C.glassBorder,
+                elevation: 4, shadowColor: C.plum, shadowOpacity: 0.12, shadowRadius: 8,
+                transform: [{ scale: chatBounceAnim }],
+              }}>
+                <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: C.plumGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.plumBorder, position: 'relative' }}>
+                  <Ionicons name="chatbubble" size={23} color={C.plum} />
+                  {unreadChat > 0 && (
+                    <View style={s.chatBadge}>
+                      <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{unreadChat}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: unreadChat > 0 ? C.plum : C.textMuted, letterSpacing: 0.3 }}>Chat</Text>
+              </Animated.View>
             </Bouncy>
 
-            <Bouncy style={{ flex: 1, alignItems: 'center', gap: 5 }} onPress={callDriver}>
-              <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: C.greenGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.greenBorder }}>
-                <Ionicons name="call" size={20} color={C.green} />
+            <Bouncy style={{ flex: 1 }} onPress={callDriver}>
+              <View style={{
+                backgroundColor: C.bgCard, borderRadius: 18,
+                paddingVertical: 16, alignItems: 'center', gap: 9,
+                borderWidth: 1.5, borderColor: C.glassBorder,
+                elevation: 4, shadowColor: C.green, shadowOpacity: 0.12, shadowRadius: 8,
+              }}>
+                <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: C.greenGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.greenBorder }}>
+                  <Ionicons name="call" size={23} color={C.green} />
+                </View>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: C.textMuted, letterSpacing: 0.3 }}>Call</Text>
               </View>
-              <Text style={{ ...T.label, color: C.textMuted }}>Call</Text>
             </Bouncy>
 
-            <InlineSOSButton onActivate={handleSOS} active={sosActive} />
           </View>
+
+          {/* ─── SOS — full width hold button ─── */}
+          <InlineSOSButton onActivate={handleSOS} active={sosActive} />
 
           {/* SOS active banner */}
           {sosActive && (
