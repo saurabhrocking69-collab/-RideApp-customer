@@ -81,6 +81,10 @@ interface AppContextType {
   surging: boolean; setSurging: (v: boolean) => void;
   surgeBarAnim: Animated.Value;
   surgeBarAnimRef: React.MutableRefObject<Animated.CompositeAnimation | null>;
+  serverSurgeOffer: { amt: number; label: string; timeout_sec: number } | null;
+  setServerSurgeOffer: (v: { amt: number; label: string; timeout_sec: number } | null) => void;
+  noDriverFinal: { alternatives: string[]; retry_after_sec: number } | null;
+  setNoDriverFinal: (v: { alternatives: string[]; retry_after_sec: number } | null) => void;
   // Notification toast (foreground in-app)
   notifToast: ToastNotif | null; setNotifToast: (n: ToastNotif | null) => void;
   // Chat
@@ -384,6 +388,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [surging, setSurging] = useState(false);
   const surgeBarAnim    = useRef(new Animated.Value(0)).current;
   const surgeBarAnimRef = useRef<Animated.CompositeAnimation | null>(null);
+  const [serverSurgeOffer, setServerSurgeOffer] = useState<{ amt: number; label: string; timeout_sec: number } | null>(null);
+  const [noDriverFinal, setNoDriverFinal] = useState<{ alternatives: string[]; retry_after_sec: number } | null>(null);
 
   // ── Notification toast ──────────────────────────────────────────────────
   const [notifToast, setNotifToast] = useState<ToastNotif | null>(null);
@@ -703,12 +709,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       surgeBarAnimRef.current?.stop(); return;
     }
     setSearchElapsed(0); surgeBarAnim.setValue(0); surgeBarAnimRef.current?.stop();
-    const anim = Animated.timing(surgeBarAnim, { toValue: 1, duration: 100000, useNativeDriver: false });
+    const anim = Animated.timing(surgeBarAnim, { toValue: 1, duration: 90000, useNativeDriver: false });
     surgeBarAnimRef.current = anim; anim.start();
     const iv = setInterval(() => {
       const secs = Math.floor((Date.now() - bookTime) / 1000);
-      setSearchElapsed(Math.min(secs, 100));
-      if (secs >= 100) clearInterval(iv);
+      setSearchElapsed(Math.min(secs, 90));
+      if (secs >= 90) clearInterval(iv);
     }, 1000);
     return () => { clearInterval(iv); surgeBarAnimRef.current?.stop(); };
   }, [screen, bookTime, rideData?.driver]);
@@ -913,7 +919,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     s.on('rideUpdate', (data: any) => {
       const st = data.status;
       if (st === 'matched' || st === 'arrived') {
-        setAltSuggest(null);
+        setAltSuggest(null); setServerSurgeOffer(null); setNoDriverFinal(null);
         // On driver arrived, immediately poll cancelInfo so wait countdown shows without waiting 10s
         if (st === 'arrived') {
           const arrivedRideId = activeRideIdRef.current;
@@ -972,15 +978,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (st === 'cancelled') {
         AsyncStorage.removeItem('activeStdRideId').catch(() => {});
         ride.clearRide();
-        setRideData(null); setAltSuggest(null); setDriverLoc(null);
+        setRideData(null); setAltSuggest(null); setDriverLoc(null); setServerSurgeOffer(null); setNoDriverFinal(null);
         setPickup(''); setDrop(''); setPickupCoords(null); setDropCoords(null); setEta('');
         buddyWaitingRef.current = false; setBuddyWaiting(false); setBuddyBookMsg('');
         setScreen('home'); setResult('❌ Ride cancel ho gayi');
       }
+      if (st === 'surge_offer') {
+        // Server detected no driver accepted — offer surge to customer
+        setServerSurgeOffer({
+          amt: data.suggested_surge_amt || 25,
+          label: data.surge_label || `+₹${data.suggested_surge_amt || 25}`,
+          timeout_sec: data.timeout_sec || 30,
+        });
+      }
+      if (st === 'no_driver_final') {
+        // Both base fare and surge round failed — show alternatives + retry
+        setServerSurgeOffer(null);
+        setNoDriverFinal({
+          alternatives: data.alternatives || [],
+          retry_after_sec: data.retry_after_sec || 300,
+        });
+        // Cancel ride state so alternatives/retry can work cleanly
+        setAltSuggest(data.alternatives?.length ? { alternatives: data.alternatives, current_type: rideDataRef.current?.vehicle_type || '' } : null);
+      }
       if (st === 'no_driver') {
         AsyncStorage.removeItem('activeStdRideId').catch(() => {});
         ride.clearRide();
-        setRideData(null); setAltSuggest(null); setDriverLoc(null);
+        setRideData(null); setAltSuggest(null); setDriverLoc(null); setServerSurgeOffer(null); setNoDriverFinal(null);
         setPickup(''); setDrop(''); setPickupCoords(null); setDropCoords(null); setEta('');
         if (buddyWaitingRef.current) {
           buddyWaitingRef.current = false; setBuddyWaiting(false);
@@ -1607,6 +1631,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     freeCancelsLeft, setFreeCancelsLeft, cancelInfo, setCancelInfo, bookTime, setBookTime,
     searchElapsed, setSearchElapsed, surgeCount, setSurgeCount,
     surgeFare, setSurgeFare, surging, setSurging, surgeBarAnim, surgeBarAnimRef,
+    serverSurgeOffer, setServerSurgeOffer, noDriverFinal, setNoDriverFinal,
     notifToast, setNotifToast,
     chatMsgs, setChatMsgs, chatInput, setChatInput, unreadChat, setUnreadChat, lastChatCount, chatToast, setChatToast,
     rating, setRating, tip, setTip, review, setReview,
