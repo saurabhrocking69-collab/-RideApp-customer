@@ -1164,228 +1164,351 @@ function HistoryTab() {
     historyRides,
     favouriteBuddy,
     addFavouriteBuddy,
-    rideIcon, setScreen,
+    rideIcon, setScreen, setTab,
+    setPickup, setDrop,
+    setPickupCoords, setDropCoords,
   } = useApp();
 
-  const [showBill, setShowBill] = useState(false);
-  const [billRide, setBillRide] = useState<any>(null);
-  const [billData, setBillData] = useState<any>(null);
-  const [billLoading, setBillLoading] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
+  const [detailRide, setDetailRide] = useState<any>(null);
+  const [detailData, setDetailData] = useState<any>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
-  const openBill = async (h: any) => {
-    setBillRide(h);
-    setBillLoading(true);
-    setShowBill(true);
+  const openDetail = async (h: any) => {
+    setDetailRide(h);
+    setDetailLoading(true);
+    setShowDetail(true);
     try {
       const d = await apiGet(`/api/rides/status/${h.id}`);
-      setBillData(d.ride);
+      setDetailData(d.ride);
     } catch (_e) {
-      setBillData(null);
+      setDetailData(null);
     }
-    setBillLoading(false);
+    setDetailLoading(false);
   };
 
-  const closeBill = () => { setShowBill(false); setBillRide(null); setBillData(null); };
+  const closeDetail = () => { setShowDetail(false); setDetailRide(null); setDetailData(null); };
 
-  const billFareNum = Math.round(parseFloat(String(billRide?.fare ?? 0).replace(/[^0-9.]/g, '')) || 0);
-  const billGst = Math.round((billFareNum * 5 / 105) * 100) / 100;
-  const billBase = Math.round((billFareNum - billGst) * 100) / 100;
-  const billId = '#SP' + String(billRide?.id || '').slice(-8).toUpperCase();
-  const billDateStr = billRide ? new Date(billRide.created_at).toLocaleString('en-IN', {
+  // ── computed detail values ────────────────────────────────────────────────
+  const ride = detailRide;
+  const rideDetail = detailData;
+  const fareNum   = Math.round(parseFloat(String(ride?.fare ?? 0).replace(/[^0-9.]/g, '')) || 0);
+  const gst       = Math.round((fareNum * 5 / 105) * 100) / 100;
+  const base      = Math.round((fareNum - gst) * 100) / 100;
+  const rideId    = '#SP' + String(ride?.id || '').slice(-8).toUpperCase();
+  const dateStr   = ride ? new Date(ride.created_at).toLocaleString('en-IN', {
     day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true,
   }) : '';
-  const billVehicle = (billRide?.ride_type || billData?.ride_type || 'Auto').replace(/\b\w/g, (c: string) => c.toUpperCase());
-  const billPayLabel = () => {
-    const m = billData?.payment_method || billRide?.payment_method || '';
+  const vehicleType = (ride?.ride_type || rideDetail?.ride_type || 'Auto').replace(/\b\w/g, (c: string) => c.toUpperCase());
+  const vehicleLabel = [rideDetail?.vehicle_brand, rideDetail?.vehicle_model].filter(Boolean).join(' ') || vehicleType;
+  const payLabel = () => {
+    const m = rideDetail?.payment_method || ride?.payment_method || '';
     if (m === 'cash') return 'Cash 💵';
     if (m === 'wallet') return 'Sppero Wallet 👛';
     if (m === 'upi_qr') return 'UPI QR 📱';
     if (m === 'online' || m === 'upi' || m === 'razorpay') return 'Online / UPI 📱';
     return '—';
   };
+  const driverRating = rideDetail?.driver_rating ? parseFloat(rideDetail.driver_rating).toFixed(1) : null;
+  const customerRatingGiven = rideDetail?.customer_rating || rideDetail?.rating;
+  const distanceKm = rideDetail?.distance ? String(rideDetail.distance).replace(' km', '') : null;
 
-  const shareBill = () => {
-    const dist = billData?.distance ? `\n📏 Distance: ${billData.distance} km` : '';
+  const shareReceipt = () => {
+    const distLine = distanceKm ? `\n📏 Distance: ${distanceKm} km` : '';
     const text =
 `🚖 *SPPERO — RIDE RECEIPT*
 ━━━━━━━━━━━━━━━━━━━
 
-📋 *Booking ID:* ${billId}
-📅 *Date:* ${billDateStr}
+📋 *Booking ID:* ${rideId}
+📅 *Date:* ${dateStr}
 
-📍 *Pickup:*  ${billRide?.pickup || ''}
-🏁 *Drop:*    ${billRide?.drop_location || ''}
-${dist}
-🚗 *Vehicle:* ${billVehicle}
-👤 *Driver:*  ${billRide?.driver_name || billData?.driver_name || 'N/A'}
+📍 *Pickup:*  ${ride?.pickup || ''}
+🏁 *Drop:*    ${ride?.drop_location || ''}
+${distLine}
+🚗 *Vehicle:* ${vehicleLabel}${rideDetail?.vehicle_no ? ' · ' + rideDetail.vehicle_no : ''}
+👤 *Driver:*  ${ride?.driver_name || rideDetail?.driver_name || 'N/A'}
 
 ━━━━━━━━━━━━━━━━━━━
        *FARE BREAKDOWN*
 ━━━━━━━━━━━━━━━━━━━
-Base Fare:       ₹${billBase.toFixed(2)}
-GST (5%):        ₹${billGst.toFixed(2)}
+Base Fare:       ₹${base.toFixed(2)}
+GST (5%):        ₹${gst.toFixed(2)}
 ━━━━━━━━━━━━━━━━━━━
-*TOTAL PAID:  ₹${billFareNum}*
-💳 *Payment:* ${billPayLabel()}
+*TOTAL PAID:  ₹${fareNum}*
+💳 *Payment:* ${payLabel()}
 ━━━━━━━━━━━━━━━━━━━
 
-_GST is included in the fare — not charged separately._
-
+_GST is included in the fare._
 🙏 Thank you for riding with *Sppero*!`;
     Share.share({ message: text });
   };
 
+  const rebookRide = () => {
+    if (!ride) return;
+    setPickup(ride.pickup || '');
+    setDrop(ride.drop_location || '');
+    setPickupCoords(null);
+    setDropCoords(null);
+    closeDetail();
+    setTab('home');
+    setScreen('booking');
+  };
+
+  const statusColor = (st: string) => {
+    if (st === 'completed') return C.green;
+    if (st === 'cancelled') return C.pink;
+    return C.yellow;
+  };
+  const statusBg = (st: string) => {
+    if (st === 'completed') return 'rgba(5,150,105,0.15)';
+    if (st === 'cancelled') return 'rgba(255,45,120,0.15)';
+    return 'rgba(251,191,36,0.15)';
+  };
+
   return (
     <View style={s.screen}>
-      <View style={{ backgroundColor: C.night, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 56, paddingBottom: 28, paddingHorizontal: 20 }}>
-        <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,45,120,0.07)', top: -60, right: -40 }} />
+      {/* Header */}
+      <View style={{ backgroundColor: C.night, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 56, paddingBottom: 20, paddingHorizontal: 20 }}>
+        <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,45,120,0.06)', top: -60, right: -40 }} />
         <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>My Trips</Text>
+        <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 3 }}>Tap any trip to see full details</Text>
       </View>
-      <ScrollView style={{ flex: 1, padding: 14 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
+
+      <ScrollView style={{ flex: 1, padding: 14 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 90 }}>
         {historyRides.length === 0
           ? <EmptyAnim icon="🚖" title="No trips yet" sub="Book your first ride and see your history here!" />
           : historyRides.map((h: any, i: number) => (
-            <View key={i} style={s.histCard}>
-              <View style={s.row}>
-                <View style={s.histIcon}><Text style={{ fontSize: 20 }}>{rideIcon(h.ride_type)}</Text></View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.recentRoute} numberOfLines={1}>{h.pickup} → {h.drop_location}</Text>
-                  <Text style={s.recentDate}>{new Date(h.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} · <Text style={{ color: h.status === 'completed' ? C.green : h.status === 'cancelled' ? C.pink : C.yellow }}>{h.status}</Text></Text>
-                  {h.driver_name && <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>Driver: {h.driver_name}</Text>}
+            <TouchableOpacity key={i} activeOpacity={0.82} onPress={() => openDetail(h)}
+              style={{ backgroundColor: C.bgCard, borderRadius: 18, marginBottom: 12, borderWidth: 1, borderColor: C.glassBorder, overflow: 'hidden' }}>
+              {/* Status stripe */}
+              <View style={{ height: 3, backgroundColor: statusColor(h.status), opacity: 0.7 }} />
+              <View style={{ padding: 14 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                  {/* Icon */}
+                  <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,45,120,0.12)', borderWidth: 1, borderColor: 'rgba(255,45,120,0.25)', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                    <Text style={{ fontSize: 22 }}>{rideIcon(h.ride_type)}</Text>
+                  </View>
+                  {/* Route + meta */}
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800', marginBottom: 3 }} numberOfLines={1}>{h.pickup}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 3 }}>
+                      <View style={{ width: 8, height: 1, backgroundColor: C.textMuted }} />
+                      <Text style={{ color: C.textMuted, fontSize: 10 }}>to</Text>
+                      <View style={{ width: 8, height: 1, backgroundColor: C.textMuted }} />
+                    </View>
+                    <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, fontWeight: '600' }} numberOfLines={1}>{h.drop_location}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                      <Text style={{ color: C.textMuted, fontSize: 11 }}>{new Date(h.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</Text>
+                      <View style={{ backgroundColor: statusBg(h.status), borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
+                        <Text style={{ color: statusColor(h.status), fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 }}>{h.status}</Text>
+                      </View>
+                    </View>
+                  </View>
+                  {/* Fare + buddy */}
+                  <View style={{ alignItems: 'flex-end', marginLeft: 8 }}>
+                    <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>₹{h.fare}</Text>
+                    {h.status === 'completed' && h.driver_phone && (
+                      <TouchableOpacity
+                        onPress={async (e) => {
+                          e.stopPropagation?.();
+                          const alreadyBuddy = favouriteBuddy?.driver_phone === h.driver_phone;
+                          if (alreadyBuddy) { alert('⭐ This driver is already your Sppero Buddy!'); return; }
+                          const res = await addFavouriteBuddy(h.driver_phone);
+                          if (res?.success) alert(`⭐ ${h.driver_name} is now your Sppero Buddy!`);
+                          else alert('⚠️ ' + (res?.error || 'Error'));
+                        }}
+                        style={{ marginTop: 6, backgroundColor: favouriteBuddy?.driver_phone === h.driver_phone ? C.greenGlass : C.pinkGlass, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: favouriteBuddy?.driver_phone === h.driver_phone ? C.greenBorder : C.pinkBorder }}>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: favouriteBuddy?.driver_phone === h.driver_phone ? C.green : C.pink }}>
+                          {favouriteBuddy?.driver_phone === h.driver_phone ? '✅ Buddy' : '⭐ Buddy'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={s.recentFare}>₹{h.fare}</Text>
-                  {h.status === 'completed' && h.driver_phone && (
-                    <TouchableOpacity
-                      onPress={async () => {
-                        const alreadyBuddy = favouriteBuddy?.driver_phone === h.driver_phone;
-                        if (alreadyBuddy) { alert('⭐ This driver is already your Sppero Buddy!'); return; }
-                        const res = await addFavouriteBuddy(h.driver_phone);
-                        if (res?.success) alert(`⭐ ${h.driver_name} is now your Sppero Buddy!`);
-                        else alert('⚠️ ' + (res?.error || 'Error'));
-                      }}
-                      style={{ marginTop: 5, backgroundColor: favouriteBuddy?.driver_phone === h.driver_phone ? C.greenGlass : C.yellowGlass, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: favouriteBuddy?.driver_phone === h.driver_phone ? C.greenBorder : C.yellowBorder }}>
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: favouriteBuddy?.driver_phone === h.driver_phone ? C.green : C.yellow }}>
-                        {favouriteBuddy?.driver_phone === h.driver_phone ? '✅ Buddy' : '⭐ Buddy?'}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
+                {/* Tap hint */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 8 }}>
+                  <Text style={{ color: 'rgba(255,45,120,0.6)', fontSize: 11, fontWeight: '700' }}>View Details →</Text>
                 </View>
               </View>
-              {h.status === 'completed' && (
-                <TouchableOpacity onPress={() => openBill(h)}
-                  style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: C.glassMid, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, borderColor: C.glassBorder }}>
-                  <Text style={{ fontSize: 14 }}>🧾</Text>
-                  <Text style={{ color: C.textMuted, fontWeight: '700', fontSize: 12 }}>Bill & Share</Text>
-                </TouchableOpacity>
-              )}
-            </View>
+            </TouchableOpacity>
           ))
         }
       </ScrollView>
       <View style={s.navFloat}><NavBar /></View>
 
-      {/* Bill Modal */}
-      <Modal visible={showBill} transparent animationType="slide" onRequestClose={closeBill}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}>
-          <View style={{ backgroundColor: C.bgDark, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: 32 }}>
-            <View style={{ width: 40, height: 4, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 4 }} />
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 8 }}>
+      {/* ── Rich Trip Detail Modal ──────────────────────────────────────── */}
+      <Modal visible={showDetail} transparent animationType="slide" onRequestClose={closeDetail}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: C.bgDark, borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '93%', borderTopWidth: 1.5, borderTopColor: 'rgba(255,45,120,0.20)' }}>
+            {/* Drag handle */}
+            <View style={{ width: 40, height: 4, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 2, alignSelf: 'center', marginTop: 12 }} />
 
-              <View style={{ alignItems: 'center', paddingVertical: 18 }}>
-                <Text style={{ fontSize: 28 }}>🧾</Text>
-                <Text style={{ fontSize: 20, fontWeight: '900', color: '#fff', marginTop: 6, letterSpacing: 1 }}>SPPERO</Text>
-                <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', letterSpacing: 2, marginTop: 2 }}>RIDE RECEIPT</Text>
-              </View>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 36 }}>
 
-              <View style={{ borderStyle: 'dashed', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', marginBottom: 16 }} />
-
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>Booking ID</Text>
-                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '800' }}>{billId}</Text>
-              </View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 }}>
-                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>Date & Time</Text>
-                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>{billDateStr}</Text>
-              </View>
-
-              <View style={{ backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 14, padding: 14, marginBottom: 14 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 }}>
-                  <Text style={{ fontSize: 16, marginRight: 10, marginTop: 1 }}>📍</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, marginBottom: 2 }}>PICKUP</Text>
-                    <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>{billRide?.pickup}</Text>
+              {/* ── Section 1: Status + IDs ── */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 18, marginBottom: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={{ fontSize: 24 }}>{rideIcon(ride?.ride_type)}</Text>
+                  <View>
+                    <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }}>{vehicleType} Ride</Text>
+                    <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 1 }}>{rideId}</Text>
                   </View>
                 </View>
-                <View style={{ width: 2, height: 16, backgroundColor: 'rgba(255,255,255,0.15)', marginLeft: 17, marginBottom: 10 }} />
+                {ride?.status && (
+                  <View style={{ backgroundColor: statusBg(ride.status), borderRadius: 10, paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1, borderColor: statusColor(ride.status) + '44' }}>
+                    <Text style={{ color: statusColor(ride.status), fontSize: 12, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.8 }}>{ride.status}</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={{ color: C.textMuted, fontSize: 12, marginBottom: 20 }}>{dateStr}</Text>
+
+              {/* ── Section 2: Route visual ── */}
+              <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: C.glassBorder }}>
+                {/* Pickup */}
                 <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                  <Text style={{ fontSize: 16, marginRight: 10, marginTop: 1 }}>🏁</Text>
+                  <View style={{ width: 28, alignItems: 'center' }}>
+                    <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: C.mint, marginTop: 3 }} />
+                  </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, marginBottom: 2 }}>DROP</Text>
-                    <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>{billRide?.drop_location}</Text>
+                    <Text style={{ color: 'rgba(0,212,168,0.7)', fontSize: 10, fontWeight: '700', letterSpacing: 1, marginBottom: 3 }}>PICKUP</Text>
+                    <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700', lineHeight: 18 }}>{ride?.pickup || '—'}</Text>
+                  </View>
+                </View>
+                {/* Connecting line */}
+                <View style={{ flexDirection: 'row', marginVertical: 6 }}>
+                  <View style={{ width: 28, alignItems: 'center' }}>
+                    <View style={{ width: 2, height: 28, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 1 }} />
+                  </View>
+                  {distanceKm && (
+                    <View style={{ flex: 1, justifyContent: 'center' }}>
+                      <Text style={{ color: C.textMuted, fontSize: 11 }}>📏 {distanceKm} km</Text>
+                    </View>
+                  )}
+                </View>
+                {/* Drop */}
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                  <View style={{ width: 28, alignItems: 'center' }}>
+                    <View style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: C.pink, marginTop: 3 }} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: 'rgba(255,45,120,0.7)', fontSize: 10, fontWeight: '700', letterSpacing: 1, marginBottom: 3 }}>DROP</Text>
+                    <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700', lineHeight: 18 }}>{ride?.drop_location || '—'}</Text>
                   </View>
                 </View>
               </View>
 
-              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
-                <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: 12 }}>
-                  <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, marginBottom: 4 }}>VEHICLE</Text>
-                  <Text style={{ fontSize: 18, marginBottom: 2 }}>🚗</Text>
-                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>{billVehicle}</Text>
-                  {billData?.vehicle_no ? <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 2 }}>{billData.vehicle_no}</Text> : null}
+              {/* ── Section 3: Driver card ── */}
+              {(ride?.driver_name || rideDetail?.driver_name) && (
+                <View style={{ backgroundColor: 'rgba(255,45,120,0.07)', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(255,45,120,0.18)', flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                  {/* Avatar */}
+                  <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(255,45,120,0.15)', borderWidth: 2, borderColor: 'rgba(255,45,120,0.35)', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 26 }}>👤</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={{ color: '#fff', fontSize: 15, fontWeight: '900' }}>{ride?.driver_name || rideDetail?.driver_name}</Text>
+                      {rideDetail?.driver_verification_status === 'verified' && (
+                        <View style={{ backgroundColor: 'rgba(5,150,105,0.2)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
+                          <Text style={{ color: C.green, fontSize: 9, fontWeight: '800' }}>✓ VERIFIED</Text>
+                        </View>
+                      )}
+                    </View>
+                    {driverRating && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
+                        <Text style={{ color: C.yellow, fontSize: 13 }}>★</Text>
+                        <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>{driverRating}</Text>
+                        <Text style={{ color: C.textMuted, fontSize: 11 }}>driver rating</Text>
+                      </View>
+                    )}
+                    {detailLoading
+                      ? <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 3 }}>Loading vehicle info...</Text>
+                      : (
+                        <View style={{ marginTop: 4 }}>
+                          {vehicleLabel && <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12 }}>{vehicleLabel}</Text>}
+                          {rideDetail?.vehicle_no && (
+                            <View style={{ marginTop: 3, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 6, alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3 }}>
+                              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800', letterSpacing: 1 }}>{rideDetail.vehicle_no}</Text>
+                            </View>
+                          )}
+                        </View>
+                      )
+                    }
+                  </View>
                 </View>
-                <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: 12 }}>
-                  <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, marginBottom: 4 }}>DRIVER</Text>
-                  <Text style={{ fontSize: 18, marginBottom: 2 }}>👤</Text>
-                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>{billRide?.driver_name || billData?.driver_name || 'N/A'}</Text>
-                  {billLoading
-                    ? <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 2 }}>Loading...</Text>
-                    : billData?.distance ? <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 2 }}>{billData.distance} km</Text> : null}
+              )}
+
+              {/* ── Section 4: Fare breakdown ── */}
+              <View style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: C.glassBorder }}>
+                <Text style={{ color: C.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 1.5, marginBottom: 14 }}>FARE BREAKDOWN</Text>
+
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 14 }}>Base Fare</Text>
+                  <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>₹{base.toFixed(2)}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 14 }}>
+                  <View>
+                    <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 14 }}>GST (5%)</Text>
+                    <Text style={{ color: C.textMuted, fontSize: 10, marginTop: 2 }}>Included in fare</Text>
+                  </View>
+                  <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>₹{gst.toFixed(2)}</Text>
+                </View>
+
+                <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginBottom: 14 }} />
+
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900' }}>Total Paid</Text>
+                  <Text style={{ color: C.pink, fontSize: 28, fontWeight: '900' }}>₹{fareNum}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ color: C.textMuted, fontSize: 12 }}>Payment</Text>
+                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{payLabel()}</Text>
                 </View>
               </View>
 
-              <View style={{ borderStyle: 'dashed', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', marginBottom: 14 }} />
-              <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: '700', letterSpacing: 1.5, textAlign: 'center', marginBottom: 14 }}>FARE BREAKDOWN</Text>
-
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 14 }}>Base Fare</Text>
-                <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>₹{billBase.toFixed(2)}</Text>
-              </View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14, alignItems: 'flex-end' }}>
-                <View>
-                  <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 14 }}>GST (5%)</Text>
-                  <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, marginTop: 2 }}>Included in fare</Text>
+              {/* ── Section 5: Rating given ── */}
+              {customerRatingGiven != null && (
+                <View style={{ backgroundColor: 'rgba(251,191,36,0.07)', borderRadius: 14, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(251,191,36,0.18)', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Text style={{ fontSize: 20 }}>⭐</Text>
+                  <View>
+                    <Text style={{ color: C.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 1 }}>YOUR RATING</Text>
+                    <View style={{ flexDirection: 'row', marginTop: 4 }}>
+                      {[1,2,3,4,5].map(s => (
+                        <Text key={s} style={{ fontSize: 18, color: s <= customerRatingGiven ? C.yellow : 'rgba(255,255,255,0.15)' }}>★</Text>
+                      ))}
+                    </View>
+                  </View>
                 </View>
-                <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>₹{billGst.toFixed(2)}</Text>
+              )}
+
+              {/* ── Section 6: Actions ── */}
+              <View style={{ gap: 10 }}>
+                {/* Rebook */}
+                {ride?.status === 'completed' && (
+                  <TouchableOpacity onPress={rebookRide}
+                    style={{ backgroundColor: C.pink, borderRadius: 16, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, elevation: 6, shadowColor: C.pink, shadowOpacity: 0.4, shadowRadius: 12 }}>
+                    <Text style={{ fontSize: 18 }}>🔄</Text>
+                    <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>Rebook This Route</Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Share receipt */}
+                <TouchableOpacity onPress={shareReceipt}
+                  style={{ backgroundColor: '#25D366', borderRadius: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, elevation: 4, shadowColor: '#25D366', shadowOpacity: 0.35, shadowRadius: 10 }}>
+                  <Text style={{ fontSize: 18 }}>📤</Text>
+                  <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>Share Receipt</Text>
+                </TouchableOpacity>
+
+                {/* Report issue */}
+                <TouchableOpacity onPress={() => { closeDetail(); setScreen('complaint-new'); }}
+                  style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: C.glassBorder }}>
+                  <Text style={{ fontSize: 16 }}>🚨</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.7)', fontWeight: '700', fontSize: 14 }}>Report an Issue</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={closeDetail} style={{ paddingVertical: 14, alignItems: 'center' }}>
+                  <Text style={{ color: C.textMuted, fontSize: 14 }}>Dismiss</Text>
+                </TouchableOpacity>
               </View>
-
-              <View style={{ borderStyle: 'dashed', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', marginBottom: 14 }} />
-
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>TOTAL PAID</Text>
-                <Text style={{ color: C.pink, fontSize: 28, fontWeight: '900' }}>₹{billFareNum}</Text>
-              </View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
-                <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12 }}>Payment Mode</Text>
-                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{billPayLabel()}</Text>
-              </View>
-
-              <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: 10, marginBottom: 18, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Text style={{ fontSize: 14 }}>ℹ️</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, lineHeight: 16, flex: 1 }}>
-                  GST is already included in the fare.{'\n'}No additional charges apply.
-                </Text>
-              </View>
-
-              <TouchableOpacity onPress={shareBill}
-                style={{ backgroundColor: '#25D366', borderRadius: 16, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, elevation: 6, shadowColor: '#25D366', shadowOpacity: 0.4, shadowRadius: 10 }}>
-                <Text style={{ fontSize: 20 }}>📤</Text>
-                <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>Share on WhatsApp</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity onPress={closeBill} style={{ marginTop: 12, paddingVertical: 12, alignItems: 'center' }}>
-                <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14 }}>Dismiss</Text>
-              </TouchableOpacity>
 
             </ScrollView>
           </View>
