@@ -890,7 +890,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
     s.on('hourlyDriverArrived', () => {
       setHourlyBooking((p: any) => p ? { ...p, driver_arrived: true } : p);
-      setResult('📍 Sppero Buddy pickup point pe pahunch gaya! OTP batao aur trip shuru karo.');
+      setResult('📍 Your Sppero Buddy has arrived! Share the OTP to start the trip.');
     });
     s.on('hourlyDriverCancelled', () => {
       setHourlyBooking((p: any) => p ? { ...p, status: 'pending', driver_phone: null } : p);
@@ -974,14 +974,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setScreen((cur: Screen) => (cur === 'payment' || cur === 'postride') ? cur : 'payment');
         loadWallet(phoneRef.current || userPhone);
       }
-      if (st === 'buddy_declined') { buddyWaitingRef.current = false; setBuddyWaiting(false); setBuddyBookMsg('⚠️ Buddy ne abhi accept nahi kiya. Ab doosre drivers dhundh rahe hain...'); }
+      if (st === 'buddy_declined') { buddyWaitingRef.current = false; setBuddyWaiting(false); setBuddyBookMsg('⚠️ Buddy did not accept. Searching other drivers...'); }
       if (st === 'cancelled') {
         AsyncStorage.removeItem('activeStdRideId').catch(() => {});
         ride.clearRide();
         setRideData(null); setAltSuggest(null); setDriverLoc(null); setServerSurgeOffer(null); setNoDriverFinal(null);
         setPickup(''); setDrop(''); setPickupCoords(null); setDropCoords(null); setEta('');
         buddyWaitingRef.current = false; setBuddyWaiting(false); setBuddyBookMsg('');
-        setScreen('home'); setResult('❌ Ride cancel ho gayi');
+        setScreen('home'); setResult('❌ Ride cancelled');
       }
       if (st === 'surge_offer') {
         // Server detected no driver accepted — offer surge to customer
@@ -1008,10 +1008,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setPickup(''); setDrop(''); setPickupCoords(null); setDropCoords(null); setEta('');
         if (buddyWaitingRef.current) {
           buddyWaitingRef.current = false; setBuddyWaiting(false);
-          setBuddyBookMsg('⏰ Driver ne 25 seconds mein respond nahi kiya — naya ride try karo');
+          setBuddyBookMsg('⏰ Driver did not respond in 25 seconds — try a new ride');
         } else {
           setBuddyWaiting(false); setBuddyBookMsg(''); setScreen('home');
-          setResult('😔 Abhi driver available nahi — thodi der baad try karo');
+          setResult('😔 No drivers available right now — try again shortly');
         }
       }
     });
@@ -1061,17 +1061,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const data = await apiPost('/api/auth/send-otp', { phone });
       if (data._error || data.error) { setResult('❌ ' + (data.message || data.error || 'Server error')); return; }
       setOtpSent(data.otp || ''); setScreen('otp'); setResult('');
-    } catch { setResult('❌ Server connect nahi hua'); }
+    } catch { setResult('❌ Could not connect to server'); }
     finally { setLoading(false); }
   };
 
   const verifyOtp = async (otpOverride?: string) => {
     const otpToUse = otpOverride || otp;
-    if (!otpToUse) { setResult('❌ OTP likho'); return; }
+    if (!otpToUse) { setResult('❌ Enter OTP'); return; }
     setLoading(true);
     try {
       const data = await apiPost('/api/auth/verify-otp', { phone, otp: otpToUse, name: userName || 'Rider' });
-      if (data._error) { setResult('❌ ' + (data.message || 'Server connect nahi hua')); shakeOtp(); return; }
+      if (data._error) { setResult('❌ ' + (data.message || 'Could not connect to server')); shakeOtp(); return; }
       if (data.token) {
         await AsyncStorage.setItem('userPhone', phone);
         await AsyncStorage.setItem('userToken', data.token);
@@ -1094,14 +1094,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           registerFCM(phone); loadOffers(); loadHourlyPackages(); connectSocket(phone);
         }
       } else {
-        setResult('❌ ' + (data.error || 'OTP galat hai')); shakeOtp();
+        setResult('❌ ' + (data.error || 'Incorrect OTP')); shakeOtp();
       }
-    } catch { setResult('❌ Server connect nahi hua'); }
+    } catch { setResult('❌ Could not connect to server'); }
     finally { setLoading(false); }
   };
 
   const completeOnboarding = async () => {
-    if (!userName.trim()) { setResult('❌ Naam likhna zaroori hai'); return; }
+    if (!userName.trim()) { setResult('❌ Name is required'); return; }
     setLoading(true);
     const finalName = userName.trim();
     try {
@@ -1158,10 +1158,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // ── Location + ETA ───────────────────────────────────────────────────────
   const useMyLocation = async () => {
-    setResult('📍 Location le rahe hain...');
+    setResult('📍 Getting your location...');
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') { setResult('❌ Location permission do'); return; }
+      if (status !== 'granted') { setResult('❌ Location permission denied'); return; }
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
       const lat = loc.coords.latitude; const lng = loc.coords.longitude;
       setUserCoords({ latitude: lat, longitude: lng }); setPickupCoords({ lat, lng });
@@ -1169,7 +1169,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${MAPS_KEY}&language=en`);
         const data = await res.json();
         if (data.results?.[0]) {
-          setPickup(data.results[0].formatted_address); setResult('✅ Location mil gayi!');
+          setPickup(data.results[0].formatted_address); setResult('✅ Location found!');
           if (drop) {
             const etaRes = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${lat},${lng}&destinations=${encodeURIComponent(drop)}&key=${MAPS_KEY}&mode=driving&departure_time=now`);
             const etaData = await etaRes.json();
@@ -1178,12 +1178,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
         } else {
           const geo = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
-          if (geo[0]) { const a = geo[0]; setPickup([a.streetNumber, a.street, a.district, a.city].filter(Boolean).join(', ')); setResult('✅ Location mil gayi!'); }
+          if (geo[0]) { const a = geo[0]; setPickup([a.streetNumber, a.street, a.district, a.city].filter(Boolean).join(', ')); setResult('✅ Location found!'); }
         }
       } catch (_e) {
         const geo = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
         if (geo[0]) { const a = geo[0]; setPickup([a.streetNumber, a.street, a.city].filter(Boolean).join(', ')); }
-        setResult('✅ Location mil gayi!');
+        setResult('✅ Location found!');
       }
     } catch (_e) { setResult('❌ Location error'); }
   };
@@ -1264,7 +1264,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const bookRide = async () => {
-    if (!pickup || !drop) { setResult('❌ Pickup aur Drop likho!'); return; }
+    if (!pickup || !drop) { setResult('❌ Enter pickup and drop locations'); return; }
     setLoading(true); setPaymentDone(false);
     try {
       const ddata = await externalGet(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(pickup)}&destinations=${encodeURIComponent(drop)}&key=${MAPS_KEY}&mode=driving&departure_time=now`);
@@ -1315,7 +1315,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ride.setRide(data); ride.startPolling(phone || '9999999999');
       setBookTime(Date.now()); setCancelTimer(60); setSurgeCount(0); setSurgeFare(''); setSearchElapsed(0);
       try { const csd = await apiGet(`/api/customer/cancel-status?phone=${phone || '9999999999'}`); setFreeCancelsLeft(csd.free_cancels_left ?? 3); } catch (_e) {}
-    } catch { setResult('❌ Server connect nahi hua!'); }
+    } catch { setResult('❌ Could not connect to server'); }
     finally { setLoading(false); }
   };
 
@@ -1338,8 +1338,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (res._error) { setResult('❌ ' + res.message); return; }
       setAltSuggest(null);
       setRideData((p: any) => p ? { ...p, ride_type: newType, fare: res.new_fare } : p);
-      setResult(`🔄 ${newType.toUpperCase()} driver dhundh rahe hain...`);
-    } catch { setResult('❌ Switch nahi hua, try again'); }
+      setResult(`🔄 Searching for ${newType.toUpperCase()} driver...`);
+    } catch { setResult('❌ Switch failed, try again'); }
     finally { setSwitchingVehicle(false); }
   };
 
@@ -1353,19 +1353,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       reason.includes('cancel') ||
       desc.includes('cancel') ||
       (code === 'BAD_REQUEST_ERROR' && reason === 'payment_error' && (!e?.description || e?.description === 'undefined'));
-    if (isCancelled)   return { cancelled: true,  msg: 'Payment aapne cancel kiya' };
-    if (code === 'NETWORK_ERROR') return { cancelled: false, msg: 'Internet slow tha. Dobara try karo — paise nahi kate.' };
-    if (code === 'SERVER_ERROR')  return { cancelled: false, msg: 'Payment server se connect nahi hua. Thodi der mein try karo.' };
-    return { cancelled: false, msg: 'Payment nahi hua. Dobara try karo — paise nahi kate honge.' };
+    if (isCancelled)   return { cancelled: true,  msg: 'Payment cancelled' };
+    if (code === 'NETWORK_ERROR') return { cancelled: false, msg: 'Slow connection. Try again — you were not charged.' };
+    if (code === 'SERVER_ERROR')  return { cancelled: false, msg: 'Payment server unreachable. Try again shortly.' };
+    return { cancelled: false, msg: 'Payment failed. Try again — you were not charged.' };
   };
 
   // ── Payment ──────────────────────────────────────────────────────────────
   const handlePayment = async () => {
-    if (!RazorpayCheckout) { Alert.alert('Payment Error', 'Payment module load nahi hua. App restart karein.'); return; }
+    if (!RazorpayCheckout) { Alert.alert('Payment Error', 'Payment module failed to load. Please restart the app.'); return; }
     try {
       const fareNum = Math.round(parseFloat(String(rideData?.fare ?? '').replace(/[^0-9.]/g, '')) || 0) || fareCount;
       const order = await apiPost('/api/payment/create-order', { amount: fareNum, ride_id: rideData.ride_id });
-      if (!order.success) { setResult('❌ ' + (order.error || 'Order create nahi hua')); return; }
+      if (!order.success) { setResult('❌ ' + (order.error || 'Could not create order')); return; }
       RazorpayCheckout.open({ description: 'Sppero Trip', currency: 'INR', key: order.key_id, amount: order.amount, order_id: order.order_id, name: 'Sppero', prefill: { contact: phone, name: userName || 'User' }, theme: { color: C.pink } })
         .then(async (data: any) => {
           apiPost('/api/payment/verify', { ride_id: rideData.ride_id, razorpay_payment_id: data.razorpay_payment_id, razorpay_order_id: data.razorpay_order_id, razorpay_signature: data.razorpay_signature, amount: fareNum, method: 'online' }).catch(() => {});
@@ -1374,9 +1374,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           AsyncStorage.removeItem('activeStdRideId').catch(() => {});
         }).catch((e: any) => {
           const { cancelled, msg } = rzpErr(e);
-          setResult(cancelled ? '❌ Payment cancel kiya' : `❌ ${msg}`);
+          setResult(cancelled ? '❌ Payment cancelled' : `❌ ${msg}`);
         });
-    } catch (e: any) { setResult('❌ Payment nahi hua. Dobara try karo.'); }
+    } catch (e: any) { setResult('❌ Payment failed. Please try again.'); }
   };
 
   const payWithWallet = async () => {
@@ -1411,7 +1411,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } else {
         setResult('❌ ' + (data.message || 'Wallet payment fail'));
       }
-    } catch (_e) { setResult('❌ Server se connect nahi hua'); }
+    } catch (_e) { setResult('❌ Could not connect to server'); }
     payingRef.current = false;
   };
 
@@ -1433,23 +1433,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const openRazorpayTopup = async (amt: number) => {
     if (amt < 1) return;
-    if (!RazorpayCheckout) { Alert.alert('Error', 'Payment module load nahi hua. App restart karein.'); return; }
+    if (!RazorpayCheckout) { Alert.alert('Error', 'Payment module failed to load. Please restart the app.'); return; }
     try {
       const d = await apiPost('/api/wallet/topup/order', { phone, amount: amt });
-      if (!d.success) { Alert.alert('Payment Error', d.error || 'Payment start nahi hua'); return; }
+      if (!d.success) { Alert.alert('Payment Error', d.error || 'Could not initiate payment'); return; }
       RazorpayCheckout.open({ key: d.key_id, amount: d.amount, currency: d.currency || 'INR', order_id: d.order_id, name: 'Sppero', description: `Wallet Recharge ₹${amt}`, prefill: { contact: phone }, theme: { color: C.pink } })
         .then(async (payment: any) => {
           try {
             const vd = await apiPost('/api/wallet/topup/verify', { phone, razorpay_order_id: payment.razorpay_order_id, razorpay_payment_id: payment.razorpay_payment_id, razorpay_signature: payment.razorpay_signature, amount: amt });
-            if (vd.success) { setWalletBalance(vd.balance); await loadWalletDetail(phone); Alert.alert('✅ Wallet Recharged!', `₹${amt} aapke wallet mein add ho gaya!`); }
-            else { Alert.alert('Payment Fail', 'Payment verify nahi hua. Balance thodi der mein refresh ho jayega.'); }
-          } catch (_e) { Alert.alert('Network Error', 'Payment hua lekin verify nahi hua. Thodi der mein balance refresh karein.'); }
+            if (vd.success) { setWalletBalance(vd.balance); await loadWalletDetail(phone); Alert.alert('✅ Wallet Recharged!', `₹${amt} has been added to your wallet!`); }
+            else { Alert.alert('Payment Failed', 'Payment could not be verified. Your balance will refresh shortly.'); }
+          } catch (_e) { Alert.alert('Network Error', 'Payment done but verification pending. Refresh your balance in a moment.'); }
         }).catch((e: any) => {
           const { cancelled, msg } = rzpErr(e);
           if (!cancelled) Alert.alert('Payment Fail', msg);
           // cancelled = user tapped back — silent, no alert needed
         });
-    } catch (_e) { Alert.alert('Error', 'Server se connect nahi hua. Internet check karein.'); }
+    } catch (_e) { Alert.alert('Error', 'Could not connect to server. Please check your internet.'); }
   };
 
   const addMoney = async (amt: number) => { openRazorpayTopup(amt); };
@@ -1544,7 +1544,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const driverPart = rideData
         ? `\nDriver: ${rideData.driver_name || 'Unknown'} | Vehicle: ${rideData.vehicle_no || 'Unknown'} | Ride #${rideData.ride_id}`
         : '';
-      const message = `🆘 EMERGENCY — Mujhe turant madad chahiye!\nMain Sppero ride pe hun.${driverPart}\n📍 Meri abhi ki location:\n${locUrl}\n\nKripya mujhe call karo ya police (100) ko khaber karo.`;
+      const message = `🆘 EMERGENCY — I need immediate help!\nI am on a Sppero ride.${driverPart}\n📍 My current location:\n${locUrl}\n\nPlease call me or alert the police (100).`;
       const encoded = encodeURIComponent(message);
       // Open WhatsApp for the first contact; others get alerted via SMS fallback
       const first = contacts[0];
@@ -1568,11 +1568,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
   const shareReferral = async () => {
     if (!referralData?.code) return;
-    try { await Share.share({ message: `🚖 Sppero join karo aur ₹50 pao! Mera referral code: ${referralData.code}` }); } catch (_e) {}
+    try { await Share.share({ message: `🚖 Join Sppero and get ₹50! Use my referral code: ${referralData.code}` }); } catch (_e) {}
   };
   const savePlace = async (label: string) => {
-    if (!pickup) { setResult('❌ Pehle location set karo'); return; }
-    try { await fetch(`${API}/api/places/save`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, label, address: pickup, lat: pickupCoords?.lat, lng: pickupCoords?.lng }) }); loadSaved(); setResult(`✅ ${label} save ho gaya!`); } catch (_e) {}
+    if (!pickup) { setResult('❌ Set a location first'); return; }
+    try { await fetch(`${API}/api/places/save`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, label, address: pickup, lat: pickupCoords?.lat, lng: pickupCoords?.lng }) }); loadSaved(); setResult(`✅ ${label} saved!`); } catch (_e) {}
   };
   const deletePlace = async (id: number) => {
     try { await fetch(`${API}/api/places/delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }); loadSaved(); } catch (_e) {}
@@ -1596,9 +1596,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (bookingId) body.booking_id = bookingId;
       const r = await fetch(`${API}/api/call/initiate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await r.json();
-      if (!data.success) { Alert.alert('Call', data.error || 'Call nahi ho saki'); return; }
+      if (!data.success) { Alert.alert('Call', data.error || 'Call could not be placed'); return; }
       if (data.method === 'direct' && data.call_number) Linking.openURL(`tel:${data.call_number}`);
-      else if (data.method === 'exotel') Alert.alert('📞 Calling', 'Aapke phone pe call aa rahi hai...');
+      else if (data.method === 'exotel') Alert.alert('📞 Calling', 'You will receive a call shortly...');
     } catch (_e) { Alert.alert('Error', 'Network error'); }
   };
   const callDriver = () => initiateCall(rideData?.ride_id ?? null);

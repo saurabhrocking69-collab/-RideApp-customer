@@ -109,7 +109,7 @@ function TapHint({ visible }: { visible: boolean }) {
   return (
     <Animated.View style={[styles.tapHint, { opacity }]} pointerEvents="none">
       <Ionicons name="finger-print" size={13} color="#fff" />
-      <Text style={styles.tapHintTxt}>Map pe tap karo — drop set karo</Text>
+      <Text style={styles.tapHintTxt}>Tap on map to set drop location</Text>
     </Animated.View>
   );
 }

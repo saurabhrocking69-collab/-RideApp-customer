@@ -42,11 +42,11 @@ export function getUnreadCount(): number {
 function timeAgo(ts: number): string {
   const diff = Date.now() - ts;
   const min  = Math.floor(diff / 60000);
-  if (min < 1)   return 'abhi';
-  if (min < 60)  return `${min} min pehle`;
+  if (min < 1)   return 'just now';
+  if (min < 60)  return `${min} min ago`;
   const hr = Math.floor(min / 60);
-  if (hr < 24)   return `${hr} ghante pehle`;
-  return `${Math.floor(hr / 24)} din pehle`;
+  if (hr < 24)   return `${hr}h ago`;
+  return `${Math.floor(hr / 24)}d ago`;
 }
 
 // ── Icon config ───────────────────────────────────────────────────────────────
@@ -187,8 +187,8 @@ export function NotificationCenter({ visible, onClose, phone }: CenterProps) {
             {notifs.length === 0 ? (
               <View style={{ alignItems: 'center', paddingVertical: 48 }}>
                 <Text style={{ fontSize: 40 }}>🔔</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, marginTop: 12, fontWeight: '600' }}>Koi notification nahi</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12, marginTop: 4 }}>Ride book karo to updates milenge</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, marginTop: 12, fontWeight: '600' }}>No notifications yet</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12, marginTop: 4 }}>Book a ride to see updates here</Text>
               </View>
             ) : (
               notifs.map(n => {

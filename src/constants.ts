@@ -12,7 +12,7 @@ export const DEFAULT_HOURLY_PACKAGES: any = {
 };
 
 export const RIDES = [
-  { id: 'bike',          icon: '🏍️', label: 'Bike',          base: 15, rate: 8,  eta: '2-3 min',  tag: 'FASTEST',  tagColor: '#FF6B35', desc: 'Traffic cut karo fast' },
+  { id: 'bike',          icon: '🏍️', label: 'Bike',          base: 15, rate: 8,  eta: '2-3 min',  tag: 'FASTEST',  tagColor: '#FF6B35', desc: 'Fastest — cuts through traffic' },
   { id: 'auto',          icon: '🛺', label: 'Auto',           base: 25, rate: 12, eta: '3-5 min',  tag: null,       tagColor: '',        desc: 'Budget friendly ride' },
   { id: 'car',           icon: '🚕', label: 'Car',            base: 40, rate: 15, eta: '5-7 min',  tag: 'POPULAR',  tagColor: '#2196F3', desc: 'AC • Comfortable' },
   { id: 'eriksha',       icon: '🛵', label: 'E-Riksha',       base: 20, rate: 10, eta: '4-6 min',  tag: 'ECO',      tagColor: '#4CAF50', desc: 'Eco-friendly ride' },
