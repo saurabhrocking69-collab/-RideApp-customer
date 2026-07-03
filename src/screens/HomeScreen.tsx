@@ -581,8 +581,13 @@ function HomeTab() {
           </View>
         </TouchableOpacity>
 
+        {/* City Map Card */}
+        <View style={{ marginHorizontal: 16, marginTop: 14, marginBottom: 14 }}>
+          <LucknowCityCard />
+        </View>
+
         {/* Content sheet */}
-        <View style={{ backgroundColor: C.bg, borderTopLeftRadius: 0, paddingTop: 14, paddingHorizontal: 16, marginTop: 14, minHeight: 600 }}>
+        <View style={{ backgroundColor: C.bg, borderTopLeftRadius: 0, paddingTop: 14, paddingHorizontal: 16, marginTop: 0, minHeight: 600 }}>
 
           {/* Ride stats strip */}
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>

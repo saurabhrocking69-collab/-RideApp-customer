@@ -799,35 +799,35 @@ export const LucknowCityCard = () => {
   const DOT_Y = 48;
 
   return (
-    <View style={{ height: 148, backgroundColor: '#E8EBF5', overflow: 'hidden' }}>
-      {/* Grid lines */}
+    <View style={{ height: 148, backgroundColor: 'rgba(13,6,24,0.95)', overflow: 'hidden', borderRadius: 18, borderWidth: 1, borderColor: 'rgba(255,45,120,0.14)' }}>
+      {/* Grid lines — neon dim */}
       {[33, 66].map(p => (
-        <View key={`h${p}`} style={{ position: 'absolute', left: 0, right: 0, top: `${p}%` as any, height: 1, backgroundColor: 'rgba(120,130,200,0.07)' }} />
+        <View key={`h${p}`} style={{ position: 'absolute', left: 0, right: 0, top: `${p}%` as any, height: 1, backgroundColor: 'rgba(255,45,120,0.06)' }} />
       ))}
       {[25, 50, 75].map(p => (
-        <View key={`v${p}`} style={{ position: 'absolute', top: 0, bottom: 0, left: `${p}%` as any, width: 1, backgroundColor: 'rgba(120,130,200,0.07)' }} />
+        <View key={`v${p}`} style={{ position: 'absolute', top: 0, bottom: 0, left: `${p}%` as any, width: 1, backgroundColor: 'rgba(0,212,168,0.05)' }} />
       ))}
 
-      {/* India-silhouette blobs */}
-      <View style={{ position: 'absolute', width: 220, height: 165, borderTopRightRadius: 90, borderBottomRightRadius: 55, borderBottomLeftRadius: 75, borderTopLeftRadius: 50, backgroundColor: 'rgba(140,148,210,0.11)', top: -8, left: -18 }} />
-      <View style={{ position: 'absolute', width: 110, height: 125, borderRadius: 55, borderBottomLeftRadius: 18, borderBottomRightRadius: 28, backgroundColor: 'rgba(140,148,210,0.08)', top: 0, right: 36 }} />
-      <View style={{ position: 'absolute', width: 65, height: 75, borderTopRightRadius: 32, borderTopLeftRadius: 32, borderBottomLeftRadius: 8, borderBottomRightRadius: 8, backgroundColor: 'rgba(140,148,210,0.06)', bottom: 0, right: 76 }} />
+      {/* Ambient glow blobs */}
+      <View style={{ position: 'absolute', width: 180, height: 130, borderTopRightRadius: 90, borderBottomRightRadius: 55, borderBottomLeftRadius: 75, borderTopLeftRadius: 50, backgroundColor: 'rgba(46,20,97,0.5)', top: -10, left: -18 }} />
+      <View style={{ position: 'absolute', width: 100, height: 110, borderRadius: 50, backgroundColor: 'rgba(46,20,97,0.4)', top: 0, right: 36 }} />
+      <View style={{ position: 'absolute', width: 60, height: 65, borderTopRightRadius: 30, borderTopLeftRadius: 30, backgroundColor: 'rgba(255,45,120,0.06)', bottom: 0, right: 76 }} />
 
       {/* Dotted route line */}
       <View style={{ position: 'absolute', top: DOT_Y - 1, left: PAD, right: PAD, flexDirection: 'row', overflow: 'hidden', height: 3, alignItems: 'center' }}>
         {Array.from({ length: 40 }).map((_, i) => (
-          <View key={i} style={{ width: 6, height: 2.5, borderRadius: 1.5, backgroundColor: 'rgba(255,45,120,0.38)', marginRight: 4 }} />
+          <View key={i} style={{ width: 6, height: 2.5, borderRadius: 1.5, backgroundColor: 'rgba(255,45,120,0.50)', marginRight: 4 }} />
         ))}
       </View>
 
-      {/* Animated traveling dot with glow */}
+      {/* Animated traveling dot with pink glow */}
       <Animated.View style={{
         position: 'absolute', top: DOT_Y - 8, left: 0,
         width: 16, height: 16, borderRadius: 8,
         backgroundColor: C.pink,
-        borderWidth: 3, borderColor: '#fff',
+        borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.9)',
         elevation: 10,
-        shadowColor: C.pink, shadowOpacity: 0.35, shadowRadius: 4,
+        shadowColor: C.pink, shadowOpacity: 0.75, shadowRadius: 8,
         transform: [
           { translateX: dotX.interpolate({ inputRange: [0, 1], outputRange: [PAD - 8, W - PAD - 8] }) },
           { scale: glow },
@@ -839,29 +839,29 @@ export const LucknowCityCard = () => {
         {landmarks.map((l, i) => (
           <View key={i} style={{ alignItems: 'center', flex: 1 }}>
             <Text style={{ fontSize: 17, lineHeight: 22 }}>{l.icon}</Text>
-            <View style={{ width: 1.5, height: 18, backgroundColor: 'rgba(255,45,120,0.20)', marginTop: 1 }} />
-            <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: C.pink, borderWidth: 1.5, borderColor: '#fff', marginTop: -1 }} />
-            <Text style={{ fontSize: 6.5, color: '#6B7CB0', fontWeight: '700', textAlign: 'center', marginTop: 3, lineHeight: 9 }} numberOfLines={2}>{l.label}</Text>
+            <View style={{ width: 1.5, height: 18, backgroundColor: 'rgba(255,45,120,0.28)', marginTop: 1 }} />
+            <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: C.pink, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.5)', marginTop: -1 }} />
+            <Text style={{ fontSize: 6.5, color: 'rgba(255,255,255,0.45)', fontWeight: '700', textAlign: 'center', marginTop: 3, lineHeight: 9 }} numberOfLines={2}>{l.label}</Text>
           </View>
         ))}
       </View>
 
       {/* Road line */}
-      <View style={{ position: 'absolute', bottom: 22, left: 0, right: 0, height: 1.5, backgroundColor: 'rgba(155,165,220,0.38)' }} />
+      <View style={{ position: 'absolute', bottom: 22, left: 0, right: 0, height: 1.5, backgroundColor: 'rgba(255,45,120,0.18)' }} />
 
       {/* Animated auto */}
       <Animated.View style={{ position: 'absolute', bottom: 13, transform: [{ translateX: autoX }] }}>
         <Text style={{ fontSize: 17, transform: [{ scaleX: -1 }] }}>🛺</Text>
       </Animated.View>
 
-      {/* Location dots — decorative */}
-      <View style={{ position: 'absolute', top: '12%' as any, left: '7%' as any, width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(124,58,237,0.28)' }} />
-      <View style={{ position: 'absolute', top: '32%' as any, left: '14%' as any, width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(124,58,237,0.22)' }} />
-      <View style={{ position: 'absolute', top: '18%' as any, right: '14%' as any, width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(124,58,237,0.22)' }} />
-      <View style={{ position: 'absolute', top: '42%' as any, right: '24%' as any, width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(124,58,237,0.18)' }} />
+      {/* Decorative location ping dots */}
+      <View style={{ position: 'absolute', top: '12%' as any, left: '7%' as any, width: 4, height: 4, borderRadius: 2, backgroundColor: 'rgba(0,212,168,0.40)' }} />
+      <View style={{ position: 'absolute', top: '32%' as any, left: '14%' as any, width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(0,212,168,0.28)' }} />
+      <View style={{ position: 'absolute', top: '18%' as any, right: '14%' as any, width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,45,120,0.35)' }} />
+      <View style={{ position: 'absolute', top: '42%' as any, right: '24%' as any, width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,45,120,0.28)' }} />
 
-      {/* LUCKNOW badge */}
-      <View style={{ position: 'absolute', bottom: 5, right: 10, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,45,120,0.10)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(255,45,120,0.20)' }}>
+      {/* INDIA badge */}
+      <View style={{ position: 'absolute', bottom: 5, right: 10, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,45,120,0.12)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(255,45,120,0.28)' }}>
         <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: C.pink }} />
         <Text style={{ color: C.pink, fontSize: 9, fontWeight: '900', letterSpacing: 1.5 }}>INDIA</Text>
       </View>
