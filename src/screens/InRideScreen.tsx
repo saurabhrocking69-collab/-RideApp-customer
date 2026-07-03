@@ -52,7 +52,7 @@ function InlineSOSButton({ onActivate, active }: { onActivate: () => void; activ
         }}>
           <Ionicons name="warning" size={22} color={C.red} />
           <Text style={{ fontSize: 10, color: C.red, marginTop: 3, fontWeight: '800' }}>
-            {active ? '🆘 Sent!' : holding ? 'Ruko...' : 'Hold SOS'}
+            {active ? '🆘 Sent!' : holding ? 'Hold...' : 'Hold SOS'}
           </Text>
         </Animated.View>
       </TouchableOpacity>
@@ -110,7 +110,7 @@ export function InRideScreen() {
   return (
     <View style={s.screen}>
       <View style={{
-        backgroundColor: C.plum, overflow: 'hidden',
+        backgroundColor: C.night, overflow: 'hidden',
         paddingTop: Platform.OS === 'android' ? 46 : 52,
         paddingBottom: 16, paddingHorizontal: SP.md,
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -122,7 +122,7 @@ export function InRideScreen() {
             <Text style={{ fontSize: 18 }}>{vEmoji}</Text>
           </View>
           <View>
-            <Text style={{ ...T.bodyBold, color: '#fff' }}>Ride Chal Rahi Hai</Text>
+            <Text style={{ ...T.bodyBold, color: '#fff' }}>Ride In Progress</Text>
             <Text style={{ ...T.caption, color: 'rgba(255,255,255,0.55)', marginTop: 1 }}>{vType.charAt(0).toUpperCase() + vType.slice(1)}</Text>
           </View>
         </View>
@@ -148,10 +148,11 @@ export function InRideScreen() {
         <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} live={true} />
       </View>
 
-      <GlassPanel intensity={20} style={{
+      <GlassPanel intensity={22} style={{
         flex: 1, borderTopLeftRadius: 24, borderTopRightRadius: 24,
         marginTop: -20, paddingTop: 16, paddingHorizontal: 16,
-        elevation: 12, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 16,
+        elevation: 12, shadowColor: C.pink, shadowOpacity: 0.12, shadowRadius: 18,
+        borderTopWidth: 1.5, borderTopColor: 'rgba(255,45,120,0.22)',
       }}>
         <TripSteps step={2} />
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
@@ -161,7 +162,8 @@ export function InRideScreen() {
             <View style={{
               backgroundColor: C.bgCard, borderRadius: R.md, padding: SP.md, marginBottom: 10,
               flexDirection: 'row', alignItems: 'center', gap: 12,
-              borderWidth: 1.5, borderColor: C.glassBorder, ...SHADOW.sm,
+              borderWidth: 1.5, borderColor: C.pinkBorder,
+              elevation: 6, shadowColor: C.pink, shadowOpacity: 0.15, shadowRadius: 12,
             }}>
               <View style={{ position: 'relative' }}>
                 {driver.photo ? (
@@ -198,15 +200,15 @@ export function InRideScreen() {
 
           {/* Live trip stats */}
           <View style={{
-            backgroundColor: C.greenGlass, borderRadius: R.md, padding: SP.md,
-            marginBottom: 10, borderWidth: 1.5, borderColor: C.greenBorder,
+            backgroundColor: 'rgba(0,212,168,0.10)', borderRadius: R.md, padding: SP.md,
+            marginBottom: 10, borderWidth: 1.5, borderColor: 'rgba(0,212,168,0.30)',
             flexDirection: 'row', alignItems: 'center',
           }}>
             <PulseView style={{ marginRight: 10 }}>
-              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.green, elevation: 2, shadowColor: C.green, shadowOpacity: 0.6, shadowRadius: 4 }} />
+              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#00D4A8', elevation: 2, shadowColor: '#00D4A8', shadowOpacity: 0.7, shadowRadius: 6 }} />
             </PulseView>
             <View style={{ flex: 1 }}>
-              <Text style={{ ...T.bodyBold, color: C.green }}>Live — Chal Rahi Hai</Text>
+              <Text style={{ ...T.bodyBold, color: '#00D4A8' }}>Live — In Progress</Text>
               {(rideData?.distance || driverDist) ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
                   <View style={{ backgroundColor: 'rgba(0,200,83,0.12)', borderRadius: R.xs, paddingHorizontal: 6, paddingVertical: 2 }}>
@@ -281,8 +283,8 @@ export function InRideScreen() {
             }}>
               <Ionicons name="warning" size={18} color={C.red} />
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, color: C.red, fontWeight: '900' }}>🆘 SOS Alert bheja!</Text>
-                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>Emergency contacts ko WhatsApp message gaya. Police: 100</Text>
+                <Text style={{ fontSize: 13, color: C.red, fontWeight: '900' }}>🆘 SOS Alert Sent!</Text>
+                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>Emergency contacts notified via WhatsApp. Police: 100</Text>
               </View>
             </View>
           )}
@@ -303,7 +305,7 @@ export function InRideScreen() {
           )}
           {!chatToast && unreadChat > 0 && (
             <TouchableOpacity style={s.chatAlert} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
-              <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>💬 Driver ke {unreadChat} message — tap to read</Text>
+              <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>💬 {unreadChat} new message from driver — tap to read</Text>
             </TouchableOpacity>
           )}
         </ScrollView>

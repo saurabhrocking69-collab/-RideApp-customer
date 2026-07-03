@@ -44,7 +44,7 @@ export function WalletScreen() {
       <DotBG />
 
       {/* ── Header ── */}
-      <View style={{ backgroundColor: C.plum, paddingTop: SB_H + 14, paddingBottom: 22, paddingHorizontal: 18, overflow: 'hidden' }}>
+      <View style={{ backgroundColor: C.night, paddingTop: SB_H + 14, paddingBottom: 22, paddingHorizontal: 18, overflow: 'hidden' }}>
         <View style={{ position: 'absolute', width: 240, height: 240, borderRadius: 120, backgroundColor: 'rgba(255,45,120,0.10)', top: -80, right: -60 }} />
         <View style={{ position: 'absolute', width: 130, height: 130, borderRadius: 65, backgroundColor: 'rgba(255,255,255,0.04)', bottom: -50, left: -20 }} />
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -146,7 +146,7 @@ export function WalletScreen() {
           <View style={{ flex: 1 }}>
             <Text style={{ color: C.pink, fontWeight: '900', fontSize: 14 }}>Cashback Rewards</Text>
             <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 2 }}>
-              {rewardsDash ? `₹${(rewardsDash.total_cashback_earned || 0).toFixed(0)} earned so far · ` : ''}Har ride pe cashback!
+              {rewardsDash ? `₹${(rewardsDash.total_cashback_earned || 0).toFixed(0)} earned so far · ` : ''}Cashback on every ride!
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={C.textDim} />
@@ -173,7 +173,7 @@ export function WalletScreen() {
           {filteredTxns.length === 0 ? (
             <View style={{ alignItems: 'center', padding: 40 }}>
               <Text style={{ fontSize: 40 }}>💸</Text>
-              <Text style={{ color: C.textDim, marginTop: 10, fontSize: 14 }}>Koi transaction nahi mili</Text>
+              <Text style={{ color: C.textDim, marginTop: 10, fontSize: 14 }}>No transactions found</Text>
             </View>
           ) : filteredTxns.map((t: any, i: number) => (
             <View key={t.id || i} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: C.glass, borderRadius: 16, padding: 14, marginBottom: 8, elevation: 2, borderWidth: 1, borderColor: C.glassBorder }}>

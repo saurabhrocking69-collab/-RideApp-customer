@@ -12,10 +12,10 @@ const SB_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 
 
 // ── UPI App tiles config ──────────────────────────────────────────────────────
 const UPI_APPS = [
-  { id: 'phonepe', name: 'PhonePe',    icon: '🟣', color: '#6B21A8', bg: '#F3E8FF', border: '#A855F7' },
-  { id: 'gpay',    name: 'Google Pay', icon: '🔵', color: '#1D4ED8', bg: '#EFF6FF', border: '#3B82F6' },
-  { id: 'paytm',   name: 'Paytm',      icon: '🔷', color: '#0369A1', bg: '#E0F2FE', border: '#0EA5E9' },
-  { id: 'bhim',    name: 'BHIM UPI',   icon: '🟠', color: '#B45309', bg: '#FFF7ED', border: '#F59E0B' },
+  { id: 'phonepe', name: 'PhonePe',    icon: '🟣', color: '#C084FC', bg: 'rgba(168,85,247,0.14)', border: '#A855F7' },
+  { id: 'gpay',    name: 'Google Pay', icon: '🔵', color: '#60A5FA', bg: 'rgba(59,130,246,0.14)',  border: '#3B82F6' },
+  { id: 'paytm',   name: 'Paytm',      icon: '🔷', color: '#38BDF8', bg: 'rgba(14,165,233,0.14)', border: '#0EA5E9' },
+  { id: 'bhim',    name: 'BHIM UPI',   icon: '🟠', color: '#FBBF24', bg: 'rgba(245,158,11,0.14)', border: '#F59E0B' },
 ];
 
 export function PaymentScreen() {
@@ -82,7 +82,7 @@ export function PaymentScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900' }}>Scan & Pay</Text>
-          <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, marginTop: 1 }}>Koi bhi UPI app se scan karo</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, marginTop: 1 }}>Scan with any UPI app</Text>
         </View>
         {/* Sppero brand chip */}
         <View style={{ backgroundColor: C.pink + '22', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: C.pink + '55' }}>
@@ -134,7 +134,7 @@ export function PaymentScreen() {
             {/* UPI App row */}
             <View style={{ marginTop: 22, marginBottom: 8 }}>
               <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: '700', textAlign: 'center', letterSpacing: 1, marginBottom: 12 }}>
-                IN CASE UN APPS SE SCAN KARO
+                OR SCAN WITH THESE APPS
               </Text>
               <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center' }}>
                 {UPI_APPS.map(app => (
@@ -165,7 +165,7 @@ export function PaymentScreen() {
             >
               <Ionicons name="open-outline" size={18} color="rgba(255,255,255,0.6)" />
               <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: '700', flex: 1 }}>
-                UPI App Mein Seedha Kholo
+                Open Directly in UPI App
               </Text>
               <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.3)" />
             </TouchableOpacity>
@@ -173,8 +173,8 @@ export function PaymentScreen() {
         ) : (
           <View style={{ backgroundColor: C.yellowGlass, borderRadius: 20, padding: 28, alignItems: 'center', borderWidth: 1.5, borderColor: C.yellowBorder }}>
             <Text style={{ fontSize: 40, marginBottom: 10 }}>⚠️</Text>
-            <Text style={{ color: C.yellow, fontSize: 15, fontWeight: '800', textAlign: 'center' }}>Driver ka UPI ID set nahi hai</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, textAlign: 'center', marginTop: 6 }}>Cash ya Wallet se pay karo</Text>
+            <Text style={{ color: C.yellow, fontSize: 15, fontWeight: '800', textAlign: 'center' }}>Driver's UPI ID not set</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, textAlign: 'center', marginTop: 6 }}>Use Cash or Wallet instead</Text>
           </View>
         )}
       </ScrollView>
@@ -193,11 +193,11 @@ export function PaymentScreen() {
           }}
         >
           <Text style={{ ...T.title, color: '#fff' }}>
-            {upiConfirming ? '⏳ Confirm ho raha hai...' : `✅  Maine Pay Kar Diya — ₹${fareNum}`}
+            {upiConfirming ? '⏳ Confirming...' : `✅  I've Paid — ₹${fareNum}`}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => setShowUpiQr(false)} style={{ alignItems: 'center', padding: 10 }}>
-          <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13 }}>← Wapas Jao</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13 }}>← Go Back</Text>
         </TouchableOpacity>
       </View>
     </ScreenIn>
@@ -250,7 +250,7 @@ export function PaymentScreen() {
           {walletSufficient && (
             <View style={{ marginTop: 12, backgroundColor: C.green, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 8, elevation: 4, shadowColor: C.green, shadowOpacity: 0.5, shadowRadius: 8 }}>
               <Text style={{ fontSize: 16 }}>💰</Text>
-              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12, flex: 1 }}>Wallet se pay karo · ₹{cashback} scratch card milega!</Text>
+              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12, flex: 1 }}>Pay with Wallet · Get ₹{cashback} scratch card!</Text>
               <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.7)" />
             </View>
           )}
@@ -264,7 +264,7 @@ export function PaymentScreen() {
               {/* Section header */}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14, marginTop: 4 }}>
                 <View style={{ width: 4, height: 22, backgroundColor: C.pink, borderRadius: 3 }} />
-                <Text style={{ color: C.text, fontSize: 17, fontWeight: '900', flex: 1 }}>UPI Se Pay Karo</Text>
+                <Text style={{ color: C.text, fontSize: 17, fontWeight: '900', flex: 1 }}>Pay via UPI</Text>
                 <View style={{ backgroundColor: C.green, borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                   <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#fff' }} />
                   <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900', letterSpacing: 0.5 }}>FASTEST</Text>
@@ -283,13 +283,13 @@ export function PaymentScreen() {
                       backgroundColor: app.bg,
                       borderRadius: 22, paddingVertical: 20, paddingHorizontal: 14,
                       alignItems: 'center',
-                      borderWidth: 2, borderColor: app.border + '55',
-                      elevation: 3, shadowColor: app.color, shadowOpacity: 0.12, shadowRadius: 8,
+                      borderWidth: 1.5, borderColor: app.border + '66',
+                      elevation: 4, shadowColor: app.border, shadowOpacity: 0.28, shadowRadius: 10,
                     }}
                   >
                     <Text style={{ fontSize: 34, marginBottom: 8 }}>{app.icon}</Text>
                     <Text style={{ color: app.color, fontSize: 15, fontWeight: '900', marginBottom: 3 }}>{app.name}</Text>
-                    <Text style={{ color: app.color + 'BB', fontSize: 11, fontWeight: '600' }}>₹{fareNum} tap karo</Text>
+                    <Text style={{ color: app.color + 'BB', fontSize: 11, fontWeight: '600' }}>Tap to pay ₹{fareNum}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -315,7 +315,7 @@ export function PaymentScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: '#fff', fontSize: 19, fontWeight: '900', marginBottom: 3 }}>Scan QR Code</Text>
-                  <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 13 }}>Kisi bhi UPI app se scan karo</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 13 }}>Scan with any UPI app</Text>
                 </View>
                 <View style={{ backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 12, padding: 8 }}>
                   <Ionicons name="arrow-forward" size={20} color="#fff" />
@@ -326,8 +326,8 @@ export function PaymentScreen() {
             <View style={{ backgroundColor: C.yellowGlass, borderRadius: 18, padding: 18, marginBottom: 16, borderWidth: 1.5, borderColor: C.yellowBorder, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <Text style={{ fontSize: 28 }}>⚠️</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: C.yellow, fontSize: 14, fontWeight: '800' }}>UPI Available Nahi</Text>
-                <Text style={{ color: C.yellow, fontSize: 12, marginTop: 2, opacity: 0.75 }}>Driver ka UPI nahi hai — Wallet ya Cash use karo</Text>
+                <Text style={{ color: C.yellow, fontSize: 14, fontWeight: '800' }}>UPI Not Available</Text>
+                <Text style={{ color: C.yellow, fontSize: 12, marginTop: 2, opacity: 0.75 }}>Driver has no UPI — use Wallet or Cash</Text>
               </View>
             </View>
           )}
@@ -335,7 +335,7 @@ export function PaymentScreen() {
           {/* ── Divider ── */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 }}>
             <View style={{ flex: 1, height: 1, backgroundColor: C.glassBorder }} />
-            <Text style={{ ...T.label, color: C.textDim }}>DUSRE TARIKE</Text>
+            <Text style={{ ...T.label, color: C.textDim }}>OTHER OPTIONS</Text>
             <View style={{ flex: 1, height: 1, backgroundColor: C.glassBorder }} />
           </View>
 
@@ -346,7 +346,7 @@ export function PaymentScreen() {
               <View style={{ backgroundColor: walletSufficient ? C.green : C.textDim, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 7, gap: 6 }}>
                 <Text style={{ fontSize: 14 }}>🎁</Text>
                 <Text style={{ color: '#fff', fontSize: 12, fontWeight: '900', flex: 1 }}>
-                  ₹5 Cashback Instantly — Wallet se pay karo!
+                  ₹5 Cashback Instantly — Pay with Wallet!
                 </Text>
                 <View style={{ backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
                   <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900' }}>BEST DEAL</Text>
@@ -382,16 +382,16 @@ export function PaymentScreen() {
                   </View>
                   <Text style={{ ...T.caption, color: walletSufficient ? C.green : C.textDim, fontWeight: '700' as const }}>
                     Balance: ₹{walletBalance}
-                    {walletSufficient ? ` · Covers ₹${fareNum} ✓` : ' — balance kam hai'}
+                    {walletSufficient ? ` · Covers ₹${fareNum} ✓` : ' — insufficient balance'}
                   </Text>
                   {walletSufficient ? (
                     <Text style={{ ...T.caption, color: C.green, marginTop: 3 }}>
-                      + ₹5 scratch card turant milega 🎉
+                      + ₹5 scratch card instantly 🎉
                     </Text>
                   ) : (
                     <TouchableOpacity onPress={() => setScreen('wallet')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                       <Text style={{ ...T.caption, color: C.pink, fontWeight: '900' as const, marginTop: 4 }}>
-                        + Recharge Karo & ₹5 Cashback Pao →
+                        + Recharge & Earn ₹5 Cashback →
                       </Text>
                     </TouchableOpacity>
                   )}
@@ -429,7 +429,7 @@ export function PaymentScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={{ ...T.bodyBold, color: C.text, marginBottom: 2 }}>Cash</Text>
                 <Text style={{ ...T.caption, color: C.textDim }}>
-                  {cashConfirming ? '⏳ Confirming...' : `Driver ko ₹${fareNum} naqdh do`}
+                  {cashConfirming ? '⏳ Confirming...' : `Give ₹${fareNum} cash to driver`}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={C.textDim} />
@@ -442,7 +442,7 @@ export function PaymentScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.greenGlass, borderRadius: R.sm, padding: 12, marginTop: 8, borderWidth: 1.5, borderColor: C.greenBorder }}>
             <Ionicons name="shield-checkmark" size={18} color={C.green} />
             <Text style={{ ...T.caption, color: C.textMuted, flex: 1, lineHeight: 16 }}>
-              Sppero ka payment system 100% secure hai · Razorpay PCI-DSS compliant
+              Sppero's payment system is 100% secure · Razorpay PCI-DSS compliant
             </Text>
           </View>
         </View>

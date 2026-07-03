@@ -73,8 +73,8 @@ function ETACountdown({ etaText, distText, arrived }: { etaText: string; distTex
     return (
       <View style={{ backgroundColor: C.greenGlass, borderRadius: 20, padding: 18, marginBottom: 10, alignItems: 'center', gap: 6, borderWidth: 1.5, borderColor: C.greenBorder }}>
         <Text style={{ fontSize: 32 }}>✅</Text>
-        <Text style={{ color: C.green, fontSize: 17, fontWeight: '900' }}>Driver Aa Gaya!</Text>
-        <Text style={{ color: C.green, fontSize: 12, textAlign: 'center', opacity: 0.7 }}>OTP share karke trip shuru karo</Text>
+        <Text style={{ color: C.green, fontSize: 17, fontWeight: '900' }}>Driver Arrived!</Text>
+        <Text style={{ color: C.green, fontSize: 12, textAlign: 'center', opacity: 0.7 }}>Share OTP to start your trip</Text>
       </View>
     );
   }
@@ -82,7 +82,7 @@ function ETACountdown({ etaText, distText, arrived }: { etaText: string; distTex
   return (
     <View style={{ backgroundColor: color + '12', borderRadius: 20, padding: 16, marginBottom: 10, borderWidth: 1.5, borderColor: color + '30' }}>
       {/* Depleting progress strip — animated */}
-      <View style={{ height: 3, backgroundColor: 'rgba(0,0,0,0.07)', borderRadius: 2, marginBottom: 14, overflow: 'hidden' }}>
+      <View style={{ height: 3, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 2, marginBottom: 14, overflow: 'hidden' }}>
         <Animated.View style={{ width: progressAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }), height: '100%', backgroundColor: color, borderRadius: 2 }} />
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
@@ -91,13 +91,13 @@ function ETACountdown({ etaText, distText, arrived }: { etaText: string; distTex
         </View>
         <View style={{ flex: 1 }}>
           <Text style={{ color: C.textMuted, fontSize: 10, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase' }}>
-            driver pahunch raha hai
+            driver is on the way
           </Text>
           <Text style={{ color: color, fontSize: 40, fontWeight: '900', letterSpacing: 1, lineHeight: 48, marginTop: 1 }}>
             {String(mins).padStart(2, '0')}:{String(secs).padStart(2, '0')}
           </Text>
           {distText ? (
-            <Text style={{ color: C.textDim, fontSize: 11, marginTop: 2 }}>{distText} door • real-time</Text>
+            <Text style={{ color: C.textDim, fontSize: 11, marginTop: 2 }}>{distText} away • live</Text>
           ) : null}
         </View>
         <PulseView><View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: color }} /></PulseView>
@@ -151,7 +151,7 @@ function RetryTimer({ seconds, onRetry }: { seconds: number; onRetry: () => void
     <View style={{ alignItems: 'center', gap: 10 }}>
       {remaining > 0 ? (
         <Text style={{ color: C.textMuted, fontSize: 13 }}>
-          {mins > 0 ? `${mins} min ` : ''}{secs}s baad retry ho sakta hai
+          {mins > 0 ? `${mins} min ` : ''}{secs}s until retry
         </Text>
       ) : null}
       <Bouncy
@@ -162,7 +162,7 @@ function RetryTimer({ seconds, onRetry }: { seconds: number; onRetry: () => void
           borderWidth: 1, borderColor: remaining > 0 ? C.glassBorder : C.pink,
         }}>
         <Text style={{ color: remaining > 0 ? C.textDim : '#fff', fontWeight: '900', fontSize: 14 }}>
-          {remaining > 0 ? `🔄 ${mins > 0 ? `${mins}m ` : ''}${secs}s baad retry` : '🔄 Abhi Retry Karo'}
+          {remaining > 0 ? `🔄 ${mins > 0 ? `${mins}m ` : ''}${secs}s to retry` : '🔄 Retry Now'}
         </Text>
       </Bouncy>
     </View>
@@ -262,17 +262,17 @@ export function MatchingScreen() {
         {/* Glass header — floats over SearchAnim (paper style) or LiveMap (pink tint) */}
         <View style={{
           position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, overflow: 'hidden',
-          backgroundColor: rideData?.driver ? 'rgba(233,30,99,0.10)' : 'rgba(244,239,227,0.88)',
+          backgroundColor: rideData?.driver ? 'rgba(233,30,99,0.10)' : 'rgba(13,6,24,0.82)',
           paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 8 : 46,
           paddingBottom: 10, paddingHorizontal: 16,
         }}>
           <View style={{ position: 'absolute', width: 180, height: 180, borderRadius: 90, backgroundColor: 'rgba(255,255,255,0.06)', top: -55, right: -35 }} />
           <Text style={{
             fontSize: 17, fontWeight: '900',
-            color: rideData?.driver ? '#fff' : '#2d1f0e',
-            textShadowColor: rideData?.driver ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.5)',
+            color: '#fff',
+            textShadowColor: 'rgba(0,0,0,0.65)',
             textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4,
-          }}>{rideData?.driver ? '🚗 Driver Mil Gaya!' : '🔍 Driver Dhundh Rahe Hain'}</Text>
+          }}>{rideData?.driver ? '🚗 Driver Found!' : '🔍 Finding a Driver'}</Text>
         </View>
       </View>
       <View style={{ flex: 1, backgroundColor: C.bg, paddingTop: 8, paddingHorizontal: 16 }}>
@@ -282,8 +282,8 @@ export function MatchingScreen() {
             <>
               {showBurst && <SuccessBurst />}
               <FadeIn delay={300} style={{ alignItems: 'center', marginBottom: 12 }}>
-                <Text style={{ fontSize: 18, fontWeight: '900', color: C.green, letterSpacing: 0.3 }}>Driver Mil Gaya! 🎉</Text>
-                <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }}>Aapka ride confirm ho gaya</Text>
+                <Text style={{ fontSize: 18, fontWeight: '900', color: C.green, letterSpacing: 0.3 }}>Driver Found! 🎉</Text>
+                <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 3 }}>Your ride is confirmed</Text>
               </FadeIn>
               <SlideUp>
                 <View style={{
@@ -393,9 +393,9 @@ export function MatchingScreen() {
                   backgroundColor: C.bgCard, borderRadius: R.md, paddingHorizontal: SP.md, paddingVertical: SP.md,
                   alignItems: 'center', marginBottom: 12, borderWidth: 2, borderColor: C.plumBorder, ...SHADOW.md,
                 }}>
-                  <Text style={{ ...T.label, color: C.textMuted, marginBottom: 14 }}>🔐 DRIVER KO YEH OTP BATAO</Text>
+                  <Text style={{ ...T.label, color: C.textMuted, marginBottom: 14 }}>🔐 SHARE THIS OTP WITH DRIVER</Text>
                   <OtpDisplay otp={rideData.startOtp} />
-                  <Text style={{ ...T.caption, color: C.textDim, marginTop: 10 }}>Trip start hone par driver dalega</Text>
+                  <Text style={{ ...T.caption, color: C.textDim, marginTop: 10 }}>Driver will enter this to start the trip</Text>
                 </View>
               )}
               <View style={{
@@ -433,7 +433,7 @@ export function MatchingScreen() {
                     `Driver: ${d?.name || 'Assigned'} | ${d?.vehicle_no || ''}\n` +
                     (rideData?.startOtp ? `OTP: ${rideData.startOtp}\n` : '') +
                     `📍 From: ${pickup}\n🎯 To: ${drop}\n\n` +
-                    `📡 *Live track karo:*\n${trackUrl}`;
+                    `📡 *Live track:*\n${trackUrl}`;
                   Share.share({ message: msg, url: trackUrl, title: 'Sppero Live Tracking' }).catch(() => {
                     Linking.openURL(`https://wa.me/?text=${encodeURIComponent(msg)}`);
                   });
@@ -463,10 +463,10 @@ export function MatchingScreen() {
               )}
               {!chatToast && unreadChat > 0 && (
                 <TouchableOpacity style={s.chatAlert} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
-                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>💬 Driver ke {unreadChat} message — tap to read</Text>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>💬 {unreadChat} new message from driver — tap to read</Text>
                 </TouchableOpacity>
               )}
-              {sosActive && <View style={[s.infoBox, { backgroundColor: C.redGlass, borderColor: C.redBorder }]}><Text style={{ fontSize: 13, color: C.red, fontWeight: '800' }}>🆘 Alert bheja! Police: 100 · Ambulance: 108</Text></View>}
+              {sosActive && <View style={[s.infoBox, { backgroundColor: C.redGlass, borderColor: C.redBorder }]}><Text style={{ fontSize: 13, color: C.red, fontWeight: '800' }}>🆘 Alert sent! Police: 100 · Ambulance: 108</Text></View>}
 
               {/* ─── Wait Timer — separate system ─── */}
               {driverArrived && driverWaitSec > 0 && (
@@ -480,7 +480,7 @@ export function MatchingScreen() {
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                       <Text style={{ fontSize: 22 }}>⏳</Text>
                       <View>
-                        <Text style={{ fontWeight: '800', fontSize: 12, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 }}>Driver Wait Kar Raha Hai</Text>
+                        <Text style={{ fontWeight: '800', fontSize: 12, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 }}>Driver is Waiting</Text>
                         <Text style={{ fontSize: 22, fontWeight: '900', color: waitFareAdd > 0 ? C.saffron : C.green, marginTop: 2, letterSpacing: 0.5 }}>
                           {waitMin}m {waitSecRem}s
                         </Text>
@@ -501,8 +501,8 @@ export function MatchingScreen() {
                   </View>
                   <Text style={{ fontSize: 11, color: C.textMuted, textAlign: 'center' }}>
                     {waitFareAdd > 0
-                      ? `3 min free window khatam • ₹1/min wait charge lag raha`
-                      : `${Math.floor(freeSecLeft / 60)}m ${freeSecLeft % 60}s baad ₹1/min shuru hoga`}
+                      ? `3 min free window over • ₹1/min wait charge applies`
+                      : `₹1/min starts in ${Math.floor(freeSecLeft / 60)}m ${freeSecLeft % 60}s`}
                   </Text>
                 </View>
               )}
@@ -539,15 +539,15 @@ export function MatchingScreen() {
               {/* ─── Cancel — separate system ─── */}
               <TouchableOpacity style={{ backgroundColor: C.pinkGlass, borderWidth: 1.5, borderColor: C.pinkBorder, borderRadius: 14, padding: 14, alignItems: 'center', marginBottom: 10 }} onPress={() => setShowCancelModal(true)}>
                 <Text style={{ color: C.pink, fontWeight: '800', fontSize: 14 }}>
-                  ✕ Ride Cancel karein {cancelInfo ? (cancelInfo.is_free ? '(Free)' : `(₹${cancelInfo.fee})`) : cancelTimer > 0 ? '(Free)' : '(₹10)'}
+                  ✕ Cancel Ride {cancelInfo ? (cancelInfo.is_free ? '(Free)' : `(₹${cancelInfo.fee})`) : cancelTimer > 0 ? '(Free)' : '(₹10)'}
                 </Text>
                 {driverWaitSec > 0 && (
                   <Text style={{ color: C.pink, fontSize: 11, marginTop: 3, opacity: 0.75 }}>
-                    Cancel fee alag • Wait charge alag hota hai
+                    Cancel fee and wait charge are separate
                   </Text>
                 )}
               </TouchableOpacity>
-              <Text style={{ textAlign: 'center', color: C.textDim, fontSize: 12, marginTop: 4, marginBottom: 8 }}>⏳ Driver OTP daalkar trip shuru karega...</Text>
+              <Text style={{ textAlign: 'center', color: C.textDim, fontSize: 12, marginTop: 4, marginBottom: 8 }}>⏳ Driver will enter the OTP to start the trip...</Text>
             </>
           ) : (
             <View style={{ paddingBottom: 24 }}>
@@ -590,9 +590,9 @@ export function MatchingScreen() {
                     }} />
                   </View>
                   <Text style={{ textAlign: 'center', fontSize: 12, color: C.textMuted, marginTop: 7, fontStyle: 'italic' }}>
-                    {searchElapsed < 30 ? '🔍 Nearby drivers ko request bhej rahe hain...' :
-                     searchElapsed < 60 ? '📡 Sabhi area drivers ko ping kiya — wait karo...' :
-                     '⚡ 15km tak dhundh rahe — thodi der aur'}
+                    {searchElapsed < 30 ? '🔍 Requesting nearby drivers...' :
+                     searchElapsed < 60 ? '📡 Pinging all drivers in your area — please wait...' :
+                     '⚡ Searching up to 15km — almost there'}
                   </Text>
                 </View>
               )}
@@ -601,11 +601,11 @@ export function MatchingScreen() {
               {serverSurgeOffer && surgeCount < 3 && (() => {
                 const baseFare = parseInt((surgeFare || rideData?.fare || '0').replace(/[^0-9]/g, '')) || 0;
                 const opts = [
-                  { label: '+₹15',  amount: 15,  newFare: baseFare + 15,  emoji: '🟢', bg: '#F1F8E9', border: '#8BC34A', btnBg: '#8BC34A' },
-                  { label: '+₹25',  amount: 25,  newFare: baseFare + 25,  emoji: '🟡', bg: '#FFFDE7', border: '#FFC107', btnBg: '#FFC107' },
-                  { label: '+₹40',  amount: 40,  newFare: baseFare + 40,  emoji: '🟠', bg: '#FFF3E0', border: '#FF9800', btnBg: '#FF9800' },
-                  { label: '+₹65',  amount: 65,  newFare: baseFare + 65,  emoji: '🔴', bg: '#FFEBEE', border: '#F44336', btnBg: '#F44336' },
-                  { label: '+₹100', amount: 100, newFare: baseFare + 100, emoji: '🔥', bg: '#F3E5F5', border: '#9C27B0', btnBg: '#9C27B0' },
+                  { label: '+₹15',  amount: 15,  newFare: baseFare + 15,  emoji: '🟢', bg: 'rgba(139,195,74,0.10)',  border: '#8BC34A', btnBg: '#8BC34A' },
+                  { label: '+₹25',  amount: 25,  newFare: baseFare + 25,  emoji: '🟡', bg: 'rgba(255,193,7,0.10)',   border: '#FFC107', btnBg: '#FFC107' },
+                  { label: '+₹40',  amount: 40,  newFare: baseFare + 40,  emoji: '🟠', bg: 'rgba(255,152,0,0.10)',   border: '#FF9800', btnBg: '#FF9800' },
+                  { label: '+₹65',  amount: 65,  newFare: baseFare + 65,  emoji: '🔴', bg: 'rgba(244,67,54,0.10)',   border: '#F44336', btnBg: '#F44336' },
+                  { label: '+₹100', amount: 100, newFare: baseFare + 100, emoji: '🔥', bg: 'rgba(156,39,176,0.10)',  border: '#9C27B0', btnBg: '#9C27B0' },
                 ];
                 return (
                   <SlideUp>
@@ -616,9 +616,9 @@ export function MatchingScreen() {
                             <Text style={{ fontSize: 20 }}>⚡</Text>
                           </View>
                           <View style={{ flex: 1 }}>
-                            <Text style={{ color: C.text, fontSize: 15, fontWeight: '900' }}>Koi driver nahi mila!</Text>
+                            <Text style={{ color: C.text, fontSize: 15, fontWeight: '900' }}>No driver found!</Text>
                             <Text style={{ color: '#E65100', fontSize: 12, marginTop: 1 }}>
-                              Fare badhao — drivers zyada attract honge
+                              Increase fare to attract more drivers
                             </Text>
                           </View>
                           <View style={{ backgroundColor: '#FF5722', borderRadius: 10, paddingHorizontal: 9, paddingVertical: 4 }}>
@@ -626,7 +626,7 @@ export function MatchingScreen() {
                           </View>
                         </View>
                         <Text style={{ color: C.textMuted, fontSize: 12, marginBottom: 14 }}>
-                          Abhi: <Text style={{ color: C.text, fontWeight: '700' }}>{surgeFare || rideData?.fare}</Text>
+                          Current: <Text style={{ color: C.text, fontWeight: '700' }}>{surgeFare || rideData?.fare}</Text>
                           {'  '}·{'  '}Suggested: <Text style={{ color: C.yellow, fontWeight: '700' }}>{serverSurgeOffer.label}</Text>
                         </Text>
                         <View style={{ gap: 10 }}>
@@ -648,7 +648,7 @@ export function MatchingScreen() {
                                   <Text style={{ fontSize: 20, fontWeight: '900', color: surging ? C.textDim : C.text }}>
                                     {opt.label}{opt.amount === serverSurgeOffer.amt ? ' ⭐' : ''}
                                   </Text>
-                                  <Text style={{ fontSize: 11, color: surging ? C.textDim : C.textMuted }}>Naya fare: ₹{opt.newFare}</Text>
+                                  <Text style={{ fontSize: 11, color: surging ? C.textDim : C.textMuted }}>New fare: ₹{opt.newFare}</Text>
                                 </View>
                               </View>
                               <View style={{ backgroundColor: surging ? '#555' : opt.btnBg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8 }}>
@@ -660,7 +660,7 @@ export function MatchingScreen() {
                         {surging && (
                           <View style={{ alignItems: 'center', marginTop: 14 }}>
                             <FloatingDots color={C.yellow} />
-                            <Text style={{ color: C.yellow, fontSize: 13, fontWeight: '700', marginTop: 6 }}>⚡ Fare update ho raha hai...</Text>
+                            <Text style={{ color: C.yellow, fontSize: 13, fontWeight: '700', marginTop: 6 }}>⚡ Updating fare...</Text>
                           </View>
                         )}
                       </View>
@@ -676,15 +676,15 @@ export function MatchingScreen() {
                     <View style={{ backgroundColor: C.redGlass, borderRadius: 20, padding: 18, borderWidth: 1.5, borderColor: C.redBorder }}>
                       <Text style={{ fontSize: 30, textAlign: 'center', marginBottom: 8 }}>😔</Text>
                       <Text style={{ color: C.red, fontSize: 16, fontWeight: '900', textAlign: 'center' }}>
-                        Is area mein driver nahi mila
+                        No driver found in this area
                       </Text>
                       <Text style={{ color: C.textMuted, fontSize: 12, textAlign: 'center', marginTop: 4, marginBottom: 16 }}>
-                        Doosra vehicle try karo ya kuch minutes baad retry karo
+                        Try another vehicle or retry in a few minutes
                       </Text>
                       {noDriverFinal.alternatives.length > 0 && (
                         <>
                           <Text style={{ color: C.text, fontSize: 12, fontWeight: '800', marginBottom: 10, textAlign: 'center' }}>
-                            Abhi available hain:
+                            Available now:
                           </Text>
                           <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 14 }}>
                             {noDriverFinal.alternatives.map((alt: string) => {
@@ -714,10 +714,10 @@ export function MatchingScreen() {
                 <View style={{ paddingHorizontal: 20, marginBottom: 14 }}>
                   <View style={{ backgroundColor: C.yellowGlass, borderRadius: 16, padding: 16, borderWidth: 1.5, borderColor: C.yellowBorder }}>
                     <Text style={{ fontSize: 14, fontWeight: '700', color: C.yellow, textAlign: 'center', marginBottom: 4 }}>
-                      😕 {(altSuggest.current_type || '').toUpperCase()} driver nahi mila
+                      😕 No {(altSuggest.current_type || '').toUpperCase()} driver found
                     </Text>
                     <Text style={{ fontSize: 12, color: C.textMuted, textAlign: 'center', marginBottom: 12 }}>
-                      Kya hum aapke liye doosra vehicle dhundhe?
+                      Want us to search for another vehicle type?
                     </Text>
                     <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
                       {altSuggest.alternatives.map((alt: string) => {
@@ -739,9 +739,9 @@ export function MatchingScreen() {
               <View style={{ paddingHorizontal: 20, marginBottom: 14 }}>
                 <View style={{ backgroundColor: cancelTimer > 0 ? C.greenGlass : C.yellowGlass, borderRadius: 14, padding: 12, borderWidth: 1, borderColor: cancelTimer > 0 ? C.greenBorder : C.yellowBorder }}>
                   <Text style={{ fontSize: 12, color: cancelTimer > 0 ? C.green : C.yellow, fontWeight: '700', textAlign: 'center' }}>
-                    {cancelTimer > 0 ? `✅ ${cancelTimer}s tak FREE cancellation` : '⚠️ Ab cancel pe ₹10 fee lagega'}
+                    {cancelTimer > 0 ? `✅ FREE cancellation for ${cancelTimer}s` : '⚠️ ₹10 fee applies on cancel now'}
                   </Text>
-                  <Text style={{ fontSize: 11, color: C.textMuted, textAlign: 'center', marginTop: 3 }}>Aaj {freeCancelsLeft} free cancels bache hain</Text>
+                  <Text style={{ fontSize: 11, color: C.textMuted, textAlign: 'center', marginTop: 3 }}>{freeCancelsLeft} free cancels remaining today</Text>
                 </View>
               </View>
 
@@ -838,49 +838,49 @@ function SearchAnim({ emoji, label }: { emoji: string; label: string }) {
   );
 
   return (
-    <View style={{ width: SW, height: 262, backgroundColor: '#f4efe3', overflow: 'hidden' }}>
+    <View style={{ width: SW, height: 262, backgroundColor: C.night, overflow: 'hidden' }}>
 
       {/* ── Paper map background ── */}
       {/* Horizontal grid lines */}
       {Array.from({ length: 8 }).map((_, i) => (
-        <View key={`h${i}`} style={{ position: 'absolute', left: 0, right: 0, top: (i + 1) * 30, height: 1, backgroundColor: 'rgba(160,130,80,0.18)' }} />
+        <View key={`h${i}`} style={{ position: 'absolute', left: 0, right: 0, top: (i + 1) * 30, height: 1, backgroundColor: 'rgba(255,45,120,0.06)' }} />
       ))}
       {/* Vertical grid lines */}
       {Array.from({ length: Math.ceil(SW / 30) }).map((_, i) => (
-        <View key={`v${i}`} style={{ position: 'absolute', top: 0, bottom: 0, left: (i + 1) * 30, width: 1, backgroundColor: 'rgba(160,130,80,0.18)' }} />
+        <View key={`v${i}`} style={{ position: 'absolute', top: 0, bottom: 0, left: (i + 1) * 30, width: 1, backgroundColor: 'rgba(255,45,120,0.06)' }} />
       ))}
       {/* Road strips — horizontal */}
-      <View style={{ position: 'absolute', left: 0, right: 0, top: 52, height: 5, backgroundColor: 'rgba(195,165,105,0.28)' }} />
-      <View style={{ position: 'absolute', left: 0, right: 0, top: 182, height: 8, backgroundColor: 'rgba(195,165,105,0.22)' }} />
+      <View style={{ position: 'absolute', left: 0, right: 0, top: 52, height: 5, backgroundColor: 'rgba(0,212,168,0.08)' }} />
+      <View style={{ position: 'absolute', left: 0, right: 0, top: 182, height: 8, backgroundColor: 'rgba(0,212,168,0.06)' }} />
       {/* Road strips — vertical */}
-      <View style={{ position: 'absolute', top: 0, bottom: 0, left: SW * 0.22, width: 5, backgroundColor: 'rgba(195,165,105,0.26)' }} />
-      <View style={{ position: 'absolute', top: 0, bottom: 0, left: SW * 0.71, width: 8, backgroundColor: 'rgba(195,165,105,0.20)' }} />
+      <View style={{ position: 'absolute', top: 0, bottom: 0, left: SW * 0.22, width: 5, backgroundColor: 'rgba(255,45,120,0.07)' }} />
+      <View style={{ position: 'absolute', top: 0, bottom: 0, left: SW * 0.71, width: 8, backgroundColor: 'rgba(255,45,120,0.05)' }} />
       {/* Slight vignette edges */}
-      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 28, backgroundColor: 'rgba(210,190,150,0.18)' }} />
-      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 28, backgroundColor: 'rgba(210,190,150,0.18)' }} />
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 28, backgroundColor: 'rgba(13,6,24,0.55)' }} />
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 28, backgroundColor: 'rgba(13,6,24,0.55)' }} />
 
       {/* Ambient center glow */}
-      <View style={{ position: 'absolute', left: CX - 95, top: CY - 95, width: 190, height: 190, borderRadius: 95, backgroundColor: 'rgba(233,69,96,0.07)' }} />
+      <View style={{ position: 'absolute', left: CX - 95, top: CY - 95, width: 190, height: 190, borderRadius: 95, backgroundColor: 'rgba(255,45,120,0.15)' }} />
 
-      <Ring v={r1} sz={60} c="#e94560" />
-      <Ring v={r2} sz={104} c="rgba(233,69,96,0.68)" />
-      <Ring v={r3} sz={150} c="rgba(233,69,96,0.38)" />
+      <Ring v={r1} sz={60} c={C.pink} />
+      <Ring v={r2} sz={104} c="rgba(255,45,120,0.75)" />
+      <Ring v={r3} sz={150} c="rgba(255,45,120,0.45)" />
 
       {/* Rotating radar sweep — 240×240 container centered at (CX, CY) */}
       <Animated.View style={{ position: 'absolute', left: CX - 120, top: CY - 120, width: 240, height: 240, transform: [{ rotate: sweepRot }] }}>
-        <View style={{ position: 'absolute', left: 119, top: 0, width: 2, height: 120, backgroundColor: 'rgba(233,69,96,0.65)', borderRadius: 1 }} />
-        <View style={{ position: 'absolute', left: 110, top: 8, width: 20, height: 112, backgroundColor: 'rgba(233,69,96,0.13)', borderRadius: 10 }} />
+        <View style={{ position: 'absolute', left: 119, top: 0, width: 2, height: 120, backgroundColor: 'rgba(255,45,120,0.92)', borderRadius: 1 }} />
+        <View style={{ position: 'absolute', left: 110, top: 8, width: 20, height: 112, backgroundColor: 'rgba(0,212,168,0.08)', borderRadius: 10 }} />
       </Animated.View>
 
       {/* Center vehicle icon */}
       <Animated.View style={{
         position: 'absolute', left: CX - 44, top: CY - 44,
         width: 88, height: 88, borderRadius: 44,
-        backgroundColor: 'rgba(255,255,255,0.82)',
-        borderWidth: 2.5, borderColor: 'rgba(233,69,96,0.65)',
+        backgroundColor: 'rgba(13,6,24,0.92)',
+        borderWidth: 2.5, borderColor: C.pink,
         alignItems: 'center', justifyContent: 'center',
         transform: [{ scale: pulse }],
-        elevation: 14, shadowColor: '#e94560', shadowOpacity: 0.45, shadowRadius: 16,
+        elevation: 14, shadowColor: C.pink, shadowOpacity: 0.60, shadowRadius: 20,
       }}>
         <Text style={{ fontSize: 40, lineHeight: 46 }}>{emoji}</Text>
       </Animated.View>
@@ -894,20 +894,20 @@ function SearchAnim({ emoji, label }: { emoji: string; label: string }) {
             left: CX + DOT_R * Math.cos(ang) - 11,
             top: CY + DOT_R * Math.sin(ang) - 11,
             width: 22, height: 22, borderRadius: 11,
-            backgroundColor: '#e94560',
-            borderWidth: 1.5, borderColor: '#fff',
+            backgroundColor: C.pink,
+            borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.5)',
             opacity: d, elevation: 6,
-            shadowColor: '#e94560', shadowOpacity: 0.6, shadowRadius: 6,
+            shadowColor: C.pink, shadowOpacity: 0.75, shadowRadius: 8,
           }} />
         );
       })}
 
       {/* Animated label */}
       <View style={{ position: 'absolute', bottom: 14, left: 0, right: 0, alignItems: 'center' }}>
-        <Animated.Text style={{ color: '#2d1f0e', fontSize: 13, fontWeight: '800', opacity: textO }}>
-          {`Dhundh rahe hain aapka ${label} Buddy...`}
+        <Animated.Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '800', opacity: textO }}>
+          {`Searching for your ${label}...`}
         </Animated.Text>
-        <Text style={{ color: '#e94560', fontSize: 10, marginTop: 4, fontWeight: '700', letterSpacing: 1.5 }}>
+        <Text style={{ color: C.pink, fontSize: 10, marginTop: 4, fontWeight: '700', letterSpacing: 1.5 }}>
           SPPERO · BEST MATCH FOR YOU
         </Text>
       </View>
@@ -940,25 +940,25 @@ function CancelModal() {
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.62)', justifyContent: 'flex-end' }}>
         <GlassPanel intensity={24} style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 34 }}>
           <View style={s.sheetHandle} />
-          <Text style={{ fontSize: 18, fontWeight: '800', color: C.text, marginBottom: 8 }}>Ride Cancel karein?</Text>
+          <Text style={{ fontSize: 18, fontWeight: '800', color: C.text, marginBottom: 8 }}>Cancel Ride?</Text>
           <View style={{ backgroundColor: isFree ? C.greenGlass : C.yellowGlass, borderRadius: 12, padding: 12, marginBottom: waitSec > 0 ? 8 : 16, borderWidth: 1, borderColor: isFree ? C.greenBorder : C.yellowBorder }}>
             <Text style={{ fontSize: 13, color: isFree ? C.green : C.yellow, fontWeight: '700' }}>
               {isFree
-                ? `✅ Abhi cancel FREE hai${cancelInfo ? ` (${cancelInfo.sec_since_book} sec hua)` : ` (${cancelTimer}s bache)`}`
-                : `⚠️ Cancel fee ₹${fee} lagega`}
+                ? `✅ Cancel is FREE right now${cancelInfo ? ` (${cancelInfo.sec_since_book}s since booking)` : ` (${cancelTimer}s left)`}`
+                : `⚠️ Cancel fee ₹${fee} applies`}
             </Text>
           </View>
           {waitSec > 0 && (
             <View style={{ backgroundColor: 'rgba(239,68,68,0.08)', borderRadius: 10, padding: 10, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(239,68,68,0.25)', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Text style={{ fontSize: 18 }}>⏱️</Text>
               <View>
-                <Text style={{ fontSize: 12, fontWeight: '800', color: '#DC2626' }}>Driver {waitMin}m {waitSecRem}s se wait kar raha hai</Text>
-                {!isFree && <Text style={{ fontSize: 11, color: '#9B1C1C', marginTop: 2 }}>Jitna zyada wait, utna zyada fee barhta hai</Text>}
+                <Text style={{ fontSize: 12, fontWeight: '800', color: '#DC2626' }}>Driver has been waiting {waitMin}m {waitSecRem}s</Text>
+                {!isFree && <Text style={{ fontSize: 11, color: '#9B1C1C', marginTop: 2 }}>Longer wait = higher fee</Text>}
               </View>
             </View>
           )}
-          <Text style={{ fontSize: 14, fontWeight: '700', color: C.textMuted, marginBottom: 10 }}>Cancel ka reason?</Text>
-          {['Galti se book ho gaya', 'Bahut wait ho raha', 'Plan change ho gaya', 'Driver door hai', 'Koi aur reason'].map((reason, i) => (
+          <Text style={{ fontSize: 14, fontWeight: '700', color: C.textMuted, marginBottom: 10 }}>Reason for cancelling?</Text>
+          {['Booked by mistake', 'Waiting too long', 'Plans changed', 'Driver is too far', 'Other reason'].map((reason, i) => (
             <TouchableOpacity key={i} style={{ backgroundColor: C.glass, borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: C.glassBorder }}
               onPress={async () => {
                 if (rideData?.ride_id) {
@@ -977,7 +977,7 @@ function CancelModal() {
           ))}
           <TouchableOpacity style={{ borderWidth: 1.5, borderColor: C.glassBorder, borderRadius: 14, padding: 14, alignItems: 'center', marginTop: 8, backgroundColor: C.glass }}
             onPress={() => setShowCancelModal(false)}>
-            <Text style={{ color: C.text, fontWeight: '800', fontSize: 14 }}>Nahi, ride rakhni hai</Text>
+            <Text style={{ color: C.text, fontWeight: '800', fontSize: 14 }}>No, keep my ride</Text>
           </TouchableOpacity>
         </GlassPanel>
       </View>

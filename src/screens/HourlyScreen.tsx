@@ -88,7 +88,7 @@ export function HourlyScreen() {
   const useCurrentLocationPickup = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') { alert('Location permission chahiye'); return; }
+      if (status !== 'granted') { alert('Location permission required'); return; }
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       const { latitude: lat, longitude: lng } = loc.coords;
       setHPickupCoords({ lat, lng });
@@ -97,7 +97,7 @@ export function HourlyScreen() {
       const addr = d.results?.[0]?.formatted_address || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
       setHPickup(addr);
       setHPickupSugg([]);
-    } catch (e) { alert('Location nahi mili — manually daalo'); }
+    } catch (e) { alert('Location not found — enter manually'); }
   };
 
   const searchHourly = (text: string, which: 'pickup'|'drop') => {
@@ -128,7 +128,7 @@ export function HourlyScreen() {
   };
 
   const bookHourly = async () => {
-    if (!hPickup) { alert('Pickup location daalo'); return; }
+    if (!hPickup) { alert('Enter pickup location'); return; }
     if (!phone) return;
     try {
       const body: any = { phone, vehicle_type: hVehicle, package_hours: hPackageHours, pickup: hPickup, pickup_lat: hPickupCoords?.lat, pickup_lng: hPickupCoords?.lng, is_roundtrip: hRoundTrip, stay_hours: hStayHours };
@@ -141,7 +141,7 @@ export function HourlyScreen() {
         setHourlyStep('waiting');
         loadWallet(phone);
       } else {
-        alert(data.error || 'Booking nahi hui');
+        alert(data.error || 'Booking failed');
       }
     } catch (e: any) { alert('Error: ' + e.message); }
   };
@@ -149,12 +149,12 @@ export function HourlyScreen() {
   const requestEarlyEnd = () => {
     if (!hourlyBooking?.id) return;
     require('react-native').Alert.alert(
-      '✅ Trip Khatam Karo',
-      'Kya aap trip abhi complete karna chahte hain?\n\nDriver ko FULL package payment milegi — aap koi refund nahi le sakte.',
+      '✅ Complete Trip',
+      'Are you sure you want to complete the trip now?\n\nThe driver will receive FULL package payment — no refund will be issued.',
       [
-        { text: 'Wapas Jao', style: 'cancel' },
+        { text: 'Go Back', style: 'cancel' },
         {
-          text: '✅ Haan, Complete Karo',
+          text: '✅ Yes, Complete',
           onPress: async () => {
             try {
               const data = await apiPost('/api/hourly/customer-early-complete', { booking_id: hourlyBooking.id });
@@ -162,10 +162,10 @@ export function HourlyScreen() {
                 setHourlyBooking((p: any) => ({ ...p, status: 'completed', driver_earning: data.driver_earning }));
                 setHourlyStep('done');
               } else {
-                require('react-native').Alert.alert('Error', data.error || 'Kuch galat ho gaya — dobara try karo');
+                require('react-native').Alert.alert('Error', data.error || 'Something went wrong — please try again');
               }
             } catch (e: any) {
-              require('react-native').Alert.alert('Network Error', 'Server se connect nahi hua');
+              require('react-native').Alert.alert('Network Error', 'Could not connect to server');
             }
           }
         }
@@ -188,8 +188,8 @@ export function HourlyScreen() {
   const cancelHourlyBooking = async () => {
     if (!hourlyBooking?.id) return;
     const data = await apiPost('/api/hourly/cancel', { booking_id: hourlyBooking.id, phone });
-    if (data.success) { alert(`Booking cancel hui! ₹${data.refunded} wapas aayenge.`); setHourlyStep('book'); setHourlyBooking(null); setScreen('home'); loadWallet(phone); }
-    else alert(data.message || 'Cancel nahi ho saka');
+    if (data.success) { alert(`Booking cancelled! ₹${data.refunded} will be refunded.`); setHourlyStep('book'); setHourlyBooking(null); setScreen('home'); loadWallet(phone); }
+    else alert(data.message || 'Could not cancel');
   };
 
   // ── DONE SUMMARY ──
@@ -214,15 +214,15 @@ export function HourlyScreen() {
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
           <View style={{ alignItems: 'center', marginBottom: 24 }}>
             <Text style={{ fontSize: 60 }}>🎉</Text>
-            <Text style={{ fontSize: 20, fontWeight: '900', color: C.text, marginTop: 8 }}>Trip Khatam!</Text>
+            <Text style={{ fontSize: 20, fontWeight: '900', color: C.text, marginTop: 8 }}>Trip Ended!</Text>
             <Text style={{ color: C.textMuted, fontSize: 13, marginTop: 4 }}>
-              {actualHrs}h {actualMins}m chali · {b.actual_km || 0} km
+              {actualHrs}h {actualMins}m completed · {b.actual_km || 0} km
             </Text>
           </View>
           <View style={{ backgroundColor: C.bgCard, borderRadius: 18, padding: 18, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor: C.pinkBorder, elevation: 6, shadowColor: C.pink, shadowOpacity: 0.3, shadowRadius: 12 }}>
             <Text style={{ color: C.textDim, fontSize: 12, letterSpacing: 1.5 }}>TOTAL PAID</Text>
             <Text style={{ color: C.yellow, fontSize: 44, fontWeight: '900', marginTop: 4, textShadowColor: C.yellow, textShadowRadius: 10 }}>₹{totalPaid.toFixed(0)}</Text>
-            <Text style={{ color: C.textDim, fontSize: 11, marginTop: 4 }}>Wallet se deducted (escrow release)</Text>
+            <Text style={{ color: C.textDim, fontSize: 11, marginTop: 4 }}>Deducted from wallet (escrow released)</Text>
           </View>
           <View style={{ backgroundColor: C.glass, borderRadius: 18, padding: 18, elevation: 3, marginBottom: 16, borderWidth: 1, borderColor: C.glassBorder }}>
             <Text style={{ fontSize: 12, color: C.textDim, marginBottom: 14, fontWeight: '800', letterSpacing: 1 }}>PAYMENT BREAKDOWN</Text>
@@ -265,11 +265,11 @@ export function HourlyScreen() {
           {refund > 0 && (
             <View style={{ backgroundColor: C.greenGlass, borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: C.greenBorder }}>
               <Text style={{ fontSize: 22, marginRight: 10 }}>💰</Text>
-              <Text style={{ color: C.green, fontSize: 13, flex: 1, fontWeight: '700' }}>₹{refund.toFixed(0)} aapke wallet mein wapas aa gaye!</Text>
+              <Text style={{ color: C.green, fontSize: 13, flex: 1, fontWeight: '700' }}>₹{refund.toFixed(0)} refunded to your wallet!</Text>
             </View>
           )}
           <Bouncy style={s.btn} onPress={() => { setHourlyStep('book'); setHourlyBooking(null); hExtendStepRef.current = 'idle'; setHExtendStep('idle'); setHApproachLimit(null); setScreen('home'); }}>
-            <Text style={s.btnTxt}>🏠 Ghar Wapas</Text>
+            <Text style={s.btnTxt}>🏠 Go Home</Text>
           </Bouncy>
         </ScrollView>
       </ScreenIn>
@@ -309,7 +309,7 @@ export function HourlyScreen() {
           if (farAway) return null;
           return (
             <View style={{ backgroundColor: C.yellowGlass, borderRadius: 14, padding: 16, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor: C.yellowBorder }}>
-              <Text style={{ color: C.textMuted, fontSize: 12, marginBottom: 6 }}>Driver ko yeh OTP do — trip start hogi</Text>
+              <Text style={{ color: C.textMuted, fontSize: 12, marginBottom: 6 }}>Share this OTP with driver — trip will start</Text>
               <Text style={{ fontSize: 38, fontWeight: '900', color: C.yellow, letterSpacing: 8, textShadowColor: C.yellow, textShadowRadius: 8 }}>{hourlyBooking?.otp}</Text>
             </View>
           );
@@ -360,26 +360,26 @@ export function HourlyScreen() {
         {hChatOpen && (
           <View style={{ backgroundColor: C.glass, borderRadius: 16, marginBottom: 16, elevation: 3, overflow: 'hidden', borderWidth: 1, borderColor: C.glassBorder }}>
             <View style={{ backgroundColor: C.bgCard, padding: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderColor: C.glassBorder }}>
-              <Text style={{ color: C.text, fontWeight: '700', fontSize: 13 }}>💬 Driver se Chat</Text>
+              <Text style={{ color: C.text, fontWeight: '700', fontSize: 13 }}>💬 Chat with Driver</Text>
               <TouchableOpacity onPress={() => setHChatOpen(false)}><Text style={{ color: C.textMuted, fontSize: 18 }}>✕</Text></TouchableOpacity>
             </View>
             <ScrollView style={{ maxHeight: 200, padding: 10 }} keyboardShouldPersistTaps="handled">
               {hChatMsgs.length === 0 && (
-                <Text style={{ color: C.textDim, fontSize: 12, textAlign: 'center', marginTop: 20, marginBottom: 20 }}>Koi message nahi — pehla message bhejo</Text>
+                <Text style={{ color: C.textDim, fontSize: 12, textAlign: 'center', marginTop: 20, marginBottom: 20 }}>No messages yet — send the first one</Text>
               )}
               {hChatMsgs.map((m: any, i: number) => (
                 <View key={i} style={{ alignItems: m.sender === 'customer' ? 'flex-end' : 'flex-start', marginBottom: 6 }}>
                   <View style={{ backgroundColor: m.sender === 'customer' ? C.pink : C.glassMid, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, maxWidth: '80%' }}>
                     <Text style={{ color: m.sender === 'customer' ? '#fff' : C.text, fontSize: 13 }}>{m.message}</Text>
                   </View>
-                  <Text style={{ color: C.textDim, fontSize: 9, marginTop: 2 }}>{m.sender === 'customer' ? 'Aap' : 'Driver'}</Text>
+                  <Text style={{ color: C.textDim, fontSize: 9, marginTop: 2 }}>{m.sender === 'customer' ? 'You' : 'Driver'}</Text>
                 </View>
               ))}
             </ScrollView>
             <View style={{ flexDirection: 'row', padding: 8, borderTopWidth: 1, borderColor: C.glassBorder, gap: 8 }}>
               <TextInput
                 style={{ flex: 1, backgroundColor: C.glassMid, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, fontSize: 13, color: C.text, borderWidth: 1, borderColor: C.glassBorder }}
-                placeholder="Message likhein..." placeholderTextColor={C.textDim}
+                placeholder="Type a message..." placeholderTextColor={C.textDim}
                 value={hChatInput} onChangeText={setHChatInput}
                 returnKeyType="send"
                 onSubmitEditing={async () => {
@@ -409,8 +409,8 @@ export function HourlyScreen() {
         <View style={{ backgroundColor: C.glass, borderRadius: 16, padding: 16, marginBottom: 16, elevation: 2, borderWidth: 1, borderColor: C.glassBorder }}>
           {[
             ['Pickup', hourlyBooking?.pickup || hPickup],
-            ['Pehla Stop', hourlyBooking?.drop_location || hDrop || 'Flexible — driver ke sath jaao'],
-            ['Round Trip', (hourlyBooking?.is_roundtrip || hRoundTrip) ? '✅ Haan' : 'Nahi'],
+            ['First Stop', hourlyBooking?.drop_location || hDrop || 'Flexible — go with driver'],
+            ['Round Trip', (hourlyBooking?.is_roundtrip || hRoundTrip) ? '✅ Yes' : 'No'],
             ['KM Included', `${hourlyBooking?.km_included} km`],
             ['Extra KM Rate', `₹${hourlyPackages[hourlyBooking?.vehicle_type || hVehicle]?.extra}/km`],
           ].map(([k, v], i) => (
@@ -423,7 +423,7 @@ export function HourlyScreen() {
 
         <View style={{ backgroundColor: C.greenGlass, borderRadius: 12, padding: 12, marginBottom: 16, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: C.greenBorder }}>
           <Text style={{ fontSize: 18, marginRight: 8 }}>✅</Text>
-          <Text style={{ color: C.green, fontSize: 12, flex: 1, fontWeight: '600' }}>₹{hourlyBooking?.base_fare} paid & held safely. Trip khatam hone par driver ko milega.</Text>
+          <Text style={{ color: C.green, fontSize: 12, flex: 1, fontWeight: '600' }}>₹{hourlyBooking?.base_fare} paid & held safely. Driver receives payment when trip ends.</Text>
         </View>
 
         {hourlyBooking?.status === 'active' && hApproachLimit && (() => {
@@ -438,12 +438,12 @@ export function HourlyScreen() {
               <View style={{ flex: 1 }}>
                 {extraKm > 0 ? (
                   <>
-                    <Text style={{ color: C.red, fontWeight: '700', fontSize: 13 }}>+{extraKm.toFixed(1)} km extra — ₹{extraCharge} trip end pe pay karein</Text>
-                    <Text style={{ color: C.textDim, fontSize: 11, marginTop: 2 }}>{included} km package mein | ab tak: {traveled.toFixed(1)} km</Text>
+                    <Text style={{ color: C.red, fontWeight: '700', fontSize: 13 }}>+{extraKm.toFixed(1)} km extra — ₹{extraCharge} payable at trip end</Text>
+                    <Text style={{ color: C.textDim, fontSize: 11, marginTop: 2 }}>{included} km included | traveled so far: {traveled.toFixed(1)} km</Text>
                   </>
                 ) : (
                   <Text style={{ color: C.green, fontSize: 12, fontWeight: '600' }}>
-                    {traveled.toFixed(1)} / {included} km — Package limit safe hai ✓
+                    {traveled.toFixed(1)} / {included} km — Within package limit ✓
                   </Text>
                 )}
               </View>
@@ -457,22 +457,22 @@ export function HourlyScreen() {
             <Text style={{ fontSize: 20, marginRight: 10 }}>{hApproachLimit.critical ? '🚨' : '⚠️'}</Text>
             <View style={{ flex: 1 }}>
               <Text style={{ fontWeight: '900', color: hApproachLimit.critical ? C.red : C.yellow, fontSize: 14, marginBottom: 4 }}>
-                {hApproachLimit.critical ? 'Sirf ~' + hApproachLimit.min_left + ' min bacha!' : '⏰ ~' + hApproachLimit.min_left + ' minute bacha hai'}
+                {hApproachLimit.critical ? 'Only ~' + hApproachLimit.min_left + ' min left!' : '⏰ ~' + hApproachLimit.min_left + ' minutes remaining'}
               </Text>
               {hApproachLimit.is_roundtrip ? (
                 <Text style={{ color: hApproachLimit.critical ? C.red : C.yellow, fontSize: 12, fontWeight: '700' }}>
-                  🔄 Round Trip — Abhi wapas pickup ke liye chalo!
+                  🔄 Round Trip — Head back to pickup now!
                 </Text>
               ) : (
                 <Text style={{ color: hApproachLimit.critical ? C.red : C.textMuted, fontSize: 12 }}>
-                  Trip extend karo ya driver se wrap up karo
+                  Extend trip or wrap up with driver
                 </Text>
               )}
               {hExtendStep === 'idle' && (
                 <TouchableOpacity onPress={() => { hExtendStepRef.current = 'choose'; setHExtendStep('choose'); }}
                   style={{ marginTop: 8, backgroundColor: hApproachLimit.is_roundtrip ? C.glassMid : C.yellowGlass, borderRadius: 8, padding: 8, alignSelf: 'flex-start', borderWidth: 1, borderColor: hApproachLimit.is_roundtrip ? C.glassBorder : C.yellowBorder }}>
                   <Text style={{ color: hApproachLimit.is_roundtrip ? C.purple : C.yellow, fontSize: 12, fontWeight: '800' }}>
-                    {hApproachLimit.is_roundtrip ? '⏱️ Extension Chahiye?' : '⏱️ Extend Karo'}
+                    {hApproachLimit.is_roundtrip ? '⏱️ Need Extension?' : '⏱️ Extend Trip'}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -482,7 +482,7 @@ export function HourlyScreen() {
 
         {hExtendStep === 'choose' && (
           <View style={{ backgroundColor: C.glass, borderRadius: 18, padding: 16, marginBottom: 16, elevation: 3, borderWidth: 2, borderColor: C.pinkBorder }}>
-            <Text style={{ fontWeight: '900', color: C.text, fontSize: 15, marginBottom: 12 }}>⏱️ Trip Extend Karo</Text>
+            <Text style={{ fontWeight: '900', color: C.text, fontSize: 15, marginBottom: 12 }}>⏱️ Extend Trip</Text>
             <Text style={{ color: C.textMuted, fontSize: 12, marginBottom: 8 }}>Extra Hours:</Text>
             <View style={{ flexDirection: 'row', gap: 6, marginBottom: 12 }}>
               {[0, 1, 2, 3, 4].map(h => (
@@ -525,7 +525,7 @@ export function HourlyScreen() {
                 <View style={{ backgroundColor: C.glassMid, borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: C.glassBorder }}>
                   <Text style={{ fontWeight: '800', color: C.yellow, fontSize: 15 }}>Estimated Cost: ₹{cost}</Text>
                   <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 4 }}>+{extraKm} km included · extra ₹{pkgData?.extra || 8}/km</Text>
-                  <Text style={{ color: C.textDim, fontSize: 11, marginTop: 2 }}>Wallet se deduct hoga — driver ke accept karne par</Text>
+                  <Text style={{ color: C.textDim, fontSize: 11, marginTop: 2 }}>Deducted from wallet — when driver accepts</Text>
                 </View>
               );
             })()}
@@ -545,13 +545,13 @@ export function HourlyScreen() {
                       setHExtendStep('pending');
                       setHourlyBooking((p: any) => ({ ...p, extend_requested_hours: hExtendHours + hExtendMin / 60 }));
                       loadWallet(phone);
-                      alert(`✅ Request bheji! ₹${data.extra_fare} hold ho gaye — driver ka intezaar karo`);
+                      alert(`✅ Request sent! ₹${data.extra_fare} held — waiting for driver`);
                     } else {
-                      alert(data.message || 'Request nahi bheji ja saki');
+                      alert(data.message || 'Could not send request');
                     }
-                  } catch (_e) { alert('Error — dobara try karo'); }
+                  } catch (_e) { alert('Error — please try again'); }
                 }}>
-                <Text style={{ color: '#fff', fontWeight: '800' }}>📤 Driver ko Request Bhejo</Text>
+                <Text style={{ color: '#fff', fontWeight: '800' }}>📤 Send Request to Driver</Text>
               </Bouncy>
             </View>
           </View>
@@ -561,8 +561,8 @@ export function HourlyScreen() {
           <View style={{ backgroundColor: C.greenGlass, borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: 'row', alignItems: 'center', borderLeftWidth: 4, borderLeftColor: C.green, borderWidth: 1, borderColor: C.greenBorder }}>
             <Text style={{ fontSize: 22, marginRight: 10 }}>✅</Text>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: '900', color: C.green, fontSize: 14 }}>Extension Approve Ho Gaya!</Text>
-              <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>Trip aur {parseFloat(hourlyBooking?.package_hours || 0) > hExtendPrevHoursRef.current ? `${Math.round((parseFloat(hourlyBooking?.package_hours || 0) - hExtendPrevHoursRef.current) * 60)} minute` : ''} extend ho gayi</Text>
+              <Text style={{ fontWeight: '900', color: C.green, fontSize: 14 }}>Extension Approved!</Text>
+              <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>Trip extended by {parseFloat(hourlyBooking?.package_hours || 0) > hExtendPrevHoursRef.current ? `${Math.round((parseFloat(hourlyBooking?.package_hours || 0) - hExtendPrevHoursRef.current) * 60)} minutes` : ''}</Text>
             </View>
           </View>
         )}
@@ -570,8 +570,8 @@ export function HourlyScreen() {
           <View style={{ backgroundColor: C.redGlass, borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: 'row', alignItems: 'center', borderLeftWidth: 4, borderLeftColor: C.red, borderWidth: 1, borderColor: C.redBorder }}>
             <Text style={{ fontSize: 22, marginRight: 10 }}>❌</Text>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: '900', color: C.red, fontSize: 14 }}>Extension Reject Ho Gaya</Text>
-              <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>Driver ne reject kiya — paise wapas wallet mein aa gaye</Text>
+              <Text style={{ fontWeight: '900', color: C.red, fontSize: 14 }}>Extension Rejected</Text>
+              <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>Driver declined — funds returned to your wallet</Text>
             </View>
           </View>
         )}
@@ -581,7 +581,7 @@ export function HourlyScreen() {
             <Text style={{ fontSize: 20, marginRight: 10 }}>⏳</Text>
             <View>
               <Text style={{ fontWeight: '800', color: C.purple, fontSize: 13 }}>Extension Request Pending</Text>
-              <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>Driver ke response ka intezaar... ₹{Math.round(hourlyBooking?.extend_escrow || 0)} hold mein</Text>
+              <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>Waiting for driver's response... ₹{Math.round(hourlyBooking?.extend_escrow || 0)} held</Text>
             </View>
           </View>
         )}
@@ -589,15 +589,15 @@ export function HourlyScreen() {
         {!hApproachLimit?.warn && hExtendStep === 'idle' && hourlyBooking?.status === 'active' && !hourlyBooking?.extend_requested_hours && (
           <Bouncy style={{ backgroundColor: C.glassMid, borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.glassBorder }} onPress={() => { hExtendStepRef.current = 'choose'; setHExtendStep('choose'); }}>
             <Text style={{ fontSize: 16, marginRight: 8 }}>⏱️</Text>
-            <Text style={{ color: C.purple, fontWeight: '800' }}>Trip Extend Karo</Text>
+            <Text style={{ color: C.purple, fontWeight: '800' }}>Extend Trip</Text>
           </Bouncy>
         )}
 
         {hourlyBooking?.pending_customer_confirm && (
           <View style={{ backgroundColor: C.yellowGlass, borderRadius: 14, padding: 16, marginBottom: 16, borderWidth: 2, borderColor: C.yellowBorder }}>
-            <Text style={{ fontWeight: '900', color: C.yellow, marginBottom: 4, fontSize: 16 }}>⚠️ Driver ne Trip Complete Kiya!</Text>
-            <Text style={{ color: C.textMuted, fontSize: 13, marginBottom: 4 }}>Kya trip actually complete hui? Confirm karo ya dispute karo.</Text>
-            <Text style={{ color: C.textDim, fontSize: 11, marginBottom: 14 }}>10 min mein auto-confirm ho jayega</Text>
+            <Text style={{ fontWeight: '900', color: C.yellow, marginBottom: 4, fontSize: 16 }}>⚠️ Driver Marked Trip Complete!</Text>
+            <Text style={{ color: C.textMuted, fontSize: 13, marginBottom: 4 }}>Did the trip actually complete? Confirm or raise a dispute.</Text>
+            <Text style={{ color: C.textDim, fontSize: 11, marginBottom: 14 }}>Auto-confirms in 10 minutes</Text>
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <Bouncy style={{ flex: 1, backgroundColor: C.green, borderRadius: 12, padding: 14, alignItems: 'center', elevation: 4, shadowColor: C.green, shadowOpacity: 0.35, shadowRadius: 8 }}
                 onPress={async () => {
@@ -607,7 +607,7 @@ export function HourlyScreen() {
                   } catch (_e) {}
                 }}>
                 <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>✅ Confirm</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 2 }}>Trip khatam hui</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 2 }}>Trip ended</Text>
               </Bouncy>
               <Bouncy style={{ flex: 1, backgroundColor: C.redGlass, borderRadius: 12, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: C.redBorder }}
                 onPress={async () => {
@@ -617,7 +617,7 @@ export function HourlyScreen() {
                   } catch (_e) {}
                 }}>
                 <Text style={{ color: C.red, fontWeight: '900', fontSize: 15 }}>⚠️ Dispute</Text>
-                <Text style={{ color: C.textDim, fontSize: 11, marginTop: 2 }}>Driver chhod gaya</Text>
+                <Text style={{ color: C.textDim, fontSize: 11, marginTop: 2 }}>Driver left early</Text>
               </Bouncy>
             </View>
           </View>
@@ -625,15 +625,15 @@ export function HourlyScreen() {
 
         {hourlyBooking?.dispute_raised && (
           <View style={{ backgroundColor: C.redGlass, borderRadius: 14, padding: 14, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor: C.redBorder }}>
-            <Text style={{ fontWeight: '900', color: C.red, marginBottom: 4 }}>🛡️ Dispute Raised — Admin Review Mein</Text>
-            <Text style={{ color: C.textMuted, fontSize: 12 }}>24h mein resolve hoga — paise escrow mein safe hain</Text>
+            <Text style={{ fontWeight: '900', color: C.red, marginBottom: 4 }}>🛡️ Dispute Raised — Under Admin Review</Text>
+            <Text style={{ color: C.textMuted, fontSize: 12 }}>Will be resolved within 24h — funds are safe in escrow</Text>
           </View>
         )}
 
         {hourlyBooking?.early_end_requested_by === 'driver' && (
           <View style={{ backgroundColor: C.yellowGlass, borderRadius: 14, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: C.yellowBorder }}>
-            <Text style={{ fontWeight: '900', color: C.yellow, marginBottom: 6 }}>⚠️ Driver Trip Khatam Karna Chahta Hai</Text>
-            <Text style={{ color: C.textMuted, fontSize: 12, marginBottom: 12 }}>Confirm karne par proportional payment hogi (min 70% driver ko).</Text>
+            <Text style={{ fontWeight: '900', color: C.yellow, marginBottom: 6 }}>⚠️ Driver Wants to End Trip Early</Text>
+            <Text style={{ color: C.textMuted, fontSize: 12, marginBottom: 12 }}>If confirmed, proportional payment applies (min 70% to driver).</Text>
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <Bouncy style={{ flex: 1, backgroundColor: C.green, borderRadius: 12, padding: 12, alignItems: 'center', elevation: 3, shadowColor: C.green, shadowOpacity: 0.3, shadowRadius: 6 }} onPress={confirmEarlyEnd}><Text style={{ color: '#fff', fontWeight: '800' }}>✅ Confirm</Text></Bouncy>
               <Bouncy style={{ flex: 1, backgroundColor: C.glassMid, borderRadius: 12, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: C.glassBorder }} onPress={rejectEarlyEnd}><Text style={{ color: C.textMuted, fontWeight: '700' }}>✗ Reject</Text></Bouncy>
@@ -646,15 +646,15 @@ export function HourlyScreen() {
             style={{ backgroundColor: C.pink, borderRadius: 16, padding: 18, alignItems: 'center', elevation: 6, shadowColor: C.pink, shadowOpacity: 0.45, shadowOffset: { width: 0, height: 4 }, shadowRadius: 10 }}
             onPress={requestEarlyEnd}>
             <Text style={{ fontSize: 26, marginBottom: 4 }}>⏹️</Text>
-            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>Trip Complete Karo</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, marginTop: 4, textAlign: 'center' }}>Driver ko full payment milegi — turant complete hoga</Text>
+            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>Complete Trip</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, marginTop: 4, textAlign: 'center' }}>Driver receives full payment — completes instantly</Text>
           </TouchableOpacity>
         )}
         {hourlyBooking?.early_end_requested_by === 'customer' && (
           <View style={{ backgroundColor: C.yellowGlass, borderRadius: 14, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: C.yellowBorder }}>
             <Text style={{ fontSize: 22, marginBottom: 4 }}>⏳</Text>
-            <Text style={{ color: C.yellow, fontWeight: '800', fontSize: 14 }}>Driver ke Confirm ka Intezaar...</Text>
-            <Text style={{ color: C.textDim, fontSize: 12, marginTop: 4 }}>Driver ne abhi confirm nahi kiya</Text>
+            <Text style={{ color: C.yellow, fontWeight: '800', fontSize: 14 }}>Waiting for Driver to Confirm...</Text>
+            <Text style={{ color: C.textDim, fontSize: 12, marginTop: 4 }}>Driver hasn't confirmed yet</Text>
           </View>
         )}
       </ScrollView>
@@ -668,22 +668,22 @@ export function HourlyScreen() {
       <ScreenIn style={s.screen}>
         <View style={{ backgroundColor: C.plum, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 52, paddingBottom: SP.md, paddingHorizontal: SP.md, alignItems: 'center' }}>
           <View style={{ position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(255,45,120,0.09)', top: -80, right: -50 }} />
-          <Text style={{ ...T.title, color: '#fff' }}>Driver Dhundh Rahe Hain</Text>
+          <Text style={{ ...T.title, color: '#fff' }}>Finding a Driver</Text>
         </View>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <PulseView><Text style={{ fontSize: 72, marginBottom: 16 }}>⏱️</Text></PulseView>
           <Text style={{ fontSize: 18, fontWeight: '900', color: C.text, marginBottom: 10 }}>
-            {driverAccepted ? 'Driver Mil Gaya!' : 'Booking Confirmed!'}
+            {driverAccepted ? 'Driver Found!' : 'Booking Confirmed!'}
           </Text>
           <View style={{ backgroundColor: C.greenGlass, borderRadius: 14, padding: 12, flexDirection: 'row', alignItems: 'center', marginBottom: 16, width: '100%', borderWidth: 1, borderColor: C.greenBorder }}>
             <Text style={{ fontSize: 16, marginRight: 8 }}>✅</Text>
-            <Text style={{ color: C.green, fontWeight: '700' }}>₹{hourlyBooking?.fare} Payment Paid — Escrow Mein</Text>
+            <Text style={{ color: C.green, fontWeight: '700' }}>₹{hourlyBooking?.fare} Payment Held — In Escrow</Text>
           </View>
           {!driverAccepted && <FloatingDots />}
           <Text style={{ color: C.textMuted, fontSize: 13, marginTop: 12, marginBottom: 20, textAlign: 'center' }}>
             {driverAccepted
-              ? 'Driver aa raha hai — OTP ready rakho'
-              : `Aapke area mein ${hVehicleIcons[hVehicle]} driver dhundh rahe hain...`}
+              ? 'Driver is on the way — have your OTP ready'
+              : `Searching for ${hVehicleIcons[hVehicle]} driver in your area...`}
           </Text>
           <View style={{ backgroundColor: C.glass, borderRadius: 16, padding: 16, width: '100%', elevation: 2, marginBottom: 20, borderWidth: 1, borderColor: C.glassBorder }}>
             {[
@@ -780,11 +780,11 @@ export function HourlyScreen() {
 
         <Text style={[s.secTitle, { marginTop: 8, color: C.textMuted, letterSpacing: 1 }]}>PICKUP LOCATION *</Text>
         <View style={{ backgroundColor: C.glass, borderRadius: 14, elevation: 1, borderWidth: 1, borderColor: C.glassBorder, marginBottom: 4 }}>
-          <TextInput style={{ fontSize: 14, color: C.text, padding: 12 }} placeholder="📍 Pickup kahaan se?" placeholderTextColor={C.textDim} value={hPickup}
+          <TextInput style={{ fontSize: 14, color: C.text, padding: 12 }} placeholder="📍 Where to pickup?" placeholderTextColor={C.textDim} value={hPickup}
             onChangeText={t => { setHPickup(t); searchHourly(t, 'pickup'); }} />
           <TouchableOpacity onPress={useCurrentLocationPickup} style={{ flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderColor: C.glassBorder, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: C.pinkGlass, borderBottomLeftRadius: 14, borderBottomRightRadius: 14 }}>
             <Text style={{ fontSize: 14, marginRight: 6 }}>🎯</Text>
-            <Text style={{ fontSize: 12, color: C.pink, fontWeight: '700' }}>Current Location Use Karo</Text>
+            <Text style={{ fontSize: 12, color: C.pink, fontWeight: '700' }}>Use Current Location</Text>
           </TouchableOpacity>
         </View>
         {hPickupSugg.length > 0 && (
@@ -799,7 +799,7 @@ export function HourlyScreen() {
 
         <Text style={[s.secTitle, { marginTop: 4, color: C.textMuted, letterSpacing: 1 }]}>FIRST STOP / AREA (OPTIONAL)</Text>
         <View style={{ backgroundColor: C.glass, borderRadius: 14, padding: 12, marginBottom: 4, elevation: 1, borderWidth: 1, borderColor: C.glassBorder }}>
-          <TextInput style={{ fontSize: 14, color: C.text }} placeholder="🗺️ Pehla stop ya area? (optional)" placeholderTextColor={C.textDim} value={hDrop}
+          <TextInput style={{ fontSize: 14, color: C.text }} placeholder="🗺️ First stop or area? (optional)" placeholderTextColor={C.textDim} value={hDrop}
             onChangeText={t => { setHDrop(t); searchHourly(t, 'drop'); }} />
         </View>
         {hDropSugg.length > 0 && (
@@ -815,9 +815,9 @@ export function HourlyScreen() {
         <View style={{ backgroundColor: C.glassMid, borderRadius: 12, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'flex-start', borderWidth: 1, borderColor: C.glassBorder }}>
           <Text style={{ fontSize: 15, marginRight: 8 }}>ℹ️</Text>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: C.purple, fontWeight: '800', fontSize: 12 }}>Package mein {hourlyPackages[hVehicle]?.[hPackageHours]?.km} km included</Text>
+            <Text style={{ color: C.purple, fontWeight: '800', fontSize: 12 }}>{hourlyPackages[hVehicle]?.[hPackageHours]?.km} km included in package</Text>
             <Text style={{ color: C.purple, fontSize: 11, marginTop: 3, opacity: 0.8 }}>
-              Aap kahi bhi ja sakte hain {hPackageHours} hour mein. Agar package km exceed hua to extra ₹{hourlyPackages[hVehicle]?.extra}/km trip end pe pay hoga.
+              Go anywhere within {hPackageHours} hours. If package km is exceeded, extra ₹{hourlyPackages[hVehicle]?.extra}/km will be charged at trip end.
             </Text>
           </View>
         </View>
@@ -826,13 +826,13 @@ export function HourlyScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ flex: 1, marginRight: 12 }}>
               <Text style={{ fontSize: 14, fontWeight: '700', color: C.text }}>🔄 Round Trip</Text>
-              <Text style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>Driver aapko wapas pickup pe drop karega — package time ke andar</Text>
+              <Text style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>Driver will drop you back at pickup — within package time</Text>
             </View>
             <Switch value={hRoundTrip} onValueChange={setHRoundTrip} trackColor={{ true: C.pink }} />
           </View>
           {hRoundTrip && (
             <View style={{ marginTop: 12 }}>
-              <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 8 }}>Drop pe rukna (hours):</Text>
+              <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 8 }}>Stay at drop (hours):</Text>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 {[1, 2, 3].map(h => (
                   <Bouncy key={h} onPress={() => setHStayHours(h)} style={{ flex: 1, backgroundColor: hStayHours === h ? C.bgCard : C.glassMid, borderRadius: 12, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: hStayHours === h ? C.pinkBorder : C.glassBorder }}>
@@ -859,13 +859,13 @@ export function HourlyScreen() {
           ))}
           {walletBalance < (pkg?.fare || 0) && (
             <View style={{ marginTop: 10, backgroundColor: C.pink, borderRadius: 10, padding: 8, elevation: 3 }}>
-              <Text style={{ color: '#fff', fontSize: 12, textAlign: 'center', fontWeight: '700' }}>⚠️ Wallet mein ₹{(pkg?.fare || 0) - walletBalance} aur chahiye — pehle add karo</Text>
+              <Text style={{ color: '#fff', fontSize: 12, textAlign: 'center', fontWeight: '700' }}>⚠️ Add ₹{(pkg?.fare || 0) - walletBalance} more to wallet first</Text>
             </View>
           )}
         </View>
 
         <Bouncy style={[s.btn, { opacity: walletBalance >= (pkg?.fare || 0) ? 1 : 0.5 }]} onPress={walletBalance >= (pkg?.fare || 0) ? bookHourly : () => { loadWalletDetail(phone); loadLoyalty(phone); setScreen('wallet'); }}>
-          <Text style={s.btnTxt}>{walletBalance >= (pkg?.fare || 0) ? `✅ Book — ₹${pkg?.fare} Wallet Se` : `💳 Wallet Mein ₹${pkg?.fare} Add Karo`}</Text>
+          <Text style={s.btnTxt}>{walletBalance >= (pkg?.fare || 0) ? `✅ Book — Pay ₹${pkg?.fare} from Wallet` : `💳 Add ₹${pkg?.fare} to Wallet`}</Text>
         </Bouncy>
       </ScrollView>
     </ScreenIn>

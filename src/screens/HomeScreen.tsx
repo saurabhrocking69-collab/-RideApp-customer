@@ -107,20 +107,20 @@ function BuddyBookModal() {
 
   const useMyLoc = async () => {
     if (!userCoords) { setBuddyBookMsg('📍 Location unavailable — manually enter pickup'); return; }
-    setBuddyBookMsg('📍 Detect kar rahe hain...');
+    setBuddyBookMsg('📍 Detecting location...');
     try {
       const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${userCoords.latitude},${userCoords.longitude}&key=${MAPS_KEY}`);
       const data = await res.json();
       const addr = data.results?.[0]?.formatted_address || '';
       if (addr) { setBuddyBookPU(addr); setBuddyBookPUCoords({ lat: userCoords.latitude, lng: userCoords.longitude }); setBuddyPUSugg([]); setBuddyBookMsg(''); }
-      else setBuddyBookMsg('📍 Address nahi mila — manually likhao');
+      else setBuddyBookMsg('📍 Location not found — enter manually');
     } catch (_e) { setBuddyBookMsg('❌ Location fetch failed'); }
   };
 
   const bookWithBuddy = async () => {
-    if (isOffline) { setBuddyBookMsg('⛔ Driver offline hai — request nahi bhej sakte'); return; }
-    if (!buddyBookPU.trim()) { setBuddyBookMsg('⚠️ Pickup location daalo'); return; }
-    if (!buddyBookDR.trim()) { setBuddyBookMsg('⚠️ Drop location daalo'); return; }
+    if (isOffline) { setBuddyBookMsg('⛔ Driver is offline — cannot send request'); return; }
+    if (!buddyBookPU.trim()) { setBuddyBookMsg('⚠️ Enter pickup location'); return; }
+    if (!buddyBookDR.trim()) { setBuddyBookMsg('⚠️ Enter drop location'); return; }
     setBuddyBookLoading(true); setBuddyBookMsg('');
     try {
       const res = await apiPost('/api/favourites/book', {
@@ -138,13 +138,13 @@ function BuddyBookModal() {
         buddyWaitingRef.current = true;
         setBuddyWaiting(true); setBuddyBookMsg('');
       } else if (res.reason === 'offline') {
-        setBuddyBookMsg(`⛔ ${res.driver_name || favouriteBuddy.driver_name} abhi offline hai — request cancel. Baad mein try karo.`);
+        setBuddyBookMsg(`⛔ ${res.driver_name || favouriteBuddy.driver_name} is offline — request cancelled. Try again later.`);
       } else if (res.reason === 'busy') {
-        setBuddyBookMsg(`🚗 ${res.driver_name || favouriteBuddy.driver_name} abhi kisi aur ride mein busy hai — request cancel. Thodi der mein dobara try karo.`);
+        setBuddyBookMsg(`🚗 ${res.driver_name || favouriteBuddy.driver_name} is on another ride — request cancelled. Try again shortly.`);
       } else {
-        setBuddyBookMsg('❌ ' + (res.error || 'Kuch galat hua — dobara try karo'));
+        setBuddyBookMsg('❌ ' + (res.error || 'Something went wrong — please try again'));
       }
-    } catch (_e) { setBuddyBookMsg('❌ Network error — dobara try karo'); }
+    } catch (_e) { setBuddyBookMsg('❌ Network error — please try again'); }
     setBuddyBookLoading(false);
   };
 
@@ -199,8 +199,8 @@ function BuddyBookModal() {
               <View style={{ backgroundColor: C.redGlass, borderRadius: 14, padding: 14, marginBottom: 14, borderWidth: 1.5, borderColor: C.redBorder, flexDirection: 'row', alignItems: 'center' }}>
                 <Text style={{ fontSize: 20, marginRight: 10 }}>⛔</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: C.red, fontSize: 13, fontWeight: '800' }}>{favouriteBuddy.driver_name} abhi offline hai</Text>
-                  <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 2 }}>Request nahi bheji jayegi. Baad mein try karo.</Text>
+                  <Text style={{ color: C.red, fontSize: 13, fontWeight: '800' }}>{favouriteBuddy.driver_name} is currently offline</Text>
+                  <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 2 }}>Request won't be sent. Try again later.</Text>
                 </View>
               </View>
             )}
@@ -208,9 +208,9 @@ function BuddyBookModal() {
             {buddyWaiting ? (
               <View style={{ alignItems: 'center', paddingVertical: 24 }}>
                 <Text style={{ fontSize: 48, marginBottom: 12 }}>⏳</Text>
-                <Text style={{ fontWeight: '800', fontSize: 17, color: C.text, textAlign: 'center' }}>Request Bheji Gayi!</Text>
+                <Text style={{ fontWeight: '800', fontSize: 17, color: C.text, textAlign: 'center' }}>Request Sent!</Text>
                 <Text style={{ color: C.textMuted, fontSize: 13, textAlign: 'center', marginTop: 6, lineHeight: 20 }}>
-                  {favouriteBuddy.driver_name} ke accept karne ka intezaar kar rahe hain...{'\n'}25 seconds ka time diya gaya hai.
+                  Waiting for {favouriteBuddy.driver_name} to accept...{'\n'}They have 25 seconds to respond.
                 </Text>
                 {buddyBookMsg.startsWith('⚠️') || buddyBookMsg.startsWith('⛔') ? (
                   <>
@@ -218,12 +218,12 @@ function BuddyBookModal() {
                       <Text style={{ color: C.yellow, fontSize: 13, textAlign: 'center', fontWeight: '700' }}>{buddyBookMsg}</Text>
                     </View>
                     <TouchableOpacity onPress={goToMatching} style={{ marginTop: 14, backgroundColor: C.glass, borderRadius: 14, paddingHorizontal: 28, paddingVertical: 14, width: '100%', alignItems: 'center', borderWidth: 1, borderColor: C.glassBorder }}>
-                      <Text style={{ color: C.text, fontWeight: '800', fontSize: 14 }}>Kisi bhi driver se book karo →</Text>
+                      <Text style={{ color: C.text, fontWeight: '800', fontSize: 14 }}>Book any available driver →</Text>
                     </TouchableOpacity>
                   </>
                 ) : (
                   <TouchableOpacity onPress={goToMatching} style={{ marginTop: 14, backgroundColor: C.pink, borderRadius: 14, paddingHorizontal: 28, paddingVertical: 14, width: '100%', alignItems: 'center', elevation: 4, shadowColor: C.pink, shadowOpacity: 0.2, shadowRadius: 6 }}>
-                    <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>Live Track Karo →</Text>
+                    <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>Live Track →</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -233,11 +233,11 @@ function BuddyBookModal() {
                 <TouchableOpacity onPress={useMyLoc}
                   style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: C.greenGlass, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 10, borderWidth: 1, borderColor: C.greenBorder }}>
                   <Text style={{ fontSize: 15, marginRight: 8 }}>🎯</Text>
-                  <Text style={{ color: C.green, fontSize: 13, fontWeight: '700' }}>Meri current location use karo</Text>
+                  <Text style={{ color: C.green, fontSize: 13, fontWeight: '700' }}>Use my current location</Text>
                 </TouchableOpacity>
                 <TextInput
                   style={{ borderWidth: 1.5, borderColor: buddyBookPU ? C.green : C.glassBorder, borderRadius: 12, padding: 12, fontSize: 14, color: C.text, backgroundColor: C.glass, marginBottom: 4 }}
-                  placeholder="Pickup location likhao ya search karo..."
+                  placeholder="Pickup location..."
                   placeholderTextColor={C.textDim}
                   value={buddyBookPU}
                   onChangeText={(t) => { setBuddyBookPU(t); searchBuddyPlaces(t, 'pickup'); }}
@@ -259,7 +259,7 @@ function BuddyBookModal() {
                 <Text style={{ fontWeight: '700', fontSize: 13, color: C.textMuted, marginBottom: 8, marginTop: 12 }}>🎯 Drop Location</Text>
                 <TextInput
                   style={{ borderWidth: 1.5, borderColor: buddyBookDR ? C.pink : C.glassBorder, borderRadius: 12, padding: 12, fontSize: 14, color: C.text, backgroundColor: C.glass, marginBottom: 4 }}
-                  placeholder="Drop location likhao ya search karo..."
+                  placeholder="Where to?"
                   placeholderTextColor={C.textDim}
                   value={buddyBookDR}
                   onChangeText={(t) => { setBuddyBookDR(t); searchBuddyPlaces(t, 'drop'); }}
@@ -294,12 +294,12 @@ function BuddyBookModal() {
                   disabled={buddyBookLoading || isOffline}
                   style={{ backgroundColor: isOffline ? C.glass : C.pink, borderRadius: 16, padding: 17, alignItems: 'center', marginTop: 16, elevation: isOffline ? 0 : 10, shadowColor: C.pink, shadowOpacity: isOffline ? 0 : 0.55, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, borderWidth: isOffline ? 1 : 0, borderColor: C.glassBorder }}>
                   <Text style={{ color: isOffline ? C.textDim : '#fff', fontWeight: '900', fontSize: 15 }}>
-                    {buddyBookLoading ? '⏳ Request bhej rahe hain...' : isOffline ? '⛔ Driver Offline — Unavailable' : `⭐ ${favouriteBuddy.driver_name} ko Request Bhejo`}
+                    {buddyBookLoading ? '⏳ Sending request...' : isOffline ? '⛔ Driver Offline — Unavailable' : `⭐ Request ${favouriteBuddy.driver_name}`}
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={() => { closeModal(); setScreen('booking'); }} style={{ alignItems: 'center', marginTop: 12, paddingVertical: 6 }}>
-                  <Text style={{ color: C.textMuted, fontSize: 13 }}>Kisi bhi driver se book karo →</Text>
+                  <Text style={{ color: C.textMuted, fontSize: 13 }}>Book any available driver →</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -317,7 +317,7 @@ const BANNER_CARDS = [
     bg: ['#1a237e', '#283593'],
     badge: '⏰ NEW',
     title: 'Schedule a Ride',
-    sub: 'Airport, office, doctor — pehle se book karo',
+    sub: 'Airport, office, doctor — book in advance',
     cta: '📅 Book Now →',
     emoji: '📅',
     screen: 'scheduled' as const,
@@ -327,7 +327,7 @@ const BANNER_CARDS = [
     bg: [C.pink, '#c2185b'],
     badge: '🎁 REFER & EARN',
     title: '₹50 + ₹50 Reward',
-    sub: 'Dost ko invite karo, dono ko cash!',
+    sub: 'Invite a friend, both get cash!',
     cta: '🔗 Invite Friends →',
     emoji: '🤝',
     screen: 'referral' as const,
@@ -473,7 +473,7 @@ function HomeTab() {
     pulse();
   }, []);
 
-  const GREETINGS = ['Namaste! 🙏', 'Chalein India ki sair? 🗺️', 'Safe Travels! 🛺', 'Sppero ke saath chalein! 🚀', 'Ride karo, India dekho! 🇮🇳'];
+  const GREETINGS = ['Good to see you! 👋', 'Where are you headed? 🗺️', 'Safe Travels! 🛺', 'Ready to ride? 🚀', 'Let\'s go! 🇮🇳'];
   const [greetIdx, setGreetIdx] = useState(0);
   const greetFade  = useRef(new Animated.Value(1)).current;
   const greetSlide = useRef(new Animated.Value(0)).current;
@@ -504,31 +504,32 @@ function HomeTab() {
   }, []);
 
   return (
-    <View style={s.screen}>
-      {/* ── Animated collapsing header ────────────────────────────── */}
-      <Animated.View style={{ height: headerH, backgroundColor: C.pink, overflow: 'hidden' }}>
-        <View style={{ position: 'absolute', width: 260, height: 260, borderRadius: 130, backgroundColor: 'rgba(255,255,255,0.10)', top: -80, right: -60 }} />
-        <View style={{ position: 'absolute', width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(255,255,255,0.07)', top: 16, left: -50 }} />
-        <View style={{ position: 'absolute', width: 90, height: 90, borderRadius: 45, backgroundColor: 'rgba(245,158,11,0.25)', bottom: -20, right: 90 }} />
-        {/* Full header — fades out on scroll */}
+    <View style={[s.screen, { backgroundColor: C.night }]}>
+      {/* ── Dark hero header ────────────────────────────── */}
+      <Animated.View style={{ height: headerH, backgroundColor: C.night, overflow: 'hidden' }}>
+        {/* Ambient glow blobs */}
+        <View style={{ position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(255,45,120,0.07)', top: -60, right: -50 }} />
+        <View style={{ position: 'absolute', width: 140, height: 140, borderRadius: 70, backgroundColor: 'rgba(46,20,97,0.6)', bottom: -30, left: -30 }} />
+
+        {/* Full header */}
         <Animated.View style={{ paddingTop: Platform.OS === 'android' ? 38 : 50, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', opacity: fullAlpha }}>
           <View style={{ flex: 1 }}>
-            <Animated.Text style={{ color: 'rgba(255,255,255,0.82)', fontSize: 12, fontWeight: '600', opacity: greetFade, transform: [{ translateY: greetSlide }] }}>
+            <Animated.Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: '600', opacity: greetFade, transform: [{ translateY: greetSlide }] }}>
               {GREETINGS[greetIdx]}
             </Animated.Text>
             <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900', letterSpacing: -0.5, marginTop: 3 }}>{userName || 'Rider'}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3 }}>
-              <Text style={{ color: 'rgba(255,255,255,0.60)', fontSize: 10 }}>📍 India</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10 }}>📍 India</Text>
               {nearbyCount > 0 && (
                 <Animated.View style={{
                   flexDirection: 'row', alignItems: 'center', gap: 4,
-                  backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 10,
+                  backgroundColor: 'rgba(0,212,168,0.15)', borderRadius: 10,
                   paddingHorizontal: 7, paddingVertical: 2,
-                  borderWidth: 1, borderColor: 'rgba(255,255,255,0.28)',
+                  borderWidth: 1, borderColor: 'rgba(0,212,168,0.3)',
                   transform: [{ scale: nearbyAnim }],
                 }}>
-                  <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: C.green }} />
-                  <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{nearbyCount} drivers nearby</Text>
+                  <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: C.mint }} />
+                  <Text style={{ color: C.mint, fontSize: 9, fontWeight: '800' }}>{nearbyCount} drivers nearby</Text>
                 </Animated.View>
               )}
             </View>
@@ -536,20 +537,21 @@ function HomeTab() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <NotifBell onPress={() => { setNotifOpen(true); setUnreadNotif(0); }} unread={unreadNotif} />
             <TouchableOpacity onPress={() => { setTab('profile'); loadWallet(phone); }}
-              style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.45)' }}>
-              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 19 }}>{(userName || 'R')[0].toUpperCase()}</Text>
+              style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,45,120,0.2)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,45,120,0.45)' }}>
+              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 18 }}>{(userName || 'R')[0].toUpperCase()}</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
+
         {/* Mini pill — fades in when scrolled */}
         <Animated.View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 14, paddingBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 10, opacity: miniAlpha }}>
           <TouchableOpacity onPress={() => setScreen('booking')}
-            style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 22, paddingHorizontal: 14, paddingVertical: 9, gap: 8 }}>
-            <Ionicons name="search" size={13} color="#fff" />
-            <Text style={{ color: 'rgba(255,255,255,0.88)', fontSize: 13, fontWeight: '600' }}>Kahan jaana hai?</Text>
+            style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: 22, paddingHorizontal: 14, paddingVertical: 9, gap: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' }}>
+            <Ionicons name="search" size={13} color="rgba(255,255,255,0.7)" />
+            <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: '600' }}>Where to?</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => { setTab('profile'); loadWallet(phone); }}
-            style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.40)' }}>
+            style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,45,120,0.2)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,45,120,0.40)' }}>
             <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>{(userName || 'R')[0].toUpperCase()}</Text>
           </TouchableOpacity>
         </Animated.View>
@@ -563,11 +565,24 @@ function HomeTab() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: 90 }}
       >
-        {/* India city illustration */}
-        <LucknowCityCard />
+        {/* Search bar floats at the dark/light boundary */}
+        <TouchableOpacity onPress={() => setScreen('booking')} activeOpacity={0.9} style={{
+          marginHorizontal: 16, marginTop: -18,
+          backgroundColor: C.bgCard,
+          borderRadius: 18, paddingVertical: 14, paddingHorizontal: 18,
+          flexDirection: 'row', alignItems: 'center', gap: 10,
+          elevation: 16, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 16, shadowOffset: { width: 0, height: 6 },
+          borderWidth: 1, borderColor: C.glassBorder,
+        }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.pink }} />
+          <Text style={{ flex: 1, fontSize: 15, color: C.textMuted, fontWeight: '500' }}>Where to?</Text>
+          <View style={{ backgroundColor: C.pink, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 6, elevation: 2 }}>
+            <Text style={{ color: '#fff', fontSize: 12, fontWeight: '800' }}>Go</Text>
+          </View>
+        </TouchableOpacity>
 
-        {/* White content sheet */}
-        <View style={{ backgroundColor: C.bg, borderTopLeftRadius: 26, borderTopRightRadius: 26, marginTop: -20, paddingTop: 14, paddingHorizontal: 16, borderTopWidth: 1, borderColor: C.glassBorder, elevation: 6, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, minHeight: 600 }}>
+        {/* Content sheet */}
+        <View style={{ backgroundColor: C.bg, borderTopLeftRadius: 0, paddingTop: 14, paddingHorizontal: 16, marginTop: 14, minHeight: 600 }}>
 
           {/* Ride stats strip */}
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
@@ -591,13 +606,6 @@ function HomeTab() {
           </SlideUp>
 
           <SlideUp delay={10}>
-            <Bouncy onPress={() => setScreen('booking')} style={s.searchBox}>
-              <Ionicons name="search" size={18} color={C.textMuted} style={{ marginRight: 10 }} />
-              <Text style={s.searchPh}>Kahan jaana hai?</Text>
-              <View style={{ marginLeft: 'auto', backgroundColor: C.pink, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 5, elevation: 2, shadowColor: C.pink, shadowOpacity: 0.25, shadowRadius: 4 }}>
-                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>Book</Text>
-              </View>
-            </Bouncy>
           </SlideUp>
 
           {/* ── Quick action row: Schedule + Hourly + Refer ─── */}
@@ -609,7 +617,7 @@ function HomeTab() {
                   <Text style={{ fontSize: 20 }}>📅</Text>
                 </View>
                 <Text style={{ fontSize: 12, fontWeight: '800', color: C.plum }}>Schedule</Text>
-                <Text style={{ fontSize: 9, color: C.textDim, marginTop: 2 }}>Pehle se book karo</Text>
+                <Text style={{ fontSize: 9, color: C.textDim, marginTop: 2 }}>Book in advance</Text>
                 {scheduledRides.length > 0 && (
                   <View style={{ backgroundColor: C.plum, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, marginTop: 6 }}>
                     <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900' }}>{scheduledRides.length} upcoming</Text>
@@ -626,6 +634,7 @@ function HomeTab() {
                 </View>
                 <Text style={{ fontSize: 12, fontWeight: '800', color: C.purple }}>By Hour</Text>
                 <Text style={{ fontSize: 9, color: C.textDim, marginTop: 2 }}>2h · 4h · Full Day</Text>
+
               </Bouncy>
               <Bouncy onPress={() => { loadReferral(); setScreen('referral'); }}
                 style={{ flex: 1, backgroundColor: C.pinkGlass, borderRadius: 16, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: C.pinkBorder, elevation: 3, shadowColor: C.pink, shadowOpacity: 0.12, shadowRadius: 8 }}>
@@ -644,7 +653,7 @@ function HomeTab() {
                 <View style={{ backgroundColor: C.yellowGlass, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopLeftRadius: 17, borderTopRightRadius: 17 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Text style={{ fontSize: 16 }}>⭐</Text>
-                    <Text style={{ marginLeft: 6, fontWeight: '800', fontSize: 13, color: C.yellow }}>Mera Sppero Buddy</Text>
+                    <Text style={{ marginLeft: 6, fontWeight: '800', fontSize: 13, color: C.yellow }}>My Sppero Buddy</Text>
                   </View>
                   <TouchableOpacity onPress={removeFavouriteBuddy} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                     <Text style={{ fontSize: 12, color: C.textDim, fontWeight: '700' }}>✕ Remove</Text>
@@ -664,7 +673,7 @@ function HomeTab() {
                       {favouriteBuddy.rating ? ` · ★ ${parseFloat(favouriteBuddy.rating).toFixed(1)}` : ''}
                     </Text>
                     <Text style={{ fontSize: 11, marginTop: 3, fontWeight: '700', color: C.green }}>
-                      ✅ {favouriteBuddy.rides_together || 0} rides saath kiye
+                      ✅ {favouriteBuddy.rides_together || 0} rides together
                       {favouriteBuddy.is_online ? ' · 🟢 Online' : ' · ⚫ Offline'}
                     </Text>
                   </View>
@@ -696,7 +705,7 @@ function HomeTab() {
                         <View style={{ backgroundColor: C.pink, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 3 }}>
                           <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12, letterSpacing: 1 }}>{offer.promo_code}</Text>
                         </View>
-                        <Text style={{ fontSize: 11, color: C.textMuted }}>Booking mein apply karo</Text>
+                        <Text style={{ fontSize: 11, color: C.textMuted }}>Apply at booking</Text>
                       </View>
                     ) : null}
                   </View>
@@ -731,9 +740,9 @@ function HomeTab() {
                 {/* Headline + avatars row */}
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '600', marginBottom: 4 }}>Dost ko invite karo</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '600', marginBottom: 4 }}>Invite a friend</Text>
                     <Text style={{ color: '#FFD700', fontSize: 30, fontWeight: '900', lineHeight: 36 }}>₹50 + ₹50</Text>
-                    <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 11, marginTop: 2 }}>Dono ke wallet mein credited hoga</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 11, marginTop: 2 }}>Credited to both wallets instantly</Text>
                   </View>
                   <View style={{ alignItems: 'center', gap: 10, marginLeft: 14 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -788,9 +797,9 @@ function HomeTab() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: C.text, fontWeight: '800', fontSize: 15 }}>
-                    {storeStatus === 'started' ? 'Ride Chal Rahi Hai!' : 'Active Ride In Progress!'}
+                    {storeStatus === 'started' ? 'Ride In Progress!' : 'Active Ride In Progress!'}
                   </Text>
-                  <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>{drop ? `→ ${drop}` : 'Tap karo ride screen pe jao'}</Text>
+                  <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>{drop ? `→ ${drop}` : 'Tap to go to ride screen'}</Text>
                 </View>
                 <Text style={{ color: C.pink, fontSize: 24, fontWeight: '300' }}>›</Text>
               </TouchableOpacity>
@@ -803,7 +812,7 @@ function HomeTab() {
                 <Text style={{ fontSize: 22, marginRight: 10 }}>⏱️</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: C.text, fontWeight: '800', fontSize: 15 }}>Active Hourly Ride</Text>
-                  <Text style={{ color: C.textMuted, fontSize: 12 }}>Tap to resume your ongoing ride</Text>
+                  <Text style={{ color: C.textMuted, fontSize: 12 }}>Tap to resume your hourly ride</Text>
                 </View>
                 <Text style={{ color: C.pink, fontSize: 22 }}>→</Text>
               </TouchableOpacity>
@@ -829,7 +838,7 @@ function HomeTab() {
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={{ color: C.yellow, fontSize: 26, fontWeight: '800' }}>₹120</Text>
-                  <Text style={{ color: C.textMuted, fontSize: 10 }}>Bike se shuru</Text>
+                  <Text style={{ color: C.textMuted, fontSize: 10 }}>Starting from Bike</Text>
                 </View>
               </View>
               <View style={{ backgroundColor: C.glass, flexDirection: 'row', borderTopWidth: 1, borderColor: C.glassBorder }}>
@@ -847,8 +856,8 @@ function HomeTab() {
           <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: C.glass, borderRadius: 14, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: C.glassBorder }} onPress={() => setScreen('hourly-info')}>
             <Text style={{ fontSize: 18, marginRight: 10 }}>⏱️</Text>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 13, fontWeight: '700', color: C.text }}>Book by Hour — Kaise Kaam Karta Hai?</Text>
-              <Text style={{ fontSize: 11, color: C.textMuted }}>Rules, fares, packages — sab jaano</Text>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: C.text }}>Book by Hour — How does it work?</Text>
+              <Text style={{ fontSize: 11, color: C.textMuted }}>Rules, fares, packages — learn more</Text>
             </View>
             <Text style={{ fontSize: 18, color: C.textDim }}>›</Text>
           </TouchableOpacity>
@@ -856,7 +865,7 @@ function HomeTab() {
             <Text style={{ fontSize: 18, marginRight: 10 }}>📋</Text>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 13, fontWeight: '700', color: C.text }}>Cancellation Policy</Text>
-              <Text style={{ fontSize: 11, color: C.textMuted }}>Cancel rules aur fees jaano</Text>
+              <Text style={{ fontSize: 11, color: C.textMuted }}>Learn about cancel rules and fees</Text>
             </View>
             <Text style={{ fontSize: 18, color: C.textDim }}>›</Text>
           </TouchableOpacity>
@@ -881,20 +890,19 @@ function HomeTab() {
 
                   {/* Headline */}
                   <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900', letterSpacing: 0.3, marginBottom: 4 }}>
-                    ⭐ Apna{' '}
+                    ⭐ Set Your{' '}
                     <Text style={{ color: '#FFD700' }}>Sppero Buddy</Text>
-                    {'\n'}Banao
                   </Text>
                   <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13, marginBottom: 18, lineHeight: 18 }}>
-                    Favourite driver save karo — har baar wahi trusted face!
+                    Save a favourite driver — same trusted face every time!
                   </Text>
 
                   {/* 3 Steps */}
                   <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
                     {[
-                      { icon: '🚗', num: '1', title: 'Ride Lo', sub: 'Kisi bhi driver ke saath' },
-                      { icon: '⭐', num: '2', title: 'Buddy Banao', sub: 'Trip baad mark karo' },
-                      { icon: '📲', num: '3', title: 'Direct Book', sub: 'Sirf usse request' },
+                      { icon: '🚗', num: '1', title: 'Take a Ride', sub: 'With any driver' },
+                      { icon: '⭐', num: '2', title: 'Set as Buddy', sub: 'Mark after the trip' },
+                      { icon: '📲', num: '3', title: 'Book Direct', sub: 'Request only them' },
                     ].map(({ icon, num, title, sub }, i) => (
                       <View key={i} style={{ flex: 1, alignItems: 'center' }}>
                         <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', marginBottom: 6 }}>
@@ -919,8 +927,8 @@ function HomeTab() {
                   <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 14, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                     {[
                       '✅ Same trusted driver',
-                      '✅ Queue skip — direct request',
-                      '✅ Driver pehle se ready',
+                      '✅ Skip the queue — direct request',
+                      '✅ Driver knows you in advance',
                     ].map((t, i) => (
                       <View key={i} style={{ backgroundColor: 'rgba(255,215,0,0.08)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(255,215,0,0.18)' }}>
                         <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: '600' }}>{t}</Text>
@@ -932,11 +940,11 @@ function HomeTab() {
                 {/* CTA strip */}
                 <View style={{ backgroundColor: C.pink, paddingHorizontal: 18, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                   <View>
-                    <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>🕐 Trips tab mein Buddy banao</Text>
-                    <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 2 }}>Ride ke baad driver ko mark karo</Text>
+                    <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>🕐 Set a Buddy from your Trips tab</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 2 }}>Mark a driver after any completed ride</Text>
                   </View>
                   <View style={{ backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)' }}>
-                    <Text style={{ color: '#fff', fontWeight: '900', fontSize: 13 }}>Dekho →</Text>
+                    <Text style={{ color: '#fff', fontWeight: '900', fontSize: 13 }}>View →</Text>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -994,10 +1002,10 @@ function LiveTab() {
   const hasHourly = !!hourlyBooking && ['pending','matched','active'].includes(hourlyBooking?.status);
   const stdStatus = storeStatus !== 'idle' ? storeStatus : (rideData?.ride_id ? 'requested' : 'idle');
   const stdStatusMap: any = {
-    requested: { label: 'Driver dhoondh rahe hain...', color: C.saffron, glassColor: C.saffGlass, border: C.saffBorder, icon: '🔍' },
-    matched:   { label: 'Driver aa raha hai',          color: C.purple,  glassColor: C.glassMid,            border: C.glassBorder,          icon: '🚗' },
-    arrived:   { label: 'Driver pahunch gaya!',        color: C.green,   glassColor: C.greenGlass,  border: C.greenBorder,  icon: '📍' },
-    started:   { label: 'Trip chal rahi hai',          color: C.purple,  glassColor: 'rgba(124,58,237,0.10)', border: 'rgba(124,58,237,0.30)', icon: '🛣️' },
+    requested: { label: 'Looking for a driver...', color: C.saffron, glassColor: C.saffGlass, border: C.saffBorder, icon: '🔍' },
+    matched:   { label: 'Driver is on the way',    color: C.purple,  glassColor: C.glassMid,   border: C.glassBorder, icon: '🚗' },
+    arrived:   { label: 'Driver has arrived!',     color: C.green,   glassColor: C.greenGlass, border: C.greenBorder, icon: '📍' },
+    started:   { label: 'Trip is ongoing',         color: C.purple,  glassColor: 'rgba(124,58,237,0.10)', border: 'rgba(124,58,237,0.30)', icon: '🛣️' },
     completed: { label: 'Trip complete — Payment pending', color: C.pink, glassColor: C.pinkGlass, border: C.pinkBorder, icon: '✅' },
   };
   const si = stdStatusMap[stdStatus] || stdStatusMap.requested;
@@ -1009,15 +1017,15 @@ function LiveTab() {
   const mm2 = Math.floor((hElapsed % 3600) / 60);
   const ss2 = hElapsed % 60;
   const hTimerStr = hh2 > 0 ? `${hh2}h ${mm2}m ${ss2}s` : `${mm2}m ${ss2}s`;
-  const hStatus   = hourlyStep === 'active' ? 'Ride chal rahi hai' : hourlyBooking?.status === 'matched' ? 'Driver aa raha hai' : 'Driver dhoondh rahe hain...';
+  const hStatus   = hourlyStep === 'active' ? 'Trip is ongoing' : hourlyBooking?.status === 'matched' ? 'Driver is on the way' : 'Looking for a driver...';
   const hColor    = hourlyStep === 'active' ? '#7b1fa2' : hourlyBooking?.status === 'matched' ? '#1565C0' : '#f57c00';
   const vEmoji: any = { auto:'🛺', bike:'🏍️', car:'🚕', eriksha:'🛵', ultra_luxury:'🚙', green_bike:'⚡', electric_auto:'🌿' };
 
   return (
     <View style={s.screen}>
-      <View style={{ backgroundColor: C.pink, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 56, paddingBottom: 28, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center' }}>
-        <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.10)', top: -60, right: -40 }} />
-        <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900', flex: 1 }}>🔴 Live Ride</Text>
+      <View style={{ backgroundColor: C.night, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 56, paddingBottom: 28, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,45,120,0.07)', top: -60, right: -40 }} />
+        <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900', flex: 1 }}>Live Ride</Text>
         {(hasStd || hasHourly) && (
           <PulseView><GlowPulse color="#fff" size={12} /></PulseView>
         )}
@@ -1125,7 +1133,7 @@ function LiveTab() {
               ) : (
                 <View style={{ backgroundColor: C.yellowGlass, borderRadius: 12, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: C.yellowBorder }}>
                   <Text style={{ fontSize: 20, marginRight: 10 }}>🔍</Text>
-                  <Text style={{ color: C.yellow, fontSize: 13, fontWeight: '700' }}>Driver dhoondha ja raha hai...</Text>
+                  <Text style={{ color: C.yellow, fontSize: 13, fontWeight: '700' }}>Looking for a driver...</Text>
                 </View>
               )}
               <Bouncy onPress={() => setScreen('hourly')} style={{ backgroundColor: C.pink, borderRadius: 14, padding: 14, alignItems: 'center', elevation: 8, shadowColor: C.pink, shadowOpacity: 0.5, shadowRadius: 10 }}>
@@ -1138,8 +1146,8 @@ function LiveTab() {
         {!hasStd && !hasHourly && (
           <View style={{ alignItems: 'center', paddingTop: 60 }}>
             <Text style={{ fontSize: 56, marginBottom: 16 }}>🚗</Text>
-            <Text style={{ fontSize: 20, fontWeight: '800', color: C.text, marginBottom: 8 }}>Koi Active Ride Nahi</Text>
-            <Text style={{ fontSize: 14, color: C.textMuted, textAlign: 'center', marginBottom: 28, paddingHorizontal: 30, lineHeight: 22 }}>Jab ride book karoge yahan live status milega — chahe app band ho jaye</Text>
+            <Text style={{ fontSize: 20, fontWeight: '800', color: C.text, marginBottom: 8 }}>No Active Ride</Text>
+            <Text style={{ fontSize: 14, color: C.textMuted, textAlign: 'center', marginBottom: 28, paddingHorizontal: 30, lineHeight: 22 }}>When you book a ride, live status will appear here — even if you close the app</Text>
             <Bouncy onPress={() => setTab('home')} style={[s.btn, { paddingHorizontal: 32 }]}>
               <Text style={s.btnTxt}>Book a Ride →</Text>
             </Bouncy>
@@ -1221,21 +1229,21 @@ GST (5%):        ₹${billGst.toFixed(2)}
 💳 *Payment:* ${billPayLabel()}
 ━━━━━━━━━━━━━━━━━━━
 
-_GST fare mein included hai — alag se charge nahi hota._
+_GST is included in the fare — not charged separately._
 
-🙏 *Sppero* mein safar karne ka shukriya!`;
+🙏 Thank you for riding with *Sppero*!`;
     Share.share({ message: text });
   };
 
   return (
     <View style={s.screen}>
-      <View style={{ backgroundColor: C.pink, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 56, paddingBottom: 28, paddingHorizontal: 20 }}>
-        <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.10)', top: -60, right: -40 }} />
-        <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>🕐 My Trips</Text>
+      <View style={{ backgroundColor: C.night, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 56, paddingBottom: 28, paddingHorizontal: 20 }}>
+        <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,45,120,0.07)', top: -60, right: -40 }} />
+        <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>My Trips</Text>
       </View>
       <ScrollView style={{ flex: 1, padding: 14 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
         {historyRides.length === 0
-          ? <EmptyAnim icon="🚖" title="Abhi koi trip nahi" sub="Pehli ride book karo aur yahan apni history dekho!" />
+          ? <EmptyAnim icon="🚖" title="No trips yet" sub="Book your first ride and see your history here!" />
           : historyRides.map((h: any, i: number) => (
             <View key={i} style={s.histCard}>
               <View style={s.row}>
@@ -1251,9 +1259,9 @@ _GST fare mein included hai — alag se charge nahi hota._
                     <TouchableOpacity
                       onPress={async () => {
                         const alreadyBuddy = favouriteBuddy?.driver_phone === h.driver_phone;
-                        if (alreadyBuddy) { alert('⭐ Yeh aapka Sppero Buddy pehle se hai!'); return; }
+                        if (alreadyBuddy) { alert('⭐ This driver is already your Sppero Buddy!'); return; }
                         const res = await addFavouriteBuddy(h.driver_phone);
-                        if (res?.success) alert(`⭐ ${h.driver_name} ab aapka Sppero Buddy hai!`);
+                        if (res?.success) alert(`⭐ ${h.driver_name} is now your Sppero Buddy!`);
                         else alert('⚠️ ' + (res?.error || 'Error'));
                       }}
                       style={{ marginTop: 5, backgroundColor: favouriteBuddy?.driver_phone === h.driver_phone ? C.greenGlass : C.yellowGlass, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: favouriteBuddy?.driver_phone === h.driver_phone ? C.greenBorder : C.yellowBorder }}>
@@ -1346,7 +1354,7 @@ _GST fare mein included hai — alag se charge nahi hota._
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14, alignItems: 'flex-end' }}>
                 <View>
                   <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 14 }}>GST (5%)</Text>
-                  <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, marginTop: 2 }}>Fare mein included hai</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, marginTop: 2 }}>Included in fare</Text>
                 </View>
                 <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>₹{billGst.toFixed(2)}</Text>
               </View>
@@ -1365,14 +1373,14 @@ _GST fare mein included hai — alag se charge nahi hota._
               <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: 10, marginBottom: 18, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Text style={{ fontSize: 14 }}>ℹ️</Text>
                 <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, lineHeight: 16, flex: 1 }}>
-                  GST fare mein already included hai.{'\n'}Yeh amount alag se charge nahi hota.
+                  GST is already included in the fare.{'\n'}No additional charges apply.
                 </Text>
               </View>
 
               <TouchableOpacity onPress={shareBill}
                 style={{ backgroundColor: '#25D366', borderRadius: 16, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, elevation: 6, shadowColor: '#25D366', shadowOpacity: 0.4, shadowRadius: 10 }}>
                 <Text style={{ fontSize: 20 }}>📤</Text>
-                <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>WhatsApp par Share Karo</Text>
+                <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>Share on WhatsApp</Text>
               </TouchableOpacity>
 
               <TouchableOpacity onPress={closeBill} style={{ marginTop: 12, paddingVertical: 12, alignItems: 'center' }}>
@@ -1407,8 +1415,8 @@ function ProfileTab() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
 
         {/* ── Plum hero ─────────────────────────────────────────── */}
-        <View style={{ backgroundColor: C.plum, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 56, paddingBottom: 52, paddingHorizontal: SP.lg }}>
-          <View style={{ position: 'absolute', width: 280, height: 280, borderRadius: 140, backgroundColor: 'rgba(255,45,120,0.10)', top: -100, right: -80 }} />
+        <View style={{ backgroundColor: C.night, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 56, paddingBottom: 52, paddingHorizontal: SP.lg }}>
+          <View style={{ position: 'absolute', width: 280, height: 280, borderRadius: 140, backgroundColor: 'rgba(255,45,120,0.08)', top: -100, right: -80 }} />
           <View style={{ position: 'absolute', width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(255,255,255,0.04)', bottom: -60, left: -40 }} />
           <Text style={{ ...T.title, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.5, marginBottom: SP.lg }}>PROFILE</Text>
           <View style={{ alignItems: 'center' }}>
@@ -1464,16 +1472,16 @@ function ProfileTab() {
         </ShineCard>
 
         {[
-          { label: 'Refer & Earn',       sub: 'Dost ko bulao, ₹50 pao',          icon: 'gift',          onPress: () => { loadReferral(); setScreen('referral'); }, iconColor: C.pink },
-          { label: 'Cashback Rewards',   sub: 'Rides pe cashback earn karo',      icon: 'cash',          onPress: () => setScreen('rewards'),                     iconColor: C.green, iconBg: C.greenGlass, iconBorder: C.greenBorder },
-          { label: 'Ride Budget',        sub: 'Monthly kharch track karo',        icon: 'bar-chart',     onPress: () => setScreen('budget'),                       iconColor: C.purple, iconBg: C.purpleGlass, iconBorder: C.purpleBorder },
-          { label: 'Saved Places',       sub: 'Home, Office save karo',           icon: 'bookmark',      onPress: () => { loadSaved(); setScreen('saved'); },      iconColor: C.yellow },
-          { label: 'Cancellation Policy',sub: 'Cancel rules aur fees',            icon: 'receipt',       onPress: () => setScreen('policy'),                       iconColor: C.pink },
-          { label: 'Promo Codes',        sub: 'Discount codes apply karo',        icon: 'pricetag',      onPress: () => { setPromoScreenCode(''); setPromoScreenMsg(''); setScreen('promo'); }, iconColor: C.yellow },
-          { label: 'Notifications',      sub: 'Alerts — Enabled ✓',              icon: 'notifications', onPress: () => Alert.alert('🔔 Notifications', 'Aapki sabhi ride notifications, wallet alerts aur offers automatically enable hain.'), iconColor: C.pink },
+          { label: 'Refer & Earn',       sub: 'Invite friends, earn ₹50 each',    icon: 'gift',          onPress: () => { loadReferral(); setScreen('referral'); }, iconColor: C.pink },
+          { label: 'Cashback Rewards',   sub: 'Earn cashback on every ride',      icon: 'cash',          onPress: () => setScreen('rewards'),                     iconColor: C.green, iconBg: C.greenGlass, iconBorder: C.greenBorder },
+          { label: 'Ride Budget',        sub: 'Track your monthly spend',         icon: 'bar-chart',     onPress: () => setScreen('budget'),                       iconColor: C.purple, iconBg: C.purpleGlass, iconBorder: C.purpleBorder },
+          { label: 'Saved Places',       sub: 'Save Home, Office & more',         icon: 'bookmark',      onPress: () => { loadSaved(); setScreen('saved'); },      iconColor: C.yellow },
+          { label: 'Cancellation Policy',sub: 'Cancel rules and fees',            icon: 'receipt',       onPress: () => setScreen('policy'),                       iconColor: C.pink },
+          { label: 'Promo Codes',        sub: 'Apply discount codes',             icon: 'pricetag',      onPress: () => { setPromoScreenCode(''); setPromoScreenMsg(''); setScreen('promo'); }, iconColor: C.yellow },
+          { label: 'Notifications',      sub: 'Alerts — Enabled ✓',              icon: 'notifications', onPress: () => Alert.alert('🔔 Notifications', 'All ride notifications, wallet alerts and offers are automatically enabled.'), iconColor: C.pink },
           { label: 'Safety',             sub: 'Emergency contacts & SOS',         icon: 'shield',        onPress: () => setScreen('safety'),                       iconColor: C.red },
           { label: 'My Complaints',      sub: 'File & track ride complaints',     icon: 'alert-circle',  onPress: async () => { setCmpLoading(true); try { const r = await apiGet(`/api/complaints?phone=${encodeURIComponent(phone)}`); setComplaints(r.complaints||[]); } catch {} setCmpLoading(false); setScreen('complaints'); }, iconColor: C.red, iconBg: C.redGlass, iconBorder: C.redBorder },
-          { label: 'Support',            sub: '24x7 help',                        icon: 'call',          onPress: () => setScreen('support'),                      iconColor: C.green },
+          { label: 'Support',            sub: '24/7 help',                        icon: 'call',          onPress: () => setScreen('support'),                      iconColor: C.green },
         ].map((item, i) => (
           <Bouncy key={i} style={s.menuItem} onPress={item.onPress}>
             <View style={[s.menuIconBox, item.iconBg ? { backgroundColor: item.iconBg, borderColor: item.iconBorder } : {}]}>

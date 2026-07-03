@@ -51,6 +51,13 @@ export const C = {
   textMuted: '#6B6B8D',   // Mid-muted — purple-shifted
   textDim:   '#9B94B8',   // Dim — softer purple
 
+  // Dark ground for hero zones (splash, matching, home dark hero)
+  night:  '#0D0618',
+  // Bright success/available color — reads better on dark than C.green
+  mint:   '#00D4A8',
+  // Warm light surface for transactional screens (payment, post-ride)
+  cream:  '#FFF5E4',
+
   // Legacy alias so old code still compiles
   yellow: '#F59E0B',
 };

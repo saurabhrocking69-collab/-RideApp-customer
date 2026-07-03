@@ -58,7 +58,7 @@ function TimePicker({ value, onChange }: { value: Date; onChange: (d: Date) => v
       setTimeError('');
       onChange(d);
     } else {
-      setTimeError('⚠️ Kam se kam 30 min aage ka time chuno');
+      setTimeError('⚠️ Please select a time at least 30 min ahead');
     }
   }, [selDay, selHour, selMin, selAmPm]);
 
@@ -186,7 +186,7 @@ export function ScheduledRideScreen() {
   const useCurrentLocationPickup = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') { Alert.alert('Permission', 'Location permission chahiye'); return; }
+      if (status !== 'granted') { Alert.alert('Permission', 'Location permission required'); return; }
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       const { latitude: lat, longitude: lng } = loc.coords;
       setPickupCoords({ lat, lng });
@@ -195,7 +195,7 @@ export function ScheduledRideScreen() {
       const addr = d.results?.[0]?.formatted_address || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
       setPickup(addr);
       setPickupSugg([]);
-    } catch { Alert.alert('Error', 'Location nahi mili — manually daalo'); }
+    } catch { Alert.alert('Error', 'Location not found — enter manually'); }
   };
 
   useEffect(() => { loadScheduled(); }, []);
@@ -231,9 +231,9 @@ export function ScheduledRideScreen() {
   };
 
   const bookScheduled = async () => {
-    if (!pickup.trim()) { setMsg('⚠️ Pickup location daalo'); return; }
-    if (!drop.trim())   { setMsg('⚠️ Drop location daalo'); return; }
-    if (schedTime <= new Date(Date.now() + 29 * 60 * 1000)) { setMsg('⚠️ Kam se kam 30 min aage schedule karo'); return; }
+    if (!pickup.trim()) { setMsg('⚠️ Enter pickup location'); return; }
+    if (!drop.trim())   { setMsg('⚠️ Enter drop location'); return; }
+    if (schedTime <= new Date(Date.now() + 29 * 60 * 1000)) { setMsg('⚠️ Please schedule at least 30 min ahead'); return; }
     setLoading(true); setMsg('');
     try {
       const d = await apiPost('/api/rides/schedule', {
@@ -248,18 +248,18 @@ export function ScheduledRideScreen() {
       });
       if (d.success) {
         setMsg('');
-        Alert.alert('✅ Ride Scheduled!', `Aapki ride ${schedTime.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} ko ${schedTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} ke liye book ho gayi.`, [{ text: 'OK', onPress: () => { setStep('list'); setPickup(''); setDrop(''); loadScheduled(); } }]);
+        Alert.alert('✅ Ride Scheduled!', `Your ride is booked for ${schedTime.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} at ${schedTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}.`, [{ text: 'OK', onPress: () => { setStep('list'); setPickup(''); setDrop(''); loadScheduled(); } }]);
       } else {
-        setMsg('❌ ' + (d.error || 'Kuch galat hua'));
+        setMsg('❌ ' + (d.error || 'Something went wrong'));
       }
-    } catch (_e) { setMsg('❌ Server se connect nahi ho saka'); }
+    } catch (_e) { setMsg('❌ Could not connect to server'); }
     setLoading(false);
   };
 
   const cancelScheduled = (id: number) => {
-    Alert.alert('Ride Cancel Karein?', 'Yeh scheduled ride cancel ho jayegi.', [
-      { text: 'Nahi', style: 'cancel' },
-      { text: 'Haan, Cancel Karo', style: 'destructive', onPress: async () => {
+    Alert.alert('Cancel This Ride?', 'This scheduled ride will be cancelled.', [
+      { text: 'No', style: 'cancel' },
+      { text: 'Yes, Cancel', style: 'destructive', onPress: async () => {
         try {
           const { API } = await import('../../api');
           const res = await fetch(`${API}/api/rides/scheduled/${id}`, {
@@ -294,7 +294,7 @@ export function ScheduledRideScreen() {
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
             <Text style={{ ...T.title, color: '#fff' }}>Scheduled Rides</Text>
-            <Text style={{ ...T.caption, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>Pehle se book karo, tension-free!</Text>
+            <Text style={{ ...T.caption, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>Book in advance, stress-free!</Text>
           </View>
         </View>
         <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -304,7 +304,7 @@ export function ScheduledRideScreen() {
                 backgroundColor: step === t ? 'rgba(255,255,255,0.20)' : 'rgba(255,255,255,0.07)',
                 borderWidth: 1.5, borderColor: step === t ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.15)' }}>
               <Text style={{ ...T.caption, color: '#fff', fontWeight: step === t ? '900' as const : '600' as const }}>
-                {t === 'list' ? '📋 Meri Rides' : '➕ Naya Schedule'}
+                {t === 'list' ? '📋 My Rides' : '➕ New Schedule'}
               </Text>
             </TouchableOpacity>
           ))}
@@ -317,19 +317,19 @@ export function ScheduledRideScreen() {
           <>
             {listLoading ? (
               <View style={{ alignItems: 'center', paddingTop: 60 }}>
-                <Text style={{ fontSize: 13, color: C.textMuted }}>⏳ Dhundh rahe hain...</Text>
+                <Text style={{ fontSize: 13, color: C.textMuted }}>⏳ Loading...</Text>
               </View>
             ) : scheduled.length === 0 ? (
               <SlideUp>
                 <View style={{ alignItems: 'center', paddingTop: 50, paddingBottom: 20 }}>
                   <Text style={{ fontSize: 56, marginBottom: 16 }}>📅</Text>
-                  <Text style={{ fontSize: 18, fontWeight: '800', color: C.text, marginBottom: 8 }}>Koi Scheduled Ride Nahi</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '800', color: C.text, marginBottom: 8 }}>No Scheduled Rides</Text>
                   <Text style={{ fontSize: 13, color: C.textMuted, textAlign: 'center', paddingHorizontal: 30, lineHeight: 20, marginBottom: 28 }}>
-                    Airport, doctor appointment, morning office — pehle se book karo aur tension-free raho!
+                    Airport, doctor appointment, morning office — book in advance and stay stress-free!
                   </Text>
                   <TouchableOpacity onPress={() => setStep('form')}
                     style={{ backgroundColor: C.pink, borderRadius: 16, paddingHorizontal: 32, paddingVertical: 14, elevation: 8, shadowColor: C.pink, shadowOpacity: 0.4, shadowRadius: 10 }}>
-                    <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>➕ Pehli Ride Schedule Karo</Text>
+                    <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>➕ Schedule Your First Ride</Text>
                   </TouchableOpacity>
                 </View>
               </SlideUp>
@@ -375,7 +375,7 @@ export function ScheduledRideScreen() {
                 ))}
                 <TouchableOpacity onPress={() => setStep('form')}
                   style={{ backgroundColor: C.pink, borderRadius: 16, padding: 16, alignItems: 'center', marginTop: 8, elevation: 6, shadowColor: C.pink, shadowOpacity: 0.35, shadowRadius: 10 }}>
-                  <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>➕ Naya Ride Schedule Karo</Text>
+                  <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>➕ Schedule a New Ride</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -390,14 +390,14 @@ export function ScheduledRideScreen() {
               <View style={{ backgroundColor: C.glass, borderRadius: 12, borderWidth: 1.5, borderColor: pickup ? C.green : C.glassBorder, overflow: 'hidden' }}>
                 <TextInput
                   style={{ fontSize: 14, color: C.text, padding: 12 }}
-                  placeholder="Kahan se pickup?"
+                  placeholder="Where to pickup?"
                   placeholderTextColor={C.textDim}
                   value={pickup}
                   onChangeText={t => { setPickup(t); setPickupCoords(null); searchPlaces(t, 'pickup'); }}
                 />
                 <TouchableOpacity onPress={useCurrentLocationPickup} style={{ flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderColor: C.glassBorder, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: C.pinkGlass }}>
                   <Text style={{ fontSize: 14, marginRight: 6 }}>🎯</Text>
-                  <Text style={{ fontSize: 12, color: C.pink, fontWeight: '700' }}>Current Location Use Karo</Text>
+                  <Text style={{ fontSize: 12, color: C.pink, fontWeight: '700' }}>Use Current Location</Text>
                 </TouchableOpacity>
               </View>
               {pickupSugg.length > 0 && (
@@ -467,13 +467,13 @@ export function ScheduledRideScreen() {
                 if (isPeak) return (
                   <View style={{ backgroundColor: 'rgba(245,158,11,0.12)', borderRadius: 10, padding: 10, marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
                     <Text style={{ fontSize: 16 }}>🚦</Text>
-                    <Text style={{ color: C.yellow, fontSize: 12, flex: 1 }}>Peak traffic hours — surge pricing lag sakti hai. Thoda pehle ya baad schedule karo.</Text>
+                    <Text style={{ color: C.yellow, fontSize: 12, flex: 1 }}>Peak traffic hours — surge pricing may apply. Consider scheduling slightly earlier or later.</Text>
                   </View>
                 );
                 if (isNight) return (
                   <View style={{ backgroundColor: 'rgba(99,102,241,0.12)', borderRadius: 10, padding: 10, marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(99,102,241,0.3)' }}>
                     <Text style={{ fontSize: 16 }}>🌙</Text>
-                    <Text style={{ color: '#818CF8', fontSize: 12, flex: 1 }}>Raat ka time — 1.2x night surcharge apply hogi. Driver dhundhne mein thoda zyada waqt lag sakta hai.</Text>
+                    <Text style={{ color: '#818CF8', fontSize: 12, flex: 1 }}>Night hours — 1.2x night surcharge applies. Finding a driver may take slightly longer.</Text>
                   </View>
                 );
                 return null;
@@ -485,7 +485,7 @@ export function ScheduledRideScreen() {
               <Text style={{ fontSize: 13, fontWeight: '800', color: C.textMuted, marginBottom: 10 }}>📝 Notes (optional)</Text>
               <TextInput
                 style={{ borderWidth: 1.5, borderColor: C.glassBorder, borderRadius: 12, padding: 12, fontSize: 14, color: C.text, backgroundColor: C.glass, minHeight: 60, textAlignVertical: 'top' }}
-                placeholder="Koi special instruction? (jaise floor number, gate, etc.)"
+                placeholder="Any special instructions? (e.g. floor number, gate, etc.)"
                 placeholderTextColor={C.textDim}
                 value={notes}
                 onChangeText={setNotes}
@@ -531,7 +531,7 @@ export function ScheduledRideScreen() {
             <TouchableOpacity onPress={bookScheduled} disabled={loading}
               style={{ backgroundColor: loading ? C.glass : C.pink, borderRadius: 18, padding: 18, alignItems: 'center', elevation: loading ? 0 : 10, shadowColor: C.pink, shadowOpacity: loading ? 0 : 0.5, shadowRadius: 14, borderWidth: loading ? 1 : 0, borderColor: C.glassBorder }}>
               <Text style={{ color: loading ? C.textDim : '#fff', fontWeight: '900', fontSize: 16 }}>
-                {loading ? '⏳ Scheduling...' : '📅 Ride Schedule Karo'}
+                {loading ? '⏳ Scheduling...' : '📅 Schedule Ride'}
               </Text>
             </TouchableOpacity>
           </SlideUp>

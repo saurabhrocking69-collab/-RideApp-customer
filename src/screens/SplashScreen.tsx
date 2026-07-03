@@ -1,50 +1,64 @@
 import { View, Text, Animated } from 'react-native';
 import { useApp } from '../context/AppContext';
-import { FloatBubbles, GlowPulse } from '../components/ui';
 import { C } from '../styles';
 
 export function SplashScreen() {
   const { splashFade, splashLogo, splashScale, splashTag } = useApp();
+
   return (
-    <Animated.View style={{ flex: 1, backgroundColor: C.bgCard, alignItems: 'center', justifyContent: 'center', opacity: splashFade }}>
-      <FloatBubbles />
+    <Animated.View style={{ flex: 1, backgroundColor: C.night, alignItems: 'center', justifyContent: 'center', opacity: splashFade }}>
 
-      {/* Background decorative circles */}
-      <View style={{ position: 'absolute', width: 480, height: 480, borderRadius: 240, backgroundColor: 'rgba(255,45,120,0.05)', top: -120, right: -120 }} />
-      <View style={{ position: 'absolute', width: 320, height: 320, borderRadius: 160, backgroundColor: 'rgba(5,150,105,0.05)', bottom: -60, left: -80 }} />
-      <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(245,158,11,0.06)', top: '30%', right: -40 }} />
+      {/* Ambient glow blobs */}
+      <View style={{ position: 'absolute', width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(255,45,120,0.07)', top: -60, right: -80 }} />
+      <View style={{ position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(46,20,97,0.5)', bottom: -40, left: -60 }} />
 
-      {/* Logo section */}
+      {/* Logo + brand */}
       <Animated.View style={{ alignItems: 'center', opacity: splashLogo, transform: [{ scale: splashScale }] }}>
-        {/* Outer glow ring */}
-        <View style={{ width: 140, height: 140, borderRadius: 70, backgroundColor: 'rgba(255,45,120,0.08)', alignItems: 'center', justifyContent: 'center', marginBottom: 28 }}>
-          <View style={{ width: 116, height: 116, borderRadius: 58, backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center', elevation: 18, shadowColor: C.pink, shadowOpacity: 0.45, shadowRadius: 28, shadowOffset: { width: 0, height: 8 } }}>
-            <Text style={{ fontSize: 54 }}>🚖</Text>
-          </View>
+        {/* Rounded-square logomark */}
+        <View style={{
+          width: 96, height: 96, borderRadius: 28,
+          alignItems: 'center', justifyContent: 'center',
+          marginBottom: 24,
+          backgroundColor: C.pink,
+          shadowColor: C.pink, shadowOpacity: 0.55, shadowRadius: 32, shadowOffset: { width: 0, height: 8 },
+          elevation: 20,
+        }}>
+          <Text style={{ fontSize: 48, fontWeight: '900', color: '#fff', letterSpacing: -2, lineHeight: 52 }}>S</Text>
         </View>
 
         {/* Brand name */}
-        <Text style={{ fontSize: 50, fontWeight: '900', color: C.text, letterSpacing: -2, lineHeight: 52 }}>Sppero</Text>
+        <Text style={{ fontSize: 44, fontWeight: '900', color: '#fff', letterSpacing: 2, lineHeight: 48 }}>SPPERO</Text>
 
-        {/* Pink underline accent */}
-        <View style={{ width: 56, height: 4, borderRadius: 2, backgroundColor: C.pink, marginTop: 10, marginBottom: 4 }} />
+        {/* Saffron accent bar */}
+        <View style={{ width: 40, height: 3, borderRadius: 2, backgroundColor: C.saffron, marginTop: 12 }} />
       </Animated.View>
 
       {/* Tagline */}
-      <Animated.View style={{ alignItems: 'center', marginTop: 18, opacity: splashTag, transform: [{ translateY: splashTag.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }}>
-        <Text style={{ color: C.textMuted, fontSize: 15, letterSpacing: 1, fontWeight: '500' }}>India ka smartest ride</Text>
+      <Animated.View style={{
+        alignItems: 'center', marginTop: 20,
+        opacity: splashTag,
+        transform: [{ translateY: splashTag.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
+      }}>
+        <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13, letterSpacing: 1.5, fontWeight: '500' }}>
+          Your City. Your Ride.
+        </Text>
       </Animated.View>
 
-      {/* Bottom indicator */}
-      <View style={{ position: 'absolute', bottom: 64, flexDirection: 'row', gap: 10, alignItems: 'center' }}>
-        <GlowPulse color={C.pink} size={10} />
-        <GlowPulse color={C.yellow} size={10} />
-        <GlowPulse color={C.green} size={10} />
+      {/* Loading bar */}
+      <View style={{
+        position: 'absolute', bottom: 56,
+        width: 120, height: 2, borderRadius: 1,
+        backgroundColor: 'rgba(255,255,255,0.1)', overflow: 'hidden',
+      }}>
+        <Animated.View style={{
+          height: '100%', borderRadius: 1,
+          backgroundColor: C.pink,
+          width: splashTag.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
+        }} />
       </View>
 
-      {/* Bottom brand text */}
-      <View style={{ position: 'absolute', bottom: 30 }}>
-        <Text style={{ color: C.textDim, fontSize: 11, letterSpacing: 2, textTransform: 'uppercase' }}>Sppero · India</Text>
+      <View style={{ position: 'absolute', bottom: 28 }}>
+        <Text style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10, letterSpacing: 3, textTransform: 'uppercase' }}>Sppero · India</Text>
       </View>
     </Animated.View>
   );

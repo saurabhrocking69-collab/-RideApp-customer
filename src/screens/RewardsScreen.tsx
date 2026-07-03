@@ -99,7 +99,7 @@ export function RewardsScreen() {
       <Animated.View style={{
         opacity: headerAnim,
         transform: [{ translateY: headerAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }],
-        backgroundColor: C.plum,
+        backgroundColor: C.night,
         paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 12 : 52,
         paddingBottom: SP.lg,
         paddingHorizontal: SP.md,
@@ -115,7 +115,7 @@ export function RewardsScreen() {
           </Bouncy>
           <View style={{ flex: 1 }}>
             <Text style={{ ...T.title, color: '#fff' }}>Cashback Rewards</Text>
-            <Text style={{ ...T.caption, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>Har ride pe automatic cashback</Text>
+            <Text style={{ ...T.caption, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>Automatic cashback on every ride</Text>
           </View>
           <Bouncy onPress={() => loadRewardsDash(phone)}
             style={{ padding: 8, backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: R.sm, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.18)' }}>
@@ -205,9 +205,9 @@ export function RewardsScreen() {
             <Text style={{ fontSize: 24 }}>👛</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ ...T.bodyBold, color: C.yellow }}>Wallet se pay = zyada savings</Text>
+            <Text style={{ ...T.bodyBold, color: C.yellow }}>Pay with Wallet = More Savings</Text>
             <Text style={{ ...T.caption, color: 'rgba(255,255,255,0.6)', marginTop: 3, lineHeight: 18 }}>
-              Har ₹50+ ride pe wallet se pay karo aur ₹5 extra cashback pao
+              Pay with wallet on any ₹50+ ride and earn ₹5 extra cashback
             </Text>
           </View>
           <Bouncy onPress={() => setScreen('wallet')}
@@ -221,9 +221,9 @@ export function RewardsScreen() {
         {history.length === 0 ? (
           <View style={{ alignItems: 'center', padding: SP.xxl, backgroundColor: C.bgCard, marginHorizontal: SP.md, borderRadius: R.md, borderWidth: 1, borderColor: C.glassBorder }}>
             <Text style={{ fontSize: 40 }}>🎁</Text>
-            <Text style={{ ...T.bodyBold, color: C.text, marginTop: 12 }}>Koi cashback abhi nahi mila</Text>
+            <Text style={{ ...T.bodyBold, color: C.text, marginTop: 12 }}>No cashback yet</Text>
             <Text style={{ ...T.caption, color: C.textMuted, marginTop: 6, textAlign: 'center', lineHeight: 18 }}>
-              Pehli ride karo aur cashback earn karna shuru karo!
+              Take your first ride and start earning cashback!
             </Text>
           </View>
         ) : history.map((h: any, i: number) => (

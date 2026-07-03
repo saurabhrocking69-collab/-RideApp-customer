@@ -20,17 +20,17 @@ export function SupportScreen() {
         setCmpLoading(false); setScreen('complaints');
       }
     },
-    { icon: '💬', label: 'WhatsApp', sub: 'Sabse fast response', color: '#25D366', bg: 'rgba(37,211,102,0.12)', border: 'rgba(37,211,102,0.35)', action: () => Linking.openURL('https://wa.me/919999999999?text=Hi%20Sppero%20Support') },
-    { icon: '📞', label: 'Helpline Call', sub: '24x7 available', color: C.purple, bg: C.glassMid, border: C.glassBorder, action: () => Linking.openURL('tel:9999999999') },
+    { icon: '💬', label: 'WhatsApp', sub: 'Fastest response', color: '#25D366', bg: 'rgba(37,211,102,0.12)', border: 'rgba(37,211,102,0.35)', action: () => Linking.openURL('https://wa.me/919999999999?text=Hi%20Sppero%20Support') },
+    { icon: '📞', label: 'Helpline Call', sub: '24/7 available', color: C.purple, bg: C.glassMid, border: C.glassBorder, action: () => Linking.openURL('tel:9999999999') },
     { icon: '📧', label: 'Email Support', sub: 'Response in 24 hrs', color: C.pink, bg: C.pinkGlass, border: C.pinkBorder, action: () => Linking.openURL('mailto:support@sppero.com') },
   ];
 
   const faqs = [
-    ['Ride cancel kaise karein?', 'Matching screen pe "Cancel" button press karo. 60 seconds tak free cancellation milti hai.'],
-    ['Payment kaise karein?', 'Cash, Wallet ya UPI — driver aapke saath settle karega trip end pe.'],
-    ['Driver nahi mila?', '100 seconds baad "Surge" option aata hai — fare badhao aur zyada drivers attract karo.'],
-    ['Wallet recharge kaise karein?', 'Profile → Wallet → "+₹100/200/500" buttons pe tap karo.'],
-    ['Apna account kaise delete karein?', 'support@sppero.com pe email karo — 7 din me delete ho jayega.'],
+    ['How do I cancel a ride?', 'On the matching screen, press the "Cancel" button. Cancellation is free within 60 seconds.'],
+    ['How do I pay?', 'Cash, Wallet, or UPI — settle with the driver at the end of the trip.'],
+    ['No driver found?', 'After 90 seconds, the "Surge" option appears — increase the fare to attract more drivers.'],
+    ['How do I recharge my wallet?', 'Profile → Wallet → tap the "+₹100/200/500" buttons.'],
+    ['How do I delete my account?', 'Email support@sppero.com — it will be deleted within 7 days.'],
   ];
 
   return (
@@ -45,7 +45,7 @@ export function SupportScreen() {
         <View style={{ backgroundColor: C.bgCard, borderRadius: 22, padding: 20, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor: C.glassBorder, elevation: 4 }}>
           <Text style={{ fontSize: 36, marginBottom: 8 }}>🎧</Text>
           <Text style={{ color: C.text, fontSize: 18, fontWeight: '900' }}>Sppero Support</Text>
-          <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 4, textAlign: 'center' }}>24x7 help ke liye humse contact karo</Text>
+          <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 4, textAlign: 'center' }}>Contact us for 24/7 help</Text>
         </View>
 
         {supportOptions.map((item, i) => (
@@ -62,7 +62,7 @@ export function SupportScreen() {
           </TouchableOpacity>
         ))}
 
-        <Text style={{ fontSize: 13, fontWeight: '800', color: C.textMuted, letterSpacing: 1, marginTop: 8, marginBottom: 10 }}>AKSAR POOCHE JANE WALE SAWAAL</Text>
+        <Text style={{ fontSize: 13, fontWeight: '800', color: C.textMuted, letterSpacing: 1, marginTop: 8, marginBottom: 10 }}>FREQUENTLY ASKED QUESTIONS</Text>
         {faqs.map(([q, a], i) => (
           <View key={i} style={{ backgroundColor: C.glass, borderRadius: 16, padding: 16, marginBottom: 10, elevation: 1, borderWidth: 1, borderColor: C.glassBorder }}>
             <Text style={{ fontSize: 13, fontWeight: '800', color: C.text, marginBottom: 6 }}>❓ {q}</Text>

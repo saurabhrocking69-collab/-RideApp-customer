@@ -139,10 +139,10 @@ export function SafetyScreen() {
   };
 
   const addContact = async () => {
-    if (!newName.trim() || !newPhone.trim()) { Alert.alert('', 'Naam aur number dono chahiye'); return; }
+    if (!newName.trim() || !newPhone.trim()) { Alert.alert('', 'Name and number are required'); return; }
     const cleaned = newPhone.replace(/\D/g, '');
-    if (cleaned.length < 10) { Alert.alert('', 'Valid mobile number daalo'); return; }
-    if (contacts.length >= 3) { Alert.alert('', 'Maximum 3 contacts add ho sakte hain'); return; }
+    if (cleaned.length < 10) { Alert.alert('', 'Enter a valid mobile number'); return; }
+    if (contacts.length >= 3) { Alert.alert('', 'Maximum 3 contacts allowed'); return; }
     const list = [...contacts, { name: newName.trim(), phone: cleaned }];
     await saveContacts(list);
     setNewName(''); setNewPhone(''); setShowAdd(false);
@@ -163,7 +163,7 @@ export function SafetyScreen() {
 
   const whatsappContact = (c: Contact) => {
     const loc = userCoords ? `https://maps.google.com/?q=${userCoords.latitude},${userCoords.longitude}` : '';
-    const msg = encodeURIComponent(`🆘 Emergency! Mujhe madad chahiye.\n📍 Meri location: ${loc}`);
+    const msg = encodeURIComponent(`🆘 Emergency! I need help!\n📍 My location: ${loc}`);
     const number = c.phone.startsWith('91') ? c.phone : `91${c.phone}`;
     Linking.openURL(`https://wa.me/${number}?text=${msg}`);
   };
@@ -203,12 +203,12 @@ export function SafetyScreen() {
           <Text style={{ color: C.textMuted, fontSize: 12, textAlign: 'center', marginBottom: 22 }}>
             {contacts.length > 0
               ? `${contacts.length} emergency contact${contacts.length > 1 ? 's' : ''} set — hold 2 seconds to activate`
-              : 'Neeche emergency contacts add karo pehle'}
+              : 'Add emergency contacts below first'}
           </Text>
           <HoldSOSButton onActivate={handleSOS} />
           {sosTriggered && (
             <View style={{ marginTop: 16, backgroundColor: C.red, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 10 }}>
-              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 13 }}>🆘 Alert bheja! Police: 100</Text>
+              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 13 }}>🆘 Alert sent! Police: 100</Text>
             </View>
           )}
         </View>
@@ -238,7 +238,7 @@ export function SafetyScreen() {
             <Ionicons name="person-add" size={28} color={C.pink} />
             <Text style={{ color: C.pink, fontWeight: '800', fontSize: 14, marginTop: 8 }}>Add Emergency Contact</Text>
             <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 4, textAlign: 'center' }}>
-              SOS bhejte waqt inhe WhatsApp aur location milegi
+              They'll receive a WhatsApp & your location when you trigger SOS
             </Text>
           </TouchableOpacity>
         )}
@@ -249,10 +249,10 @@ export function SafetyScreen() {
             marginBottom: 14, borderWidth: 1, borderColor: C.glassBorder,
             elevation: 4, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8,
           }}>
-            <Text style={{ fontSize: 14, fontWeight: '800', color: C.text, marginBottom: 12 }}>➕ Naya Contact</Text>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: C.text, marginBottom: 12 }}>➕ New Contact</Text>
             <TextInput
               value={newName} onChangeText={setNewName}
-              placeholder="Naam (e.g. Mummy, Bhai)" placeholderTextColor={C.textDim}
+              placeholder="Name (e.g. Mom, Brother)" placeholderTextColor={C.textDim}
               style={{
                 backgroundColor: C.glassMid, borderRadius: 12, padding: 13,
                 fontSize: 14, color: C.text, marginBottom: 10,
@@ -315,11 +315,11 @@ export function SafetyScreen() {
           elevation: 2, borderWidth: 1, borderColor: C.glassBorder,
         }}>
           {[
-            '✅ Driver ka naam aur vehicle number verify karo boarding se pehle',
-            '✅ Family ko location share karo — WhatsApp pe Live Location bhejo',
-            '✅ Raat ko front seat prefer mat karo, back seat safer hai',
-            '✅ Trip complete hone se pehle payment mat karo',
-            '✅ Koi bhi problem ho — SOS hold karo, 2 seconds mein alert jayega',
+            '✅ Verify driver name and vehicle number before boarding',
+            '✅ Share your location with family — send Live Location on WhatsApp',
+            '✅ At night, prefer the back seat for added safety',
+            '✅ Do not pay before the trip is complete',
+            '✅ If anything feels wrong — hold SOS, alert fires in 2 seconds',
           ].map((tip, i, arr) => (
             <Text key={i} style={{
               fontSize: 13, color: C.textMuted, padding: 14,

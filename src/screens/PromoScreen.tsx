@@ -25,8 +25,8 @@ export function PromoScreen() {
       </View>
       <ScrollView style={{ flex: 1, padding: 16 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
         <View style={{ backgroundColor: C.glass, borderRadius: 18, padding: 18, marginBottom: 16, elevation: 2, borderWidth: 1, borderColor: C.glassBorder }}>
-          <Text style={{ fontSize: 15, fontWeight: '800', color: C.text, marginBottom: 4 }}>Code Apply Karo</Text>
-          <Text style={{ fontSize: 12, color: C.textDim, marginBottom: 14 }}>Booking se pehle code daalo — discount automatically lagega</Text>
+          <Text style={{ fontSize: 15, fontWeight: '800', color: C.text, marginBottom: 4 }}>Apply a Code</Text>
+          <Text style={{ fontSize: 12, color: C.textDim, marginBottom: 14 }}>Enter a code before booking — discount will be applied automatically</Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <TextInput
               style={{ flex: 1, borderWidth: 1.5, borderColor: C.glassBorder, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, fontSize: 15, color: C.text, fontWeight: '700', letterSpacing: 1, backgroundColor: C.glassMid }}
@@ -48,7 +48,7 @@ export function PromoScreen() {
                   const d = await res.json();
                   if (d.valid) {
                     setPromoCode(promoScreenCode);
-                    setPromoScreenMsg(`✅ ${d.message} — Booking pe apply hoga`);
+                    setPromoScreenMsg(`✅ ${d.message} — Will apply at booking`);
                   } else {
                     setPromoScreenMsg('❌ ' + (d.message || 'Invalid code'));
                   }
@@ -58,7 +58,7 @@ export function PromoScreen() {
               <Text style={{ color: '#fff', fontWeight: '900', fontSize: 13 }}>Apply</Text>
             </TouchableOpacity>
           </View>
-          {promoCode ? <Text style={{ fontSize: 12, color: C.green, marginTop: 8, fontWeight: '600' }}>✅ Code saved: <Text style={{ fontWeight: '900' }}>{promoCode}</Text> — next booking pe lagega</Text> : null}
+          {promoCode ? <Text style={{ fontSize: 12, color: C.green, marginTop: 8, fontWeight: '600' }}>✅ Code saved: <Text style={{ fontWeight: '900' }}>{promoCode}</Text> — will apply at next booking</Text> : null}
           {promoScreenMsg ? <Text style={{ fontSize: 12, color: promoScreenMsg.startsWith('✅') ? C.green : C.pink, marginTop: 6, fontWeight: '600' }}>{promoScreenMsg}</Text> : null}
         </View>
 
@@ -66,7 +66,7 @@ export function PromoScreen() {
         {availablePromos.length === 0 ? (
           <View style={{ backgroundColor: C.glass, borderRadius: 16, padding: 24, alignItems: 'center', elevation: 1, borderWidth: 1, borderColor: C.glassBorder }}>
             <Text style={{ fontSize: 32, marginBottom: 10 }}>🎫</Text>
-            <Text style={{ color: C.textDim, fontSize: 13 }}>Abhi koi active promo nahi — jaldi aayenge!</Text>
+            <Text style={{ color: C.textDim, fontSize: 13 }}>No active promos right now — check back soon!</Text>
           </View>
         ) : availablePromos.map((p: any, i: number) => (
           <View key={i} style={{ backgroundColor: C.glass, borderRadius: 16, padding: 16, marginBottom: 10, elevation: 2, borderLeftWidth: 4, borderLeftColor: C.pink, borderWidth: 1, borderColor: C.glassBorder }}>
@@ -84,7 +84,7 @@ export function PromoScreen() {
               {p.expires_at ? ` · Expires: ${new Date(p.expires_at).toLocaleDateString('en-IN')}` : ''}
             </Text>
             <TouchableOpacity
-              onPress={() => { setPromoCode(p.code); setPromoScreenCode(p.code); setPromoScreenMsg(`✅ ${p.code} saved — next booking pe lagega`); }}
+              onPress={() => { setPromoCode(p.code); setPromoScreenCode(p.code); setPromoScreenMsg(`✅ ${p.code} saved — will apply at next booking`); }}
               style={{ marginTop: 10, backgroundColor: C.bgCard, borderRadius: 10, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: C.pinkBorder }}>
               <Text style={{ color: C.pink, fontWeight: '800', fontSize: 12 }}>Use This Code</Text>
             </TouchableOpacity>

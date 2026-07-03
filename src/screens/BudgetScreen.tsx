@@ -183,7 +183,7 @@ export function BudgetScreen() {
           shadowColor: C.pink, shadowOpacity: 0.08, shadowRadius: 14,
         }}>
           <Text style={{ fontSize: 12, fontWeight: '800', color: C.textMuted, letterSpacing: 1, marginBottom: 8 }}>
-            {monthLabel(now).toUpperCase()} KA KHARCH
+            {monthLabel(now).toUpperCase()} SPENDING
           </Text>
           <AnimCount value={thisTotal} />
           <View style={{ flexDirection: 'row', gap: 16, marginTop: 14 }}>
@@ -241,11 +241,11 @@ export function BudgetScreen() {
             <>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
                 <Text style={{ fontSize: 12, color: C.textMuted }}>
-                  ₹{Math.round(thisTotal)} kharch / ₹{budget} budget
+                  ₹{Math.round(thisTotal)} spent / ₹{budget} budget
                 </Text>
                 {budgetLeft !== null && (
                   <Text style={{ fontSize: 12, fontWeight: '700', color: overBudget ? C.red : C.green }}>
-                    {overBudget ? `₹${Math.round(thisTotal - budget)} over` : `₹${Math.round(budgetLeft)} bacha`}
+                    {overBudget ? `₹${Math.round(thisTotal - budget)} over` : `₹${Math.round(budgetLeft)} left`}
                   </Text>
                 )}
               </View>
@@ -259,7 +259,7 @@ export function BudgetScreen() {
             </>
           ) : (
             <Text style={{ fontSize: 13, color: C.textMuted }}>
-              Monthly budget set karo aur track karo ki kitna kharch hua 📊
+              Set a monthly budget to track how much you're spending 📊
             </Text>
           )}
         </View>
@@ -272,7 +272,7 @@ export function BudgetScreen() {
           <Text style={{ fontSize: 13, fontWeight: '800', color: C.text, marginBottom: 14 }}>📊 3-Month Trend</Text>
           {chartData.some(d => d.value > 0)
             ? <BarChart data={chartData} />
-            : <Text style={{ color: C.textDim, fontSize: 13, textAlign: 'center', paddingVertical: 20 }}>Abhi koi data nahi</Text>
+            : <Text style={{ color: C.textDim, fontSize: 13, textAlign: 'center', paddingVertical: 20 }}>No data yet</Text>
           }
         </View>
 
@@ -282,7 +282,7 @@ export function BudgetScreen() {
             backgroundColor: C.bgCard, borderRadius: 20, padding: 18,
             marginBottom: 14, elevation: 4, borderWidth: 1, borderColor: C.glassBorder,
           }}>
-            <Text style={{ fontSize: 13, fontWeight: '800', color: C.text, marginBottom: 4 }}>🏆 Is mahine ke Top Routes</Text>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: C.text, marginBottom: 4 }}>🏆 Top Routes This Month</Text>
             {topRoutes.map((r, i) => (
               <RouteRow key={i} rank={i + 1} pickup={r.pickup} drop={r.drop} count={r.count} total={r.total} />
             ))}
@@ -295,7 +295,7 @@ export function BudgetScreen() {
             backgroundColor: C.bgCard, borderRadius: 20, padding: 18,
             marginBottom: 14, elevation: 4, borderWidth: 1, borderColor: C.glassBorder,
           }}>
-            <Text style={{ fontSize: 13, fontWeight: '800', color: C.text, marginBottom: 12 }}>📅 Din ke hisaab se</Text>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: C.text, marginBottom: 12 }}>📅 Day-by-Day Spending</Text>
             {recentDays.map(([dk, amt], i) => {
               const d = new Date(dk);
               return (
@@ -319,9 +319,9 @@ export function BudgetScreen() {
         {history.length === 0 && (
           <View style={{ alignItems: 'center', paddingVertical: 50 }}>
             <Text style={{ fontSize: 40 }}>📊</Text>
-            <Text style={{ fontSize: 16, fontWeight: '800', color: C.text, marginTop: 12 }}>Koi rides nahi abhi</Text>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: C.text, marginTop: 12 }}>No rides yet</Text>
             <Text style={{ fontSize: 13, color: C.textMuted, textAlign: 'center', marginTop: 6 }}>
-              Ride book karo — iska data yahan automatically track hoga
+              Book a ride — your spending will be automatically tracked here
             </Text>
           </View>
         )}

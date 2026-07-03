@@ -461,7 +461,7 @@ export function BookingScreen() {
                 )}
                 {placesLoading && !pickup && nearbyPlaces.length === 0 && (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, marginBottom: 4, paddingHorizontal: 4 }}>
-                    <Text style={{ fontSize: 11, color: C.textDim }}>📍 Nearby spots dhundh rahe hain...</Text>
+                    <Text style={{ fontSize: 11, color: C.textDim }}>📍 Finding nearby spots...</Text>
                   </View>
                 )}
 
@@ -583,7 +583,7 @@ export function BookingScreen() {
               <View style={{ backgroundColor: C.greenGlass, borderRadius: R.sm, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: C.greenBorder }}>
                 <Text style={{ fontSize: 16 }}>💡</Text>
                 <Text style={{ fontSize: 12, fontWeight: '700', color: C.green, flex: 1 }}>
-                  {nearest.r.label} sabse paas — ~{nearest.info?.eta_min} min mein aayega
+                  {nearest.r.label} is nearest — arriving in ~{nearest.info?.eta_min} min
                 </Text>
                 {rideType !== nearest.r.id && (
                   <TouchableOpacity onPress={() => setRideType(nearest.r.id)} style={{ backgroundColor: C.green, borderRadius: R.xs, paddingHorizontal: 10, paddingVertical: 5 }}>
@@ -668,14 +668,14 @@ export function BookingScreen() {
                             <View style={{ marginTop: 4 }}>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                                 <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#6B7280' }} />
-                                <Text style={{ fontSize: 10, color: '#6B7280', fontWeight: '600' }}>Is area mein abhi available nahi</Text>
+                                <Text style={{ fontSize: 10, color: '#6B7280', fontWeight: '600' }}>Not available in this area right now</Text>
                               </View>
                               {bestAlt && (
                                 <TouchableOpacity
                                   onPress={() => setRideType(bestAlt.id)}
                                   style={{ marginTop: 5, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.pinkGlass, borderRadius: R.xs - 2, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' }}>
                                   <Text style={{ fontSize: 10, color: C.pink, fontWeight: '800' }}>
-                                    {bestAlt.label} try karo · ~{driverEta[bestAlt.id]?.eta_min} min
+                                    Try {bestAlt.label} · ~{driverEta[bestAlt.id]?.eta_min} min
                                   </Text>
                                   <Ionicons name="arrow-forward" size={10} color={C.pink} />
                                 </TouchableOpacity>
@@ -688,7 +688,7 @@ export function BookingScreen() {
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 }}>
                             <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: isFar ? C.yellow : C.green }} />
                             <Text style={{ fontSize: 10, color: isFar ? C.yellow : C.green, fontWeight: '800' }}>
-                              {isFar ? `${info.dist_km} km door · ~${info.eta_min} min wait` : `~${info.eta_min} min · ${info.dist_km} km paas`}
+                              {isFar ? `${info.dist_km} km away · ~${info.eta_min} min wait` : `~${info.eta_min} min · ${info.dist_km} km away`}
                             </Text>
                           </View>
                         );
@@ -727,10 +727,10 @@ export function BookingScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 13, fontWeight: '800', color: isFar ? C.yellow : C.green }}>
-                      {selLabel} driver {isFar ? 'thoda door hai' : 'paas mein hai'}
+                      {selLabel} driver {isFar ? 'is a bit far' : 'is nearby'}
                     </Text>
                     <Text style={{ fontSize: 11, color: C.textDim, marginTop: 3 }}>
-                      {info.dist_km} km door · ~{info.eta_min} min mein aayega
+                      {info.dist_km} km away · arriving in ~{info.eta_min} min
                     </Text>
                   </View>
                 </View>
@@ -746,8 +746,8 @@ export function BookingScreen() {
                   <Text style={{ fontSize: 20 }}>😕</Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '800', color: C.red }}>Is area mein koi driver online nahi</Text>
-                  <Text style={{ fontSize: 11, color: C.textDim, marginTop: 3 }}>Thodi der baad dobara try karein</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: C.red }}>No driver online in this area</Text>
+                  <Text style={{ fontSize: 11, color: C.textDim, marginTop: 3 }}>Please try again in a moment</Text>
                 </View>
               </View>
             );
@@ -756,7 +756,7 @@ export function BookingScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                   <Text style={{ fontSize: 16 }}>⚡</Text>
                   <Text style={{ fontSize: 12, fontWeight: '800', color: C.yellow, flex: 1 }}>
-                    {selLabel} abhi available nahi — ye try karo:
+                    {selLabel} not available right now — try these:
                   </Text>
                 </View>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -796,7 +796,7 @@ export function BookingScreen() {
                   <Text style={{ fontSize: 16 }}>🔥</Text>
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: C.saffron, fontWeight: '900', fontSize: 12 }}>SURGE PRICING — {surgeLabel}</Text>
-                    <Text style={{ color: C.saffron, fontSize: 10, marginTop: 1, opacity: 0.8 }}>Aapke area mein abhi zyada demand hai</Text>
+                    <Text style={{ color: C.saffron, fontSize: 10, marginTop: 1, opacity: 0.8 }}>High demand in your area right now</Text>
                   </View>
                   <View style={{ backgroundColor: C.saffron, borderRadius: R.xs, paddingHorizontal: 8, paddingVertical: 4 }}>
                     <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>{surgeLabel}</Text>
@@ -819,7 +819,7 @@ export function BookingScreen() {
                   {fareHistoryEntry && (
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, backgroundColor: C.greenGlass, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: C.greenBorder }}>
                       <Text style={{ fontSize: 9, color: C.green, fontWeight: '700' }}>
-                        Pehle: ₹{fareHistoryEntry.fare}
+                        Last time: ₹{fareHistoryEntry.fare}
                       </Text>
                     </View>
                   )}
@@ -922,8 +922,8 @@ export function BookingScreen() {
           paddingTop: 10,
           paddingBottom: Platform.OS === 'android' ? 20 : 28,
           backgroundColor: C.bg,
-          borderTopWidth: 1,
-          borderTopColor: C.glassBorder,
+          borderTopWidth: 1.5,
+          borderTopColor: 'rgba(255,45,120,0.18)',
         }}>
           <Animated.View style={{ transform: [{ scale: bookPulseAnim }] }}>
           <Bouncy
@@ -976,14 +976,14 @@ export function BookingScreen() {
                 <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: C.yellowGlass, alignItems: 'center', justifyContent: 'center', marginBottom: 12, borderWidth: 2, borderColor: C.yellowBorder }}>
                   <Text style={{ fontSize: 28 }}>⚠️</Text>
                 </View>
-                <Text style={{ fontSize: 19, fontWeight: '900', color: '#fff' }}>Driver Thoda Door Hai</Text>
-                <Text style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>{selLabel} driver aapke pickup se bahar hai</Text>
+                <Text style={{ fontSize: 19, fontWeight: '900', color: '#fff' }}>Driver is a Bit Far</Text>
+                <Text style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>{selLabel} driver is outside your pickup area</Text>
               </View>
 
               {/* Distance / ETA info card */}
               <View style={{ backgroundColor: C.yellowGlass, borderRadius: R.sm, padding: 16, marginBottom: 18, borderWidth: 1.5, borderColor: C.yellowBorder, gap: 12 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 13, color: C.textDim }}>Driver kitna door hai</Text>
+                  <Text style={{ fontSize: 13, color: C.textDim }}>Driver distance</Text>
                   <View style={{ backgroundColor: 'rgba(245,158,11,0.15)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
                     <Text style={{ fontSize: 14, fontWeight: '900', color: C.yellow }}>{info?.dist_km} km</Text>
                   </View>
@@ -999,9 +999,9 @@ export function BookingScreen() {
                   <>
                     <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.06)' }} />
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Text style={{ fontSize: 13, color: C.textDim }}>Normal se extra</Text>
+                      <Text style={{ fontSize: 13, color: C.textDim }}>Extra wait</Text>
                       <View style={{ backgroundColor: 'rgba(239,68,68,0.15)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
-                        <Text style={{ fontSize: 14, fontWeight: '900', color: C.red }}>+{extraMin} min zyada</Text>
+                        <Text style={{ fontSize: 14, fontWeight: '900', color: C.red }}>+{extraMin} min longer</Text>
                       </View>
                     </View>
                   </>
@@ -1017,7 +1017,7 @@ export function BookingScreen() {
                   {waitConfirmed && <Ionicons name="checkmark" size={15} color="#fff" />}
                 </View>
                 <Text style={{ flex: 1, fontSize: 13, fontWeight: '700', color: waitConfirmed ? C.green : 'rgba(255,255,255,0.75)', lineHeight: 19 }}>
-                  Haan, main wait karunga — booking ke baad ride cancel nahi karunga
+                  Yes, I'll wait — I won't cancel the ride after booking
                 </Text>
               </TouchableOpacity>
 
@@ -1026,14 +1026,14 @@ export function BookingScreen() {
                 <TouchableOpacity
                   onPress={() => setShowWaitModal(false)}
                   style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 14, paddingVertical: 16, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
-                  <Text style={{ fontWeight: '700', color: C.textMuted, fontSize: 14 }}>Wapas Jao</Text>
+                  <Text style={{ fontWeight: '700', color: C.textMuted, fontSize: 14 }}>Go Back</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => { setShowWaitModal(false); bookRide(); }}
                   disabled={!waitConfirmed}
                   style={{ flex: 2, backgroundColor: waitConfirmed ? C.pink : C.glassMid, borderRadius: 14, paddingVertical: 16, alignItems: 'center', elevation: waitConfirmed ? 8 : 0, shadowColor: C.pink, shadowOpacity: waitConfirmed ? 0.45 : 0, shadowRadius: 12 }}>
                   <Text style={{ fontWeight: '900', color: waitConfirmed ? '#fff' : C.textMuted, fontSize: 15 }}>
-                    {waitConfirmed ? 'Book Karo →' : 'Pehle Confirm Karo'}
+                    {waitConfirmed ? 'Book Now →' : 'Confirm First'}
                   </Text>
                 </TouchableOpacity>
               </View>

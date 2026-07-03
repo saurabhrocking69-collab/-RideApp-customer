@@ -111,9 +111,9 @@ GST (5%):        ₹${gstAmt.toFixed(2)}
 💳 *Payment:* ${paymentLabel()}
 ━━━━━━━━━━━━━━━━━━━
 
-_GST fare mein included hai — alag se charge nahi hota._
+_GST is included in the fare — not charged separately._
 
-🙏 *Sppero* mein safar karne ka shukriya!`;
+🙏 Thank you for riding with *Sppero*!`;
 
     Share.share({ message: text });
   };
@@ -123,7 +123,7 @@ _GST fare mein included hai — alag se charge nahi hota._
       <DotBG />
       <Confetti />
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
-        <View style={{ paddingTop: 52, paddingBottom: 28, backgroundColor: C.pink, borderBottomLeftRadius: 36, borderBottomRightRadius: 36, alignItems: 'center', overflow: 'hidden' }}>
+        <View style={{ paddingTop: 52, paddingBottom: 28, backgroundColor: C.pink, borderBottomLeftRadius: 36, borderBottomRightRadius: 36, alignItems: 'center', overflow: 'hidden', elevation: 12, shadowColor: C.pink, shadowOpacity: 0.45, shadowRadius: 20 }}>
           <View style={{ position: 'absolute', width: 240, height: 240, borderRadius: 120, backgroundColor: 'rgba(255,255,255,0.10)', top: -80, right: -60 }} />
           <View style={{ position: 'absolute', width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(255,255,255,0.07)', bottom: -40, left: -40 }} />
 
@@ -137,7 +137,7 @@ _GST fare mein included hai — alag se charge nahi hota._
               </View>
             )}
             <View style={{ alignItems: 'flex-start' }}>
-              <Text style={{ fontSize: 24, fontWeight: '900', color: '#fff' }}>{paymentDone ? 'Payment Done!' : 'Pahunch Gaye! 🎉'}</Text>
+              <Text style={{ fontSize: 24, fontWeight: '900', color: '#fff' }}>{paymentDone ? 'Payment Done!' : 'Trip Complete! 🎉'}</Text>
               {rideData?.driver?.name ? (
                 <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 2 }}>
                   Driver: {rideData.driver.name}
@@ -166,7 +166,7 @@ _GST fare mein included hai — alag se charge nahi hota._
         </View>
 
         {/* Trip stats card — visible without opening modal */}
-        <View style={{ marginHorizontal: 14, marginTop: 4, backgroundColor: C.glass, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: C.glassBorder }}>
+        <View style={{ marginHorizontal: 14, marginTop: 4, backgroundColor: C.bgCard, borderRadius: 18, padding: 14, borderWidth: 1.5, borderColor: C.glassBorder, elevation: 4, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 10 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
             {[
               { icon: '📏', label: 'Distance', value: billData?.distance ? `${billData.distance} km` : rideData?.distance || '—' },
@@ -195,15 +195,15 @@ _GST fare mein included hai — alag se charge nahi hota._
                 {scratched ? (
                   <FadeIn style={{ alignItems: 'center' }}>
                     <Text style={{ fontSize: 40 }}>🎉</Text>
-                    <Text style={{ fontSize: 14, color: C.textMuted, marginTop: 6 }}>Aapko mila reward!</Text>
+                    <Text style={{ fontSize: 14, color: C.textMuted, marginTop: 6 }}>You got a reward!</Text>
                     <Text style={{ fontSize: 42, fontWeight: '900', color: C.green, marginTop: 4, textShadowColor: C.green, textShadowRadius: 10 }}>₹{scratchCard.reward}</Text>
-                    <Text style={{ fontSize: 12, color: C.green, marginTop: 4, fontWeight: '700' }}>✅ Wallet mein add ho gaya!</Text>
+                    <Text style={{ fontSize: 12, color: C.green, marginTop: 4, fontWeight: '700' }}>✅ Added to your wallet!</Text>
                   </FadeIn>
                 ) : (
                   <View style={{ alignItems: 'center' }}>
                     <Text style={{ fontSize: 40 }}>🎟️</Text>
-                    <Text style={{ fontSize: 18, fontWeight: '900', color: C.text, marginTop: 6 }}>Scratch Card Jeeta!</Text>
-                    <Text style={{ fontSize: 13, color: 'rgba(0,0,0,0.7)', marginTop: 4 }}>👆 Tap karke scratch karo</Text>
+                    <Text style={{ fontSize: 18, fontWeight: '900', color: C.text, marginTop: 6 }}>Scratch Card Won!</Text>
+                    <Text style={{ fontSize: 13, color: 'rgba(0,0,0,0.7)', marginTop: 4 }}>👆 Tap to scratch</Text>
                   </View>
                 )}
               </TouchableOpacity>
@@ -216,7 +216,7 @@ _GST fare mein included hai — alag se charge nahi hota._
             <View style={{ backgroundColor: C.greenGlass, borderRadius: 16, padding: 16, borderWidth: 1.5, borderColor: C.greenBorder }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
                 <Text style={{ fontSize: 24, marginRight: 8 }}>🎉</Text>
-                <Text style={{ fontSize: 15, fontWeight: '800', color: C.green, flex: 1 }}>Cashback Mila!</Text>
+                <Text style={{ fontSize: 15, fontWeight: '800', color: C.green, flex: 1 }}>Cashback Earned!</Text>
                 <Text style={{ fontSize: 22, fontWeight: '900', color: C.green }}>
                   +₹{cashbackEarned.reduce((sum: number, c: any) => sum + c.amount, 0)}
                 </Text>
@@ -236,13 +236,13 @@ _GST fare mein included hai — alag se charge nahi hota._
           </FadeIn>
         )}
 
-        <View style={{ marginHorizontal: 14, marginTop: 16, backgroundColor: C.bgCard, borderRadius: R.md, padding: SP.md, borderWidth: 1.5, borderColor: C.glassBorder, ...SHADOW.sm }}>
-          <Text style={{ ...T.title, color: C.text, textAlign: 'center', marginBottom: SP.md }}>Driver ko Rate Karo</Text>
+        <View style={{ marginHorizontal: 14, marginTop: 16, backgroundColor: C.bgCard, borderRadius: R.md, padding: SP.md, borderWidth: 1.5, borderColor: C.glassBorder, elevation: 8, shadowColor: C.pink, shadowOpacity: 0.10, shadowRadius: 16 }}>
+          <Text style={{ ...T.title, color: C.text, textAlign: 'center', marginBottom: SP.md }}>Rate Your Driver</Text>
           <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: SP.md, gap: 4 }}>
             {[1,2,3,4,5].map(star => (
               <Animated.View key={star} style={{ opacity: localStarAnims[star-1], transform: [{ scale: localStarAnims[star-1].interpolate({ inputRange: [0, 0.6, 0.85, 1], outputRange: [0, 1.35, 0.88, 1] }) }] }}>
                 <TouchableOpacity onPress={() => { setRating(star); animateStar(star - 1); }} style={{ padding: 4 }}>
-                  <Animated.Text style={{ fontSize: 40, color: star <= rating ? C.yellow : C.glassMid, transform: [{ scale: starAnims[star - 1] }] }}>★</Animated.Text>
+                  <Animated.Text style={{ fontSize: 40, color: star <= rating ? C.yellow : C.glassMid, transform: [{ scale: starAnims[star - 1] }], textShadowColor: star <= rating ? C.yellow : 'transparent', textShadowRadius: 10, textShadowOffset: { width: 0, height: 0 } }}>★</Animated.Text>
                 </TouchableOpacity>
               </Animated.View>
             ))}
@@ -265,15 +265,15 @@ _GST fare mein included hai — alag se charge nahi hota._
                 <Text style={{ fontSize: 18, marginRight: 8 }}>{alreadyBuddy ? '✅' : '⭐'}</Text>
                 <View>
                   <Text style={{ fontWeight: '800', fontSize: 13, color: alreadyBuddy ? C.green : C.yellow }}>
-                    {alreadyBuddy ? 'Yeh aapka Sppero Buddy hai!' : `${rideData.driver.name} ko Sppero Buddy banao`}
+                    {alreadyBuddy ? 'This is your Sppero Buddy!' : `Make ${rideData.driver.name} your Sppero Buddy`}
                   </Text>
-                  {!alreadyBuddy && <Text style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>Seedha inhe request bhej sakoge</Text>}
+                  {!alreadyBuddy && <Text style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>Book them directly next time</Text>}
                 </View>
               </TouchableOpacity>
             );
           })()}
 
-          <Text style={{ ...T.bodyBold, color: C.textMuted, marginTop: SP.sm, marginBottom: 10 }}>💰 Tip do (optional)</Text>
+          <Text style={{ ...T.bodyBold, color: C.textMuted, marginTop: SP.sm, marginBottom: 10 }}>💰 Add a tip (optional)</Text>
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
             {[0, 10, 20, 50].map(t => (
               <Bouncy key={t}
@@ -290,7 +290,7 @@ _GST fare mein included hai — alag se charge nahi hota._
           <TouchableOpacity onPress={() => { setCmpType(''); setCmpDesc(''); setScreen('complaint-new'); }}
             style={{ backgroundColor: C.redGlass, borderRadius: 14, padding: 14, marginTop: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1.5, borderColor: C.redBorder }}>
             <Text style={{ fontSize: 18 }}>⚠️</Text>
-            <Text style={{ color: C.red, fontWeight: '700', fontSize: 14 }}>Ride Issue? Complaint File Karo</Text>
+            <Text style={{ color: C.red, fontWeight: '700', fontSize: 14 }}>Ride Issue? File a Complaint</Text>
           </TouchableOpacity>
 
           <Bouncy style={[s.btn, { marginTop: 14 }]} onPress={async () => {
@@ -304,7 +304,7 @@ _GST fare mein included hai — alag se charge nahi hota._
             AsyncStorage.removeItem('activeStdRideId').catch(() => {});
             loadHistory(phone); loadWallet(phone);
           }}>
-            <Text style={s.btnTxt}>Done 🏠 Home Jao</Text>
+            <Text style={s.btnTxt}>Done 🏠 Go Home</Text>
           </Bouncy>
         </View>
       </ScrollView>
@@ -386,7 +386,7 @@ _GST fare mein included hai — alag se charge nahi hota._
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14, alignItems: 'flex-end' }}>
                 <View>
                   <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 14 }}>GST (5%)</Text>
-                  <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, marginTop: 2 }}>*Transparency ke liye only</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, marginTop: 2 }}>*Shown for transparency only</Text>
                 </View>
                 <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>₹{gstAmt.toFixed(2)}</Text>
               </View>
@@ -406,7 +406,7 @@ _GST fare mein included hai — alag se charge nahi hota._
               <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: 10, marginBottom: 18, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Text style={{ fontSize: 14 }}>ℹ️</Text>
                 <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, lineHeight: 16, flex: 1 }}>
-                  GST fare mein included hai — alag se charge nahi hota.
+                  GST is included in the fare — not charged separately.
                 </Text>
               </View>
 
@@ -414,7 +414,7 @@ _GST fare mein included hai — alag se charge nahi hota._
               <TouchableOpacity onPress={shareBill}
                 style={{ backgroundColor: '#25D366', borderRadius: 16, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, elevation: 6, shadowColor: '#25D366', shadowOpacity: 0.4, shadowRadius: 10 }}>
                 <Text style={{ fontSize: 20 }}>📤</Text>
-                <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>WhatsApp par Share Karo</Text>
+                <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>Share on WhatsApp</Text>
               </TouchableOpacity>
 
               <TouchableOpacity onPress={() => setShowBill(false)}
