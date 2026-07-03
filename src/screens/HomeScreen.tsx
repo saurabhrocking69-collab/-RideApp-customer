@@ -1,16 +1,32 @@
 import { useState, useEffect, useRef } from 'react';
 import { ScrollView, View, Text, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, Animated, Share, Dimensions } from 'react-native';
 import { Image } from 'expo-image';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Storage as AsyncStorage } from '../storage';
 import { Ionicons } from '@expo/vector-icons';
 import { apiPost, apiGet } from '../../api';
 import { useRideStore } from '../../store';
 import { useApp } from '../context/AppContext';
-import { Bouncy, GlassPanel, PulseView, LucknowCityCard, SlideUp, CountUp, EmptyAnim, DotBG, GlowPulse, ShineCard } from '../components/ui';
+import { Bouncy, GlassPanel, PulseView, SlideUp, CountUp, EmptyAnim, GlowPulse, ShineCard } from '../components/ui';
 import { s, C, T, SP, R, SHADOW } from '../styles';
 import { MAPS_KEY } from '../constants';
 import { useNearbyDrivers } from '../offline';
 import { NotifBell, NotificationCenter, getUnreadCount } from '../components/NotificationCenter';
+
+const DARK_MAP_STYLE = [
+  { elementType: 'geometry',        stylers: [{ color: '#0d0618' }] },
+  { elementType: 'labels.text.fill',stylers: [{ color: '#6b4fa0' }] },
+  { elementType: 'labels.text.stroke',stylers:[{ color: '#0d0618' }] },
+  { featureType: 'road',            elementType: 'geometry',       stylers: [{ color: '#1a0a35' }] },
+  { featureType: 'road',            elementType: 'geometry.stroke', stylers: [{ color: '#2e1461' }] },
+  { featureType: 'road.highway',    elementType: 'geometry',       stylers: [{ color: '#2e1461' }] },
+  { featureType: 'road.highway',    elementType: 'geometry.stroke', stylers: [{ color: 'rgba(255,45,120,0.25)' }] },
+  { featureType: 'water',           elementType: 'geometry',       stylers: [{ color: '#0a0520' }] },
+  { featureType: 'poi',             stylers: [{ visibility: 'off' }] },
+  { featureType: 'transit',         stylers: [{ visibility: 'off' }] },
+  { featureType: 'administrative',  elementType: 'geometry.stroke', stylers: [{ color: '#2e1461' }] },
+  { featureType: 'landscape',       elementType: 'geometry',       stylers: [{ color: '#100820' }] },
+];
 
 function NavBar() {
   const { tab, screen, setScreen, setTab, loadHistory, phone, rideData, storeStatus, hourlyBooking } = useApp();
@@ -543,16 +559,12 @@ function HomeTab() {
           </View>
         </Animated.View>
 
-        {/* Mini pill — fades in when scrolled */}
-        <Animated.View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 14, paddingBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 10, opacity: miniAlpha }}>
-          <TouchableOpacity onPress={() => setScreen('booking')}
-            style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: 22, paddingHorizontal: 14, paddingVertical: 9, gap: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' }}>
-            <Ionicons name="search" size={13} color="rgba(255,255,255,0.7)" />
-            <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: '600' }}>Where to?</Text>
-          </TouchableOpacity>
+        {/* Mini row — compact name + avatar when scrolled */}
+        <Animated.View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', opacity: miniAlpha }}>
+          <Text style={{ color: '#fff', fontSize: 15, fontWeight: '900', letterSpacing: -0.3 }}>{userName || 'Rider'}</Text>
           <TouchableOpacity onPress={() => { setTab('profile'); loadWallet(phone); }}
-            style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,45,120,0.2)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,45,120,0.40)' }}>
-            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>{(userName || 'R')[0].toUpperCase()}</Text>
+            style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,45,120,0.2)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,45,120,0.40)' }}>
+            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>{(userName || 'R')[0].toUpperCase()}</Text>
           </TouchableOpacity>
         </Animated.View>
       </Animated.View>
@@ -565,29 +577,75 @@ function HomeTab() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: 90 }}
       >
-        {/* Search bar floats at the dark/light boundary */}
-        <TouchableOpacity onPress={() => setScreen('booking')} activeOpacity={0.9} style={{
-          marginHorizontal: 16, marginTop: -18,
+        {/* ── Live Map ── */}
+        <View style={{ marginHorizontal: 16, marginTop: 12, borderRadius: 20, overflow: 'hidden', height: 200, borderWidth: 1, borderColor: 'rgba(255,45,120,0.22)', elevation: 6, shadowColor: C.pink, shadowOpacity: 0.12, shadowRadius: 10 }}>
+          <MapView
+            provider={PROVIDER_GOOGLE}
+            style={{ flex: 1 }}
+            scrollEnabled={false}
+            zoomEnabled={false}
+            rotateEnabled={false}
+            pitchEnabled={false}
+            customMapStyle={DARK_MAP_STYLE}
+            initialRegion={{
+              latitude:      userLat || 26.8467,
+              longitude:     userLng || 80.9462,
+              latitudeDelta:  0.06,
+              longitudeDelta: 0.06,
+            }}
+            region={userLat && userLng ? {
+              latitude:      userLat,
+              longitude:     userLng,
+              latitudeDelta:  0.06,
+              longitudeDelta: 0.06,
+            } : undefined}
+          >
+            {userLat && userLng && (
+              <Marker coordinate={{ latitude: userLat, longitude: userLng }}>
+                <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: C.pink, borderWidth: 3, borderColor: '#fff', elevation: 6, shadowColor: C.pink, shadowOpacity: 0.8, shadowRadius: 8 }} />
+              </Marker>
+            )}
+            {(Array.isArray(nearbyDriversData) ? nearbyDriversData : []).map((d: any, i: number) => (
+              d?.lat && d?.lng
+                ? <Marker key={i} coordinate={{ latitude: d.lat, longitude: d.lng }} anchor={{ x: 0.5, y: 0.5 }}>
+                    <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.mint, borderWidth: 2, borderColor: '#fff' }} />
+                  </Marker>
+                : null
+            ))}
+          </MapView>
+          {/* Overlay badges */}
+          <View style={{ position: 'absolute', top: 10, left: 10, backgroundColor: 'rgba(13,6,24,0.82)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: 'rgba(255,45,120,0.30)' }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: C.pink }} />
+            <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900', letterSpacing: 1 }}>SPPERO</Text>
+          </View>
+          {nearbyCount > 0 && (
+            <View style={{ position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(0,212,168,0.15)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: 'rgba(0,212,168,0.35)' }}>
+              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: C.mint }} />
+              <Text style={{ color: C.mint, fontSize: 10, fontWeight: '800' }}>{nearbyCount} driver{nearbyCount !== 1 ? 's' : ''} nearby</Text>
+            </View>
+          )}
+        </View>
+
+        {/* ── Where to? — below map ── */}
+        <TouchableOpacity onPress={() => setScreen('booking')} activeOpacity={0.88} style={{
+          marginHorizontal: 16, marginTop: 10, marginBottom: 4,
           backgroundColor: C.bgCard,
-          borderRadius: 18, paddingVertical: 14, paddingHorizontal: 18,
-          flexDirection: 'row', alignItems: 'center', gap: 10,
-          elevation: 16, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 16, shadowOffset: { width: 0, height: 6 },
-          borderWidth: 1, borderColor: C.glassBorder,
+          borderRadius: 18, paddingVertical: 15, paddingHorizontal: 18,
+          flexDirection: 'row', alignItems: 'center', gap: 12,
+          elevation: 6, shadowColor: C.pink, shadowOpacity: 0.10, shadowRadius: 12,
+          borderWidth: 1.5, borderColor: 'rgba(255,45,120,0.18)',
         }}>
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.pink }} />
+          <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,45,120,0.14)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,45,120,0.30)' }}>
+            <Ionicons name="search" size={14} color={C.pink} />
+          </View>
           <Text style={{ flex: 1, fontSize: 15, color: C.textMuted, fontWeight: '500' }}>Where to?</Text>
-          <View style={{ backgroundColor: C.pink, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 6, elevation: 2 }}>
-            <Text style={{ color: '#fff', fontSize: 12, fontWeight: '800' }}>Go</Text>
+          <View style={{ backgroundColor: C.pink, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 7, elevation: 2, shadowColor: C.pink, shadowOpacity: 0.4, shadowRadius: 6 }}>
+            <Text style={{ color: '#fff', fontSize: 12, fontWeight: '900' }}>Go</Text>
           </View>
         </TouchableOpacity>
 
-        {/* City Map Card */}
-        <View style={{ marginHorizontal: 16, marginTop: 14, marginBottom: 14 }}>
-          <LucknowCityCard />
-        </View>
-
         {/* Content sheet */}
-        <View style={{ backgroundColor: C.bg, borderTopLeftRadius: 0, paddingTop: 14, paddingHorizontal: 16, marginTop: 0, minHeight: 600 }}>
+        <View style={{ backgroundColor: C.bg, borderTopLeftRadius: 0, paddingTop: 10, paddingHorizontal: 16, marginTop: 12, minHeight: 600 }}>
 
           {/* Ride stats strip */}
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
