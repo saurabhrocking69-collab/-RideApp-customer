@@ -158,7 +158,7 @@ export function ChatScreen() {
   const {
     rideData,
     chatMsgs, chatInput, setChatInput,
-    setScreen,
+    setScreen, chatOrigin,
     sendChat, callDriver,
   } = useApp();
 
@@ -168,7 +168,7 @@ export function ChatScreen() {
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
       <DotBG />
       <View style={s.topBar}>
-        <TouchableOpacity onPress={() => setScreen(rideData?.status === 'started' ? 'inride' : 'matching')} style={s.backBtn}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
+        <TouchableOpacity onPress={() => setScreen(chatOrigin)} style={s.backBtn}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
         <Text style={s.topTitle}>💬 {rideData?.driver?.name || 'Driver'}</Text>
         <TouchableOpacity onPress={callDriver} style={{ width: 36, alignItems: 'flex-end' }}><Ionicons name="call" size={20} color={C.green} /></TouchableOpacity>
       </View>

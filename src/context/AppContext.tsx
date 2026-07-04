@@ -93,6 +93,7 @@ interface AppContextType {
   unreadChat: number; setUnreadChat: React.Dispatch<React.SetStateAction<number>>;
   lastChatCount: React.MutableRefObject<number>;
   chatToast: string | null; setChatToast: (v: string | null) => void;
+  chatOrigin: Screen; setChatOrigin: (s: Screen) => void;
   // Post ride
   rating: number; setRating: (r: number) => void;
   tip: number; setTip: (t: number) => void;
@@ -400,6 +401,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [unreadChat, setUnreadChat] = useState(0);
   const lastChatCount = useRef(0);
   const [chatToast, setChatToast] = useState<string | null>(null);
+  const [chatOrigin, setChatOrigin] = useState<Screen>('matching');
   const chatToastTimer = useRef<any>(null);
 
   // ── Post ride ───────────────────────────────────────────────────────────
@@ -1633,7 +1635,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     surgeFare, setSurgeFare, surging, setSurging, surgeBarAnim, surgeBarAnimRef,
     serverSurgeOffer, setServerSurgeOffer, noDriverFinal, setNoDriverFinal,
     notifToast, setNotifToast,
-    chatMsgs, setChatMsgs, chatInput, setChatInput, unreadChat, setUnreadChat, lastChatCount, chatToast, setChatToast,
+    chatMsgs, setChatMsgs, chatInput, setChatInput, unreadChat, setUnreadChat, lastChatCount, chatToast, setChatToast, chatOrigin, setChatOrigin,
     rating, setRating, tip, setTip, review, setReview,
     paymentDone, setPaymentDone, showUpiQr, setShowUpiQr, fareCount, setFareCount,
     scratchCard, setScratchCard, scratched, setScratched, scratchAnim, starAnims, sosActive, setSosActive,

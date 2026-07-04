@@ -101,7 +101,7 @@ const VEHICLE_EMOJI: Record<string, string> = {
 
 export function InRideScreen() {
   const {
-    setScreen,
+    setScreen, setChatOrigin,
     pickup, drop,
     pickupCoords, dropCoords,
     driverLoc,
@@ -245,7 +245,7 @@ export function InRideScreen() {
           {/* ─── Quick contact — compact pills right below driver card ─── */}
           {driver && (
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10, marginTop: -4 }}>
-              <Bouncy style={{ flex: 1 }} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
+              <Bouncy style={{ flex: 1 }} onPress={() => { setUnreadChat(0); setChatOrigin('inride'); setScreen('chat'); }}>
                 <Animated.View style={{
                   backgroundColor: C.plumGlass, borderRadius: 14,
                   paddingVertical: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -347,14 +347,14 @@ export function InRideScreen() {
                 flexDirection: 'row', alignItems: 'center', gap: 10,
                 borderWidth: 1, borderColor: C.pinkBorder, elevation: 8,
               }}
-              onPress={() => { setChatToast(null); setUnreadChat(0); setScreen('chat'); }}>
+              onPress={() => { setChatToast(null); setUnreadChat(0); setChatOrigin('inride'); setScreen('chat'); }}>
               <Ionicons name="chatbubble" size={16} color={C.pink} />
               <Text style={{ color: '#fff', fontSize: 13, flex: 1, fontWeight: '600' }} numberOfLines={1}>{chatToast}</Text>
               <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10 }}>Reply</Text>
             </TouchableOpacity>
           )}
           {!chatToast && unreadChat > 0 && (
-            <TouchableOpacity style={s.chatAlert} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
+            <TouchableOpacity style={s.chatAlert} onPress={() => { setUnreadChat(0); setChatOrigin('inride'); setScreen('chat'); }}>
               <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>💬 {unreadChat} new message from driver — tap to read</Text>
             </TouchableOpacity>
           )}

@@ -201,6 +201,7 @@ export function MatchingScreen() {
     surgeFareNow, switchVehicle, bookRide,
     callDriver, triggerSOS,
     rideIcon,
+    setChatOrigin,
   } = useApp();
 
   // SuccessBurst auto-hide after 2s
@@ -411,7 +412,7 @@ export function MatchingScreen() {
 
                   {/* ─── Quick contact strip — bottom of driver card ─── */}
                   <View style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: C.glassBorder }}>
-                    <Bouncy style={{ flex: 1 }} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
+                    <Bouncy style={{ flex: 1 }} onPress={() => { setUnreadChat(0); setChatOrigin('matching'); setScreen('chat'); }}>
                       <Animated.View style={{
                         flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
                         gap: 8, paddingVertical: 14,
@@ -522,14 +523,14 @@ export function MatchingScreen() {
               {chatToast && (
                 <TouchableOpacity
                   style={{ backgroundColor: C.bgDark, borderRadius: R.sm, padding: 14, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: C.pinkBorder, elevation: 8 }}
-                  onPress={() => { setChatToast(null); setUnreadChat(0); setScreen('chat'); }}>
+                  onPress={() => { setChatToast(null); setUnreadChat(0); setChatOrigin('matching'); setScreen('chat'); }}>
                   <Ionicons name="chatbubble" size={16} color={C.pink} />
                   <Text style={{ color: '#fff', fontSize: 13, flex: 1, fontWeight: '600' }} numberOfLines={1}>{chatToast}</Text>
                   <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10 }}>Reply</Text>
                 </TouchableOpacity>
               )}
               {!chatToast && unreadChat > 0 && (
-                <TouchableOpacity style={s.chatAlert} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
+                <TouchableOpacity style={s.chatAlert} onPress={() => { setUnreadChat(0); setChatOrigin('matching'); setScreen('chat'); }}>
                   <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>💬 {unreadChat} new message from driver — tap to read</Text>
                 </TouchableOpacity>
               )}
