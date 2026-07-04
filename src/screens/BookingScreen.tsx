@@ -335,22 +335,38 @@ export function BookingScreen() {
     return () => loop.stop();
   }, []);
 
-  // ── fitKey — re-triggers LiveMap.fitToCoordinates after height animation settles ──
-  const [fitKey, setFitKey] = useState(0);
-  useEffect(() => {
-    if (!pickupCoords || !dropCoords) return;
-    const t = setTimeout(() => setFitKey(k => k + 1), 720); // spring settles ~700ms
-    return () => clearTimeout(t);
-  }, [!!(pickupCoords && dropCoords)]);
-
-  // ── Map height animation ──────────────────────────
-  const [inputFocused, setInputFocused] = useState(false);
+  // ── Map height state machine ──────────────────────
+  // Phases:
+  //   !bothSet           → MAP_MED  (picking locations)
+  //   bothSet, browsing  → MAP_SMALL (user scrolled into vehicle list)
+  //   bothSet, !browsing → MAP_BIG  (route set OR vehicle just selected — confirmation peak)
+  const [inputFocused,    setInputFocused]    = useState(false);
+  const [vehicleBrowsing, setVehicleBrowsing] = useState(false);
   const bothSet = !!(pickupCoords && dropCoords);
+
+  // Reset browse mode when route is cleared
+  useEffect(() => { if (!bothSet) setVehicleBrowsing(false); }, [bothSet]);
+
   const mapHeightAnim = useRef(new Animated.Value(MAP_MED)).current;
   useEffect(() => {
-    const target = inputFocused ? MAP_SMALL : bothSet ? MAP_BIG : MAP_MED;
+    const target = inputFocused
+      ? MAP_SMALL
+      : !bothSet
+        ? MAP_MED
+        : vehicleBrowsing
+          ? MAP_SMALL
+          : MAP_BIG;
     Animated.spring(mapHeightAnim, { toValue: target, friction: 9, tension: 70, useNativeDriver: false }).start();
-  }, [inputFocused, bothSet]);
+  }, [inputFocused, bothSet, vehicleBrowsing]);
+
+  // ── fitKey — re-triggers fitToCoordinates when map expands ──
+  const [fitKey, setFitKey] = useState(0);
+  useEffect(() => {
+    // Fire when map is about to expand: route just set, or vehicle selected (browsing→false)
+    if (!bothSet || vehicleBrowsing) return;
+    const t = setTimeout(() => setFitKey(k => k + 1), 720);
+    return () => clearTimeout(t);
+  }, [bothSet, vehicleBrowsing]);
 
   // Sheet entrance: fade + slide-up on mount
   const sheetAnim = useRef(new Animated.Value(0)).current;
@@ -480,6 +496,7 @@ export function BookingScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets
+          onScrollBeginDrag={() => { if (bothSet) setVehicleBrowsing(true); }}
           contentContainerStyle={{ paddingBottom: 16, paddingHorizontal: 14 }}>
 
           {/* ─── Location card ─────────────────────────────── */}
@@ -897,7 +914,7 @@ export function BookingScreen() {
                   {nearest.r.label} is nearest — arriving in ~{nearest.info?.eta_min} min
                 </Text>
                 {rideType !== nearest.r.id && (
-                  <TouchableOpacity onPress={() => setRideType(nearest.r.id)} style={{ backgroundColor: C.green, borderRadius: R.xs, paddingHorizontal: 10, paddingVertical: 5 }}>
+                  <TouchableOpacity onPress={() => { setRideType(nearest.r.id); setVehicleBrowsing(false); }} style={{ backgroundColor: C.green, borderRadius: R.xs, paddingHorizontal: 10, paddingVertical: 5 }}>
                     <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900' }}>Select</Text>
                   </TouchableOpacity>
                 )}
@@ -918,6 +935,7 @@ export function BookingScreen() {
                   <TouchableOpacity
                     onPress={() => {
                       setRideType(r.id);
+                      setVehicleBrowsing(false); // expand map — confirmation peak
                       RIDES.forEach((ride: any) => {
                         Animated.spring(cardAnims[ride.id], {
                           toValue: ride.id === r.id ? 1.015 : 1,
@@ -983,7 +1001,7 @@ export function BookingScreen() {
                               </View>
                               {bestAlt && (
                                 <TouchableOpacity
-                                  onPress={() => setRideType(bestAlt.id)}
+                                  onPress={() => { setRideType(bestAlt.id); setVehicleBrowsing(false); }}
                                   style={{ marginTop: 5, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.pinkGlass, borderRadius: R.xs - 2, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' }}>
                                   <Text style={{ fontSize: 10, color: C.pink, fontWeight: '800' }}>
                                     Try {bestAlt.label} · ~{driverEta[bestAlt.id]?.eta_min} min
@@ -1074,7 +1092,7 @@ export function BookingScreen() {
                   {availables.slice(0, 3).map(alt => (
                     <TouchableOpacity
                       key={alt.id}
-                      onPress={() => setRideType(alt.id)}
+                      onPress={() => { setRideType(alt.id); setVehicleBrowsing(false); }}
                       style={{ backgroundColor: C.pink, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 6, elevation: 4, shadowColor: C.pink, shadowOpacity: 0.35, shadowRadius: 6 }}>
                       <RideVehicleIcon id={alt.id} size={13} color="#fff" />
                       <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900' }}>
