@@ -335,6 +335,14 @@ export function BookingScreen() {
     return () => loop.stop();
   }, []);
 
+  // ── fitKey — re-triggers LiveMap.fitToCoordinates after height animation settles ──
+  const [fitKey, setFitKey] = useState(0);
+  useEffect(() => {
+    if (!pickupCoords || !dropCoords) return;
+    const t = setTimeout(() => setFitKey(k => k + 1), 720); // spring settles ~700ms
+    return () => clearTimeout(t);
+  }, [!!(pickupCoords && dropCoords)]);
+
   // ── Map height animation ──────────────────────────
   const [inputFocused, setInputFocused] = useState(false);
   const bothSet = !!(pickupCoords && dropCoords);
@@ -379,12 +387,33 @@ export function BookingScreen() {
             : undefined}
           skipAutoFit={!!(pickupCoords && !dropCoords)}
           onRouteInfo={(et, dt) => { setRouteEta(et); setRouteDist(dt); }}
+          fitKey={fitKey}
         />
         <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} />
 
         {/* Confirm drop button — visible during drag-to-set-drop mode */}
         {pickupCoords && !dropCoords && (
-          <View style={{ position: 'absolute', bottom: 44, left: 16, right: 16, zIndex: 30 }}>
+          <View style={{ position: 'absolute', bottom: 44, left: 16, right: 16, zIndex: 30, gap: 10 }}>
+            {/* Road-only hint */}
+            <View style={{
+              alignSelf: 'center',
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              backgroundColor: 'rgba(255,255,255,0.92)',
+              paddingVertical: 6,
+              paddingHorizontal: 12,
+              borderRadius: 20,
+              elevation: 6,
+              shadowColor: '#000',
+              shadowOpacity: 0.12,
+              shadowRadius: 6,
+            }}>
+              <Text style={{ fontSize: 13 }}>🛣️</Text>
+              <Text style={{ fontSize: 11.5, fontWeight: '700', color: C.plum }}>
+                Place on a road for accurate fare
+              </Text>
+            </View>
             <TouchableOpacity
               activeOpacity={0.88}
               onPress={confirmDropHere}

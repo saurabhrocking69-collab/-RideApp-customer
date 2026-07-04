@@ -100,17 +100,6 @@ function EtaChip({ eta, distance }: { eta: string; distance: string }) {
   );
 }
 
-// ── Center drop crosshair — fixed pin at map center for drag-to-set-drop ──────
-function CenterDropPin() {
-  return (
-    <View pointerEvents="none" style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
-      <View style={{ position: 'absolute', width: 32, height: 2, backgroundColor: C.pink, opacity: 0.6, borderRadius: 1 }} />
-      <View style={{ position: 'absolute', height: 32, width: 2, backgroundColor: C.pink, opacity: 0.6, borderRadius: 1 }} />
-      <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: C.pink, borderWidth: 3, borderColor: '#fff', elevation: 8, shadowColor: C.pink, shadowOpacity: 0.6, shadowRadius: 8 }} />
-    </View>
-  );
-}
-
 // ── "Drag to set drop" label hint ────────────────────────────────────────────
 function DragHint({ visible }: { visible: boolean }) {
   const opacity = useRef(new Animated.Value(0)).current;
@@ -166,6 +155,7 @@ export interface LiveMapProps {
   onRegionChange?: (coords: { lat: number; lng: number }) => void;
   skipAutoFit?: boolean;
   onRouteInfo?: (eta: string, dist: string) => void;
+  fitKey?: number;
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -190,12 +180,25 @@ export const LiveMap = memo(function LiveMap({
   onRegionChange,
   skipAutoFit = false,
   onRouteInfo,
+  fitKey = 0,
 }: LiveMapProps) {
   const mapRef = useRef<MapView>(null);
   const prevPos = useRef<{ lat: number; lng: number } | null>(null);
   const [heading, setHeading] = useState(0);
   const [draggingPickup, setDraggingPickup] = useState(false);
   const [draggingDrop, setDraggingDrop] = useState(false);
+
+  // ── Drag-pin lift animation ───────────────────────────────────────────────
+  const [isMapDragging, setIsMapDragging] = useState(false);
+  const pinLift    = useRef(new Animated.Value(0)).current;
+  const shadowScale = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!dropDragMode) { pinLift.setValue(0); shadowScale.setValue(1); return; }
+    Animated.parallel([
+      Animated.spring(pinLift,    { toValue: isMapDragging ? -20 : 0,   friction: 5, tension: 220, useNativeDriver: true }),
+      Animated.spring(shadowScale,{ toValue: isMapDragging ?  0.6 : 1,  friction: 5, tension: 220, useNativeDriver: true }),
+    ]).start();
+  }, [isMapDragging, dropDragMode]);
 
   const driverRegion = useRef(
     new AnimatedRegion({
@@ -208,6 +211,18 @@ export const LiveMap = memo(function LiveMap({
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
   const [etaText, setEtaText] = useState('');
   const [distText, setDistText] = useState('');
+
+  // ── Route glow pulse (booking mode only) ─────────────────────────────────
+  const [routeGlow, setRouteGlow] = useState('rgba(255,45,120,0.15)');
+  useEffect(() => {
+    if (!routeCoords.length || mode !== 'booking') { setRouteGlow('rgba(255,45,120,0.15)'); return; }
+    let bright = false;
+    const t = setInterval(() => {
+      bright = !bright;
+      setRouteGlow(bright ? 'rgba(255,45,120,0.30)' : 'rgba(255,45,120,0.10)');
+    }, 900);
+    return () => clearInterval(t);
+  }, [routeCoords.length, mode]);
 
   // Smooth driver position + compute bearing
   useEffect(() => {
@@ -289,7 +304,7 @@ export const LiveMap = memo(function LiveMap({
         animated: true,
       });
     }
-  }, [pickupCoords?.lat, pickupCoords?.lng, dropCoords?.lat, dropCoords?.lng, driverLat, driverLng, followDriver]);
+  }, [pickupCoords?.lat, pickupCoords?.lng, dropCoords?.lat, dropCoords?.lng, driverLat, driverLng, followDriver, fitKey]);
 
   const recenter = () => {
     if (!mapRef.current) return;
@@ -335,27 +350,44 @@ export const LiveMap = memo(function LiveMap({
         onPress={onMapPress
           ? (e) => onMapPress({ lat: e.nativeEvent.coordinate.latitude, lng: e.nativeEvent.coordinate.longitude })
           : undefined}
-        onRegionChange={onRegionChange
-          ? (region) => onRegionChange({ lat: region.latitude, lng: region.longitude })
-          : undefined}
+        onRegionChange={(region) => {
+          if (dropDragMode) setIsMapDragging(true);
+          onRegionChange?.({ lat: region.latitude, lng: region.longitude });
+        }}
+        onRegionChangeComplete={(region) => {
+          if (dropDragMode) {
+            setIsMapDragging(false);
+            onRegionChange?.({ lat: region.latitude, lng: region.longitude });
+          }
+        }}
       >
-        {/* Completed route segment (green) */}
-        {completedCoords.length > 1 && (
-          <Polyline
-            coordinates={completedCoords}
-            strokeColor="rgba(5,150,105,0.5)"
-            strokeWidth={4}
-            lineCap="round"
-          />
+        {/* Glow halo — animated pulse behind booking route */}
+        {remainingCoords.length > 1 && mode === 'booking' && (
+          <Polyline coordinates={remainingCoords} strokeColor={routeGlow} strokeWidth={14} lineCap="round" />
         )}
 
-        {/* Remaining / booking route (pink) */}
+        {/* Completed route segment (green) */}
+        {completedCoords.length > 1 && (
+          <Polyline coordinates={completedCoords} strokeColor="rgba(5,150,105,0.5)" strokeWidth={5} lineCap="round" />
+        )}
+
+        {/* Main route line — thicker in booking mode */}
         {remainingCoords.length > 1 && (
           <Polyline
             coordinates={remainingCoords}
             strokeColor={mode === 'matching' ? C.pink : mode === 'booking' ? C.pink : C.green}
-            strokeWidth={mode === 'booking' ? 3 : 4}
-            lineDashPattern={mode === 'booking' ? [10, 6] : undefined}
+            strokeWidth={mode === 'booking' ? 6 : 4}
+            lineCap="round"
+          />
+        )}
+
+        {/* White dash overlay — road-marking micro-texture */}
+        {remainingCoords.length > 1 && mode === 'booking' && (
+          <Polyline
+            coordinates={remainingCoords}
+            strokeColor="rgba(255,255,255,0.68)"
+            strokeWidth={1.8}
+            lineDashPattern={[6, 18]}
             lineCap="round"
           />
         )}
@@ -435,8 +467,41 @@ export const LiveMap = memo(function LiveMap({
         )}
       </MapView>
 
-      {/* Center drop crosshair — drag mode */}
-      {dropDragMode && <CenterDropPin />}
+      {/* Animated drop pin — lifts on map drag, tip stays at map center */}
+      {dropDragMode && (
+        <View pointerEvents="none" style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
+          {/* Pin — marginBottom: 58 puts the tail tip at exact map center */}
+          <Animated.View style={{ alignItems: 'center', marginBottom: 58, transform: [{ translateY: pinLift }] }}>
+            <View style={{
+              width: 34, height: 34, borderRadius: 17,
+              backgroundColor: isMapDragging ? '#FF4D96' : C.pink,
+              alignItems: 'center', justifyContent: 'center',
+              elevation: isMapDragging ? 18 : 9,
+              shadowColor: C.pink,
+              shadowOpacity: isMapDragging ? 0.85 : 0.50,
+              shadowRadius: isMapDragging ? 20 : 10,
+              borderWidth: 3, borderColor: '#fff',
+            }}>
+              <View style={{ width: 11, height: 11, borderRadius: 5.5, backgroundColor: '#fff' }} />
+            </View>
+            {/* Tail — 12px visual, 0 layout height */}
+            <View style={{
+              width: 0, height: 0,
+              borderLeftWidth: 6, borderRightWidth: 6, borderTopWidth: 12,
+              borderLeftColor: 'transparent', borderRightColor: 'transparent',
+              borderTopColor: isMapDragging ? '#FF4D96' : C.pink,
+              marginTop: -1,
+            }} />
+          </Animated.View>
+          {/* Ground shadow — stays at map center, shrinks when pin is lifted */}
+          <Animated.View style={{
+            position: 'absolute',
+            width: 24, height: 10, borderRadius: 12,
+            backgroundColor: 'rgba(0,0,0,0.22)',
+            transform: [{ scale: shadowScale }],
+          }} />
+        </View>
+      )}
 
       {/* ETA chip — top-left, not shown in booking (displayed in bottom sheet instead) */}
       {etaText && mode !== 'booking' ? <EtaChip eta={etaText} distance={distText} /> : null}
