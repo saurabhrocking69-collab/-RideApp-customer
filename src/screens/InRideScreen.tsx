@@ -3,7 +3,7 @@ import { Platform, ScrollView, Text, TouchableOpacity, View, Animated, Vibration
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useApp } from '../context/AppContext';
-import { Bouncy, GlassPanel, MapOverlay, PulseView, TripSteps, DotBG } from '../components/ui';
+import { GlassPanel, MapOverlay, PulseView, TripSteps } from '../components/ui';
 import { LiveMap } from '../components/LiveMap';
 import { s, C, T, SP, R, SHADOW } from '../styles';
 
@@ -101,38 +101,19 @@ const VEHICLE_EMOJI: Record<string, string> = {
 
 export function InRideScreen() {
   const {
-    setScreen, setChatOrigin,
     pickup, drop,
     pickupCoords, dropCoords,
     driverLoc,
     driverEta, driverDist,
     rideData, rideType,
-    unreadChat, setUnreadChat,
-    chatToast, setChatToast,
     sosActive, setSosActive,
-    callDriver, triggerSOS,
+    triggerSOS,
   } = useApp();
 
   const [elapsed, setElapsed] = useState(0);
   const startRef = useRef(
     rideData?.started_at ? new Date(rideData.started_at).getTime() : Date.now()
   );
-
-  // Chat bounce — pulses when there are unread messages
-  const chatBounceAnim = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
-    if (unreadChat > 0) {
-      const loop = Animated.loop(Animated.sequence([
-        Animated.spring(chatBounceAnim, { toValue: 1.14, friction: 3, tension: 300, useNativeDriver: true }),
-        Animated.spring(chatBounceAnim, { toValue: 1, friction: 3, tension: 300, useNativeDriver: true }),
-        Animated.delay(1800),
-      ]));
-      loop.start();
-      return () => loop.stop();
-    } else {
-      chatBounceAnim.setValue(1);
-    }
-  }, [unreadChat]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -242,36 +223,6 @@ export function InRideScreen() {
             </View>
           )}
 
-          {/* ─── Quick contact — compact pills right below driver card ─── */}
-          {driver && (
-            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10, marginTop: -4 }}>
-              <Bouncy style={{ flex: 1 }} onPress={() => { setUnreadChat(0); setChatOrigin('inride'); setScreen('chat'); }}>
-                <Animated.View style={{
-                  backgroundColor: C.plumGlass, borderRadius: 14,
-                  paddingVertical: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  borderWidth: 1.5, borderColor: unreadChat > 0 ? C.plumBorder : 'rgba(46,20,97,0.25)',
-                  elevation: 2, shadowColor: C.plum, shadowOpacity: 0.15, shadowRadius: 6,
-                  transform: [{ scale: chatBounceAnim }],
-                }}>
-                  <Ionicons name="chatbubble" size={16} color={C.plum} />
-                  <Text style={{ fontSize: 13, fontWeight: '800', color: C.plum }}>
-                    {unreadChat > 0 ? `Chat (${unreadChat})` : 'Chat'}
-                  </Text>
-                </Animated.View>
-              </Bouncy>
-              <Bouncy style={{ flex: 1 }} onPress={callDriver}>
-                <View style={{
-                  backgroundColor: C.greenGlass, borderRadius: 14,
-                  paddingVertical: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  borderWidth: 1.5, borderColor: C.greenBorder,
-                  elevation: 2, shadowColor: C.green, shadowOpacity: 0.15, shadowRadius: 6,
-                }}>
-                  <Ionicons name="call" size={16} color={C.green} />
-                  <Text style={{ fontSize: 13, fontWeight: '800', color: C.green }}>Call Driver</Text>
-                </View>
-              </Bouncy>
-            </View>
-          )}
 
           {/* Live trip stats */}
           <View style={{
@@ -339,25 +290,6 @@ export function InRideScreen() {
             </View>
           )}
 
-          {/* Chat toast */}
-          {chatToast && (
-            <TouchableOpacity
-              style={{
-                backgroundColor: C.bgDark, borderRadius: R.sm, padding: 14, marginTop: 4,
-                flexDirection: 'row', alignItems: 'center', gap: 10,
-                borderWidth: 1, borderColor: C.pinkBorder, elevation: 8,
-              }}
-              onPress={() => { setChatToast(null); setUnreadChat(0); setChatOrigin('inride'); setScreen('chat'); }}>
-              <Ionicons name="chatbubble" size={16} color={C.pink} />
-              <Text style={{ color: '#fff', fontSize: 13, flex: 1, fontWeight: '600' }} numberOfLines={1}>{chatToast}</Text>
-              <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10 }}>Reply</Text>
-            </TouchableOpacity>
-          )}
-          {!chatToast && unreadChat > 0 && (
-            <TouchableOpacity style={s.chatAlert} onPress={() => { setUnreadChat(0); setChatOrigin('inride'); setScreen('chat'); }}>
-              <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>💬 {unreadChat} new message from driver — tap to read</Text>
-            </TouchableOpacity>
-          )}
         </ScrollView>
       </GlassPanel>
     </View>
