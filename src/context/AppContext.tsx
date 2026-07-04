@@ -85,6 +85,7 @@ interface AppContextType {
   setServerSurgeOffer: (v: { amt: number; label: string; timeout_sec: number } | null) => void;
   noDriverFinal: { alternatives: string[]; retry_after_sec: number } | null;
   setNoDriverFinal: (v: { alternatives: string[]; retry_after_sec: number } | null) => void;
+  driverCancelPopup: boolean; setDriverCancelPopup: (v: boolean) => void;
   // Notification toast (foreground in-app)
   notifToast: ToastNotif | null; setNotifToast: (n: ToastNotif | null) => void;
   // Chat
@@ -391,6 +392,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const surgeBarAnimRef = useRef<Animated.CompositeAnimation | null>(null);
   const [serverSurgeOffer, setServerSurgeOffer] = useState<{ amt: number; label: string; timeout_sec: number } | null>(null);
   const [noDriverFinal, setNoDriverFinal] = useState<{ alternatives: string[]; retry_after_sec: number } | null>(null);
+  const [driverCancelPopup, setDriverCancelPopup] = useState(false);
 
   // ── Notification toast ──────────────────────────────────────────────────
   const [notifToast, setNotifToast] = useState<ToastNotif | null>(null);
@@ -572,6 +574,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const sub1 = Notifications.addNotificationReceivedListener(n => {
       const content = n.request.content;
       const data    = content.data as any;
+      if (data?.type === 'ride_cancelled') {
+        setDriverCancelPopup(true);
+      }
       const toast: ToastNotif = {
         id:    n.request.identifier,
         title: content.title || 'Sppero',
@@ -593,7 +598,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (['ride_matched', 'driver_arrived'].includes(data.type)) setScreen('matching');
       else if (data.type === 'trip_started')                       setScreen('inride');
       else if (data.type === 'trip_completed')                     setScreen('payment');
-      else if (data.type === 'ride_cancelled')                     setScreen('home');
+      else if (data.type === 'ride_cancelled')                     { setScreen('home'); setDriverCancelPopup(true); }
       else if (data.type === 'no_driver_found')                    setScreen('home');
       else if (data.type === 'extension_accepted')                 setScreen('matching');
       // Wallet / payments
@@ -1638,6 +1643,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     searchElapsed, setSearchElapsed, surgeCount, setSurgeCount,
     surgeFare, setSurgeFare, surging, setSurging, surgeBarAnim, surgeBarAnimRef,
     serverSurgeOffer, setServerSurgeOffer, noDriverFinal, setNoDriverFinal,
+    driverCancelPopup, setDriverCancelPopup,
     notifToast, setNotifToast,
     chatMsgs, setChatMsgs, chatInput, setChatInput, unreadChat, setUnreadChat, lastChatCount, chatToast, setChatToast, chatOrigin, setChatOrigin,
     rating, setRating, tip, setTip, review, setReview,

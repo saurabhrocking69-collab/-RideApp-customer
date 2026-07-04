@@ -202,6 +202,7 @@ export function MatchingScreen() {
     callDriver, triggerSOS,
     rideIcon,
     setChatOrigin,
+    driverCancelPopup, setDriverCancelPopup,
   } = useApp();
 
   // SuccessBurst auto-hide after 2s
@@ -241,6 +242,24 @@ export function MatchingScreen() {
   }, [!!rideData?.driver]);
 
   if (showCancelModal) return <CancelModal />;
+
+  if (driverCancelPopup) return (
+    <View style={{ flex: 1, backgroundColor: 'rgba(8,14,24,0.88)', justifyContent: 'center', alignItems: 'center', padding: 28 }}>
+      <View style={{ backgroundColor: '#FFFFFF', borderRadius: 26, padding: 32, alignItems: 'center', width: '100%', elevation: 20, shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 20 }}>
+        <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 2, borderColor: '#EF4444', alignItems: 'center', justifyContent: 'center', marginBottom: 18 }}>
+          <Text style={{ fontSize: 34 }}>🚫</Text>
+        </View>
+        <Text style={{ fontSize: 20, fontWeight: '900', color: '#0F172A', marginBottom: 8, textAlign: 'center' }}>Driver ne Cancel Kiya</Text>
+        <Text style={{ fontSize: 14, color: '#64748B', textAlign: 'center', marginBottom: 28, lineHeight: 20 }}>Aapke liye naya driver dhundh rahe hain...</Text>
+        <TouchableOpacity
+          onPress={() => setDriverCancelPopup(false)}
+          style={{ backgroundColor: C.pink, borderRadius: 14, paddingVertical: 15, paddingHorizontal: 52, elevation: 6, shadowColor: C.pink, shadowOpacity: 0.35, shadowRadius: 8 }}
+        >
+          <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15, letterSpacing: 0.3 }}>Okay</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 
   const getDriverLevel = (rating: number) => {
     if (rating >= 4.8) return { emoji: '💎', name: 'Platinum', color: '#9C27B0', bg: 'rgba(156,39,176,0.1)', border: 'rgba(156,39,176,0.3)' };
