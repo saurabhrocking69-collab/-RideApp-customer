@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Platform, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Storage } from '../storage';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -73,9 +73,8 @@ export function HourlyScreen() {
     const load = async () => {
       try {
         const d = await apiGet(`/api/hourly/chat/${hourlyBooking.id}`);
-        if (active) {
-          const msgs = d.messages || [];
-          setHChatMsgs(msgs);
+        if (active && !d._error && Array.isArray(d.messages)) {
+          setHChatMsgs(d.messages);
           setHChatUnread(0);
         }
       } catch (_e) {}
@@ -144,6 +143,20 @@ export function HourlyScreen() {
         alert(data.error || 'Booking failed');
       }
     } catch (e: any) { alert('Error: ' + e.message); }
+  };
+
+  const sendHourlyMsg = async () => {
+    const msg = hChatInput.trim();
+    if (!msg || !hourlyBooking?.id) return;
+    setHChatInput('');
+    const result = await apiPost('/api/hourly/chat/send', { booking_id: hourlyBooking.id, sender: 'customer', message: msg });
+    if (result._error) {
+      setHChatInput(msg);
+      Alert.alert('', 'Message not sent — check your connection and try again.');
+      return;
+    }
+    const d = await apiGet(`/api/hourly/chat/${hourlyBooking.id}`);
+    if (!d._error && Array.isArray(d.messages)) setHChatMsgs(d.messages);
   };
 
   const requestEarlyEnd = () => {
@@ -382,24 +395,10 @@ export function HourlyScreen() {
                 placeholder="Type a message..." placeholderTextColor={C.textDim}
                 value={hChatInput} onChangeText={setHChatInput}
                 returnKeyType="send"
-                onSubmitEditing={async () => {
-                  const msg = hChatInput.trim();
-                  if (!msg || !hourlyBooking?.id) return;
-                  setHChatInput('');
-                  await apiPost('/api/hourly/chat/send', { booking_id: hourlyBooking.id, sender: 'customer', message: msg });
-                  const d = await apiGet(`/api/hourly/chat/${hourlyBooking.id}`);
-                  setHChatMsgs(d.messages || []);
-                }}
+                onSubmitEditing={sendHourlyMsg}
               />
               <Bouncy style={{ backgroundColor: C.pink, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, justifyContent: 'center', elevation: 4, shadowColor: C.pink, shadowOpacity: 0.4, shadowRadius: 6 }}
-                onPress={async () => {
-                  const msg = hChatInput.trim();
-                  if (!msg || !hourlyBooking?.id) return;
-                  setHChatInput('');
-                  await apiPost('/api/hourly/chat/send', { booking_id: hourlyBooking.id, sender: 'customer', message: msg });
-                  const d = await apiGet(`/api/hourly/chat/${hourlyBooking.id}`);
-                  setHChatMsgs(d.messages || []);
-                }}>
+                onPress={sendHourlyMsg}>
                 <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>Send</Text>
               </Bouncy>
             </View>
