@@ -408,6 +408,32 @@ export function MatchingScreen() {
                       </View>
                     </View>
                   </View>
+
+                  {/* ─── Quick contact strip — bottom of driver card ─── */}
+                  <View style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: C.glassBorder }}>
+                    <Bouncy style={{ flex: 1 }} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
+                      <Animated.View style={{
+                        flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                        gap: 8, paddingVertical: 14,
+                        transform: [{ scale: chatBounceAnim }],
+                      }}>
+                        <Ionicons name="chatbubble" size={18} color={unreadChat > 0 ? C.plum : C.textMuted} />
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: unreadChat > 0 ? C.plum : C.textMuted }}>Chat</Text>
+                        {unreadChat > 0 && (
+                          <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center', marginLeft: -2 }}>
+                            <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{unreadChat}</Text>
+                          </View>
+                        )}
+                      </Animated.View>
+                    </Bouncy>
+                    <View style={{ width: 1, backgroundColor: C.glassBorder }} />
+                    <Bouncy style={{ flex: 1 }} onPress={callDriver}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14 }}>
+                        <Ionicons name="call" size={18} color={C.green} />
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: C.green }}>Call Driver</Text>
+                      </View>
+                    </Bouncy>
+                  </View>
                 </View>
               </SlideUp>
               <ETACountdown
@@ -428,68 +454,37 @@ export function MatchingScreen() {
               {/* ─── Action section with entrance animation ─── */}
               <Animated.View style={{ opacity: actionOpacity, transform: [{ translateY: actionSlide }] }}>
 
-                {/* Row: Chat · Call · Share */}
-                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
-
-                  {/* Chat */}
-                  <Bouncy style={{ flex: 1 }} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
-                    <Animated.View style={{
-                      backgroundColor: C.bgCard, borderRadius: 18,
-                      paddingVertical: 16, alignItems: 'center', gap: 9,
-                      borderWidth: 1.5, borderColor: unreadChat > 0 ? C.plumBorder : C.glassBorder,
-                      elevation: 4, shadowColor: C.plum, shadowOpacity: 0.12, shadowRadius: 8,
-                      transform: [{ scale: chatBounceAnim }],
-                    }}>
-                      <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: C.plumGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.plumBorder }}>
-                        <Ionicons name="chatbubble" size={23} color={C.plum} />
-                        {unreadChat > 0 && <View style={s.chatBadge}><Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{unreadChat}</Text></View>}
-                      </View>
-                      <Text style={{ fontSize: 11, fontWeight: '800', color: unreadChat > 0 ? C.plum : C.textMuted, letterSpacing: 0.3 }}>Chat</Text>
-                    </Animated.View>
-                  </Bouncy>
-
-                  {/* Call */}
-                  <Bouncy style={{ flex: 1 }} onPress={callDriver}>
-                    <View style={{
-                      backgroundColor: C.bgCard, borderRadius: 18,
-                      paddingVertical: 16, alignItems: 'center', gap: 9,
-                      borderWidth: 1.5, borderColor: C.glassBorder,
-                      elevation: 4, shadowColor: C.green, shadowOpacity: 0.12, shadowRadius: 8,
-                    }}>
-                      <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: C.greenGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.greenBorder }}>
-                        <Ionicons name="call" size={23} color={C.green} />
-                      </View>
-                      <Text style={{ fontSize: 11, fontWeight: '800', color: C.textMuted, letterSpacing: 0.3 }}>Call</Text>
-                    </View>
-                  </Bouncy>
-
-                  {/* Share */}
-                  <Bouncy style={{ flex: 1 }} onPress={() => {
-                    const d = rideData?.driver;
-                    const trackUrl = `${API}/track/${rideData?.ride_id || ''}`;
-                    const msg = `🚖 *Sppero — Live Tracking*\n\n` +
-                      `Driver: ${d?.name || 'Assigned'} | ${d?.vehicle_no || ''}\n` +
-                      (rideData?.startOtp ? `OTP: ${rideData.startOtp}\n` : '') +
-                      `📍 From: ${pickup}\n🎯 To: ${drop}\n\n` +
-                      `📡 *Live track:*\n${trackUrl}`;
-                    Share.share({ message: msg, url: trackUrl, title: 'Sppero Live Tracking' }).catch(() => {
-                      Linking.openURL(`https://wa.me/?text=${encodeURIComponent(msg)}`);
-                    });
+                {/* Share tracking — descriptive full-width strip */}
+                <Bouncy onPress={() => {
+                  const d = rideData?.driver;
+                  const trackUrl = `${API}/track/${rideData?.ride_id || ''}`;
+                  const msg = `🚖 *Sppero — Live Tracking*\n\n` +
+                    `Driver: ${d?.name || 'Assigned'} | ${d?.vehicle_no || ''}\n` +
+                    (rideData?.startOtp ? `OTP: ${rideData.startOtp}\n` : '') +
+                    `📍 From: ${pickup}\n🎯 To: ${drop}\n\n` +
+                    `📡 *Live track:*\n${trackUrl}`;
+                  Share.share({ message: msg, url: trackUrl, title: 'Sppero Live Tracking' }).catch(() => {
+                    Linking.openURL(`https://wa.me/?text=${encodeURIComponent(msg)}`);
+                  });
+                }}>
+                  <View style={{
+                    backgroundColor: C.bgCard, borderRadius: 18,
+                    paddingVertical: 14, paddingHorizontal: 20,
+                    flexDirection: 'row', alignItems: 'center', gap: 14,
+                    marginBottom: 10,
+                    borderWidth: 1.5, borderColor: C.glassBorder,
+                    elevation: 3, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8,
                   }}>
-                    <View style={{
-                      backgroundColor: C.bgCard, borderRadius: 18,
-                      paddingVertical: 16, alignItems: 'center', gap: 9,
-                      borderWidth: 1.5, borderColor: C.glassBorder,
-                      elevation: 4, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8,
-                    }}>
-                      <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: C.glassMid, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.glassBorder }}>
-                        <Ionicons name="share-social" size={23} color={C.textMuted} />
-                      </View>
-                      <Text style={{ fontSize: 11, fontWeight: '800', color: C.textMuted, letterSpacing: 0.3 }}>Share</Text>
+                    <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: C.glassMid, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.glassBorder }}>
+                      <Ionicons name="share-social" size={22} color={C.textMuted} />
                     </View>
-                  </Bouncy>
-
-                </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '800', color: C.text }}>Share Live Tracking</Text>
+                      <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>Send ride link + OTP to family / friends</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={C.textDim} />
+                  </View>
+                </Bouncy>
 
                 {/* SOS — full width, prominent, clearly separate from utility actions */}
                 <TouchableOpacity

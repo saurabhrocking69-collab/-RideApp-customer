@@ -242,6 +242,37 @@ export function InRideScreen() {
             </View>
           )}
 
+          {/* ─── Quick contact — compact pills right below driver card ─── */}
+          {driver && (
+            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10, marginTop: -4 }}>
+              <Bouncy style={{ flex: 1 }} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
+                <Animated.View style={{
+                  backgroundColor: C.plumGlass, borderRadius: 14,
+                  paddingVertical: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  borderWidth: 1.5, borderColor: unreadChat > 0 ? C.plumBorder : 'rgba(46,20,97,0.25)',
+                  elevation: 2, shadowColor: C.plum, shadowOpacity: 0.15, shadowRadius: 6,
+                  transform: [{ scale: chatBounceAnim }],
+                }}>
+                  <Ionicons name="chatbubble" size={16} color={C.plum} />
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: C.plum }}>
+                    {unreadChat > 0 ? `Chat (${unreadChat})` : 'Chat'}
+                  </Text>
+                </Animated.View>
+              </Bouncy>
+              <Bouncy style={{ flex: 1 }} onPress={callDriver}>
+                <View style={{
+                  backgroundColor: C.greenGlass, borderRadius: 14,
+                  paddingVertical: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  borderWidth: 1.5, borderColor: C.greenBorder,
+                  elevation: 2, shadowColor: C.green, shadowOpacity: 0.15, shadowRadius: 6,
+                }}>
+                  <Ionicons name="call" size={16} color={C.green} />
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: C.green }}>Call Driver</Text>
+                </View>
+              </Bouncy>
+            </View>
+          )}
+
           {/* Live trip stats */}
           <View style={{
             backgroundColor: 'rgba(0,212,168,0.10)', borderRadius: R.md, padding: SP.md,
@@ -288,45 +319,6 @@ export function InRideScreen() {
               <Text style={{ fontSize: 14, marginTop: 1 }}>🎯</Text>
               <Text style={{ fontSize: 13, color: C.pink, fontWeight: '700', flex: 1 }} numberOfLines={2}>{drop}</Text>
             </View>
-          </View>
-
-          {/* ─── Utility row: Chat · Call ─── */}
-          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
-
-            <Bouncy style={{ flex: 1 }} onPress={() => { setUnreadChat(0); setScreen('chat'); }}>
-              <Animated.View style={{
-                backgroundColor: C.bgCard, borderRadius: 18,
-                paddingVertical: 16, alignItems: 'center', gap: 9,
-                borderWidth: 1.5, borderColor: unreadChat > 0 ? C.plumBorder : C.glassBorder,
-                elevation: 4, shadowColor: C.plum, shadowOpacity: 0.12, shadowRadius: 8,
-                transform: [{ scale: chatBounceAnim }],
-              }}>
-                <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: C.plumGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.plumBorder, position: 'relative' }}>
-                  <Ionicons name="chatbubble" size={23} color={C.plum} />
-                  {unreadChat > 0 && (
-                    <View style={s.chatBadge}>
-                      <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{unreadChat}</Text>
-                    </View>
-                  )}
-                </View>
-                <Text style={{ fontSize: 11, fontWeight: '800', color: unreadChat > 0 ? C.plum : C.textMuted, letterSpacing: 0.3 }}>Chat</Text>
-              </Animated.View>
-            </Bouncy>
-
-            <Bouncy style={{ flex: 1 }} onPress={callDriver}>
-              <View style={{
-                backgroundColor: C.bgCard, borderRadius: 18,
-                paddingVertical: 16, alignItems: 'center', gap: 9,
-                borderWidth: 1.5, borderColor: C.glassBorder,
-                elevation: 4, shadowColor: C.green, shadowOpacity: 0.12, shadowRadius: 8,
-              }}>
-                <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: C.greenGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.greenBorder }}>
-                  <Ionicons name="call" size={23} color={C.green} />
-                </View>
-                <Text style={{ fontSize: 11, fontWeight: '800', color: C.textMuted, letterSpacing: 0.3 }}>Call</Text>
-              </View>
-            </Bouncy>
-
           </View>
 
           {/* ─── SOS — full width hold button ─── */}
