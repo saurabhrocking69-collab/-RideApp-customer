@@ -554,7 +554,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setScreen('login');
         }
       });
-    }, 2000);
+    }, 3000); // 2s pink + ~0.7s plum flood + 0.3s fade
   }, []);
 
   // Notifications setup
