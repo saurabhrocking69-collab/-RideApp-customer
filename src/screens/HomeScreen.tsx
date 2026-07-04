@@ -534,32 +534,36 @@ function HomeTab() {
   }, []);
 
   return (
-    <View style={[s.screen, { backgroundColor: C.night }]}>
-      {/* ── Dark hero header ────────────────────────────── */}
-      <Animated.View style={{ height: headerH, backgroundColor: C.night, overflow: 'hidden' }}>
-        {/* Ambient glow blobs */}
-        <View style={{ position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(255,45,120,0.07)', top: -60, right: -50 }} />
-        <View style={{ position: 'absolute', width: 140, height: 140, borderRadius: 70, backgroundColor: 'rgba(46,20,97,0.6)', bottom: -30, left: -30 }} />
+    <View style={[s.screen, { backgroundColor: C.bg }]}>
+      {/* ── Plum brand header ── */}
+      <Animated.View style={{ height: headerH, backgroundColor: C.plum, overflow: 'hidden' }}>
+        {/* Decorative pink glow circles */}
+        <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,45,120,0.18)', top: -80, right: -50 }} />
+        <View style={{ position: 'absolute', width: 100, height: 100, borderRadius: 50,  backgroundColor: 'rgba(255,45,120,0.10)', bottom: -30, left: 30 }} />
+        <View style={{ position: 'absolute', width: 60,  height: 60,  borderRadius: 30,  backgroundColor: 'rgba(255,255,255,0.04)', top: 20, left: '45%' }} />
 
         {/* Full header */}
         <Animated.View style={{ paddingTop: Platform.OS === 'android' ? 38 : 50, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', opacity: fullAlpha }}>
           <View style={{ flex: 1 }}>
-            <Animated.Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: '600', opacity: greetFade, transform: [{ translateY: greetSlide }] }}>
+            <Animated.Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, fontWeight: '600', opacity: greetFade, transform: [{ translateY: greetSlide }] }}>
               {GREETINGS[greetIdx]}
             </Animated.Text>
             <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900', letterSpacing: -0.5, marginTop: 3 }}>{userName || 'Rider'}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3 }}>
-              <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10 }}>📍 India</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Ionicons name="location-outline" size={11} color="rgba(255,255,255,0.45)" />
+                <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, fontWeight: '600' }}>Lucknow, India</Text>
+              </View>
               {nearbyCount > 0 && (
                 <Animated.View style={{
                   flexDirection: 'row', alignItems: 'center', gap: 4,
-                  backgroundColor: 'rgba(0,212,168,0.15)', borderRadius: 10,
+                  backgroundColor: 'rgba(5,150,105,0.20)', borderRadius: 10,
                   paddingHorizontal: 7, paddingVertical: 2,
-                  borderWidth: 1, borderColor: 'rgba(0,212,168,0.3)',
+                  borderWidth: 1, borderColor: 'rgba(5,150,105,0.35)',
                   transform: [{ scale: nearbyAnim }],
                 }}>
-                  <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: C.mint }} />
-                  <Text style={{ color: C.mint, fontSize: 9, fontWeight: '800' }}>{nearbyCount} drivers nearby</Text>
+                  <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: C.green }} />
+                  <Text style={{ color: C.green, fontSize: 9, fontWeight: '800' }}>{nearbyCount} nearby</Text>
                 </Animated.View>
               )}
             </View>
@@ -567,17 +571,17 @@ function HomeTab() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <NotifBell onPress={() => { setNotifOpen(true); setUnreadNotif(0); }} unread={unreadNotif} />
             <TouchableOpacity onPress={() => { setTab('profile'); loadWallet(phone); }}
-              style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,45,120,0.2)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,45,120,0.45)' }}>
+              style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center', ...SHADOW.pink }}>
               <Text style={{ color: '#fff', fontWeight: '900', fontSize: 18 }}>{(userName || 'R')[0].toUpperCase()}</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
 
-        {/* Mini row — compact name + avatar when scrolled */}
+        {/* Mini row — compact when scrolled */}
         <Animated.View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', opacity: miniAlpha }}>
           <Text style={{ color: '#fff', fontSize: 15, fontWeight: '900', letterSpacing: -0.3 }}>{userName || 'Rider'}</Text>
           <TouchableOpacity onPress={() => { setTab('profile'); loadWallet(phone); }}
-            style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,45,120,0.2)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,45,120,0.40)' }}>
+            style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center', ...SHADOW.pink }}>
             <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>{(userName || 'R')[0].toUpperCase()}</Text>
           </TouchableOpacity>
         </Animated.View>
@@ -593,19 +597,20 @@ function HomeTab() {
       >
         {/* 1. ── Search bar — FIRST ── */}
         <TouchableOpacity onPress={() => setScreen('booking')} activeOpacity={0.88} style={{
-          marginHorizontal: 16, marginTop: 14,
+          marginHorizontal: 16, marginTop: -10,
           backgroundColor: C.bgCard,
-          borderRadius: 18, paddingVertical: 16, paddingHorizontal: 18,
+          borderRadius: 20, paddingVertical: 16, paddingHorizontal: 18,
           flexDirection: 'row', alignItems: 'center', gap: 12,
-          elevation: 8, shadowColor: C.pink, shadowOpacity: 0.14, shadowRadius: 14,
-          borderWidth: 1.5, borderColor: 'rgba(255,45,120,0.22)',
+          ...SHADOW.lg,
+          borderWidth: 0,
+          zIndex: 10,
         }}>
-          <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,45,120,0.14)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,45,120,0.30)' }}>
-            <Ionicons name="search" size={15} color={C.pink} />
+          <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.pinkBorder }}>
+            <Ionicons name="search" size={16} color={C.pink} />
           </View>
-          <Text style={{ flex: 1, fontSize: 16, color: C.textMuted, fontWeight: '500' }}>Where to?</Text>
-          <View style={{ backgroundColor: C.pink, borderRadius: 12, paddingHorizontal: 18, paddingVertical: 8, elevation: 2, shadowColor: C.pink, shadowOpacity: 0.4, shadowRadius: 6 }}>
-            <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900' }}>Go</Text>
+          <Text style={{ flex: 1, fontSize: 15, color: C.textMuted, fontWeight: '500' }}>Where are you going?</Text>
+          <View style={{ backgroundColor: C.pink, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8, ...SHADOW.pink }}>
+            <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900', letterSpacing: 0.5 }}>Go</Text>
           </View>
         </TouchableOpacity>
 
@@ -650,12 +655,12 @@ function HomeTab() {
           style={{ marginTop: 12 }}
           contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
           {([
-            { id: 'auto',   emoji: '🛺', label: 'Auto',    hourly: false },
-            { id: 'bike',   emoji: '🏍️', label: 'Bike',    hourly: false },
-            { id: 'car',    emoji: '🚗', label: 'Car',     hourly: false },
-            { id: 'luxury', emoji: '🚙', label: 'Luxury',  hourly: false },
-            { id: 'hourly', emoji: '⏱️', label: 'By Hour', hourly: true  },
-          ] as { id: string; emoji: string; label: string; hourly: boolean }[]).map(v => (
+            { id: 'auto',   icon: 'car-outline' as const,        label: 'Auto',    hourly: false },
+            { id: 'bike',   icon: 'bicycle-outline' as const,    label: 'Bike',    hourly: false },
+            { id: 'car',    icon: 'car-sport-outline' as const,  label: 'Car',     hourly: false },
+            { id: 'luxury', icon: 'diamond-outline' as const,    label: 'Luxury',  hourly: false },
+            { id: 'hourly', icon: 'time-outline' as const,       label: 'By Hour', hourly: true  },
+          ]).map(v => (
             <TouchableOpacity key={v.id}
               onPress={() => {
                 if (v.hourly) {
@@ -667,13 +672,15 @@ function HomeTab() {
                 }
               }}
               style={{
-                alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10,
-                backgroundColor: C.bgCard, borderRadius: 14,
+                alignItems: 'center', paddingHorizontal: 18, paddingVertical: 12,
+                backgroundColor: C.bgCard, borderRadius: 16,
                 borderWidth: 1.5, borderColor: v.hourly ? C.purpleBorder : C.glassBorder,
-                elevation: 2,
+                ...SHADOW.sm,
               }}>
-              <Text style={{ fontSize: 24 }}>{v.emoji}</Text>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: v.hourly ? C.purple : C.textMuted, marginTop: 3 }}>{v.label}</Text>
+              <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: v.hourly ? C.purpleGlass : C.plumGlass, alignItems: 'center', justifyContent: 'center', marginBottom: 6, borderWidth: 1, borderColor: v.hourly ? C.purpleBorder : C.plumBorder }}>
+                <Ionicons name={v.icon} size={20} color={v.hourly ? C.purple : C.plum} />
+              </View>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: v.hourly ? C.purple : C.plum }}>{v.label}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -754,10 +761,12 @@ function HomeTab() {
           <SlideUp delay={0}>
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
               <Bouncy onPress={() => setScreen('scheduled')}
-                style={{ flex: 1, backgroundColor: C.plumGlass, borderRadius: 18, padding: 16, borderWidth: 1.5, borderColor: C.plumBorder, elevation: 3 }}>
-                <Text style={{ fontSize: 28, marginBottom: 8 }}>📅</Text>
-                <Text style={{ fontSize: 13, fontWeight: '900', color: C.plum }}>Schedule</Text>
-                <Text style={{ fontSize: 10, color: C.textDim, marginTop: 3, lineHeight: 14 }}>Book a ride in advance</Text>
+                style={{ flex: 1, backgroundColor: C.bgCard, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: C.glassBorder, ...SHADOW.sm }}>
+                <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: C.plumGlass, alignItems: 'center', justifyContent: 'center', marginBottom: 10, borderWidth: 1, borderColor: C.plumBorder }}>
+                  <Ionicons name="calendar-outline" size={21} color={C.plum} />
+                </View>
+                <Text style={{ fontSize: 13, fontWeight: '900', color: C.text }}>Schedule</Text>
+                <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 3, lineHeight: 14 }}>Book a ride in advance</Text>
                 {scheduledRides.length > 0 && (
                   <View style={{ backgroundColor: C.plum, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2, marginTop: 8, alignSelf: 'flex-start' }}>
                     <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900' }}>{scheduledRides.length} upcoming</Text>
@@ -768,26 +777,32 @@ function HomeTab() {
                 setHourlyStep('book'); setHPickup(''); setHDrop(''); setHPickupCoords(null); setHDropCoords(null);
                 setHPickupSugg([]); setHDropSugg([]); setHRoundTrip(false); setHStayHours(1);
                 setHourlyBooking(null); setScreen('hourly');
-              }} style={{ flex: 1, backgroundColor: C.purpleGlass, borderRadius: 18, padding: 16, borderWidth: 1.5, borderColor: C.purpleBorder, elevation: 3 }}>
-                <Text style={{ fontSize: 28, marginBottom: 8 }}>⏱️</Text>
-                <Text style={{ fontSize: 13, fontWeight: '900', color: C.purple }}>By Hour</Text>
-                <Text style={{ fontSize: 10, color: C.textDim, marginTop: 3, lineHeight: 14 }}>2h · 4h · Full Day</Text>
+              }} style={{ flex: 1, backgroundColor: C.bgCard, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: C.glassBorder, ...SHADOW.sm }}>
+                <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: C.purpleGlass, alignItems: 'center', justifyContent: 'center', marginBottom: 10, borderWidth: 1, borderColor: C.purpleBorder }}>
+                  <Ionicons name="time-outline" size={21} color={C.purple} />
+                </View>
+                <Text style={{ fontSize: 13, fontWeight: '900', color: C.text }}>By Hour</Text>
+                <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 3, lineHeight: 14 }}>2h · 4h · Full Day</Text>
               </Bouncy>
             </View>
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
               <Bouncy onPress={() => setTab('history')}
-                style={{ flex: 1, backgroundColor: C.yellowGlass, borderRadius: 18, padding: 16, borderWidth: 1.5, borderColor: C.yellowBorder, elevation: 3 }}>
-                <Text style={{ fontSize: 28, marginBottom: 8 }}>⭐</Text>
-                <Text style={{ fontSize: 13, fontWeight: '900', color: C.yellow }}>Sppero Buddy</Text>
-                <Text style={{ fontSize: 10, color: C.textDim, marginTop: 3, lineHeight: 14 }}>
-                  {favouriteBuddy ? `${favouriteBuddy.driver_name} · ${favouriteBuddy.is_online ? 'Online' : 'Offline'}` : 'Set your trusted driver'}
+                style={{ flex: 1, backgroundColor: C.bgCard, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: C.glassBorder, ...SHADOW.sm }}>
+                <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', marginBottom: 10, borderWidth: 1, borderColor: C.pinkBorder }}>
+                  <Ionicons name="person-circle-outline" size={21} color={C.pink} />
+                </View>
+                <Text style={{ fontSize: 13, fontWeight: '900', color: C.text }}>Sppero Buddy</Text>
+                <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 3, lineHeight: 14 }}>
+                  {favouriteBuddy ? `${favouriteBuddy.driver_name} · ${favouriteBuddy.is_online ? 'Online' : 'Offline'}` : 'Your trusted driver'}
                 </Text>
               </Bouncy>
               <Bouncy onPress={() => { loadReferral(); setScreen('referral'); }}
-                style={{ flex: 1, backgroundColor: C.pinkGlass, borderRadius: 18, padding: 16, borderWidth: 1.5, borderColor: C.pinkBorder, elevation: 3 }}>
-                <Text style={{ fontSize: 28, marginBottom: 8 }}>🎁</Text>
-                <Text style={{ fontSize: 13, fontWeight: '900', color: C.pink }}>Refer & Earn</Text>
-                <Text style={{ fontSize: 10, color: C.textDim, marginTop: 3, lineHeight: 14 }}>₹50 for you + friend</Text>
+                style={{ flex: 1, backgroundColor: C.bgCard, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: C.glassBorder, ...SHADOW.sm }}>
+                <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', marginBottom: 10, borderWidth: 1, borderColor: C.pinkBorder }}>
+                  <Ionicons name="gift-outline" size={21} color={C.pink} />
+                </View>
+                <Text style={{ fontSize: 13, fontWeight: '900', color: C.text }}>Refer & Earn</Text>
+                <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 3, lineHeight: 14 }}>₹50 for you + friend</Text>
               </Bouncy>
             </View>
           </SlideUp>
@@ -795,11 +810,11 @@ function HomeTab() {
           {/* 6. ── Sppero Buddy card (if has buddy) ── */}
           {favouriteBuddy && (
             <SlideUp delay={60}>
-              <ShineCard style={{ backgroundColor: C.glass, borderRadius: 18, marginBottom: 14, borderWidth: 1.5, borderColor: C.yellowBorder }}>
-                <View style={{ backgroundColor: C.yellowGlass, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopLeftRadius: 17, borderTopRightRadius: 17 }}>
+              <ShineCard style={{ backgroundColor: C.bgCard, borderRadius: 20, marginBottom: 14, borderWidth: 1, borderColor: C.glassBorder, ...SHADOW.md }}>
+                <View style={{ backgroundColor: C.plumGlass, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopLeftRadius: 19, borderTopRightRadius: 19, borderBottomWidth: 1, borderBottomColor: C.plumBorder }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ fontSize: 16 }}>⭐</Text>
-                    <Text style={{ marginLeft: 6, fontWeight: '800', fontSize: 13, color: C.yellow }}>My Sppero Buddy</Text>
+                    <Ionicons name="star" size={15} color={C.plum} />
+                    <Text style={{ marginLeft: 6, fontWeight: '800', fontSize: 13, color: C.plum }}>My Sppero Buddy</Text>
                   </View>
                   <TouchableOpacity onPress={removeFavouriteBuddy} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                     <Text style={{ fontSize: 12, color: C.textDim, fontWeight: '700' }}>✕ Remove</Text>
@@ -916,30 +931,32 @@ function HomeTab() {
                   if (storeStatus === 'started') setScreen('inride');
                   else setScreen('matching');
                 }}
-                style={{ backgroundColor: C.pinkGlass, borderRadius: 16, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', elevation: 5, borderWidth: 1.5, borderColor: C.pinkBorder }}>
-                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: C.bgCard, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1.5, borderColor: C.pinkBorder }}>
-                  <Text style={{ fontSize: 22 }}>{storeStatus === 'started' ? '🛣️' : '🚗'}</Text>
+                style={{ backgroundColor: C.bgCard, borderRadius: 18, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: C.pinkBorder, ...SHADOW.md }}>
+                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1, borderColor: C.pinkBorder }}>
+                  <Ionicons name={storeStatus === 'started' ? 'navigate-outline' : 'car-outline'} size={22} color={C.pink} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: C.text, fontWeight: '800', fontSize: 15 }}>
-                    {storeStatus === 'started' ? 'Ride In Progress!' : 'Active Ride In Progress!'}
+                    {storeStatus === 'started' ? 'Ride In Progress' : 'Looking for Driver'}
                   </Text>
-                  <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>{drop ? `→ ${drop}` : 'Tap to go to ride screen'}</Text>
+                  <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>{drop ? `To ${drop}` : 'Tap to view ride status'}</Text>
                 </View>
-                <Text style={{ color: C.pink, fontSize: 24, fontWeight: '300' }}>›</Text>
+                <Ionicons name="chevron-forward" size={20} color={C.pink} />
               </TouchableOpacity>
             </SlideUp>
           )}
 
           {hourlyBooking && ['pending','matched','active'].includes(hourlyBooking.status) && (
             <SlideUp delay={0}>
-              <TouchableOpacity onPress={() => setScreen('hourly')} style={{ backgroundColor: C.pinkGlass, borderRadius: 16, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', elevation: 4, borderWidth: 1.5, borderColor: C.pinkBorder }}>
-                <Text style={{ fontSize: 22, marginRight: 10 }}>⏱️</Text>
+              <TouchableOpacity onPress={() => setScreen('hourly')} style={{ backgroundColor: C.bgCard, borderRadius: 18, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: C.purpleBorder, ...SHADOW.md }}>
+                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: C.purpleGlass, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1, borderColor: C.purpleBorder }}>
+                  <Ionicons name="time-outline" size={22} color={C.purple} />
+                </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: C.text, fontWeight: '800', fontSize: 15 }}>Active Hourly Ride</Text>
                   <Text style={{ color: C.textMuted, fontSize: 12 }}>Tap to resume your hourly ride</Text>
                 </View>
-                <Text style={{ color: C.pink, fontSize: 22 }}>→</Text>
+                <Ionicons name="chevron-forward" size={20} color={C.purple} />
               </TouchableOpacity>
             </SlideUp>
           )}
@@ -948,23 +965,26 @@ function HomeTab() {
           {!favouriteBuddy && (
             <SlideUp delay={120}>
               <TouchableOpacity activeOpacity={0.93} onPress={() => setTab('history')}
-                style={{ borderRadius: 18, marginBottom: 14, overflow: 'hidden', elevation: 6, borderWidth: 1, borderColor: C.glassBorder }}>
-                <View style={{ backgroundColor: C.bgDark, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-                  <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(255,215,0,0.10)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,215,0,0.28)' }}>
-                    <Text style={{ fontSize: 26 }}>⭐</Text>
+                style={{ borderRadius: 20, marginBottom: 14, overflow: 'hidden', borderWidth: 1, borderColor: C.glassBorder, ...SHADOW.md }}>
+                <View style={{ backgroundColor: C.bgCard, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                  <View style={{ width: 50, height: 50, borderRadius: 16, backgroundColor: C.plumGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.plumBorder }}>
+                    <Ionicons name="person-circle-outline" size={28} color={C.plum} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <View style={{ backgroundColor: C.pinkGlass, borderRadius: 5, paddingHorizontal: 7, paddingVertical: 2, alignSelf: 'flex-start', marginBottom: 5, borderWidth: 1, borderColor: C.pinkBorder }}>
                       <Text style={{ color: C.pink, fontSize: 9, fontWeight: '900', letterSpacing: 1 }}>SPPERO EXCLUSIVE</Text>
                     </View>
                     <Text style={{ color: C.text, fontSize: 14, fontWeight: '900' }}>Set Your Sppero Buddy</Text>
-                    <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 3 }}>Same trusted driver every time — unique to Sppero</Text>
+                    <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 3 }}>Same trusted driver every time</Text>
                   </View>
-                  <Text style={{ color: C.pink, fontSize: 20 }}>›</Text>
+                  <Ionicons name="chevron-forward" size={20} color={C.textMuted} />
                 </View>
-                <View style={{ backgroundColor: C.pink, paddingHorizontal: 16, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>Set from your Trips tab after any ride</Text>
-                  <Text style={{ color: '#fff', fontWeight: '900', fontSize: 13 }}>View →</Text>
+                <View style={{ backgroundColor: C.plum, paddingHorizontal: 16, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Text style={{ color: 'rgba(255,255,255,0.75)', fontWeight: '700', fontSize: 12 }}>Set from your Trips tab after any ride</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>View</Text>
+                    <Ionicons name="arrow-forward" size={13} color="#fff" />
+                  </View>
                 </View>
               </TouchableOpacity>
             </SlideUp>
@@ -973,9 +993,11 @@ function HomeTab() {
           {/* ── Made in India footer ── */}
           <View style={{ alignItems: 'center', paddingTop: 28, paddingBottom: 10 }}>
             <View style={{ width: 40, height: 1, backgroundColor: C.glassBorder, marginBottom: 16 }} />
-            <Text style={{ fontSize: 22, marginBottom: 6 }}>🇮🇳</Text>
-            <Text style={{ color: C.textDim, fontSize: 11, fontWeight: '800', letterSpacing: 2 }}>MADE IN INDIA</Text>
-            <Text style={{ color: C.textDim, fontSize: 10, marginTop: 5, letterSpacing: 0.8 }}>Sppero Inc.</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 5 }}>
+              <Ionicons name="heart" size={13} color={C.pink} />
+              <Text style={{ color: C.textMuted, fontSize: 11, fontWeight: '800', letterSpacing: 2 }}>MADE IN INDIA</Text>
+            </View>
+            <Text style={{ color: C.textDim, fontSize: 10, letterSpacing: 0.8 }}>Sppero Inc. · Lucknow</Text>
           </View>
         </View>
       </Animated.ScrollView>
@@ -1026,7 +1048,7 @@ function LiveTab() {
 
   return (
     <View style={s.screen}>
-      <View style={{ backgroundColor: C.night, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 56, paddingBottom: 28, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center' }}>
+      <View style={{ backgroundColor: C.plum, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 56, paddingBottom: 28, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center' }}>
         <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,45,120,0.07)', top: -60, right: -40 }} />
         <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900', flex: 1 }}>Live Ride</Text>
         {(hasStd || hasHourly) && (
@@ -1271,12 +1293,12 @@ _GST is included in the fare._
   return (
     <View style={s.screen}>
       {/* Header */}
-      <View style={{ backgroundColor: C.night, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 56, paddingBottom: 20, paddingHorizontal: 20 }}>
-        <View style={{ position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(255,45,120,0.07)', top: -80, right: -50 }} />
-        <View style={{ position: 'absolute', width: 140, height: 140, borderRadius: 70, backgroundColor: 'rgba(5,150,105,0.05)', bottom: -60, left: -30 }} />
+      <View style={{ backgroundColor: C.plum, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 56, paddingBottom: 20, paddingHorizontal: 20 }}>
+        <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,45,120,0.18)', top: -80, right: -50 }} />
+        <View style={{ position: 'absolute', width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(255,45,120,0.10)', bottom: -40, left: 40 }} />
         <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900', letterSpacing: 0.3 }}>My Trips</Text>
-        <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 4 }}>
-          {historyRides.length > 0 ? `${historyRides.length} trips · tap to see full details` : 'Your ride history will appear here'}
+        <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, marginTop: 4 }}>
+          {historyRides.length > 0 ? `${historyRides.length} trips · tap for full details` : 'Your ride history will appear here'}
         </Text>
       </View>
 
@@ -1306,9 +1328,9 @@ _GST is included in the fare._
                   {/* Row 1: vehicle chip + date/time + status badge */}
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
                     {/* Vehicle pill */}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }}>
-                      <Text style={{ fontSize: 14 }}>{rideIcon(h.ride_type)}</Text>
-                      <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: '700', textTransform: 'capitalize' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.plumGlass, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: C.plumBorder }}>
+                      <Ionicons name={h.ride_type === 'bike' ? 'bicycle-outline' : h.ride_type === 'luxury' ? 'diamond-outline' : 'car-outline'} size={13} color={C.plum} />
+                      <Text style={{ color: C.plum, fontSize: 11, fontWeight: '700', textTransform: 'capitalize' }}>
                         {(h.ride_type || 'ride').replace('_', ' ')}
                       </Text>
                     </View>
@@ -1329,30 +1351,32 @@ _GST is included in the fare._
                     <View style={{ flex: 1, marginRight: 14 }}>
                       {/* Pickup */}
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                        <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.green, borderWidth: 2, borderColor: 'rgba(5,150,105,0.4)' }} />
-                        <Text style={{ color: pickup ? '#fff' : C.textMuted, fontSize: 13, fontWeight: pickup ? '700' : '400', flex: 1, fontStyle: pickup ? 'normal' : 'italic' }} numberOfLines={1}>
+                        <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.green, borderWidth: 2, borderColor: C.greenBorder }} />
+                        <Text style={{ color: pickup ? C.text : C.textDim, fontSize: 13, fontWeight: pickup ? '700' : '400', flex: 1, fontStyle: pickup ? 'normal' : 'italic' }} numberOfLines={1}>
                           {shortPick || 'Pickup not recorded'}
                         </Text>
                       </View>
                       {/* Connector line */}
                       <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginLeft: 4.5, paddingVertical: 3 }}>
-                        <View style={{ width: 1, height: 18, backgroundColor: 'rgba(255,255,255,0.12)', marginRight: 14 }} />
+                        <View style={{ width: 1, height: 18, backgroundColor: C.glassBorder, marginRight: 14 }} />
                         {h.driver_name ? (
-                          <Text style={{ color: C.textMuted, fontSize: 10.5, marginTop: 1, flex: 1 }} numberOfLines={1}>
-                            🧑‍✈️ {h.driver_name}
-                          </Text>
-                        ) : (
-                          h.payment_method ? (
-                            <Text style={{ color: C.textMuted, fontSize: 10.5, marginTop: 1 }}>
-                              {h.payment_method === 'cash' ? '💵 Cash' : h.payment_method === 'wallet' ? '👛 Wallet' : '📱 UPI'}
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1 }}>
+                            <Ionicons name="person-outline" size={10} color={C.textDim} />
+                            <Text style={{ color: C.textMuted, fontSize: 10.5, flex: 1 }} numberOfLines={1}>{h.driver_name}</Text>
+                          </View>
+                        ) : h.payment_method ? (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <Ionicons name="card-outline" size={10} color={C.textDim} />
+                            <Text style={{ color: C.textMuted, fontSize: 10.5 }}>
+                              {h.payment_method === 'cash' ? 'Cash' : h.payment_method === 'wallet' ? 'Wallet' : 'UPI'}
                             </Text>
-                          ) : null
-                        )}
+                          </View>
+                        ) : null}
                       </View>
                       {/* Drop */}
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                        <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: isCancelled ? C.pink : C.pink, borderWidth: 2, borderColor: 'rgba(255,45,120,0.4)' }} />
-                        <Text style={{ color: drop ? 'rgba(255,255,255,0.65)' : C.textMuted, fontSize: 12, fontWeight: drop ? '500' : '400', flex: 1, fontStyle: drop ? 'normal' : 'italic' }} numberOfLines={1}>
+                        <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: C.pink, borderWidth: 2, borderColor: C.pinkBorder }} />
+                        <Text style={{ color: drop ? C.textMuted : C.textDim, fontSize: 12, fontWeight: drop ? '500' : '400', flex: 1, fontStyle: drop ? 'normal' : 'italic' }} numberOfLines={1}>
                           {isCancelled ? (shortDrop || 'Cancelled before drop') : (shortDrop || 'Drop not recorded')}
                         </Text>
                       </View>
@@ -1360,26 +1384,30 @@ _GST is included in the fare._
 
                     {/* Fare + Buddy */}
                     <View style={{ alignItems: 'flex-end', justifyContent: 'center', minWidth: 58 }}>
-                      <Text style={{ color: isCompleted ? '#fff' : C.textMuted, fontSize: 20, fontWeight: '900', lineHeight: 24 }}>
+                      <Text style={{ color: isCompleted ? C.text : C.textMuted, fontSize: 20, fontWeight: '900', lineHeight: 24 }}>
                         {isCompleted ? `₹${parseFloat(h.fare || 0).toFixed(0)}` : '—'}
                       </Text>
                       {isCompleted && h.payment_method && (
-                        <Text style={{ color: C.textMuted, fontSize: 10, marginTop: 2 }}>
-                          {h.payment_method === 'cash' ? '💵 cash' : h.payment_method === 'wallet' ? '👛 wallet' : '📱 upi'}
-                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 }}>
+                          <Ionicons name={h.payment_method === 'cash' ? 'cash-outline' : h.payment_method === 'wallet' ? 'wallet-outline' : 'phone-portrait-outline'} size={10} color={C.textDim} />
+                          <Text style={{ color: C.textDim, fontSize: 10 }}>
+                            {h.payment_method === 'cash' ? 'Cash' : h.payment_method === 'wallet' ? 'Wallet' : 'UPI'}
+                          </Text>
+                        </View>
                       )}
                       {isCompleted && h.driver_phone && (
                         <TouchableOpacity
                           onPress={async (e) => {
                             e.stopPropagation?.();
-                            if (isBuddy) { alert('⭐ Already your Sppero Buddy!'); return; }
+                            if (isBuddy) { alert('Already your Sppero Buddy!'); return; }
                             const res = await addFavouriteBuddy(h.driver_phone);
-                            if (res?.success) alert(`⭐ ${h.driver_name} is now your Sppero Buddy!`);
-                            else alert('⚠️ ' + (res?.error || 'Error'));
+                            if (res?.success) alert(`${h.driver_name} is now your Sppero Buddy!`);
+                            else alert(res?.error || 'Error');
                           }}
-                          style={{ marginTop: 8, backgroundColor: isBuddy ? C.greenGlass : C.pinkGlass, borderRadius: 10, paddingHorizontal: 9, paddingVertical: 5, borderWidth: 1, borderColor: isBuddy ? C.greenBorder : C.pinkBorder }}>
-                          <Text style={{ fontSize: 10, fontWeight: '900', color: isBuddy ? C.green : C.pink }}>
-                            {isBuddy ? '✅ Buddy' : '⭐ Buddy'}
+                          style={{ marginTop: 8, backgroundColor: isBuddy ? C.greenGlass : C.plumGlass, borderRadius: 10, paddingHorizontal: 9, paddingVertical: 5, borderWidth: 1, borderColor: isBuddy ? C.greenBorder : C.plumBorder, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Ionicons name={isBuddy ? 'checkmark-circle' : 'star-outline'} size={11} color={isBuddy ? C.green : C.plum} />
+                          <Text style={{ fontSize: 10, fontWeight: '900', color: isBuddy ? C.green : C.plum }}>
+                            {isBuddy ? 'Buddy' : 'Buddy'}
                           </Text>
                         </TouchableOpacity>
                       )}
@@ -1595,9 +1623,9 @@ function ProfileTab() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
 
         {/* ── Plum hero ─────────────────────────────────────────── */}
-        <View style={{ backgroundColor: C.night, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 56, paddingBottom: 52, paddingHorizontal: SP.lg }}>
-          <View style={{ position: 'absolute', width: 280, height: 280, borderRadius: 140, backgroundColor: 'rgba(255,45,120,0.08)', top: -100, right: -80 }} />
-          <View style={{ position: 'absolute', width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(255,255,255,0.04)', bottom: -60, left: -40 }} />
+        <View style={{ backgroundColor: C.plum, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 56, paddingBottom: 52, paddingHorizontal: SP.lg }}>
+          <View style={{ position: 'absolute', width: 240, height: 240, borderRadius: 120, backgroundColor: 'rgba(255,45,120,0.18)', top: -80, right: -60 }} />
+          <View style={{ position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,45,120,0.10)', bottom: -40, left: 30 }} />
           <Text style={{ ...T.title, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.5, marginBottom: SP.lg }}>PROFILE</Text>
           <View style={{ alignItems: 'center' }}>
             <View style={{ width: 90, height: 90, borderRadius: 45, backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: 3, borderColor: C.pink, alignItems: 'center', justifyContent: 'center', elevation: 10, shadowColor: C.pink, shadowOpacity: 0.5, shadowRadius: 16 }}>
