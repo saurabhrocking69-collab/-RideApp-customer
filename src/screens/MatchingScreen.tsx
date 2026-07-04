@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
-import { Animated, Dimensions, Linking, Platform, ScrollView, Share, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Dimensions, Platform, ScrollView, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Storage as AsyncStorage } from '../storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -473,38 +473,6 @@ export function MatchingScreen() {
               )}
               {/* ─── Action section with entrance animation ─── */}
               <Animated.View style={{ opacity: actionOpacity, transform: [{ translateY: actionSlide }] }}>
-
-                {/* Share tracking — descriptive full-width strip */}
-                <Bouncy onPress={() => {
-                  const d = rideData?.driver;
-                  const trackUrl = `${API}/track/${rideData?.ride_id || ''}`;
-                  const msg = `🚖 *Sppero — Live Tracking*\n\n` +
-                    `Driver: ${d?.name || 'Assigned'} | ${d?.vehicle_no || ''}\n` +
-                    (rideData?.startOtp ? `OTP: ${rideData.startOtp}\n` : '') +
-                    `📍 From: ${pickup}\n🎯 To: ${drop}\n\n` +
-                    `📡 *Live track:*\n${trackUrl}`;
-                  Share.share({ message: msg, url: trackUrl, title: 'Sppero Live Tracking' }).catch(() => {
-                    Linking.openURL(`https://wa.me/?text=${encodeURIComponent(msg)}`);
-                  });
-                }}>
-                  <View style={{
-                    backgroundColor: C.bgCard, borderRadius: 18,
-                    paddingVertical: 14, paddingHorizontal: 20,
-                    flexDirection: 'row', alignItems: 'center', gap: 14,
-                    marginBottom: 10,
-                    borderWidth: 1.5, borderColor: C.glassBorder,
-                    elevation: 3, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8,
-                  }}>
-                    <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: C.glassMid, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.glassBorder }}>
-                      <Ionicons name="share-social" size={22} color={C.textMuted} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 14, fontWeight: '800', color: C.text }}>Share Live Tracking</Text>
-                      <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>Send ride link + OTP to family / friends</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={16} color={C.textDim} />
-                  </View>
-                </Bouncy>
 
                 {/* SOS — full width, prominent, clearly separate from utility actions */}
                 <TouchableOpacity
