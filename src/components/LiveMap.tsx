@@ -100,16 +100,27 @@ function EtaChip({ eta, distance }: { eta: string; distance: string }) {
   );
 }
 
-// ── "Tap to set drop" floating hint ──────────────────────────────────────────
-function TapHint({ visible }: { visible: boolean }) {
+// ── Center drop crosshair — fixed pin at map center for drag-to-set-drop ──────
+function CenterDropPin() {
+  return (
+    <View pointerEvents="none" style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
+      <View style={{ position: 'absolute', width: 32, height: 2, backgroundColor: C.pink, opacity: 0.6, borderRadius: 1 }} />
+      <View style={{ position: 'absolute', height: 32, width: 2, backgroundColor: C.pink, opacity: 0.6, borderRadius: 1 }} />
+      <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: C.pink, borderWidth: 3, borderColor: '#fff', elevation: 8, shadowColor: C.pink, shadowOpacity: 0.6, shadowRadius: 8 }} />
+    </View>
+  );
+}
+
+// ── "Drag to set drop" label hint ────────────────────────────────────────────
+function DragHint({ visible }: { visible: boolean }) {
   const opacity = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.timing(opacity, { toValue: visible ? 1 : 0, duration: 280, useNativeDriver: true }).start();
   }, [visible]);
   return (
-    <Animated.View style={[styles.tapHint, { opacity }]} pointerEvents="none">
-      <Ionicons name="finger-print" size={13} color="#fff" />
-      <Text style={styles.tapHintTxt}>Tap on map to set drop location</Text>
+    <Animated.View style={[styles.tapHint, { opacity, bottom: 56 }]} pointerEvents="none">
+      <Ionicons name="move" size={13} color="#fff" />
+      <Text style={styles.tapHintTxt}>Drag map to set drop location</Text>
     </Animated.View>
   );
 }
@@ -151,6 +162,8 @@ export interface LiveMapProps {
   draggableDrop?: boolean;
   onDropDragEnd?: (coords: { lat: number; lng: number }) => void;
   showTapHint?: boolean;
+  dropDragMode?: boolean;
+  onRegionChange?: (coords: { lat: number; lng: number }) => void;
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -171,6 +184,8 @@ export const LiveMap = memo(function LiveMap({
   draggableDrop = false,
   onDropDragEnd,
   showTapHint = false,
+  dropDragMode = false,
+  onRegionChange,
 }: LiveMapProps) {
   const mapRef = useRef<MapView>(null);
   const prevPos = useRef<{ lat: number; lng: number } | null>(null);
@@ -311,6 +326,9 @@ export const LiveMap = memo(function LiveMap({
         onPress={onMapPress
           ? (e) => onMapPress({ lat: e.nativeEvent.coordinate.latitude, lng: e.nativeEvent.coordinate.longitude })
           : undefined}
+        onRegionChange={onRegionChange
+          ? (region) => onRegionChange({ lat: region.latitude, lng: region.longitude })
+          : undefined}
       >
         {/* Completed route segment (green) */}
         {completedCoords.length > 1 && (
@@ -408,11 +426,14 @@ export const LiveMap = memo(function LiveMap({
         )}
       </MapView>
 
+      {/* Center drop crosshair — drag mode */}
+      {dropDragMode && <CenterDropPin />}
+
       {/* ETA chip — top-left */}
       {etaText ? <EtaChip eta={etaText} distance={distText} /> : null}
 
-      {/* "Tap to set drop" hint — bottom center */}
-      <TapHint visible={showTapHint} />
+      {/* Drag hint */}
+      <DragHint visible={dropDragMode} />
 
       {/* Re-center button — bottom right */}
       <RecenterBtn onPress={recenter} />

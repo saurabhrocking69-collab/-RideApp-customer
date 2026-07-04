@@ -191,14 +191,9 @@ export function BookingScreen() {
     } catch (_e) { return `${lat.toFixed(4)}, ${lng.toFixed(4)}`; }
   };
 
-  // Tap on map: set drop if pickup is set, otherwise set pickup
+  // Tap on map: only set pickup (drop is set via drag)
   const handleMapPress = async (coords: { lat: number; lng: number }) => {
-    if (pickupCoords && !dropCoords) {
-      const addr = await reverseGeocode(coords.lat, coords.lng);
-      setDrop(addr);
-      setDropCoords(coords);
-      setDropSugg([]);
-    } else if (!pickupCoords) {
+    if (!pickupCoords) {
       const addr = await reverseGeocode(coords.lat, coords.lng);
       setPickup(addr);
       setPickupCoords(coords);
@@ -220,6 +215,21 @@ export function BookingScreen() {
     setDrop(addr);
     setDropCoords(coords);
     setFareEstimates({}); setEta(''); lastFetchKey.current = '';
+  };
+
+  // ── Drop drag mode — track map center via ref (no re-render on every frame) ──
+  const centerCoordsRef = useRef<{ lat: number; lng: number } | null>(null);
+  const [geoLoading, setGeoLoading] = useState(false);
+
+  const confirmDropHere = async () => {
+    const target = centerCoordsRef.current || pickupCoords;
+    if (!target || geoLoading) return;
+    setGeoLoading(true);
+    const addr = await reverseGeocode(target.lat, target.lng);
+    setDrop(addr);
+    setDropCoords(target);
+    setDropSugg([]);
+    setGeoLoading(false);
   };
 
   // ── Map height animation ──────────────────────────
@@ -256,13 +266,44 @@ export function BookingScreen() {
           showRoute={!!(pickupCoords && dropCoords)}
           nearbyDrivers={!pickupCoords || !dropCoords ? nearbyDrivers : []}
           onMapPress={handleMapPress}
-          draggablePickup={!!pickupCoords}
+          draggablePickup={!!pickupCoords && !!dropCoords}
           onPickupDragEnd={handlePickupDragEnd}
           draggableDrop={!!dropCoords}
           onDropDragEnd={handleDropDragEnd}
-          showTapHint={!!pickupCoords && !dropCoords}
+          dropDragMode={!!(pickupCoords && !dropCoords)}
+          onRegionChange={pickupCoords && !dropCoords
+            ? (coords) => { centerCoordsRef.current = coords; }
+            : undefined}
         />
         <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} />
+
+        {/* Confirm drop button — visible during drag-to-set-drop mode */}
+        {pickupCoords && !dropCoords && (
+          <View style={{ position: 'absolute', bottom: 14, left: 16, right: 16, zIndex: 30 }}>
+            <TouchableOpacity
+              activeOpacity={0.88}
+              onPress={confirmDropHere}
+              style={{
+                backgroundColor: geoLoading ? C.glassMid : C.pink,
+                borderRadius: 16,
+                paddingVertical: 14,
+                paddingHorizontal: 20,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 12,
+                elevation: 14,
+                shadowColor: C.pink,
+                shadowOpacity: 0.55,
+                shadowRadius: 14,
+              }}>
+              <Ionicons name="flag" size={18} color="#fff" />
+              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15, flex: 1 }}>
+                {geoLoading ? 'Setting location...' : 'Set Drop Here'}
+              </Text>
+              {!geoLoading && <Ionicons name="checkmark-circle" size={20} color="rgba(255,255,255,0.85)" />}
+            </TouchableOpacity>
+          </View>
+        )}
         {/* Glass header — 90% transparent, floats over map tiles */}
         <View style={{
           position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
