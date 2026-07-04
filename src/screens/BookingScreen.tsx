@@ -232,6 +232,15 @@ export function BookingScreen() {
     setGeoLoading(false);
   };
 
+  // Enter drag-to-adjust mode: keep previous drop coords as initial crosshair position
+  const enterAdjustMode = () => {
+    if (dropCoords) centerCoordsRef.current = { ...dropCoords };
+    setDropCoords(null);
+    setFareEstimates({});
+    setEta('');
+    lastFetchKey.current = '';
+  };
+
   // ── Map height animation ──────────────────────────
   const [inputFocused, setInputFocused] = useState(false);
   const bothSet = !!(pickupCoords && dropCoords);
@@ -274,12 +283,13 @@ export function BookingScreen() {
           onRegionChange={pickupCoords && !dropCoords
             ? (coords) => { centerCoordsRef.current = coords; }
             : undefined}
+          skipAutoFit={!!(pickupCoords && !dropCoords)}
         />
         <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} />
 
         {/* Confirm drop button — visible during drag-to-set-drop mode */}
         {pickupCoords && !dropCoords && (
-          <View style={{ position: 'absolute', bottom: 14, left: 16, right: 16, zIndex: 30 }}>
+          <View style={{ position: 'absolute', bottom: 44, left: 16, right: 16, zIndex: 30 }}>
             <TouchableOpacity
               activeOpacity={0.88}
               onPress={confirmDropHere}
@@ -424,6 +434,15 @@ export function BookingScreen() {
                   </View>
                 </View>
               </View>
+
+              {/* Drag-to-adjust drop strip */}
+              <TouchableOpacity
+                onPress={e => { e.stopPropagation(); enterAdjustMode(); }}
+                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 11, borderTopWidth: 1, borderTopColor: C.glassBorder, marginHorizontal: 16, marginBottom: 4 }}>
+                <Ionicons name="move" size={14} color={C.pink} />
+                <Text style={{ fontSize: 12, fontWeight: '800', color: C.pink }}>Drag map to adjust drop</Text>
+                <Ionicons name="chevron-forward" size={12} color={C.pinkBorder} />
+              </TouchableOpacity>
             </TouchableOpacity>
           ) : (
             /* Input mode */

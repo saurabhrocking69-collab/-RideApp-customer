@@ -164,6 +164,7 @@ export interface LiveMapProps {
   showTapHint?: boolean;
   dropDragMode?: boolean;
   onRegionChange?: (coords: { lat: number; lng: number }) => void;
+  skipAutoFit?: boolean;
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -186,6 +187,7 @@ export const LiveMap = memo(function LiveMap({
   showTapHint = false,
   dropDragMode = false,
   onRegionChange,
+  skipAutoFit = false,
 }: LiveMapProps) {
   const mapRef = useRef<MapView>(null);
   const prevPos = useRef<{ lat: number; lng: number } | null>(null);
@@ -266,9 +268,9 @@ export const LiveMap = memo(function LiveMap({
     driverLng != null ? Math.round(driverLng * 200) / 200 : null,
   ]);
 
-  // Fit map to markers (skip when following driver)
+  // Fit map to markers (skip when following driver or in drag mode)
   useEffect(() => {
-    if (followDriver || !mapRef.current) return;
+    if (followDriver || skipAutoFit || !mapRef.current) return;
     const coords: { latitude: number; longitude: number }[] = [];
     if (pickupCoords) coords.push({ latitude: pickupCoords.lat, longitude: pickupCoords.lng });
     if (dropCoords)   coords.push({ latitude: dropCoords.lat,   longitude: dropCoords.lng   });
