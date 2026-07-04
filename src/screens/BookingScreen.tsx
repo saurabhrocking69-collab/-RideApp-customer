@@ -218,6 +218,16 @@ export function BookingScreen() {
     bookRide();
   };
 
+  // Haversine distance in km between two coords
+  const haversineKm = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
+    const R = 6371;
+    const dLat = (b.lat - a.lat) * Math.PI / 180;
+    const dLng = (b.lng - a.lng) * Math.PI / 180;
+    const s = Math.sin(dLat / 2) ** 2
+      + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.asin(Math.sqrt(s));
+  };
+
   // Reverse geocode a coordinate to a human-readable address
   const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
     try {
@@ -261,24 +271,35 @@ export function BookingScreen() {
     setFareEstimates({}); setEta(''); lastFetchKey.current = '';
   };
 
-  // ── Drop drag mode — track map center via ref (no re-render on every frame) ──
-  const centerCoordsRef = useRef<{ lat: number; lng: number } | null>(null);
-  const [geoLoading, setGeoLoading] = useState(false);
+  // ── Drop drag mode ────────────────────────────────────────────────────────
+  const centerCoordsRef  = useRef<{ lat: number; lng: number } | null>(null);
+  const originalDropRef  = useRef<{ lat: number; lng: number } | null>(null); // saved when entering adjust mode
+  const dragTimerRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [dragCenter,   setDragCenter]   = useState<{ lat: number; lng: number } | null>(null);
+  const [geoLoading,   setGeoLoading]   = useState(false);
 
   const confirmDropHere = async () => {
     const target = centerCoordsRef.current || pickupCoords;
     if (!target || geoLoading) return;
+    // Enforce 1km radius when in adjustment mode
+    if (originalDropRef.current && haversineKm(target, originalDropRef.current) > 1) return;
     setGeoLoading(true);
     const addr = await reverseGeocode(target.lat, target.lng);
     setDrop(addr);
     setDropCoords(target);
     setDropSugg([]);
+    originalDropRef.current = null;
+    setDragCenter(null);
     setGeoLoading(false);
   };
 
-  // Enter drag-to-adjust mode: keep previous drop coords as initial crosshair position
+  // Enter drag-to-adjust mode: save original drop so 1km guard can reference it
   const enterAdjustMode = () => {
-    if (dropCoords) centerCoordsRef.current = { ...dropCoords };
+    if (dropCoords) {
+      centerCoordsRef.current  = { ...dropCoords };
+      originalDropRef.current  = { ...dropCoords };
+      setDragCenter({ ...dropCoords });
+    }
     setDropCoords(null);
     setFareEstimates({});
     setEta('');
@@ -342,22 +363,26 @@ export function BookingScreen() {
   //   bothSet, !browsing → MAP_BIG  (route set OR vehicle just selected — confirmation peak)
   const [inputFocused,    setInputFocused]    = useState(false);
   const [vehicleBrowsing, setVehicleBrowsing] = useState(false);
-  const bothSet = !!(pickupCoords && dropCoords);
+  const bothSet    = !!(pickupCoords && dropCoords);
+  const inDragMode = !!(pickupCoords && !dropCoords);
 
   // Reset browse mode when route is cleared
   useEffect(() => { if (!bothSet) setVehicleBrowsing(false); }, [bothSet]);
 
   const mapHeightAnim = useRef(new Animated.Value(MAP_MED)).current;
   useEffect(() => {
-    const target = inputFocused
-      ? MAP_SMALL
-      : !bothSet
-        ? MAP_MED
-        : vehicleBrowsing
-          ? MAP_SMALL
-          : MAP_BIG;
+    // Priority: drag mode → always big so user can see map clearly
+    const target = inDragMode
+      ? MAP_BIG
+      : inputFocused
+        ? MAP_SMALL
+        : !bothSet
+          ? MAP_MED
+          : vehicleBrowsing
+            ? MAP_SMALL
+            : MAP_BIG;
     Animated.spring(mapHeightAnim, { toValue: target, friction: 9, tension: 70, useNativeDriver: false }).start();
-  }, [inputFocused, bothSet, vehicleBrowsing]);
+  }, [inDragMode, inputFocused, bothSet, vehicleBrowsing]);
 
   // ── fitKey — re-triggers fitToCoordinates when map expands ──
   const [fitKey, setFitKey] = useState(0);
@@ -399,7 +424,12 @@ export function BookingScreen() {
           onDropDragEnd={handleDropDragEnd}
           dropDragMode={!!(pickupCoords && !dropCoords)}
           onRegionChange={pickupCoords && !dropCoords
-            ? (coords) => { centerCoordsRef.current = coords; }
+            ? (coords) => {
+                centerCoordsRef.current = coords;
+                // Debounce dragCenter state — avoid re-rendering on every drag frame
+                if (dragTimerRef.current) clearTimeout(dragTimerRef.current);
+                dragTimerRef.current = setTimeout(() => setDragCenter(coords), 120);
+              }
             : undefined}
           skipAutoFit={!!(pickupCoords && !dropCoords)}
           onRouteInfo={(et, dt) => { setRouteEta(et); setRouteDist(dt); }}
@@ -407,53 +437,6 @@ export function BookingScreen() {
         />
         <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} />
 
-        {/* Confirm drop button — visible during drag-to-set-drop mode */}
-        {pickupCoords && !dropCoords && (
-          <View style={{ position: 'absolute', bottom: 44, left: 16, right: 16, zIndex: 30, gap: 10 }}>
-            {/* Road-only hint */}
-            <View style={{
-              alignSelf: 'center',
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
-              backgroundColor: 'rgba(255,255,255,0.92)',
-              paddingVertical: 6,
-              paddingHorizontal: 12,
-              borderRadius: 20,
-              elevation: 6,
-              shadowColor: '#000',
-              shadowOpacity: 0.12,
-              shadowRadius: 6,
-            }}>
-              <Text style={{ fontSize: 13 }}>🛣️</Text>
-              <Text style={{ fontSize: 11.5, fontWeight: '700', color: C.plum }}>
-                Place on a road for accurate fare
-              </Text>
-            </View>
-            <TouchableOpacity
-              activeOpacity={0.88}
-              onPress={confirmDropHere}
-              style={{
-                backgroundColor: geoLoading ? C.glassMid : C.pink,
-                borderRadius: 16,
-                paddingVertical: 14,
-                paddingHorizontal: 20,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 12,
-                elevation: 14,
-                shadowColor: C.pink,
-                shadowOpacity: 0.55,
-                shadowRadius: 14,
-              }}>
-              <Ionicons name="flag" size={18} color="#fff" />
-              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15, flex: 1 }}>
-                {geoLoading ? 'Setting location...' : 'Set Drop Here'}
-              </Text>
-              {!geoLoading && <Ionicons name="checkmark-circle" size={20} color="rgba(255,255,255,0.85)" />}
-            </TouchableOpacity>
-          </View>
-        )}
         {/* Floating back button — no panel, just a pill over the map */}
         <TouchableOpacity
           onPress={() => { setScreen('home'); setPickupSugg([]); setDropSugg([]); setEta(''); setPromoCode(''); setPromoDiscount(0); setInstantApplied(false); setShowPromoInput(false); }}
@@ -835,6 +818,58 @@ export function BookingScreen() {
             </>
           )}
 
+          {/* ─── Drag mode status panel ─────────────────────────────────────────── */}
+          {inDragMode && (() => {
+            const dragDist = dragCenter && originalDropRef.current
+              ? haversineKm(dragCenter, originalDropRef.current) : null;
+            const tooFar = dragDist !== null && dragDist > 1;
+            return (
+              <View style={{ gap: 10, marginTop: 10 }}>
+                {/* Instruction row */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.pinkGlass, borderRadius: 14, padding: 12, borderWidth: 1, borderColor: C.pinkBorder }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="locate" size={18} color="#fff" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '900', color: C.plum }}>Drag the map to place your drop</Text>
+                    <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>The pin follows the map center</Text>
+                  </View>
+                </View>
+
+                {/* 1km distance guard — only shown in adjust mode */}
+                {dragDist !== null && (
+                  <View style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 8, padding: 11, borderRadius: 12,
+                    backgroundColor: tooFar ? 'rgba(255,59,48,0.07)' : 'rgba(5,150,105,0.07)',
+                    borderWidth: 1, borderColor: tooFar ? 'rgba(255,59,48,0.22)' : 'rgba(5,150,105,0.22)',
+                  }}>
+                    <Text style={{ fontSize: 18 }}>{tooFar ? '⚠️' : '✅'}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: tooFar ? '#FF3B30' : C.green }}>
+                        {tooFar
+                          ? `Too far — ${dragDist.toFixed(1)} km away`
+                          : dragDist < 0.05
+                            ? 'At searched location'
+                            : `${dragDist < 1 ? Math.round(dragDist * 1000) + ' m' : dragDist.toFixed(1) + ' km'} from searched drop`}
+                      </Text>
+                      {tooFar && (
+                        <Text style={{ fontSize: 10, color: '#FF3B30', opacity: 0.8, marginTop: 2 }}>
+                          Move the pin within 1 km of your searched location
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                )}
+
+                {/* Road hint */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(46,20,97,0.06)', borderRadius: 10, paddingVertical: 9, paddingHorizontal: 12 }}>
+                  <Text style={{ fontSize: 16 }}>🛣️</Text>
+                  <Text style={{ fontSize: 11.5, fontWeight: '700', color: C.plum }}>Place the pin on a road for accurate fare</Text>
+                </View>
+              </View>
+            );
+          })()}
+
           {/* ─── Plum ETA card — animated, only when route is ready ──────────────── */}
           {bothSet && routeEta ? (
             <Animated.View style={{ opacity: etaCardFade, transform: [{ translateY: etaCardSlide }], marginBottom: 16 }}>
@@ -895,7 +930,8 @@ export function BookingScreen() {
             </View>
           ) : null}
 
-          {/* ─── Vehicle selector ───────────────────────────── */}
+          {/* ─── Vehicle + fare + promo — hidden in drag mode ───────────────────── */}
+          {!inDragMode && <>
           <Text style={{ fontSize: 11, fontWeight: '900', color: C.textDim, letterSpacing: 1.4, marginBottom: 10, marginTop: 2, marginLeft: 2 }}>
             CHOOSE VEHICLE
           </Text>
@@ -1245,9 +1281,42 @@ export function BookingScreen() {
           ) : null}
 
           {result ? <Text style={[s.err, { marginTop: 12 }]}>{result}</Text> : null}
+          </>}{/* end !inDragMode */}
         </ScrollView>
 
-        {/* ─── Sticky book button — always visible ─── */}
+        {/* ─── Sticky bottom button — swaps between drag mode and book mode ─── */}
+        {inDragMode ? (() => {
+          const dragDist = dragCenter && originalDropRef.current
+            ? haversineKm(dragCenter, originalDropRef.current) : null;
+          const tooFar = dragDist !== null && dragDist > 1;
+          return (
+            <View style={{
+              paddingHorizontal: 14, paddingTop: 10,
+              paddingBottom: Platform.OS === 'android' ? 28 : 24,
+              backgroundColor: C.bg,
+              borderTopWidth: 1.5,
+              borderTopColor: 'rgba(255,45,120,0.18)',
+            }}>
+              <TouchableOpacity
+                activeOpacity={tooFar ? 1 : 0.85}
+                onPress={tooFar ? undefined : confirmDropHere}
+                disabled={geoLoading || tooFar}
+                style={{
+                  backgroundColor: geoLoading || tooFar ? C.glassMid : C.pink,
+                  borderRadius: 16, paddingVertical: 15, paddingHorizontal: 20,
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12,
+                  elevation: tooFar ? 0 : 14,
+                  shadowColor: C.pink, shadowOpacity: tooFar ? 0 : 0.55, shadowRadius: 14,
+                }}>
+                <Ionicons name={tooFar ? 'warning' : 'flag'} size={18} color={tooFar ? C.textMuted : '#fff'} />
+                <Text style={{ fontWeight: '900', fontSize: 15, color: tooFar ? C.textMuted : '#fff' }}>
+                  {geoLoading ? 'Setting location...' : tooFar ? 'Move pin within 1 km' : 'Set Drop Here'}
+                </Text>
+                {!geoLoading && !tooFar && <Ionicons name="checkmark-circle" size={20} color="rgba(255,255,255,0.85)" />}
+              </TouchableOpacity>
+            </View>
+          );
+        })() : (
         <View style={{
           paddingHorizontal: 14,
           paddingTop: 8,
@@ -1290,6 +1359,7 @@ export function BookingScreen() {
           </Bouncy>
           </Animated.View>
         </View>
+        )}{/* end !inDragMode book button */}
       </GlassPanel>
       </Animated.View>
 
