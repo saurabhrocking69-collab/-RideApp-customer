@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { ScrollView, View, Text, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, Animated, Easing, Share, Dimensions } from 'react-native';
 import { Image } from 'expo-image';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Storage as AsyncStorage } from '../storage';
 import { Ionicons } from '@expo/vector-icons';
 import { apiPost, apiGet } from '../../api';
@@ -13,20 +12,6 @@ import { MAPS_KEY } from '../constants';
 import { useNearbyDrivers } from '../offline';
 import { NotifBell, NotificationCenter, getUnreadCount } from '../components/NotificationCenter';
 
-const DARK_MAP_STYLE = [
-  { elementType: 'geometry',        stylers: [{ color: '#0d0618' }] },
-  { elementType: 'labels.text.fill',stylers: [{ color: '#6b4fa0' }] },
-  { elementType: 'labels.text.stroke',stylers:[{ color: '#0d0618' }] },
-  { featureType: 'road',            elementType: 'geometry',       stylers: [{ color: '#1a0a35' }] },
-  { featureType: 'road',            elementType: 'geometry.stroke', stylers: [{ color: '#2e1461' }] },
-  { featureType: 'road.highway',    elementType: 'geometry',       stylers: [{ color: '#2e1461' }] },
-  { featureType: 'road.highway',    elementType: 'geometry.stroke', stylers: [{ color: 'rgba(255,45,120,0.25)' }] },
-  { featureType: 'water',           elementType: 'geometry',       stylers: [{ color: '#0a0520' }] },
-  { featureType: 'poi',             stylers: [{ visibility: 'off' }] },
-  { featureType: 'transit',         stylers: [{ visibility: 'off' }] },
-  { featureType: 'administrative',  elementType: 'geometry.stroke', stylers: [{ color: '#2e1461' }] },
-  { featureType: 'landscape',       elementType: 'geometry',       stylers: [{ color: '#100820' }] },
-];
 
 function NavBar() {
   const { tab, screen, setScreen, setTab, loadHistory, phone, rideData, storeStatus, hourlyBooking } = useApp();
@@ -552,7 +537,7 @@ function HomeTab() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <Ionicons name="location-outline" size={11} color="rgba(255,255,255,0.45)" />
-                <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, fontWeight: '600' }}>Lucknow, India</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, fontWeight: '600' }}>India</Text>
               </View>
               {nearbyCount > 0 && (
                 <Animated.View style={{
@@ -624,21 +609,21 @@ function HomeTab() {
         }}>
           <Animated.View style={{ flexDirection: 'row', alignItems: 'center', transform: [{ translateX: tickerAnim }] }}>
             {([
-              { dot: '#059669', text: `${nearbyCount > 0 ? nearbyCount + ' drivers near you' : 'Drivers active in Lucknow'}` },
+              { dot: '#059669', text: `${nearbyCount > 0 ? nearbyCount + ' drivers near you' : 'Drivers active near you'}` },
               { dot: C.pink,    text: 'Avg 4 min pickup time' },
               { dot: C.yellow,  text: '4.8 avg driver rating' },
               { dot: C.mint,    text: '2,500+ drivers earning daily' },
               { dot: C.purple,  text: "India's only Buddy system" },
-              { dot: C.pink,    text: 'Made in India · Lucknow HQ' },
+              { dot: C.pink,    text: 'Made in India 🇮🇳' },
               { dot: '#059669', text: 'Every ride tracked & safe' },
               { dot: C.yellow,  text: 'Cash · UPI · Wallet accepted' },
             ].concat([
-              { dot: '#059669', text: `${nearbyCount > 0 ? nearbyCount + ' drivers near you' : 'Drivers active in Lucknow'}` },
+              { dot: '#059669', text: `${nearbyCount > 0 ? nearbyCount + ' drivers near you' : 'Drivers active near you'}` },
               { dot: C.pink,    text: 'Avg 4 min pickup time' },
               { dot: C.yellow,  text: '4.8 avg driver rating' },
               { dot: C.mint,    text: '2,500+ drivers earning daily' },
               { dot: C.purple,  text: "India's only Buddy system" },
-              { dot: C.pink,    text: 'Made in India · Lucknow HQ' },
+              { dot: C.pink,    text: 'Made in India 🇮🇳' },
               { dot: '#059669', text: 'Every ride tracked & safe' },
               { dot: C.yellow,  text: 'Cash · UPI · Wallet accepted' },
             ])).map((item, i) => (
@@ -705,54 +690,6 @@ function HomeTab() {
             </View>
           </TouchableOpacity>
         )}
-
-        {/* 4. ── Live Map ── */}
-        <View style={{ marginHorizontal: 16, marginTop: 10, borderRadius: 20, overflow: 'hidden', height: 160, borderWidth: 1, borderColor: 'rgba(255,45,120,0.22)', elevation: 6, shadowColor: C.pink, shadowOpacity: 0.12, shadowRadius: 10 }}>
-          <MapView
-            provider={PROVIDER_GOOGLE}
-            style={{ flex: 1 }}
-            scrollEnabled={false}
-            zoomEnabled={false}
-            rotateEnabled={false}
-            pitchEnabled={false}
-            customMapStyle={DARK_MAP_STYLE}
-            initialRegion={{
-              latitude:      userLat || 26.8467,
-              longitude:     userLng || 80.9462,
-              latitudeDelta:  0.06,
-              longitudeDelta: 0.06,
-            }}
-            region={userLat && userLng ? {
-              latitude:      userLat,
-              longitude:     userLng,
-              latitudeDelta:  0.06,
-              longitudeDelta: 0.06,
-            } : undefined}
-          >
-            {userLat && userLng && (
-              <Marker coordinate={{ latitude: userLat, longitude: userLng }}>
-                <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: C.pink, borderWidth: 3, borderColor: '#fff', elevation: 6, shadowColor: C.pink, shadowOpacity: 0.8, shadowRadius: 8 }} />
-              </Marker>
-            )}
-            {(Array.isArray(nearbyDriversData) ? nearbyDriversData : []).map((d: any, i: number) => (
-              d?.lat && d?.lng
-                ? <Marker key={i} coordinate={{ latitude: d.lat, longitude: d.lng }} anchor={{ x: 0.5, y: 0.5 }}>
-                    <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.mint, borderWidth: 2, borderColor: '#fff' }} />
-                  </Marker>
-                : null
-            ))}
-          </MapView>
-          <View style={{ position: 'absolute', top: 10, left: 10, backgroundColor: 'rgba(13,6,24,0.82)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: 'rgba(255,45,120,0.30)' }}>
-            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: C.pink }} />
-            <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900', letterSpacing: 1 }}>SPPERO</Text>
-          </View>
-          {nearbyCount > 0 && (
-            <View style={{ position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(0,212,168,0.15)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: 'rgba(0,212,168,0.35)' }}>
-              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: C.mint }} />
-              <Text style={{ color: C.mint, fontSize: 10, fontWeight: '800' }}>{nearbyCount} nearby</Text>
-            </View>
-          )}
-        </View>
 
         {/* ── Content area ── */}
         <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
@@ -997,7 +934,7 @@ function HomeTab() {
               <Ionicons name="heart" size={13} color={C.pink} />
               <Text style={{ color: C.textMuted, fontSize: 11, fontWeight: '800', letterSpacing: 2 }}>MADE IN INDIA</Text>
             </View>
-            <Text style={{ color: C.textDim, fontSize: 10, letterSpacing: 0.8 }}>Sppero Inc. · Lucknow</Text>
+            <Text style={{ color: C.textDim, fontSize: 10, letterSpacing: 0.8 }}>Sppero Inc. · India</Text>
           </View>
         </View>
       </Animated.ScrollView>
