@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ScrollView, View, Text, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, Animated, Share, Dimensions } from 'react-native';
+import { ScrollView, View, Text, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, Animated, Easing, Share, Dimensions } from 'react-native';
 import { Image } from 'expo-image';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Storage as AsyncStorage } from '../storage';
@@ -495,6 +495,19 @@ function HomeTab() {
   const greetFade  = useRef(new Animated.Value(1)).current;
   const greetSlide = useRef(new Animated.Value(0)).current;
   const scrollY    = useRef(new Animated.Value(0)).current;
+  const tickerAnim = useRef(new Animated.Value(0)).current;
+  const TICKER_W   = 1400;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(tickerAnim, {
+        toValue: -TICKER_W,
+        duration: 26000,
+        useNativeDriver: true,
+        easing: Easing.linear,
+      })
+    ).start();
+  }, []);
 
   const FULL_H = Platform.OS === 'android' ? 130 : 146;
   const MINI_H = Platform.OS === 'android' ? 72 : 84;
@@ -595,6 +608,42 @@ function HomeTab() {
             <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900' }}>Go</Text>
           </View>
         </TouchableOpacity>
+
+        {/* 1b. ── Live city pulse ticker ── */}
+        <View style={{
+          marginHorizontal: 16, marginTop: 10,
+          height: 30, borderRadius: 10, overflow: 'hidden',
+          backgroundColor: 'rgba(255,255,255,0.04)',
+          borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
+          justifyContent: 'center',
+        }}>
+          <Animated.View style={{ flexDirection: 'row', alignItems: 'center', transform: [{ translateX: tickerAnim }] }}>
+            {([
+              { dot: '#059669', text: `${nearbyCount > 0 ? nearbyCount + ' drivers near you' : 'Drivers active in Lucknow'}` },
+              { dot: C.pink,    text: 'Avg 4 min pickup time' },
+              { dot: C.yellow,  text: '4.8 avg driver rating' },
+              { dot: C.mint,    text: '2,500+ drivers earning daily' },
+              { dot: C.purple,  text: "India's only Buddy system" },
+              { dot: C.pink,    text: 'Made in India · Lucknow HQ' },
+              { dot: '#059669', text: 'Every ride tracked & safe' },
+              { dot: C.yellow,  text: 'Cash · UPI · Wallet accepted' },
+            ].concat([
+              { dot: '#059669', text: `${nearbyCount > 0 ? nearbyCount + ' drivers near you' : 'Drivers active in Lucknow'}` },
+              { dot: C.pink,    text: 'Avg 4 min pickup time' },
+              { dot: C.yellow,  text: '4.8 avg driver rating' },
+              { dot: C.mint,    text: '2,500+ drivers earning daily' },
+              { dot: C.purple,  text: "India's only Buddy system" },
+              { dot: C.pink,    text: 'Made in India · Lucknow HQ' },
+              { dot: '#059669', text: 'Every ride tracked & safe' },
+              { dot: C.yellow,  text: 'Cash · UPI · Wallet accepted' },
+            ])).map((item, i) => (
+              <View key={i} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18 }}>
+                <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: item.dot, marginRight: 7 }} />
+                <Text style={{ color: C.textMuted, fontSize: 11.5, fontWeight: '600', letterSpacing: 0.2 }}>{item.text}</Text>
+              </View>
+            ))}
+          </Animated.View>
+        </View>
 
         {/* 2. ── Vehicle quick-select chips ── */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false}
