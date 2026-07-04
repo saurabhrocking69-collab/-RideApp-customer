@@ -31,6 +31,35 @@ function computeBearing(lat1: number, lng1: number, lat2: number, lng2: number):
   return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
 }
 
+// ── Interpolate a lat/lng point at progress t (0→1) along a polyline ─────────
+function interpolateRoute(
+  coords: { latitude: number; longitude: number }[],
+  t: number,
+): { latitude: number; longitude: number } {
+  if (coords.length === 0) return { latitude: 0, longitude: 0 };
+  if (t <= 0 || coords.length === 1) return coords[0];
+  if (t >= 1) return coords[coords.length - 1];
+  // Accumulate segment lengths (degree-space — fine for city-scale routes)
+  const dists: number[] = [0];
+  for (let i = 1; i < coords.length; i++) {
+    const dlat = coords[i].latitude  - coords[i - 1].latitude;
+    const dlng = coords[i].longitude - coords[i - 1].longitude;
+    dists.push(dists[i - 1] + Math.sqrt(dlat * dlat + dlng * dlng));
+  }
+  const total  = dists[dists.length - 1];
+  const target = t * total;
+  for (let i = 1; i < dists.length; i++) {
+    if (dists[i] >= target) {
+      const seg = (target - dists[i - 1]) / (dists[i] - dists[i - 1]);
+      return {
+        latitude:  coords[i - 1].latitude  + seg * (coords[i].latitude  - coords[i - 1].latitude),
+        longitude: coords[i - 1].longitude + seg * (coords[i].longitude - coords[i - 1].longitude),
+      };
+    }
+  }
+  return coords[coords.length - 1];
+}
+
 // ── Vehicle icons ─────────────────────────────────────────────────────────────
 const VEHICLE_ICONS: Record<string, string> = {
   bike: '🏍️', green_bike: '⚡', auto: '🛺', electric_auto: '🌿',
@@ -212,16 +241,23 @@ export const LiveMap = memo(function LiveMap({
   const [etaText, setEtaText] = useState('');
   const [distText, setDistText] = useState('');
 
-  // ── Route glow pulse (booking mode only) ─────────────────────────────────
-  const [routeGlow, setRouteGlow] = useState('rgba(255,45,120,0.15)');
+  // ── Travelling dot along booking route ───────────────────────────────────
+  const dotProgressRef    = useRef(0);
+  const remainingRef      = useRef<{ latitude: number; longitude: number }[]>([]);
+  const [dotPos, setDotPos] = useState<{ latitude: number; longitude: number } | null>(null);
+
   useEffect(() => {
-    if (!routeCoords.length || mode !== 'booking') { setRouteGlow('rgba(255,45,120,0.15)'); return; }
-    let bright = false;
-    const t = setInterval(() => {
-      bright = !bright;
-      setRouteGlow(bright ? 'rgba(255,45,120,0.30)' : 'rgba(255,45,120,0.10)');
-    }, 900);
-    return () => clearInterval(t);
+    if (!routeCoords.length || mode !== 'booking') { setDotPos(null); dotProgressRef.current = 0; return; }
+    const DURATION = 2800; // ms — full pickup→drop journey
+    const TICK     = 40;   // ms — ~25 fps
+    const STEP     = TICK / DURATION;
+    const timer = setInterval(() => {
+      dotProgressRef.current += STEP;
+      if (dotProgressRef.current > 1) dotProgressRef.current = 0;
+      const pos = interpolateRoute(remainingRef.current, dotProgressRef.current);
+      setDotPos(pos);
+    }, TICK);
+    return () => { clearInterval(timer); setDotPos(null); };
   }, [routeCoords.length, mode]);
 
   // Smooth driver position + compute bearing
@@ -322,6 +358,8 @@ export const LiveMap = memo(function LiveMap({
   // Inride route: split into completed (green) + remaining (pink) based on driver proximity
   let completedCoords: { latitude: number; longitude: number }[] = [];
   let remainingCoords = routeCoords;
+  // Keep remainingRef in sync so the dot interval closure always has fresh coords
+  remainingRef.current = remainingCoords;
   if (mode === 'inride' && routeCoords.length > 1 && driverLat != null && driverLng != null) {
     let closestIdx = 0;
     let minDist = Infinity;
@@ -361,17 +399,12 @@ export const LiveMap = memo(function LiveMap({
           }
         }}
       >
-        {/* Glow halo — animated pulse behind booking route */}
-        {remainingCoords.length > 1 && mode === 'booking' && (
-          <Polyline coordinates={remainingCoords} strokeColor={routeGlow} strokeWidth={14} lineCap="round" />
-        )}
-
         {/* Completed route segment (green) */}
         {completedCoords.length > 1 && (
           <Polyline coordinates={completedCoords} strokeColor="rgba(5,150,105,0.5)" strokeWidth={5} lineCap="round" />
         )}
 
-        {/* Main route line — thicker in booking mode */}
+        {/* Main route line */}
         {remainingCoords.length > 1 && (
           <Polyline
             coordinates={remainingCoords}
@@ -381,7 +414,7 @@ export const LiveMap = memo(function LiveMap({
           />
         )}
 
-        {/* White dash overlay — road-marking micro-texture */}
+        {/* White dash overlay — road-marking texture */}
         {remainingCoords.length > 1 && mode === 'booking' && (
           <Polyline
             coordinates={remainingCoords}
@@ -390,6 +423,28 @@ export const LiveMap = memo(function LiveMap({
             lineDashPattern={[6, 18]}
             lineCap="round"
           />
+        )}
+
+        {/* Travelling plum dot — moves from pickup to drop along the route */}
+        {dotPos && mode === 'booking' && remainingCoords.length > 1 && (
+          <Marker
+            coordinate={dotPos}
+            anchor={{ x: 0.5, y: 0.5 }}
+            tracksViewChanges={false}
+            zIndex={20}
+            flat
+          >
+            <View style={{
+              width: 14, height: 14, borderRadius: 7,
+              backgroundColor: C.plum,
+              borderWidth: 2.5,
+              borderColor: '#fff',
+              shadowColor: C.plum,
+              shadowOpacity: 0.75,
+              shadowRadius: 5,
+              elevation: 8,
+            }} />
+          </Marker>
         )}
 
         {/* User accuracy ring */}
