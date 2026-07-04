@@ -51,8 +51,52 @@ export function BookingScreen() {
   const finalFare = Math.max(0, rawFare - discount);
   const hasFare   = rawFare > 0 && !fareLoading;
 
+  // ── Saved places (Home / Office / Other) ────────────────────────────────────
+  type SavedPlace = { text: string; coords: { lat: number; lng: number } };
+  type SavedPlaces = { home: SavedPlace | null; office: SavedPlace | null; others: SavedPlace[] };
+  const [savedPlaces, setSavedPlaces] = useState<SavedPlaces>({ home: null, office: null, others: [] });
+  const [showSavePicker, setShowSavePicker] = useState(false);
+  const [saveTarget, setSaveTarget] = useState<SavedPlace | null>(null);
+
+  useEffect(() => {
+    AsyncStorage.getItem('sppero_saved_places').then(raw => {
+      if (raw) setSavedPlaces(JSON.parse(raw));
+    }).catch(() => {});
+  }, []);
+
+  const persistSavedPlaces = async (updated: SavedPlaces) => {
+    setSavedPlaces(updated);
+    await AsyncStorage.setItem('sppero_saved_places', JSON.stringify(updated)).catch(() => {});
+  };
+
+  const savePlaceAs = (type: 'home' | 'office' | 'other') => {
+    if (!saveTarget) return;
+    const updated = { ...savedPlaces };
+    if (type === 'home')   updated.home   = saveTarget;
+    else if (type === 'office') updated.office = saveTarget;
+    else updated.others = [saveTarget, ...savedPlaces.others.filter(o => o.text !== saveTarget.text)].slice(0, 3);
+    persistSavedPlaces(updated);
+    setShowSavePicker(false);
+  };
+
+  const removeSavedPlace = (type: 'home' | 'office') => {
+    persistSavedPlaces({ ...savedPlaces, [type]: null });
+  };
+
+  const openSavePicker = (place: SavedPlace) => {
+    setSaveTarget(place);
+    setShowSavePicker(true);
+  };
+
+  const selectSaved = (place: SavedPlace) => {
+    setDrop(place.text); setDropSugg([]);
+    setDropCoords(place.coords);
+  };
+
+  const hasSavedPlaces = !!(savedPlaces.home || savedPlaces.office || savedPlaces.others.length > 0);
+
   const showDropSugg = dropSugg.length > 0;
-  const showDropHist = dropSugg.length === 0 && !drop && !dropCoords && dropHistory.length > 0;
+  const showDropHist = dropSugg.length === 0 && !drop && !dropCoords && (dropHistory.length > 0 || hasSavedPlaces || !savedPlaces.home || !savedPlaces.office);
   const hasDropDown  = showDropSugg || showDropHist;
 
   type EtaInfo = { dist_km: number; eta_min: number };
@@ -451,7 +495,18 @@ export function BookingScreen() {
                       <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: '800', color: C.text }}>{pickup}</Text>
                     </View>
                     <View>
-                      <Text style={{ fontSize: 9, color: C.textDim, fontWeight: '800', letterSpacing: 1, marginBottom: 3 }}>TO</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                        <Text style={{ fontSize: 9, color: C.textDim, fontWeight: '800', letterSpacing: 1 }}>TO</Text>
+                        {/* Save drop location */}
+                        {dropCoords && (
+                          <TouchableOpacity
+                            onPress={e => { e.stopPropagation(); openSavePicker({ text: drop, coords: dropCoords }); }}
+                            style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(46,20,97,0.10)', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: 'rgba(46,20,97,0.20)' }}>
+                            <Ionicons name="bookmark-outline" size={9} color={C.plum} />
+                            <Text style={{ fontSize: 9, fontWeight: '800', color: C.plum }}>SAVE</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
                       <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: '800', color: C.text }}>{drop}</Text>
                     </View>
                   </View>
@@ -637,25 +692,96 @@ export function BookingScreen() {
 
                   {showDropHist && (
                     <>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6, gap: 6 }}>
-                        <Ionicons name="time" size={12} color={C.pink} />
-                        <Text style={{ fontSize: 10, color: C.pink, fontWeight: '900', letterSpacing: 1.2 }}>RECENT DESTINATIONS</Text>
-                      </View>
-                      {dropHistory.map((h, i) => (
-                        <TouchableOpacity key={i}
-                          style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: C.glassBorder }}
-                          onPress={() => {
-                            setDrop(h.text); setDropSugg([]);
-                            if (h.coords) { setDropCoords(h.coords); }
-                            else { geocodePlace(h.text, 'drop'); }
-                          }}>
-                          <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: C.glassMid, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1, borderColor: C.glassBorder }}>
-                            <Ionicons name="location-outline" size={14} color={C.textMuted} />
+                      {/* ── Saved Places — Home & Office ── */}
+                      {hasSavedPlaces && (
+                        <View style={{ paddingHorizontal: 14, paddingTop: 14, paddingBottom: 8 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+                            <Ionicons name="bookmark" size={11} color={C.pink} />
+                            <Text style={{ fontSize: 10, color: C.pink, fontWeight: '900', letterSpacing: 1.3 }}>SAVED PLACES</Text>
                           </View>
-                          <Text style={{ fontSize: 13, color: C.text, flex: 1, fontWeight: '500' }} numberOfLines={1}>{h.text}</Text>
-                          <Ionicons name="chevron-forward" size={14} color={C.textDim} />
-                        </TouchableOpacity>
-                      ))}
+                          <View style={{ flexDirection: 'row', gap: 10 }}>
+                            {savedPlaces.home && (
+                              <TouchableOpacity onPress={() => selectSaved(savedPlaces.home!)}
+                                style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: 'rgba(46,20,97,0.07)', borderRadius: 16, padding: 12, borderWidth: 1.5, borderColor: 'rgba(46,20,97,0.18)' }}>
+                                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.plum, alignItems: 'center', justifyContent: 'center' }}>
+                                  <Text style={{ fontSize: 17 }}>🏠</Text>
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={{ fontSize: 13, fontWeight: '800', color: C.text }}>Home</Text>
+                                  <Text style={{ fontSize: 10, color: C.textDim, marginTop: 1 }} numberOfLines={1}>{savedPlaces.home.text}</Text>
+                                </View>
+                              </TouchableOpacity>
+                            )}
+                            {savedPlaces.office && (
+                              <TouchableOpacity onPress={() => selectSaved(savedPlaces.office!)}
+                                style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: 'rgba(37,99,235,0.07)', borderRadius: 16, padding: 12, borderWidth: 1.5, borderColor: 'rgba(37,99,235,0.18)' }}>
+                                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#1D4ED8', alignItems: 'center', justifyContent: 'center' }}>
+                                  <Text style={{ fontSize: 17 }}>🏢</Text>
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={{ fontSize: 13, fontWeight: '800', color: C.text }}>Office</Text>
+                                  <Text style={{ fontSize: 10, color: C.textDim, marginTop: 1 }} numberOfLines={1}>{savedPlaces.office.text}</Text>
+                                </View>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                        </View>
+                      )}
+
+                      {/* ── Recent destinations (max 3) ── */}
+                      {dropHistory.length > 0 && (
+                        <>
+                          <View style={{ height: 1, backgroundColor: C.glassBorder, marginHorizontal: 14, marginTop: hasSavedPlaces ? 4 : 0 }} />
+                          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 6, gap: 6 }}>
+                            <Ionicons name="time" size={11} color={C.textMuted} />
+                            <Text style={{ fontSize: 10, color: C.textMuted, fontWeight: '900', letterSpacing: 1.2 }}>RECENT</Text>
+                          </View>
+                          {dropHistory.slice(0, 3).map((h, i) => (
+                            <TouchableOpacity key={i}
+                              activeOpacity={0.75}
+                              style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 13, paddingHorizontal: 16, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: C.glassBorder }}
+                              onPress={() => { setDrop(h.text); setDropSugg([]); if (h.coords) setDropCoords(h.coords); else geocodePlace(h.text, 'drop'); }}>
+                              {/* Icon */}
+                              <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: C.glassMid, alignItems: 'center', justifyContent: 'center', marginRight: 13, borderWidth: 1.5, borderColor: C.glassBorder }}>
+                                <Ionicons name="location-outline" size={16} color={C.textMuted} />
+                              </View>
+                              {/* Address */}
+                              <Text style={{ fontSize: 13, color: C.text, flex: 1, fontWeight: '600' }} numberOfLines={1}>{h.text}</Text>
+                              {/* Save bookmark */}
+                              {h.coords && (
+                                <TouchableOpacity
+                                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                  onPress={e => { e.stopPropagation(); openSavePicker({ text: h.text, coords: h.coords! }); }}
+                                  style={{ padding: 8, marginLeft: 4 }}>
+                                  <Ionicons name="bookmark-outline" size={17} color={C.textDim} />
+                                </TouchableOpacity>
+                              )}
+                            </TouchableOpacity>
+                          ))}
+                        </>
+                      )}
+
+                      {/* ── Add Home / Office nudge (if neither set) ── */}
+                      {(!savedPlaces.home || !savedPlaces.office) && (
+                        <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 14, paddingVertical: 12, borderTopWidth: 1, borderTopColor: C.glassBorder }}>
+                          {!savedPlaces.home && (
+                            <TouchableOpacity
+                              onPress={() => { setSaveTarget(null); setShowSavePicker(true); }}
+                              style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(46,20,97,0.25)', borderStyle: 'dashed', paddingVertical: 11, backgroundColor: 'rgba(46,20,97,0.04)' }}>
+                              <Text style={{ fontSize: 15 }}>🏠</Text>
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: C.plum }}>Add Home</Text>
+                            </TouchableOpacity>
+                          )}
+                          {!savedPlaces.office && (
+                            <TouchableOpacity
+                              onPress={() => { setSaveTarget(null); setShowSavePicker(true); }}
+                              style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(37,99,235,0.25)', borderStyle: 'dashed', paddingVertical: 11, backgroundColor: 'rgba(37,99,235,0.04)' }}>
+                              <Text style={{ fontSize: 15 }}>🏢</Text>
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: '#1D4ED8' }}>Add Office</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      )}
                     </>
                   )}
                 </View>
@@ -1077,20 +1203,20 @@ export function BookingScreen() {
         {/* ─── Sticky book button — always visible ─── */}
         <View style={{
           paddingHorizontal: 14,
-          paddingTop: 10,
-          paddingBottom: Platform.OS === 'android' ? 20 : 28,
+          paddingTop: 8,
+          paddingBottom: Platform.OS === 'android' ? 38 : 34,
           backgroundColor: C.bg,
           borderTopWidth: 1.5,
           borderTopColor: 'rgba(255,45,120,0.18)',
         }}>
           <Animated.View style={{ transform: [{ scale: bookPulseAnim }] }}>
           <Bouncy
-            style={[{ borderRadius: 18, overflow: 'hidden' }, loading && { opacity: 0.72 }]}
+            style={[{ borderRadius: 16, overflow: 'hidden' }, loading && { opacity: 0.72 }]}
             onPress={handleBook}
             disabled={loading}>
             <View style={{
               backgroundColor: loading ? C.glassMid : hasFare ? C.pink : C.glassMid,
-              paddingVertical: 17,
+              paddingVertical: 13,
               paddingHorizontal: 24,
               borderRadius: 18,
               flexDirection: 'row',
@@ -1201,6 +1327,78 @@ export function BookingScreen() {
           </View>
         );
       })()}
+
+      {/* ─── Save Place picker modal ─────────────────────────────────────────── */}
+      {showSavePicker && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end', zIndex: 999 }}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowSavePicker(false)} />
+          <View style={{ backgroundColor: C.bg, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 20, paddingBottom: Platform.OS === 'android' ? 36 : 44, borderTopWidth: 1.5, borderColor: C.glassBorder }}>
+
+            {/* Handle */}
+            <View style={{ alignItems: 'center', marginBottom: 20 }}>
+              <View style={{ width: 44, height: 4, borderRadius: 2, backgroundColor: C.glassB2 }} />
+            </View>
+
+            {/* Label */}
+            <Text style={{ fontSize: 12, color: C.textDim, fontWeight: '900', letterSpacing: 1.3, marginBottom: 6 }}>SAVE LOCATION AS</Text>
+            {saveTarget && (
+              <Text style={{ fontSize: 14, fontWeight: '700', color: C.text, marginBottom: 20 }} numberOfLines={1}>{saveTarget.text}</Text>
+            )}
+
+            {/* Options */}
+            <View style={{ gap: 12 }}>
+              {/* Home */}
+              <TouchableOpacity onPress={() => savePlaceAs('home')}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: 'rgba(46,20,97,0.07)', borderRadius: 18, padding: 16, borderWidth: 1.5, borderColor: 'rgba(46,20,97,0.18)' }}>
+                <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: C.plum, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 22 }}>🏠</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>Home</Text>
+                  <Text style={{ fontSize: 12, color: C.textDim, marginTop: 2 }}>
+                    {savedPlaces.home ? `Replace: ${savedPlaces.home.text}` : 'Set your home address'}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={C.textDim} />
+              </TouchableOpacity>
+
+              {/* Office */}
+              <TouchableOpacity onPress={() => savePlaceAs('office')}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: 'rgba(37,99,235,0.07)', borderRadius: 18, padding: 16, borderWidth: 1.5, borderColor: 'rgba(37,99,235,0.18)' }}>
+                <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#1D4ED8', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 22 }}>🏢</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>Office</Text>
+                  <Text style={{ fontSize: 12, color: C.textDim, marginTop: 2 }}>
+                    {savedPlaces.office ? `Replace: ${savedPlaces.office.text}` : 'Set your work address'}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={C.textDim} />
+              </TouchableOpacity>
+
+              {/* Other */}
+              <TouchableOpacity onPress={() => savePlaceAs('other')}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: C.glassMid, borderRadius: 18, padding: 16, borderWidth: 1.5, borderColor: C.glassBorder }}>
+                <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: C.bgCard, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.glassBorder }}>
+                  <Text style={{ fontSize: 22 }}>📍</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>Favourite Place</Text>
+                  <Text style={{ fontSize: 12, color: C.textDim, marginTop: 2 }}>Save as a favourite spot</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={C.textDim} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Cancel */}
+            <TouchableOpacity onPress={() => setShowSavePicker(false)}
+              style={{ marginTop: 14, alignItems: 'center', paddingVertical: 14 }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: C.textMuted }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }
