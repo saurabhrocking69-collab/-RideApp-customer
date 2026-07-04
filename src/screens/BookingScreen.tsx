@@ -241,6 +241,56 @@ export function BookingScreen() {
     lastFetchKey.current = '';
   };
 
+  // ── Route ETA (from LiveMap directions API callback) ─────────────────────────
+  const [routeEta, setRouteEta]   = useState('');
+  const [routeDist, setRouteDist] = useState('');
+  // Reset when route is cleared
+  useEffect(() => { if (!dropCoords) { setRouteEta(''); setRouteDist(''); } }, [dropCoords]);
+
+  // ETA card animations
+  const etaCardFade  = useRef(new Animated.Value(0)).current;
+  const etaCardSlide = useRef(new Animated.Value(18)).current;
+  const etaTimeFade  = useRef(new Animated.Value(0)).current;
+  const etaTimeSlide = useRef(new Animated.Value(12)).current;
+  const etaDistFade  = useRef(new Animated.Value(0)).current;
+  const etaDistSlide = useRef(new Animated.Value(12)).current;
+  const pulseDot     = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (routeEta && dropCoords) {
+      // Card slides up
+      Animated.parallel([
+        Animated.spring(etaCardSlide, { toValue: 0, friction: 8, tension: 80, useNativeDriver: true }),
+        Animated.timing(etaCardFade,  { toValue: 1, duration: 260, useNativeDriver: true }),
+      ]).start();
+      // Stats stagger in
+      Animated.stagger(110, [
+        Animated.parallel([
+          Animated.spring(etaTimeSlide, { toValue: 0, friction: 9, tension: 110, useNativeDriver: true }),
+          Animated.timing(etaTimeFade,  { toValue: 1, duration: 220, useNativeDriver: true }),
+        ]),
+        Animated.parallel([
+          Animated.spring(etaDistSlide, { toValue: 0, friction: 9, tension: 110, useNativeDriver: true }),
+          Animated.timing(etaDistFade,  { toValue: 1, duration: 220, useNativeDriver: true }),
+        ]),
+      ]).start();
+    } else {
+      etaCardFade.setValue(0); etaCardSlide.setValue(18);
+      etaTimeFade.setValue(0); etaTimeSlide.setValue(12);
+      etaDistFade.setValue(0); etaDistSlide.setValue(12);
+    }
+  }, [routeEta, dropCoords]);
+
+  // Continuous pulse on the live dot
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulseDot, { toValue: 1.9, duration: 750, useNativeDriver: true }),
+      Animated.timing(pulseDot, { toValue: 1,   duration: 750, useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, []);
+
   // ── Map height animation ──────────────────────────
   const [inputFocused, setInputFocused] = useState(false);
   const bothSet = !!(pickupCoords && dropCoords);
@@ -284,6 +334,7 @@ export function BookingScreen() {
             ? (coords) => { centerCoordsRef.current = coords; }
             : undefined}
           skipAutoFit={!!(pickupCoords && !dropCoords)}
+          onRouteInfo={(et, dt) => { setRouteEta(et); setRouteDist(dt); }}
         />
         <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} />
 
@@ -314,33 +365,21 @@ export function BookingScreen() {
             </TouchableOpacity>
           </View>
         )}
-        {/* Glass header — 90% transparent, floats over map tiles */}
-        <View style={{
-          position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
-          backgroundColor: C.pinkGlass,
-          paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 10 : 54,
-          paddingBottom: 16, paddingHorizontal: 16,
-          flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <TouchableOpacity
-            onPress={() => { setScreen('home'); setPickupSugg([]); setDropSugg([]); setEta(''); setPromoCode(''); setPromoDiscount(0); setInstantApplied(false); setShowPromoInput(false); }}
-            style={[s.backBtn, {
-              width: 36, height: 36, borderRadius: 12,
-              backgroundColor: 'rgba(15,23,42,0.45)',
-              alignItems: 'center', justifyContent: 'center',
-            }]}>
-            <Ionicons name="arrow-back" size={20} color="#fff" />
-          </TouchableOpacity>
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text style={[s.topTitle, { textShadowColor: 'rgba(0,0,0,0.55)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 }]}>
-              Book a Ride
-            </Text>
-            <Text style={{ color: 'rgba(255,255,255,0.90)', fontSize: 11, marginTop: 1, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 }}>
-              Live fares · All India
-            </Text>
-          </View>
-          <View style={{ width: 36 }} />
-        </View>
+        {/* Floating back button — no panel, just a pill over the map */}
+        <TouchableOpacity
+          onPress={() => { setScreen('home'); setPickupSugg([]); setDropSugg([]); setEta(''); setPromoCode(''); setPromoDiscount(0); setInstantApplied(false); setShowPromoInput(false); }}
+          style={{
+            position: 'absolute', zIndex: 10,
+            top: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 8 : 52,
+            left: 14,
+            width: 40, height: 40, borderRadius: 20,
+            backgroundColor: 'rgba(255,255,255,0.93)',
+            alignItems: 'center', justifyContent: 'center',
+            elevation: 8,
+            shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 10,
+          }}>
+          <Ionicons name="arrow-back" size={20} color={C.plum} />
+        </TouchableOpacity>
       </Animated.View>
 
       {/* ─── Bottom sheet — glass panel floating over map ─── */}
@@ -388,17 +427,6 @@ export function BookingScreen() {
                 shadowOpacity: 0.10,
                 shadowRadius: 14,
               }}>
-
-              {/* ETA stripe — green banner at top */}
-              {eta && !eta.includes('Calculate') ? (
-                <View style={{ backgroundColor: C.green, paddingHorizontal: 16, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Text style={{ fontSize: 13 }}>🗺️</Text>
-                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12, flex: 1 }}>{eta}</Text>
-                  <View style={{ backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
-                    <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>EDIT</Text>
-                  </View>
-                </View>
-              ) : null}
 
               <View style={{ padding: 16 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'stretch' }}>
@@ -635,13 +663,65 @@ export function BookingScreen() {
             </>
           )}
 
-          {/* ETA calculating spinner */}
-          {eta && eta.includes('Calculate') && (
-            <View style={{ backgroundColor: C.yellowGlass, borderRadius: 12, padding: 10, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: C.yellowBorder }}>
-              <Text style={{ fontSize: 15 }}>🔄</Text>
-              <Text style={{ color: C.yellow, fontWeight: '700', fontSize: 12 }}>{eta}</Text>
+          {/* ─── Plum ETA card — animated, only when route is ready ──────────────── */}
+          {bothSet && routeEta ? (
+            <Animated.View style={{ opacity: etaCardFade, transform: [{ translateY: etaCardSlide }], marginBottom: 16 }}>
+              <View style={{
+                backgroundColor: C.plum,
+                borderRadius: 20,
+                overflow: 'hidden',
+                elevation: 10,
+                shadowColor: C.plum,
+                shadowOpacity: 0.40,
+                shadowRadius: 16,
+              }}>
+                {/* Top row — live badge */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 13, paddingBottom: 9, gap: 8 }}>
+                  {/* Pulse dot */}
+                  <View style={{ width: 14, height: 14, alignItems: 'center', justifyContent: 'center' }}>
+                    <Animated.View style={{
+                      position: 'absolute',
+                      width: 14, height: 14, borderRadius: 7,
+                      backgroundColor: '#4ADE80',
+                      opacity: pulseDot.interpolate({ inputRange: [1, 1.9], outputRange: [0.4, 0] }),
+                      transform: [{ scale: pulseDot }],
+                    }} />
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#4ADE80' }} />
+                  </View>
+                  <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 10, fontWeight: '900', letterSpacing: 1.4 }}>LIVE ROUTE</Text>
+                  <View style={{ flex: 1 }} />
+                  <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, fontWeight: '600' }}>tap card to edit</Text>
+                </View>
+
+                {/* Hairline divider */}
+                <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.10)', marginHorizontal: 16 }} />
+
+                {/* Stats row */}
+                <View style={{ flexDirection: 'row', paddingVertical: 16, paddingHorizontal: 16 }}>
+                  {/* Time */}
+                  <Animated.View style={{ flex: 1, opacity: etaTimeFade, transform: [{ translateY: etaTimeSlide }] }}>
+                    <Text style={{ color: '#fff', fontSize: 28, fontWeight: '900', letterSpacing: -0.5 }}>{routeEta}</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.50)', fontSize: 11, fontWeight: '700', marginTop: 4, letterSpacing: 0.3 }}>Est. travel time</Text>
+                  </Animated.View>
+
+                  {/* Vertical separator */}
+                  <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.12)', marginVertical: 2, marginHorizontal: 4 }} />
+
+                  {/* Distance */}
+                  <Animated.View style={{ flex: 1, paddingLeft: 18, opacity: etaDistFade, transform: [{ translateY: etaDistSlide }] }}>
+                    <Text style={{ color: '#fff', fontSize: 28, fontWeight: '900', letterSpacing: -0.5 }}>{routeDist}</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.50)', fontSize: 11, fontWeight: '700', marginTop: 4, letterSpacing: 0.3 }}>Total distance</Text>
+                  </Animated.View>
+                </View>
+              </View>
+            </Animated.View>
+          ) : bothSet ? (
+            /* Calculating skeleton */
+            <View style={{ backgroundColor: 'rgba(46,20,97,0.18)', borderRadius: 16, paddingVertical: 14, paddingHorizontal: 16, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: 'rgba(46,20,97,0.20)' }}>
+              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.plum, opacity: 0.5 }} />
+              <Text style={{ color: C.plum, fontWeight: '700', fontSize: 12, opacity: 0.7 }}>Calculating route…</Text>
             </View>
-          )}
+          ) : null}
 
           {/* ─── Vehicle selector ───────────────────────────── */}
           <Text style={{ fontSize: 11, fontWeight: '900', color: C.textDim, letterSpacing: 1.4, marginBottom: 10, marginTop: 2, marginLeft: 2 }}>

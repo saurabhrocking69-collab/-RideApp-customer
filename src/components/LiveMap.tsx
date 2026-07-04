@@ -165,6 +165,7 @@ export interface LiveMapProps {
   dropDragMode?: boolean;
   onRegionChange?: (coords: { lat: number; lng: number }) => void;
   skipAutoFit?: boolean;
+  onRouteInfo?: (eta: string, dist: string) => void;
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -188,6 +189,7 @@ export const LiveMap = memo(function LiveMap({
   dropDragMode = false,
   onRegionChange,
   skipAutoFit = false,
+  onRouteInfo,
 }: LiveMapProps) {
   const mapRef = useRef<MapView>(null);
   const prevPos = useRef<{ lat: number; lng: number } | null>(null);
@@ -257,7 +259,12 @@ export const LiveMap = memo(function LiveMap({
         if (!route) return;
         setRouteCoords(decodePolyline(route.overview_polyline?.points || ''));
         const leg = route.legs?.[0];
-        if (leg) { setEtaText(leg.duration?.text || ''); setDistText(leg.distance?.text || ''); }
+        if (leg) {
+          const et = leg.duration?.text || '';
+          const dt = leg.distance?.text || '';
+          setEtaText(et); setDistText(dt);
+          onRouteInfo?.(et, dt);
+        }
       })
       .catch(() => {});
     return () => { cancelled = true; };
@@ -431,8 +438,8 @@ export const LiveMap = memo(function LiveMap({
       {/* Center drop crosshair — drag mode */}
       {dropDragMode && <CenterDropPin />}
 
-      {/* ETA chip — top-left */}
-      {etaText ? <EtaChip eta={etaText} distance={distText} /> : null}
+      {/* ETA chip — top-left, not shown in booking (displayed in bottom sheet instead) */}
+      {etaText && mode !== 'booking' ? <EtaChip eta={etaText} distance={distText} /> : null}
 
       {/* Drag hint */}
       <DragHint visible={dropDragMode} />
