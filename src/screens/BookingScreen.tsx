@@ -1,4 +1,4 @@
-import { Animated, KeyboardAvoidingView, Platform, ScrollView, StatusBar, TextInput, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Dimensions, KeyboardAvoidingView, Platform, ScrollView, StatusBar, TextInput, Text, TouchableOpacity, View } from 'react-native';
 import { useState, useRef, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Storage as AsyncStorage } from '../storage';
@@ -10,7 +10,10 @@ import { RIDES, MAPS_KEY } from '../constants';
 import { apiGet, externalGet } from '../../api';
 import { useNearbyDrivers } from '../offline';
 
-const MAP_H = 290; // includes ~90px for floating transparent header above visible map
+const SCREEN_H   = Dimensions.get('window').height;
+const MAP_BIG    = Math.floor(SCREEN_H * 0.62); // > half screen — default and post-route
+const MAP_MED    = Math.floor(SCREEN_H * 0.38); // while entering one location
+const MAP_SMALL  = Platform.OS === 'android' ? 110 : 130; // collapsed — keyboard visible
 
 export function BookingScreen() {
   const {
@@ -219,6 +222,15 @@ export function BookingScreen() {
     setFareEstimates({}); setEta(''); lastFetchKey.current = '';
   };
 
+  // ── Map height animation ──────────────────────────
+  const [inputFocused, setInputFocused] = useState(false);
+  const bothSet = !!(pickupCoords && dropCoords);
+  const mapHeightAnim = useRef(new Animated.Value(MAP_MED)).current;
+  useEffect(() => {
+    const target = inputFocused ? MAP_SMALL : bothSet ? MAP_BIG : MAP_MED;
+    Animated.spring(mapHeightAnim, { toValue: target, friction: 9, tension: 70, useNativeDriver: false }).start();
+  }, [inputFocused, bothSet]);
+
   // Sheet entrance: fade + slide-up on mount
   const sheetAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -232,14 +244,14 @@ export function BookingScreen() {
       <DotBG />
 
       {/* ─── Map + floating transparent header ───────────── */}
-      <View style={{ height: MAP_H, width: '100%' }}>
+      <Animated.View style={{ height: mapHeightAnim, width: '100%' }}>
         <LiveMap
           pickupCoords={pickupCoords}
           dropCoords={dropCoords}
           userLat={userCoords?.latitude || userCoords?.lat}
           userLng={userCoords?.longitude || userCoords?.lng}
           userAccuracy={(userCoords as any)?.accuracy}
-          height={MAP_H}
+          height={MAP_BIG}
           mode="booking"
           showRoute={!!(pickupCoords && dropCoords)}
           nearbyDrivers={!pickupCoords || !dropCoords ? nearbyDrivers : []}
@@ -278,7 +290,7 @@ export function BookingScreen() {
           </View>
           <View style={{ width: 36 }} />
         </View>
-      </View>
+      </Animated.View>
 
       {/* ─── Bottom sheet — glass panel floating over map ─── */}
       <Animated.View style={{
@@ -400,6 +412,8 @@ export function BookingScreen() {
                     placeholder="Pickup location..."
                     placeholderTextColor={C.textDim}
                     value={pickup}
+                    onFocus={() => setInputFocused(true)}
+                    onBlur={() => setInputFocused(false)}
                     onChangeText={(t) => {
                       setPickup(t);
                       searchPlaces(t, 'pickup');
@@ -483,6 +497,8 @@ export function BookingScreen() {
                     placeholder="Where to?"
                     placeholderTextColor={C.textDim}
                     value={drop}
+                    onFocus={() => setInputFocused(true)}
+                    onBlur={() => setInputFocused(false)}
                     onChangeText={(t) => {
                       setDrop(t);
                       searchPlaces(t, 'drop');
@@ -898,6 +914,8 @@ export function BookingScreen() {
                     placeholderTextColor={C.textDim}
                     autoCapitalize="characters"
                     value={promoCode}
+                    onFocus={() => setInputFocused(true)}
+                    onBlur={() => setInputFocused(false)}
                     onChangeText={setPromoCode}
                   />
                   <TouchableOpacity onPress={applyPromo} style={{ backgroundColor: C.pink, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8, elevation: 4, shadowColor: C.pink, shadowOpacity: 0.4, shadowRadius: 6 }}>
