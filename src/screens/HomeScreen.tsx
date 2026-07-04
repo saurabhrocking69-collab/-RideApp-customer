@@ -1332,69 +1332,123 @@ _GST is included in the fare._
     <View style={s.screen}>
       {/* Header */}
       <View style={{ backgroundColor: C.night, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 56, paddingBottom: 20, paddingHorizontal: 20 }}>
-        <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,45,120,0.06)', top: -60, right: -40 }} />
-        <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>My Trips</Text>
-        <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 3 }}>Tap any trip to see full details</Text>
+        <View style={{ position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(255,45,120,0.07)', top: -80, right: -50 }} />
+        <View style={{ position: 'absolute', width: 140, height: 140, borderRadius: 70, backgroundColor: 'rgba(5,150,105,0.05)', bottom: -60, left: -30 }} />
+        <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900', letterSpacing: 0.3 }}>My Trips</Text>
+        <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 4 }}>
+          {historyRides.length > 0 ? `${historyRides.length} trips · tap to see full details` : 'Your ride history will appear here'}
+        </Text>
       </View>
 
-      <ScrollView style={{ flex: 1, padding: 14 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 90 }}>
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 14, paddingBottom: 100 }}>
         {historyRides.length === 0
           ? <EmptyAnim icon="🚖" title="No trips yet" sub="Book your first ride and see your history here!" />
-          : historyRides.map((h: any, i: number) => (
-            <TouchableOpacity key={i} activeOpacity={0.82} onPress={() => openDetail(h)}
-              style={{ backgroundColor: C.bgCard, borderRadius: 18, marginBottom: 12, borderWidth: 1, borderColor: C.glassBorder, overflow: 'hidden' }}>
-              {/* Status stripe */}
-              <View style={{ height: 3, backgroundColor: statusColor(h.status), opacity: 0.7 }} />
-              <View style={{ padding: 14 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                  {/* Icon */}
-                  <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,45,120,0.12)', borderWidth: 1, borderColor: 'rgba(255,45,120,0.25)', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                    <Text style={{ fontSize: 22 }}>{rideIcon(h.ride_type)}</Text>
-                  </View>
-                  {/* Route + meta */}
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800', marginBottom: 3 }} numberOfLines={1}>{h.pickup}</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 3 }}>
-                      <View style={{ width: 8, height: 1, backgroundColor: C.textMuted }} />
-                      <Text style={{ color: C.textMuted, fontSize: 10 }}>to</Text>
-                      <View style={{ width: 8, height: 1, backgroundColor: C.textMuted }} />
+          : historyRides.map((h: any, i: number) => {
+            const pickup    = h.pickup?.trim()        || null;
+            const drop      = h.drop_location?.trim() || null;
+            const shortPick = pickup ? pickup.split(',')[0] : null;
+            const shortDrop = drop   ? drop.split(',')[0]  : null;
+            const isCompleted = h.status === 'completed';
+            const isCancelled = h.status === 'cancelled';
+            const sc = statusColor(h.status);
+            const isBuddy = favouriteBuddy?.driver_phone === h.driver_phone;
+            const dt = new Date(h.created_at);
+            const timeStr = dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+            const dateStr = dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+            return (
+              <TouchableOpacity key={i} activeOpacity={0.80} onPress={() => openDetail(h)}
+                style={{ backgroundColor: C.bgCard, borderRadius: 20, marginBottom: 12, borderWidth: 1, borderColor: C.glassBorder, overflow: 'hidden', elevation: 3, shadowColor: sc, shadowOpacity: 0.12, shadowRadius: 8 }}>
+
+                {/* Top accent bar */}
+                <View style={{ height: 3.5, backgroundColor: sc }} />
+
+                <View style={{ padding: 16 }}>
+                  {/* Row 1: vehicle chip + date/time + status badge */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+                    {/* Vehicle pill */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' }}>
+                      <Text style={{ fontSize: 14 }}>{rideIcon(h.ride_type)}</Text>
+                      <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: '700', textTransform: 'capitalize' }}>
+                        {(h.ride_type || 'ride').replace('_', ' ')}
+                      </Text>
                     </View>
-                    <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, fontWeight: '600' }} numberOfLines={1}>{h.drop_location}</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
-                      <Text style={{ color: C.textMuted, fontSize: 11 }}>{new Date(h.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</Text>
-                      <View style={{ backgroundColor: statusBg(h.status), borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
-                        <Text style={{ color: statusColor(h.status), fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 }}>{h.status}</Text>
+                    <View style={{ flex: 1 }} />
+                    {/* Date + time */}
+                    <Text style={{ color: C.textMuted, fontSize: 11, marginRight: 8 }}>{dateStr} · {timeStr}</Text>
+                    {/* Status badge */}
+                    <View style={{ backgroundColor: statusBg(h.status), borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: sc + '44' }}>
+                      <Text style={{ color: sc, fontSize: 10, fontWeight: '900', letterSpacing: 0.5 }}>
+                        {isCompleted ? 'COMPLETED' : isCancelled ? 'CANCELLED' : (h.status || '').toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Row 2: Route timeline + Fare */}
+                  <View style={{ flexDirection: 'row', alignItems: 'stretch' }}>
+                    {/* Route visual */}
+                    <View style={{ flex: 1, marginRight: 14 }}>
+                      {/* Pickup */}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.green, borderWidth: 2, borderColor: 'rgba(5,150,105,0.4)' }} />
+                        <Text style={{ color: pickup ? '#fff' : C.textMuted, fontSize: 13, fontWeight: pickup ? '700' : '400', flex: 1, fontStyle: pickup ? 'normal' : 'italic' }} numberOfLines={1}>
+                          {shortPick || 'Pickup not recorded'}
+                        </Text>
+                      </View>
+                      {/* Connector line */}
+                      <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginLeft: 4.5, paddingVertical: 3 }}>
+                        <View style={{ width: 1, height: 18, backgroundColor: 'rgba(255,255,255,0.12)', marginRight: 14 }} />
+                        {h.driver_name ? (
+                          <Text style={{ color: C.textMuted, fontSize: 10.5, marginTop: 1, flex: 1 }} numberOfLines={1}>
+                            🧑‍✈️ {h.driver_name}
+                          </Text>
+                        ) : (
+                          h.payment_method ? (
+                            <Text style={{ color: C.textMuted, fontSize: 10.5, marginTop: 1 }}>
+                              {h.payment_method === 'cash' ? '💵 Cash' : h.payment_method === 'wallet' ? '👛 Wallet' : '📱 UPI'}
+                            </Text>
+                          ) : null
+                        )}
+                      </View>
+                      {/* Drop */}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: isCancelled ? C.pink : C.pink, borderWidth: 2, borderColor: 'rgba(255,45,120,0.4)' }} />
+                        <Text style={{ color: drop ? 'rgba(255,255,255,0.65)' : C.textMuted, fontSize: 12, fontWeight: drop ? '500' : '400', flex: 1, fontStyle: drop ? 'normal' : 'italic' }} numberOfLines={1}>
+                          {isCancelled ? (shortDrop || 'Cancelled before drop') : (shortDrop || 'Drop not recorded')}
+                        </Text>
                       </View>
                     </View>
-                  </View>
-                  {/* Fare + buddy */}
-                  <View style={{ alignItems: 'flex-end', marginLeft: 8 }}>
-                    <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>₹{h.fare}</Text>
-                    {h.status === 'completed' && h.driver_phone && (
-                      <TouchableOpacity
-                        onPress={async (e) => {
-                          e.stopPropagation?.();
-                          const alreadyBuddy = favouriteBuddy?.driver_phone === h.driver_phone;
-                          if (alreadyBuddy) { alert('⭐ This driver is already your Sppero Buddy!'); return; }
-                          const res = await addFavouriteBuddy(h.driver_phone);
-                          if (res?.success) alert(`⭐ ${h.driver_name} is now your Sppero Buddy!`);
-                          else alert('⚠️ ' + (res?.error || 'Error'));
-                        }}
-                        style={{ marginTop: 6, backgroundColor: favouriteBuddy?.driver_phone === h.driver_phone ? C.greenGlass : C.pinkGlass, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: favouriteBuddy?.driver_phone === h.driver_phone ? C.greenBorder : C.pinkBorder }}>
-                        <Text style={{ fontSize: 10, fontWeight: '800', color: favouriteBuddy?.driver_phone === h.driver_phone ? C.green : C.pink }}>
-                          {favouriteBuddy?.driver_phone === h.driver_phone ? '✅ Buddy' : '⭐ Buddy'}
+
+                    {/* Fare + Buddy */}
+                    <View style={{ alignItems: 'flex-end', justifyContent: 'center', minWidth: 58 }}>
+                      <Text style={{ color: isCompleted ? '#fff' : C.textMuted, fontSize: 20, fontWeight: '900', lineHeight: 24 }}>
+                        {isCompleted ? `₹${parseFloat(h.fare || 0).toFixed(0)}` : '—'}
+                      </Text>
+                      {isCompleted && h.payment_method && (
+                        <Text style={{ color: C.textMuted, fontSize: 10, marginTop: 2 }}>
+                          {h.payment_method === 'cash' ? '💵 cash' : h.payment_method === 'wallet' ? '👛 wallet' : '📱 upi'}
                         </Text>
-                      </TouchableOpacity>
-                    )}
+                      )}
+                      {isCompleted && h.driver_phone && (
+                        <TouchableOpacity
+                          onPress={async (e) => {
+                            e.stopPropagation?.();
+                            if (isBuddy) { alert('⭐ Already your Sppero Buddy!'); return; }
+                            const res = await addFavouriteBuddy(h.driver_phone);
+                            if (res?.success) alert(`⭐ ${h.driver_name} is now your Sppero Buddy!`);
+                            else alert('⚠️ ' + (res?.error || 'Error'));
+                          }}
+                          style={{ marginTop: 8, backgroundColor: isBuddy ? C.greenGlass : C.pinkGlass, borderRadius: 10, paddingHorizontal: 9, paddingVertical: 5, borderWidth: 1, borderColor: isBuddy ? C.greenBorder : C.pinkBorder }}>
+                          <Text style={{ fontSize: 10, fontWeight: '900', color: isBuddy ? C.green : C.pink }}>
+                            {isBuddy ? '✅ Buddy' : '⭐ Buddy'}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   </View>
                 </View>
-                {/* Tap hint */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 8 }}>
-                  <Text style={{ color: 'rgba(255,45,120,0.6)', fontSize: 11, fontWeight: '700' }}>View Details →</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))
+              </TouchableOpacity>
+            );
+          })
         }
       </ScrollView>
       <View style={s.navFloat}><NavBar /></View>
