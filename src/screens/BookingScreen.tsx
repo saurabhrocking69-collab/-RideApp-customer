@@ -1,9 +1,9 @@
-import { Animated, Dimensions, KeyboardAvoidingView, Platform, ScrollView, StatusBar, TextInput, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Dimensions, KeyboardAvoidingView, PanResponder, Platform, ScrollView, StatusBar, TextInput, Text, TouchableOpacity, View } from 'react-native';
 import { useState, useRef, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Storage as AsyncStorage } from '../storage';
 import { useApp } from '../context/AppContext';
-import { Bouncy, GlassPanel, MapOverlay, RideVehicleIcon, DotBG } from '../components/ui';
+import { GlassPanel, RideVehicleIcon, DotBG } from '../components/ui';
 import { LiveMap } from '../components/LiveMap';
 import { s, C, T, R, SP, SHADOW } from '../styles';
 import { RIDES, MAPS_KEY } from '../constants';
@@ -11,9 +11,14 @@ import { apiGet, externalGet } from '../../api';
 import { useNearbyDrivers } from '../offline';
 
 const SCREEN_H   = Dimensions.get('window').height;
-const MAP_BIG    = Math.floor(SCREEN_H * 0.62); // > half screen — default and post-route
-const MAP_MED    = Math.floor(SCREEN_H * 0.38); // while entering one location
-const MAP_SMALL  = Platform.OS === 'android' ? 110 : 130; // collapsed — keyboard visible
+const MAP_BIG    = Math.floor(SCREEN_H * 0.62);
+const MAP_ADJUST = Math.floor(SCREEN_H * 0.77);
+const MAP_MED    = Math.floor(SCREEN_H * 0.38);
+const MAP_SMALL  = Platform.OS === 'android' ? 110 : 130;
+
+const SWIPE_H     = 58;  // swipe-to-book track height
+const SWIPE_THUMB = 46;  // draggable thumb diameter
+const SWIPE_PAD   = 6;   // thumb inset from track edge
 
 export function BookingScreen() {
   const {
@@ -77,10 +82,6 @@ export function BookingScreen() {
     else updated.others = [saveTarget, ...savedPlaces.others.filter(o => o.text !== saveTarget.text)].slice(0, 3);
     persistSavedPlaces(updated);
     setShowSavePicker(false);
-  };
-
-  const removeSavedPlace = (type: 'home' | 'office') => {
-    persistSavedPlaces({ ...savedPlaces, [type]: null });
   };
 
   const openSavePicker = (place: SavedPlace) => {
@@ -199,9 +200,9 @@ export function BookingScreen() {
   }, [userCoords?.lat, userCoords?.lng, pickup]);
 
   const placeIcon = (p: any) => {
-    if (p._type === 'transit') return { emoji: '🚇', color: '#2563EB', bg: 'rgba(37,99,235,0.08)', border: 'rgba(37,99,235,0.25)' };
-    if (p._type === 'mall') return { emoji: '🛍️', color: '#7C3AED', bg: 'rgba(124,58,237,0.08)', border: 'rgba(124,58,237,0.25)' };
-    return { emoji: '📍', color: '#64748B', bg: 'rgba(100,116,139,0.06)', border: 'rgba(100,116,139,0.2)' };
+    if (p._type === 'transit') return { emoji: '🚇', color: C.plum,    bg: C.plumGlass,   border: C.plumBorder };
+    if (p._type === 'mall')    return { emoji: '🛍️', color: C.purple,  bg: C.purpleGlass, border: C.purpleBorder };
+    return                            { emoji: '📍', color: C.textMuted, bg: C.glassMid,   border: C.glassBorder };
   };
 
   const selectNearbyPlace = (place: any) => {
@@ -217,6 +218,47 @@ export function BookingScreen() {
     if (eta && eta.dist_km > 5) { setWaitConfirmed(false); setShowWaitModal(true); return; }
     bookRide();
   };
+
+  // ── Swipe-to-book gesture ────────────────────────────────────────────────────
+  const swipeX        = useRef(new Animated.Value(0)).current;
+  const trackWidthRef = useRef(0);
+  // Keep fresh refs readable inside PanResponder (created once, avoids stale closures)
+  const hasFareRef    = useRef(hasFare);
+  hasFareRef.current  = hasFare;
+  const loadingRef    = useRef(loading);
+  loadingRef.current  = loading;
+  const handleBookRef = useRef<() => void>(handleBook);
+  handleBookRef.current = handleBook;
+
+  const swipePan = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => hasFareRef.current && !loadingRef.current,
+    onMoveShouldSetPanResponder:  (_, gs) => Math.abs(gs.dx) > 4 && hasFareRef.current && !loadingRef.current,
+    onPanResponderGrant: () => swipeX.stopAnimation(),
+    onPanResponderMove: (_, gs) => {
+      if (!hasFareRef.current || loadingRef.current) return;
+      const max = trackWidthRef.current - SWIPE_THUMB - SWIPE_PAD * 2;
+      swipeX.setValue(Math.max(0, Math.min(gs.dx, max)));
+    },
+    onPanResponderRelease: (_, gs) => {
+      const max = trackWidthRef.current - SWIPE_THUMB - SWIPE_PAD * 2;
+      if (gs.dx >= max * 0.72 && hasFareRef.current) {
+        Animated.spring(swipeX, { toValue: max, useNativeDriver: false, tension: 220, friction: 7 }).start(() => {
+          handleBookRef.current();
+          setTimeout(() => Animated.spring(swipeX, { toValue: 0, useNativeDriver: false, tension: 160, friction: 9 }).start(), 650);
+        });
+      } else {
+        Animated.spring(swipeX, { toValue: 0, useNativeDriver: false, tension: 180, friction: 8 }).start();
+      }
+    },
+    onPanResponderTerminate: () => {
+      Animated.spring(swipeX, { toValue: 0, useNativeDriver: false }).start();
+    },
+  })).current;
+
+  // Reset swipe thumb when loading state changes
+  useEffect(() => {
+    if (loading) Animated.spring(swipeX, { toValue: 0, useNativeDriver: false }).start();
+  }, [loading]);
 
   // Haversine distance in km between two coords
   const haversineKm = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
@@ -367,11 +409,11 @@ export function BookingScreen() {
   //                (inDragMode is true here too, but adjustMode is the UI driver)
   //
   //  Priority (high → low):
-  //    1. inputFocused   → MAP_SMALL  (keyboard always wins — show suggestions)
-  //    2. adjustMode     → MAP_BIG    (explicit drag-to-adjust: big map to drag)
-  //    3. !bothSet       → MAP_MED    (initial state: pickup set, searching drop)
-  //    4. vehicleBrowsing→ MAP_SMALL  (user scrolling vehicles)
-  //    5. default        → MAP_BIG    (route set, vehicle selected)
+  //    1. inputFocused   → MAP_SMALL   (keyboard always wins — show suggestions)
+  //    2. adjustMode     → MAP_ADJUST  (drag mode: 77% map, minimal sheet below)
+  //    3. !bothSet       → MAP_MED     (initial state: pickup set, searching drop)
+  //    4. vehicleBrowsing→ MAP_SMALL   (user scrolling vehicles)
+  //    5. default        → MAP_BIG     (route set, vehicle selected)
   const [inputFocused,    setInputFocused]    = useState(false);
   const [vehicleBrowsing, setVehicleBrowsing] = useState(false);
   const [adjustMode,      setAdjustMode]      = useState(false);
@@ -388,7 +430,7 @@ export function BookingScreen() {
   const mapHeightAnim = useRef(new Animated.Value(MAP_MED)).current;
   useEffect(() => {
     const target = inputFocused   ? MAP_SMALL   // keyboard always collapses map
-      : adjustMode                ? MAP_BIG     // explicit drag-adjust → full map
+      : adjustMode                ? MAP_ADJUST  // drag mode → 77% map, tiny sheet
       : !bothSet                  ? MAP_MED     // searching drop → medium
       : vehicleBrowsing           ? MAP_SMALL   // browsing vehicles
       : MAP_BIG;                                // route confirmed / vehicle selected
@@ -447,8 +489,6 @@ export function BookingScreen() {
           fitKey={fitKey}
           adjustOrigin={adjustOrigin}
         />
-        <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} />
-
         {/* Floating back button — no panel, just a pill over the map */}
         <TouchableOpacity
           onPress={() => { setScreen('home'); setPickupSugg([]); setDropSugg([]); setEta(''); setPromoCode(''); setPromoDiscount(0); setInstantApplied(false); setShowPromoInput(false); }}
@@ -477,6 +517,7 @@ export function BookingScreen() {
         borderTopLeftRadius: 28,
         borderTopRightRadius: 28,
         marginTop: -28,
+        overflow: 'hidden',
         elevation: 14,
         shadowColor: C.pink,
         shadowOpacity: 0.10,
@@ -494,19 +535,19 @@ export function BookingScreen() {
           onScrollBeginDrag={() => { if (bothSet) setVehicleBrowsing(true); }}
           contentContainerStyle={{ paddingBottom: 16, paddingHorizontal: 14 }}>
 
-          {/* ─── Location card ─────────────────────────────── */}
-          {pickupCoords && dropCoords ? (
+          {/* ─── Location card — hidden while dragging so map gets full space ─── */}
+          {!adjustMode && pickupCoords && dropCoords ? (
             /* Confirmed route — tap to edit drop */
             <TouchableOpacity
               activeOpacity={0.88}
               onPress={() => { setDropCoords(null); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; }}
               style={{
                 backgroundColor: C.bgCard,
-                borderRadius: 20,
+                marginHorizontal: -14,
                 marginBottom: 14,
                 elevation: 6,
                 overflow: 'hidden',
-                borderWidth: 1.5,
+                borderBottomWidth: 1.5,
                 borderColor: C.glassBorder,
                 shadowColor: C.pink,
                 shadowOpacity: 0.10,
@@ -542,7 +583,7 @@ export function BookingScreen() {
                         {dropCoords && (
                           <TouchableOpacity
                             onPress={e => { e.stopPropagation(); openSavePicker({ text: drop, coords: dropCoords }); }}
-                            style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(46,20,97,0.10)', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: 'rgba(46,20,97,0.20)' }}>
+                            style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: C.plumGlass, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: C.plumBorder }}>
                             <Ionicons name="bookmark-outline" size={9} color={C.plum} />
                             <Text style={{ fontSize: 9, fontWeight: '800', color: C.plum }}>SAVE</Text>
                           </TouchableOpacity>
@@ -562,26 +603,22 @@ export function BookingScreen() {
               {/* Drag-to-adjust drop strip */}
               <TouchableOpacity
                 onPress={e => { e.stopPropagation(); enterAdjustMode(); }}
-                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 11, borderTopWidth: 1, borderTopColor: C.glassBorder, marginHorizontal: 16, marginBottom: 4 }}>
+                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 11, borderTopWidth: 1, borderTopColor: C.glassBorder, paddingHorizontal: 16 }}>
                 <Ionicons name="move" size={14} color={C.pink} />
                 <Text style={{ fontSize: 12, fontWeight: '800', color: C.pink }}>Drag map to adjust drop</Text>
                 <Ionicons name="chevron-forward" size={12} color={C.pinkBorder} />
               </TouchableOpacity>
             </TouchableOpacity>
-          ) : (
-            /* Input mode */
+          ) : !adjustMode ? (
+            /* Input mode — also hidden while dragging */
             <>
               <View style={{
                 backgroundColor: C.bgCard,
-                borderTopLeftRadius: 20,
-                borderTopRightRadius: 20,
-                borderBottomLeftRadius: hasDropDown ? 0 : 20,
-                borderBottomRightRadius: hasDropDown ? 0 : 20,
+                marginHorizontal: -14,
                 padding: 14,
                 paddingBottom: hasDropDown ? 10 : 14,
                 marginBottom: hasDropDown ? 0 : 14,
                 elevation: 6,
-                borderWidth: 1.5,
                 borderBottomWidth: hasDropDown ? 0 : 1.5,
                 borderColor: C.glassBorder,
                 shadowColor: C.pink,
@@ -702,14 +739,10 @@ export function BookingScreen() {
               {hasDropDown && (
                 <View style={{
                   backgroundColor: C.bgCard,
-                  borderTopLeftRadius: 0,
-                  borderTopRightRadius: 0,
-                  borderBottomLeftRadius: 20,
-                  borderBottomRightRadius: 20,
+                  marginHorizontal: -14,
                   marginBottom: 14,
                   elevation: 18,
-                  borderWidth: 1.5,
-                  borderTopWidth: 0,
+                  borderBottomWidth: 1.5,
                   borderColor: C.glassBorder,
                   shadowColor: C.pink,
                   shadowOpacity: 0.14,
@@ -743,7 +776,7 @@ export function BookingScreen() {
                           <View style={{ flexDirection: 'row', gap: 10 }}>
                             {savedPlaces.home && (
                               <TouchableOpacity onPress={() => selectSaved(savedPlaces.home!)}
-                                style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: 'rgba(46,20,97,0.07)', borderRadius: 16, padding: 12, borderWidth: 1.5, borderColor: 'rgba(46,20,97,0.18)' }}>
+                                style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: C.plumGlass, borderRadius: 16, padding: 12, borderWidth: 1.5, borderColor: C.plumBorder }}>
                                 <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.plum, alignItems: 'center', justifyContent: 'center' }}>
                                   <Text style={{ fontSize: 17 }}>🏠</Text>
                                 </View>
@@ -755,8 +788,8 @@ export function BookingScreen() {
                             )}
                             {savedPlaces.office && (
                               <TouchableOpacity onPress={() => selectSaved(savedPlaces.office!)}
-                                style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: 'rgba(37,99,235,0.07)', borderRadius: 16, padding: 12, borderWidth: 1.5, borderColor: 'rgba(37,99,235,0.18)' }}>
-                                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#1D4ED8', alignItems: 'center', justifyContent: 'center' }}>
+                                style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: C.purpleGlass, borderRadius: 16, padding: 12, borderWidth: 1.5, borderColor: C.purpleBorder }}>
+                                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.purple, alignItems: 'center', justifyContent: 'center' }}>
                                   <Text style={{ fontSize: 17 }}>🏢</Text>
                                 </View>
                                 <View style={{ flex: 1 }}>
@@ -808,7 +841,7 @@ export function BookingScreen() {
                           {!savedPlaces.home && (
                             <TouchableOpacity
                               onPress={() => { setSaveTarget(null); setShowSavePicker(true); }}
-                              style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(46,20,97,0.25)', borderStyle: 'dashed', paddingVertical: 11, backgroundColor: 'rgba(46,20,97,0.04)' }}>
+                              style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 12, borderWidth: 1.5, borderColor: C.plumBorder, borderStyle: 'dashed', paddingVertical: 11, backgroundColor: C.plumGlass }}>
                               <Text style={{ fontSize: 15 }}>🏠</Text>
                               <Text style={{ fontSize: 12, fontWeight: '700', color: C.plum }}>Add Home</Text>
                             </TouchableOpacity>
@@ -816,9 +849,9 @@ export function BookingScreen() {
                           {!savedPlaces.office && (
                             <TouchableOpacity
                               onPress={() => { setSaveTarget(null); setShowSavePicker(true); }}
-                              style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(37,99,235,0.25)', borderStyle: 'dashed', paddingVertical: 11, backgroundColor: 'rgba(37,99,235,0.04)' }}>
+                              style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 12, borderWidth: 1.5, borderColor: C.purpleBorder, borderStyle: 'dashed', paddingVertical: 11, backgroundColor: C.purpleGlass }}>
                               <Text style={{ fontSize: 15 }}>🏢</Text>
-                              <Text style={{ fontSize: 12, fontWeight: '700', color: '#1D4ED8' }}>Add Office</Text>
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: C.purple }}>Add Office</Text>
                             </TouchableOpacity>
                           )}
                         </View>
@@ -828,59 +861,9 @@ export function BookingScreen() {
                 </View>
               )}
             </>
-          )}
+          ) : null /* adjustMode — ScrollView empty, all status lives in sticky area */}
 
-          {/* ─── Drag mode status panel ─────────────────────────────────────────── */}
-          {adjustMode && (() => {
-            const dragDist = dragCenter && originalDropRef.current
-              ? haversineKm(dragCenter, originalDropRef.current) : null;
-            const tooFar = dragDist !== null && dragDist > 1;
-            return (
-              <View style={{ gap: 10, marginTop: 10 }}>
-                {/* Instruction row */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.pinkGlass, borderRadius: 14, padding: 12, borderWidth: 1, borderColor: C.pinkBorder }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="locate" size={18} color="#fff" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '900', color: C.plum }}>Drag the map to place your drop</Text>
-                    <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>The pin follows the map center</Text>
-                  </View>
-                </View>
-
-                {/* 1km distance guard — only shown in adjust mode */}
-                {dragDist !== null && (
-                  <View style={{
-                    flexDirection: 'row', alignItems: 'center', gap: 8, padding: 11, borderRadius: 12,
-                    backgroundColor: tooFar ? 'rgba(255,59,48,0.07)' : 'rgba(5,150,105,0.07)',
-                    borderWidth: 1, borderColor: tooFar ? 'rgba(255,59,48,0.22)' : 'rgba(5,150,105,0.22)',
-                  }}>
-                    <Text style={{ fontSize: 18 }}>{tooFar ? '⚠️' : '✅'}</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 12, fontWeight: '800', color: tooFar ? '#FF3B30' : C.green }}>
-                        {tooFar
-                          ? `Too far — ${dragDist.toFixed(1)} km away`
-                          : dragDist < 0.05
-                            ? 'At searched location'
-                            : `${dragDist < 1 ? Math.round(dragDist * 1000) + ' m' : dragDist.toFixed(1) + ' km'} from searched drop`}
-                      </Text>
-                      {tooFar && (
-                        <Text style={{ fontSize: 10, color: '#FF3B30', opacity: 0.8, marginTop: 2 }}>
-                          Move the pin within 1 km of your searched location
-                        </Text>
-                      )}
-                    </View>
-                  </View>
-                )}
-
-                {/* Road hint */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(46,20,97,0.06)', borderRadius: 10, paddingVertical: 9, paddingHorizontal: 12 }}>
-                  <Text style={{ fontSize: 16 }}>🛣️</Text>
-                  <Text style={{ fontSize: 11.5, fontWeight: '700', color: C.plum }}>Place the pin on a road for accurate fare</Text>
-                </View>
-              </View>
-            );
-          })()}
+          {/* drag status lives in the sticky area below — ScrollView stays minimal in adjust mode */}
 
           {/* ─── Plum ETA card — animated, only when route is ready ──────────────── */}
           {bothSet && routeEta ? (
@@ -936,7 +919,7 @@ export function BookingScreen() {
             </Animated.View>
           ) : bothSet ? (
             /* Calculating skeleton */
-            <View style={{ backgroundColor: 'rgba(46,20,97,0.18)', borderRadius: 16, paddingVertical: 14, paddingHorizontal: 16, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: 'rgba(46,20,97,0.20)' }}>
+            <View style={{ backgroundColor: C.bgDeep, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 16, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: C.plumBorder }}>
               <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.plum, opacity: 0.5 }} />
               <Text style={{ color: C.plum, fontWeight: '700', fontSize: 12, opacity: 0.7 }}>Calculating route…</Text>
             </View>
@@ -1000,7 +983,7 @@ export function BookingScreen() {
                       padding: SP.md,
                       gap: SP.md - 2,
                       borderWidth: isSel ? 1.5 : 1,
-                      borderColor: isSel ? C.pink : isLux ? 'rgba(124,58,237,0.3)' : C.glassBorder,
+                      borderColor: isSel ? C.pink : isLux ? C.purpleBorder : C.glassBorder,
                       overflow: 'hidden',
                       ...(isSel ? SHADOW.pink : SHADOW.sm),
                     }}>
@@ -1296,7 +1279,7 @@ export function BookingScreen() {
           </>}{/* end !adjustMode */}
         </ScrollView>
 
-        {/* ─── Sticky bottom button — swaps between drag mode and book mode ─── */}
+        {/* ─── Sticky bottom — adjust mode: context + compact status + button ─── */}
         {adjustMode ? (() => {
           const dragDist = dragCenter && originalDropRef.current
             ? haversineKm(dragCenter, originalDropRef.current) : null;
@@ -1307,15 +1290,66 @@ export function BookingScreen() {
               paddingBottom: Platform.OS === 'android' ? 28 : 24,
               backgroundColor: C.bg,
               borderTopWidth: 1.5,
-              borderTopColor: 'rgba(255,45,120,0.18)',
+              borderTopColor: C.pinkBorder,
+              gap: 8,
             }}>
+              {/* Context header — what we're adjusting + cancel */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ width: 10, height: 10, borderRadius: 2.5, backgroundColor: C.pink }} />
+                <Text style={{ fontSize: 13, fontWeight: '800', color: C.text, flex: 1 }} numberOfLines={1}>
+                  {drop || 'Drop location'}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (originalDropRef.current) {
+                      setDropCoords({ ...originalDropRef.current });
+                      centerCoordsRef.current = { ...originalDropRef.current };
+                    }
+                    originalDropRef.current = null;
+                    setDragCenter(null);
+                    setAdjustMode(false);
+                    setAdjustOrigin(null);
+                  }}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 10, backgroundColor: C.glassMid, borderRadius: 10, borderWidth: 1, borderColor: C.glassBorder }}>
+                  <Ionicons name="close" size={13} color={C.textMuted} />
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: C.textMuted }}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Instruction row + live distance badge */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="locate" size={12} color={C.pink} />
+                <Text style={{ fontSize: 11.5, fontWeight: '700', color: C.plum, flex: 1 }}>
+                  Drag map · pin follows center · stay on a road
+                </Text>
+                {dragDist !== null && (
+                  <View style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 4,
+                    backgroundColor: tooFar ? C.redGlass : C.greenGlass,
+                    borderRadius: 10, paddingHorizontal: 9, paddingVertical: 4,
+                    borderWidth: 1, borderColor: tooFar ? C.redBorder : C.greenBorder,
+                  }}>
+                    <Text style={{ fontSize: 11, fontWeight: '900', color: tooFar ? C.red : C.green }}>
+                      {tooFar
+                        ? `${dragDist.toFixed(1)} km ⚠`
+                        : dragDist < 0.05
+                          ? '✓ On spot'
+                          : dragDist < 1
+                            ? `${Math.round(dragDist * 1000)} m ✓`
+                            : `${dragDist.toFixed(1)} km ✓`}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Action button */}
               <TouchableOpacity
                 activeOpacity={tooFar ? 1 : 0.85}
                 onPress={tooFar ? undefined : confirmDropHere}
                 disabled={geoLoading || tooFar}
                 style={{
                   backgroundColor: geoLoading || tooFar ? C.glassMid : C.pink,
-                  borderRadius: 16, paddingVertical: 15, paddingHorizontal: 20,
+                  borderRadius: 16, paddingVertical: 14, paddingHorizontal: 20,
                   flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12,
                   elevation: tooFar ? 0 : 14,
                   shadowColor: C.pink, shadowOpacity: tooFar ? 0 : 0.55, shadowRadius: 14,
@@ -1331,44 +1365,84 @@ export function BookingScreen() {
         })() : (
         <View style={{
           paddingHorizontal: 14,
-          paddingTop: 8,
-          paddingBottom: Platform.OS === 'android' ? 38 : 34,
+          paddingTop: 10,
+          paddingBottom: Platform.OS === 'android' ? 34 : 28,
           backgroundColor: C.bg,
           borderTopWidth: 1.5,
-          borderTopColor: 'rgba(255,45,120,0.18)',
+          borderTopColor: C.pinkBorder,
         }}>
+          {/* ── Swipe-to-book track ── */}
           <Animated.View style={{ transform: [{ scale: bookPulseAnim }] }}>
-          <Bouncy
-            style={[{ borderRadius: 16, overflow: 'hidden' }, loading && { opacity: 0.72 }]}
-            onPress={handleBook}
-            disabled={loading}>
-            <View style={{
-              backgroundColor: loading ? C.glassMid : hasFare ? C.pink : C.glassMid,
-              paddingVertical: 13,
-              paddingHorizontal: 24,
-              borderRadius: 18,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 10,
-              elevation: hasFare && !loading ? 10 : 1,
-              shadowColor: C.pink,
-              shadowOpacity: hasFare && !loading ? 0.50 : 0,
-              shadowRadius: 14,
-            }}>
-              {!loading && <RideVehicleIcon id={rideType} size={20} color="#fff" />}
-              <View style={{ alignItems: 'center' }}>
-                <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16, letterSpacing: 0.3 }}>
-                  {loading ? 'Finding driver...' : `Book ${selRide?.label || 'Ride'}`}
+            <View
+              onLayout={e => { trackWidthRef.current = e.nativeEvent.layout.width; }}
+              style={{
+                height: SWIPE_H,
+                borderRadius: SWIPE_H / 2,
+                backgroundColor: hasFare ? C.bgDeep : C.glassMid,
+                overflow: 'hidden',
+                borderWidth: 1.5,
+                borderColor: hasFare ? C.pinkBorder : C.glassBorder,
+                elevation: hasFare && !loading ? 10 : 2,
+                shadowColor: C.pink,
+                shadowOpacity: hasFare && !loading ? 0.32 : 0,
+                shadowRadius: 14,
+              }}>
+
+              {/* Pink fill — expands as thumb slides right */}
+              {hasFare && !loading && (
+                <Animated.View style={{
+                  position: 'absolute', left: 0, top: 0, bottom: 0,
+                  width: swipeX.interpolate({ inputRange: [0, 500], outputRange: [SWIPE_THUMB + SWIPE_PAD, SWIPE_THUMB + SWIPE_PAD + 500], extrapolate: 'extend' }),
+                  backgroundColor: C.pink,
+                  borderRadius: SWIPE_H / 2,
+                }} />
+              )}
+
+              {/* Center label — fades as thumb moves right */}
+              <Animated.View style={{
+                position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
+                alignItems: 'center', justifyContent: 'center',
+                opacity: swipeX.interpolate({ inputRange: [0, 70], outputRange: [1, 0], extrapolate: 'clamp' }),
+              }}>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: hasFare ? C.plum : C.textMuted, letterSpacing: 0.2 }} numberOfLines={1}>
+                  {loading
+                    ? 'Finding driver…'
+                    : hasFare
+                      ? `${selRide?.label || 'Ride'} · ₹${finalFare}${discount > 0 ? ` · saved ₹${discount}` : ''}`
+                      : 'Set a route to see fare'}
                 </Text>
-                {!loading && (
-                  <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, marginTop: 1 }}>
-                    {hasFare ? `₹${finalFare}${discount > 0 ? ` · saved ₹${discount}` : ''}` : 'Set route to see fare'}
-                  </Text>
-                )}
-              </View>
+              </Animated.View>
+
+              {/* Right chevron — fades when thumb moves */}
+              <Animated.View style={{
+                position: 'absolute', right: 20, top: 0, bottom: 0,
+                alignItems: 'center', justifyContent: 'center',
+                opacity: swipeX.interpolate({ inputRange: [0, 50], outputRange: [0.4, 0], extrapolate: 'clamp' }),
+              }}>
+                <Ionicons name="chevron-forward" size={20} color={C.plum} />
+              </Animated.View>
+
+              {/* Draggable thumb */}
+              <Animated.View
+                {...(hasFare && !loading ? swipePan.panHandlers : {})}
+                style={{
+                  position: 'absolute',
+                  top: SWIPE_PAD, left: SWIPE_PAD,
+                  width: SWIPE_THUMB, height: SWIPE_THUMB,
+                  borderRadius: SWIPE_THUMB / 2,
+                  backgroundColor: loading ? C.glassMid : hasFare ? C.plum : C.glassHigh,
+                  alignItems: 'center', justifyContent: 'center',
+                  elevation: 6,
+                  shadowColor: C.plum, shadowOpacity: 0.28, shadowRadius: 8,
+                  transform: [{ translateX: swipeX }],
+                }}>
+                {loading
+                  ? <Ionicons name="ellipsis-horizontal" size={18} color={C.textMuted} />
+                  : <RideVehicleIcon id={rideType} size={22} color={hasFare ? '#fff' : C.textDim} />
+                }
+              </Animated.View>
+
             </View>
-          </Bouncy>
           </Animated.View>
         </View>
         )}{/* end !adjustMode book button */}
@@ -1478,7 +1552,7 @@ export function BookingScreen() {
             <View style={{ gap: 12 }}>
               {/* Home */}
               <TouchableOpacity onPress={() => savePlaceAs('home')}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: 'rgba(46,20,97,0.07)', borderRadius: 18, padding: 16, borderWidth: 1.5, borderColor: 'rgba(46,20,97,0.18)' }}>
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: C.plumGlass, borderRadius: 18, padding: 16, borderWidth: 1.5, borderColor: C.plumBorder }}>
                 <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: C.plum, alignItems: 'center', justifyContent: 'center' }}>
                   <Text style={{ fontSize: 22 }}>🏠</Text>
                 </View>
@@ -1493,8 +1567,8 @@ export function BookingScreen() {
 
               {/* Office */}
               <TouchableOpacity onPress={() => savePlaceAs('office')}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: 'rgba(37,99,235,0.07)', borderRadius: 18, padding: 16, borderWidth: 1.5, borderColor: 'rgba(37,99,235,0.18)' }}>
-                <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#1D4ED8', alignItems: 'center', justifyContent: 'center' }}>
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: C.purpleGlass, borderRadius: 18, padding: 16, borderWidth: 1.5, borderColor: C.purpleBorder }}>
+                <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: C.purple, alignItems: 'center', justifyContent: 'center' }}>
                   <Text style={{ fontSize: 22 }}>🏢</Text>
                 </View>
                 <View style={{ flex: 1 }}>
