@@ -444,6 +444,19 @@ export const LiveMap = memo(function LiveMap({
     remainingCoords = routeCoords.slice(closestIdx);
   }
 
+  // Booking route split — green (ahead of arrow) + pink (behind arrow)
+  let bookingBehind: { latitude: number; longitude: number }[] = [];
+  let bookingAhead:  { latitude: number; longitude: number }[] = routeCoords;
+  let arrowBearing = 0;
+  if (mode === 'booking' && dotPos && routeCoords.length > 1) {
+    const splitIdx = Math.max(0, Math.floor(dotProgressRef.current * (routeCoords.length - 1)));
+    bookingBehind  = routeCoords.slice(0, splitIdx + 1);
+    bookingAhead   = routeCoords.slice(splitIdx);
+    const nextT    = Math.min(dotProgressRef.current + 0.025, 1);
+    const nextPt   = interpolateRoute(routeCoords, nextT);
+    arrowBearing   = computeBearing(dotPos.latitude, dotPos.longitude, nextPt.latitude, nextPt.longitude);
+  }
+
   return (
     <View style={fill ? { flex: 1, width: '100%', overflow: 'hidden' } : { height, width: '100%', overflow: 'hidden' }}>
       <MapView
@@ -472,51 +485,60 @@ export const LiveMap = memo(function LiveMap({
           }
         }}
       >
-        {/* Completed route segment (green) */}
+        {/* Completed route segment (inride only) */}
         {completedCoords.length > 1 && (
           <Polyline coordinates={completedCoords} strokeColor="rgba(5,150,105,0.5)" strokeWidth={5} lineCap="round" />
         )}
 
-        {/* Main route line */}
-        {remainingCoords.length > 1 && (
+        {/* Booking: pink trail behind arrow */}
+        {mode === 'booking' && bookingBehind.length > 1 && (
+          <Polyline coordinates={bookingBehind} strokeColor={C.pink} strokeWidth={5} lineCap="round" />
+        )}
+        {/* Booking: green route ahead of arrow (or full route before animation starts) */}
+        {mode === 'booking' && bookingAhead.length > 1 && (
+          <Polyline coordinates={bookingAhead} strokeColor={C.green} strokeWidth={5} lineCap="round" />
+        )}
+
+        {/* Non-booking route */}
+        {mode !== 'booking' && remainingCoords.length > 1 && (
           <Polyline
             coordinates={remainingCoords}
-            strokeColor={mode === 'matching' ? C.pink : mode === 'booking' ? C.pink : C.green}
-            strokeWidth={mode === 'booking' ? 6 : 4}
+            strokeColor={mode === 'matching' ? C.pink : C.green}
+            strokeWidth={4}
             lineCap="round"
           />
         )}
 
-        {/* White dash overlay — road-marking texture */}
-        {remainingCoords.length > 1 && mode === 'booking' && (
-          <Polyline
-            coordinates={remainingCoords}
-            strokeColor="rgba(255,255,255,0.68)"
-            strokeWidth={1.8}
-            lineDashPattern={[6, 18]}
-            lineCap="round"
+        {/* 800m destination zone around drop-off */}
+        {dropCoords && mode === 'booking' && (
+          <Circle
+            center={{ latitude: dropCoords.lat, longitude: dropCoords.lng }}
+            radius={800}
+            strokeColor="rgba(34,197,94,0.55)"
+            fillColor="rgba(34,197,94,0.07)"
+            strokeWidth={1.5}
           />
         )}
 
-        {/* Travelling plum dot — moves from pickup to drop along the route */}
-        {dotPos && mode === 'booking' && remainingCoords.length > 1 && (
+        {/* Travelling arrow — green circle with directional arrow, rotates to face route direction */}
+        {dotPos && mode === 'booking' && routeCoords.length > 1 && (
           <Marker
             coordinate={dotPos}
             anchor={{ x: 0.5, y: 0.5 }}
-            tracksViewChanges={false}
-            zIndex={20}
+            rotation={arrowBearing}
             flat
+            tracksViewChanges={false}
+            zIndex={25}
           >
             <View style={{
-              width: 14, height: 14, borderRadius: 7,
-              backgroundColor: C.plum,
-              borderWidth: 2.5,
-              borderColor: '#fff',
-              shadowColor: C.plum,
-              shadowOpacity: 0.75,
-              shadowRadius: 5,
+              width: 28, height: 28, borderRadius: 14,
+              backgroundColor: C.green,
+              alignItems: 'center', justifyContent: 'center',
+              borderWidth: 2.5, borderColor: '#fff',
               elevation: 8,
-            }} />
+            }}>
+              <Ionicons name="arrow-up" size={14} color="#fff" />
+            </View>
           </Marker>
         )}
 

@@ -385,15 +385,6 @@ export function BookingScreen() {
     return () => clearTimeout(t);
   }, [bothSet, drawerExpanded]);
 
-  // ── Route badge animation — slides up when route + ETA are ready ──────────
-  const routeBadgeAnim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    if (bothSet && routeEta) {
-      Animated.spring(routeBadgeAnim, { toValue: 1, friction: 7, tension: 90, useNativeDriver: true }).start();
-    } else {
-      Animated.timing(routeBadgeAnim, { toValue: 0, duration: 160, useNativeDriver: true }).start();
-    }
-  }, [bothSet, routeEta]);
 
   return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -433,46 +424,6 @@ export function BookingScreen() {
           <Ionicons name="arrow-back" size={20} color={C.plum} />
         </TouchableOpacity>
 
-        {/* ── Floating route preview badge — always visible over the map ─── */}
-        <Animated.View
-          pointerEvents="none"
-          style={{
-            position: 'absolute', bottom: 60, left: 14, right: 14, zIndex: 10,
-            opacity: routeBadgeAnim,
-            transform: [{ translateY: routeBadgeAnim.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }],
-          }}>
-          <View style={{
-            flexDirection: 'row', alignItems: 'center',
-            backgroundColor: 'rgba(255,255,255,0.97)',
-            borderRadius: 20, paddingHorizontal: 16, paddingVertical: 11,
-            elevation: 16,
-            shadowColor: C.plum, shadowOpacity: 0.20, shadowRadius: 16,
-            borderWidth: 1.5, borderColor: 'rgba(255,45,120,0.13)',
-            gap: 12,
-          }}>
-            {/* Route indicator dots */}
-            <View style={{ alignItems: 'center', gap: 3 }}>
-              <View style={{ width: 9, height: 9, borderRadius: 4.5, backgroundColor: C.green, borderWidth: 2, borderColor: 'rgba(5,150,105,0.22)' }} />
-              <View style={{ width: 1.5, height: 12, backgroundColor: C.glassBorder }} />
-              <View style={{ width: 9, height: 9, borderRadius: 2.5, backgroundColor: C.pink, borderWidth: 2, borderColor: C.pinkBorder }} />
-            </View>
-            {/* Origin + destination */}
-            <View style={{ flex: 1, gap: 3 }}>
-              <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: '700', color: C.textMuted }}>{pickup}</Text>
-              <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: '700', color: C.text }}>{drop}</Text>
-            </View>
-            {/* Time · dist · fare */}
-            <View style={{ alignItems: 'flex-end', gap: 2 }}>
-              <Text style={{ fontSize: 15, fontWeight: '900', color: C.plum, letterSpacing: -0.3 }}>{routeEta}</Text>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: C.textMuted }}>{routeDist}</Text>
-              {hasFare ? (
-                <Text style={{ fontSize: 13, fontWeight: '900', color: C.pink }}>₹{finalFare}</Text>
-              ) : bothSet ? (
-                <Text style={{ fontSize: 10, color: C.textDim }}>calculating…</Text>
-              ) : null}
-            </View>
-          </View>
-        </Animated.View>
 
       </View>
 
