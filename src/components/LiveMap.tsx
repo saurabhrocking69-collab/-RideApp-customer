@@ -356,17 +356,26 @@ export const LiveMap = memo(function LiveMap({
     driverLng != null ? Math.round(driverLng * 200) / 200 : null,
   ]);
 
-  // Fit map to markers (skip when following driver or in drag mode)
+  // Fit map — uses sampled route polyline when available for tighter framing
   useEffect(() => {
     if (followDriver || skipAutoFit || !mapRef.current) return;
-    const coords: { latitude: number; longitude: number }[] = [];
-    if (pickupCoords) coords.push({ latitude: pickupCoords.lat, longitude: pickupCoords.lng });
-    if (dropCoords)   coords.push({ latitude: dropCoords.lat,   longitude: dropCoords.lng   });
-    if (driverLat != null && driverLng != null) coords.push({ latitude: driverLat, longitude: driverLng });
-    if (!coords.length && userLat != null) coords.push({ latitude: userLat!, longitude: userLng! });
+    let coords: { latitude: number; longitude: number }[] = [];
+    const routePts = remainingRef.current;
+    if (routePts.length > 1) {
+      // Sample up to 30 points from the polyline so curves are fully visible
+      const stride = Math.max(1, Math.floor(routePts.length / 30));
+      coords = routePts.filter((_, i) => i % stride === 0);
+      const last = routePts[routePts.length - 1];
+      if (coords[coords.length - 1] !== last) coords.push(last);
+    } else {
+      if (pickupCoords) coords.push({ latitude: pickupCoords.lat, longitude: pickupCoords.lng });
+      if (dropCoords)   coords.push({ latitude: dropCoords.lat,   longitude: dropCoords.lng   });
+      if (driverLat != null && driverLng != null) coords.push({ latitude: driverLat, longitude: driverLng });
+      if (!coords.length && userLat != null) coords.push({ latitude: userLat!, longitude: userLng! });
+    }
     if (coords.length > 0) {
       mapRef.current.fitToCoordinates(coords, {
-        edgePadding: { top: 70, right: 60, bottom: 80, left: 60 },
+        edgePadding: { top: 80, right: 60, bottom: 120, left: 60 },
         animated: true,
       });
     }
@@ -374,6 +383,26 @@ export const LiveMap = memo(function LiveMap({
 
   const recenter = () => {
     if (!mapRef.current) return;
+    // Route visible → fit the full polyline
+    if (remainingRef.current.length > 1) {
+      const pts = remainingRef.current;
+      const stride = Math.max(1, Math.floor(pts.length / 25));
+      const sampled = pts.filter((_, i) => i % stride === 0);
+      if (sampled[sampled.length - 1] !== pts[pts.length - 1]) sampled.push(pts[pts.length - 1]);
+      mapRef.current.fitToCoordinates(sampled, {
+        edgePadding: { top: 80, right: 60, bottom: 120, left: 60 }, animated: true,
+      });
+      return;
+    }
+    // Markers only → fit to them
+    if (pickupCoords && dropCoords) {
+      mapRef.current.fitToCoordinates([
+        { latitude: pickupCoords.lat, longitude: pickupCoords.lng },
+        { latitude: dropCoords.lat,   longitude: dropCoords.lng   },
+      ], { edgePadding: { top: 80, right: 60, bottom: 120, left: 60 }, animated: true });
+      return;
+    }
+    // Fallback → center on user/driver
     const lat = driverLat ?? userLat ?? pickupCoords?.lat ?? 26.8467;
     const lng = driverLng ?? userLng ?? pickupCoords?.lng ?? 80.9462;
     mapRef.current.animateToRegion(
