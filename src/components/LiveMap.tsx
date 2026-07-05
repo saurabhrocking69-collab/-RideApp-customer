@@ -187,7 +187,7 @@ export interface LiveMapProps {
   skipAutoFit?: boolean;
   onRouteInfo?: (eta: string, dist: string) => void;
   fitKey?: number;
-  adjustOrigin?: { lat: number; lng: number } | null; // center of 1km green circle in adjust mode
+  adjustOrigin?: { lat: number; lng: number } | null; // center of 2km green circle in adjust mode
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -462,13 +462,16 @@ export const LiveMap = memo(function LiveMap({
           />
         )}
 
-        {/* 1km adjust-range circle — shown when user is drag-adjusting their drop */}
-        {adjustOrigin && (
+        {/* 2km green circle — around drop marker (always) or adjust origin (in drag mode) */}
+        {(dropCoords || adjustOrigin) && (
           <Circle
-            center={{ latitude: adjustOrigin.lat, longitude: adjustOrigin.lng }}
-            radius={1000}
-            fillColor="rgba(5,150,105,0.06)"
-            strokeColor="rgba(5,150,105,0.55)"
+            center={{
+              latitude: (adjustOrigin ?? dropCoords)!.lat,
+              longitude: (adjustOrigin ?? dropCoords)!.lng,
+            }}
+            radius={2000}
+            fillColor="rgba(5,150,105,0.05)"
+            strokeColor="rgba(5,150,105,0.50)"
             strokeWidth={2}
           />
         )}

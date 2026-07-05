@@ -317,21 +317,25 @@ export function BookingScreen() {
   const centerCoordsRef  = useRef<{ lat: number; lng: number } | null>(null);
   const originalDropRef  = useRef<{ lat: number; lng: number } | null>(null); // saved when entering adjust mode
   const dragTimerRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const geoDebounceRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [dragCenter,   setDragCenter]   = useState<{ lat: number; lng: number } | null>(null);
+  const [liveGeoAddr,  setLiveGeoAddr]  = useState('');
   const [geoLoading,   setGeoLoading]   = useState(false);
 
   const confirmDropHere = async () => {
     const target = centerCoordsRef.current || pickupCoords;
     if (!target || geoLoading) return;
-    // Enforce 1km radius when in adjustment mode
-    if (originalDropRef.current && haversineKm(target, originalDropRef.current) > 1) return;
+    // Enforce 2km radius when in adjustment mode
+    if (originalDropRef.current && haversineKm(target, originalDropRef.current) > 2) return;
     setGeoLoading(true);
     const addr = await reverseGeocode(target.lat, target.lng);
     setDrop(addr);
     setDropCoords(target);
     setDropSugg([]);
+    setFareEstimates({}); setEta(''); lastFetchKey.current = '';
     originalDropRef.current = null;
     setDragCenter(null);
+    setLiveGeoAddr('');
     setAdjustMode(false);
     setAdjustOrigin(null);
     setGeoLoading(false);
@@ -419,6 +423,17 @@ export function BookingScreen() {
   const [adjustMode,      setAdjustMode]      = useState(false);
   const [adjustOrigin,    setAdjustOrigin]    = useState<{ lat: number; lng: number } | null>(null);
   const bothSet    = !!(pickupCoords && dropCoords);
+
+  // Debounced reverse-geocode as user drags — shows live address in sticky area
+  useEffect(() => {
+    if (!dragCenter || !adjustMode) { setLiveGeoAddr(''); return; }
+    if (geoDebounceRef.current) clearTimeout(geoDebounceRef.current);
+    geoDebounceRef.current = setTimeout(async () => {
+      const addr = await reverseGeocode(dragCenter.lat, dragCenter.lng);
+      setLiveGeoAddr(addr);
+    }, 480);
+    return () => { if (geoDebounceRef.current) clearTimeout(geoDebounceRef.current); };
+  }, [dragCenter?.lat, dragCenter?.lng, adjustMode]);
   const inDragMode = !!(pickupCoords && !dropCoords); // for LiveMap teardrop pin prop only
 
   // Reset adjust + browse mode when route is cleared or completed
@@ -533,6 +548,7 @@ export function BookingScreen() {
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets
           onScrollBeginDrag={() => { if (bothSet) setVehicleBrowsing(true); }}
+          style={adjustMode ? { flex: 0 } : undefined}
           contentContainerStyle={{ paddingBottom: 16, paddingHorizontal: 14 }}>
 
           {/* ─── Location card — hidden while dragging so map gets full space ─── */}
@@ -1283,7 +1299,7 @@ export function BookingScreen() {
         {adjustMode ? (() => {
           const dragDist = dragCenter && originalDropRef.current
             ? haversineKm(dragCenter, originalDropRef.current) : null;
-          const tooFar = dragDist !== null && dragDist > 1;
+          const tooFar = dragDist !== null && dragDist > 2;
           return (
             <View style={{
               paddingHorizontal: 14, paddingTop: 10,
@@ -1307,6 +1323,7 @@ export function BookingScreen() {
                     }
                     originalDropRef.current = null;
                     setDragCenter(null);
+                    setLiveGeoAddr('');
                     setAdjustMode(false);
                     setAdjustOrigin(null);
                   }}
@@ -1342,6 +1359,28 @@ export function BookingScreen() {
                 )}
               </View>
 
+              {/* Live geocoded address — updates as user drags */}
+              {(liveGeoAddr || dragCenter) ? (
+                <View style={{
+                  backgroundColor: C.plumGlass,
+                  borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8,
+                  borderWidth: 1, borderColor: C.plumBorder,
+                  flexDirection: 'row', alignItems: 'flex-start', gap: 8,
+                }}>
+                  <Ionicons name="flag" size={13} color={C.pink} style={{ marginTop: 1 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: C.text }} numberOfLines={2}>
+                      {liveGeoAddr || (dragCenter ? `${dragCenter.lat.toFixed(5)}, ${dragCenter.lng.toFixed(5)}` : '')}
+                    </Text>
+                    {dragCenter && (
+                      <Text style={{ fontSize: 10, color: C.textDim, marginTop: 2, fontVariant: ['tabular-nums'] }}>
+                        {dragCenter.lat.toFixed(5)}, {dragCenter.lng.toFixed(5)}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              ) : null}
+
               {/* Action button */}
               <TouchableOpacity
                 activeOpacity={tooFar ? 1 : 0.85}
@@ -1356,7 +1395,7 @@ export function BookingScreen() {
                 }}>
                 <Ionicons name={tooFar ? 'warning' : 'flag'} size={18} color={tooFar ? C.textMuted : '#fff'} />
                 <Text style={{ fontWeight: '900', fontSize: 15, color: tooFar ? C.textMuted : '#fff' }}>
-                  {geoLoading ? 'Setting location...' : tooFar ? 'Move pin within 1 km' : 'Set Drop Here'}
+                  {geoLoading ? 'Setting location...' : tooFar ? 'Move pin within 2 km' : 'Set Drop Here'}
                 </Text>
                 {!geoLoading && !tooFar && <Ionicons name="checkmark-circle" size={20} color="rgba(255,255,255,0.85)" />}
               </TouchableOpacity>
