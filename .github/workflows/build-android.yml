@@ -41,12 +41,27 @@ jobs:
       # google-services.json is gitignored — inject from secret before prebuild
       # so Firebase initialises correctly at app startup.
       - name: Inject google-services.json
-        run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > google-services.json
+        run: |
+          printf '%s' "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > google-services.json
+          python3 -m json.tool google-services.json > /dev/null \
+            && echo "✅ google-services.json valid JSON ($(wc -c < google-services.json) bytes)" \
+            || (echo "❌ google-services.json invalid or empty — check GOOGLE_SERVICES_JSON secret"; exit 1)
+          PKG=$(python3 -c "import json; d=json.load(open('google-services.json')); print(d['client'][0]['client_info']['android_client_info']['package_name'])")
+          echo "Package in secret: $PKG"
+          [ "$PKG" = "com.saurabhspero.rideappmobile3" ] \
+            && echo "✅ Package matches app" \
+            || (echo "❌ Package mismatch — google-services.json is for '$PKG', not 'com.saurabhspero.rideappmobile3'"; exit 1)
 
       - name: Expo Prebuild
         run: npx expo prebuild --platform android --clean
         env:
           CI: '1'
+
+      - name: Verify google-services.json copied to android/app
+        run: |
+          ls -lh android/app/google-services.json \
+            && echo "✅ google-services.json present in android/app" \
+            || (echo "❌ Missing from android/app — prebuild did not copy it"; exit 1)
 
       # Generate a fresh keystore every build — alias and passwords are
       # hardcoded so there is never a secret/alias mismatch at sign time.
@@ -59,6 +74,7 @@ jobs:
             -storepass android123 -keypass android123 \
             -dname "CN=Sppero,O=Sppero,C=IN"
 
+      # arm64-v8a = modern phones; armeabi-v7a = older/budget ARM32 devices
       - name: Build Release APK
         working-directory: android
         run: |
@@ -67,7 +83,7 @@ jobs:
             -Pandroid.injected.signing.store.password="android123" \
             -Pandroid.injected.signing.key.alias="release" \
             -Pandroid.injected.signing.key.password="android123" \
-            -PreactNativeArchitectures=arm64-v8a \
+            -PreactNativeArchitectures=arm64-v8a,armeabi-v7a \
             --no-daemon
 
       - name: Upload APK
