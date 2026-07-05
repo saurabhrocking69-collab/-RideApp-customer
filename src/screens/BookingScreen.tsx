@@ -12,7 +12,7 @@ import { useNearbyDrivers } from '../offline';
 
 const SCREEN_H   = Dimensions.get('window').height;
 const MAP_BIG    = Math.floor(SCREEN_H * 0.62);
-const MAP_ADJUST = Math.floor(SCREEN_H * 0.77);
+const MAP_ADJUST = SCREEN_H; // full-screen in drag mode — sheet collapses, overlay floats
 const MAP_MED    = Math.floor(SCREEN_H * 0.38);
 const MAP_SMALL  = Platform.OS === 'android' ? 110 : 130;
 
@@ -519,6 +519,120 @@ export function BookingScreen() {
           }}>
           <Ionicons name="arrow-back" size={20} color={C.plum} />
         </TouchableOpacity>
+
+        {/* ── Adjust-mode floating overlay — hovers over full-screen map ── */}
+        {adjustMode && (() => {
+          const dragDist = dragCenter && originalDropRef.current
+            ? haversineKm(dragCenter, originalDropRef.current) : null;
+          const tooFar = dragDist !== null && dragDist > 2;
+          return (
+            <View style={{
+              position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 50,
+              backgroundColor: 'rgba(255,255,255,0.97)',
+              borderTopLeftRadius: 24, borderTopRightRadius: 24,
+              borderTopWidth: 1.5, borderTopColor: C.pinkBorder,
+              paddingHorizontal: 16, paddingTop: 10,
+              paddingBottom: Platform.OS === 'android' ? 28 : 24,
+              gap: 9,
+              elevation: 22,
+              shadowColor: C.pink, shadowOpacity: 0.18, shadowRadius: 22,
+            }}>
+              {/* Drag handle pill */}
+              <View style={{ alignItems: 'center', marginBottom: 2 }}>
+                <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: C.glassBorder }} />
+              </View>
+
+              {/* Context header — drop name + cancel */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ width: 10, height: 10, borderRadius: 2.5, backgroundColor: C.pink }} />
+                <Text style={{ fontSize: 13, fontWeight: '800', color: C.text, flex: 1 }} numberOfLines={1}>
+                  {drop || 'Drop location'}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (originalDropRef.current) {
+                      setDropCoords({ ...originalDropRef.current });
+                      centerCoordsRef.current = { ...originalDropRef.current };
+                    }
+                    originalDropRef.current = null;
+                    setDragCenter(null);
+                    setLiveGeoAddr('');
+                    setAdjustMode(false);
+                    setAdjustOrigin(null);
+                  }}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 10, backgroundColor: C.glassMid, borderRadius: 10, borderWidth: 1, borderColor: C.glassBorder }}>
+                  <Ionicons name="close" size={13} color={C.textMuted} />
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: C.textMuted }}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Instruction + distance badge */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="locate" size={12} color={C.pink} />
+                <Text style={{ fontSize: 11.5, fontWeight: '700', color: C.plum, flex: 1 }}>
+                  Drag map · pin follows center · stay on a road
+                </Text>
+                {dragDist !== null && (
+                  <View style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 4,
+                    backgroundColor: tooFar ? C.redGlass : C.greenGlass,
+                    borderRadius: 10, paddingHorizontal: 9, paddingVertical: 4,
+                    borderWidth: 1, borderColor: tooFar ? C.redBorder : C.greenBorder,
+                  }}>
+                    <Text style={{ fontSize: 11, fontWeight: '900', color: tooFar ? C.red : C.green }}>
+                      {tooFar
+                        ? `${dragDist.toFixed(1)} km ⚠`
+                        : dragDist < 0.05 ? '✓ On spot'
+                        : dragDist < 1 ? `${Math.round(dragDist * 1000)} m ✓`
+                        : `${dragDist.toFixed(1)} km ✓`}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Live geocoded address */}
+              {(liveGeoAddr || dragCenter) ? (
+                <View style={{
+                  backgroundColor: C.plumGlass,
+                  borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8,
+                  borderWidth: 1, borderColor: C.plumBorder,
+                  flexDirection: 'row', alignItems: 'flex-start', gap: 8,
+                }}>
+                  <Ionicons name="flag" size={13} color={C.pink} style={{ marginTop: 1 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: C.text }} numberOfLines={2}>
+                      {liveGeoAddr || (dragCenter ? `${dragCenter.lat.toFixed(5)}, ${dragCenter.lng.toFixed(5)}` : '')}
+                    </Text>
+                    {dragCenter && (
+                      <Text style={{ fontSize: 10, color: C.textDim, marginTop: 2, fontVariant: ['tabular-nums'] }}>
+                        {dragCenter.lat.toFixed(5)}, {dragCenter.lng.toFixed(5)}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              ) : null}
+
+              {/* Action button */}
+              <TouchableOpacity
+                activeOpacity={tooFar ? 1 : 0.85}
+                onPress={tooFar ? undefined : confirmDropHere}
+                disabled={geoLoading || tooFar}
+                style={{
+                  backgroundColor: geoLoading || tooFar ? C.glassMid : C.pink,
+                  borderRadius: 16, paddingVertical: 14, paddingHorizontal: 20,
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12,
+                  elevation: tooFar ? 0 : 14,
+                  shadowColor: C.pink, shadowOpacity: tooFar ? 0 : 0.55, shadowRadius: 14,
+                }}>
+                <Ionicons name={tooFar ? 'warning' : 'flag'} size={18} color={tooFar ? C.textMuted : '#fff'} />
+                <Text style={{ fontWeight: '900', fontSize: 15, color: tooFar ? C.textMuted : '#fff' }}>
+                  {geoLoading ? 'Setting location...' : tooFar ? 'Move pin within 2 km' : 'Set Drop Here'}
+                </Text>
+                {!geoLoading && !tooFar && <Ionicons name="checkmark-circle" size={20} color="rgba(255,255,255,0.85)" />}
+              </TouchableOpacity>
+            </View>
+          );
+        })()}
       </Animated.View>
 
       {/* ─── Bottom sheet — glass panel floating over map ─── */}
@@ -548,7 +662,6 @@ export function BookingScreen() {
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets
           onScrollBeginDrag={() => { if (bothSet) setVehicleBrowsing(true); }}
-          style={adjustMode ? { flex: 0 } : undefined}
           contentContainerStyle={{ paddingBottom: 16, paddingHorizontal: 14 }}>
 
           {/* ─── Location card — hidden while dragging so map gets full space ─── */}
@@ -1295,113 +1408,8 @@ export function BookingScreen() {
           </>}{/* end !adjustMode */}
         </ScrollView>
 
-        {/* ─── Sticky bottom — adjust mode: context + compact status + button ─── */}
-        {adjustMode ? (() => {
-          const dragDist = dragCenter && originalDropRef.current
-            ? haversineKm(dragCenter, originalDropRef.current) : null;
-          const tooFar = dragDist !== null && dragDist > 2;
-          return (
-            <View style={{
-              paddingHorizontal: 14, paddingTop: 10,
-              paddingBottom: Platform.OS === 'android' ? 28 : 24,
-              backgroundColor: C.bg,
-              borderTopWidth: 1.5,
-              borderTopColor: C.pinkBorder,
-              gap: 8,
-            }}>
-              {/* Context header — what we're adjusting + cancel */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <View style={{ width: 10, height: 10, borderRadius: 2.5, backgroundColor: C.pink }} />
-                <Text style={{ fontSize: 13, fontWeight: '800', color: C.text, flex: 1 }} numberOfLines={1}>
-                  {drop || 'Drop location'}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    if (originalDropRef.current) {
-                      setDropCoords({ ...originalDropRef.current });
-                      centerCoordsRef.current = { ...originalDropRef.current };
-                    }
-                    originalDropRef.current = null;
-                    setDragCenter(null);
-                    setLiveGeoAddr('');
-                    setAdjustMode(false);
-                    setAdjustOrigin(null);
-                  }}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 10, backgroundColor: C.glassMid, borderRadius: 10, borderWidth: 1, borderColor: C.glassBorder }}>
-                  <Ionicons name="close" size={13} color={C.textMuted} />
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: C.textMuted }}>Cancel</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Instruction row + live distance badge */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Ionicons name="locate" size={12} color={C.pink} />
-                <Text style={{ fontSize: 11.5, fontWeight: '700', color: C.plum, flex: 1 }}>
-                  Drag map · pin follows center · stay on a road
-                </Text>
-                {dragDist !== null && (
-                  <View style={{
-                    flexDirection: 'row', alignItems: 'center', gap: 4,
-                    backgroundColor: tooFar ? C.redGlass : C.greenGlass,
-                    borderRadius: 10, paddingHorizontal: 9, paddingVertical: 4,
-                    borderWidth: 1, borderColor: tooFar ? C.redBorder : C.greenBorder,
-                  }}>
-                    <Text style={{ fontSize: 11, fontWeight: '900', color: tooFar ? C.red : C.green }}>
-                      {tooFar
-                        ? `${dragDist.toFixed(1)} km ⚠`
-                        : dragDist < 0.05
-                          ? '✓ On spot'
-                          : dragDist < 1
-                            ? `${Math.round(dragDist * 1000)} m ✓`
-                            : `${dragDist.toFixed(1)} km ✓`}
-                    </Text>
-                  </View>
-                )}
-              </View>
-
-              {/* Live geocoded address — updates as user drags */}
-              {(liveGeoAddr || dragCenter) ? (
-                <View style={{
-                  backgroundColor: C.plumGlass,
-                  borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8,
-                  borderWidth: 1, borderColor: C.plumBorder,
-                  flexDirection: 'row', alignItems: 'flex-start', gap: 8,
-                }}>
-                  <Ionicons name="flag" size={13} color={C.pink} style={{ marginTop: 1 }} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: C.text }} numberOfLines={2}>
-                      {liveGeoAddr || (dragCenter ? `${dragCenter.lat.toFixed(5)}, ${dragCenter.lng.toFixed(5)}` : '')}
-                    </Text>
-                    {dragCenter && (
-                      <Text style={{ fontSize: 10, color: C.textDim, marginTop: 2, fontVariant: ['tabular-nums'] }}>
-                        {dragCenter.lat.toFixed(5)}, {dragCenter.lng.toFixed(5)}
-                      </Text>
-                    )}
-                  </View>
-                </View>
-              ) : null}
-
-              {/* Action button */}
-              <TouchableOpacity
-                activeOpacity={tooFar ? 1 : 0.85}
-                onPress={tooFar ? undefined : confirmDropHere}
-                disabled={geoLoading || tooFar}
-                style={{
-                  backgroundColor: geoLoading || tooFar ? C.glassMid : C.pink,
-                  borderRadius: 16, paddingVertical: 14, paddingHorizontal: 20,
-                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12,
-                  elevation: tooFar ? 0 : 14,
-                  shadowColor: C.pink, shadowOpacity: tooFar ? 0 : 0.55, shadowRadius: 14,
-                }}>
-                <Ionicons name={tooFar ? 'warning' : 'flag'} size={18} color={tooFar ? C.textMuted : '#fff'} />
-                <Text style={{ fontWeight: '900', fontSize: 15, color: tooFar ? C.textMuted : '#fff' }}>
-                  {geoLoading ? 'Setting location...' : tooFar ? 'Move pin within 2 km' : 'Set Drop Here'}
-                </Text>
-                {!geoLoading && !tooFar && <Ionicons name="checkmark-circle" size={20} color="rgba(255,255,255,0.85)" />}
-              </TouchableOpacity>
-            </View>
-          );
-        })() : (
+        {/* ─── Sticky bottom — swipe-to-book (adjust mode overlay is now inside map view) ─── */}
+        {!adjustMode && (
         <View style={{
           paddingHorizontal: 14,
           paddingTop: 10,
@@ -1484,7 +1492,7 @@ export function BookingScreen() {
             </View>
           </Animated.View>
         </View>
-        )}{/* end !adjustMode book button */}
+        )}{/* end !adjustMode swipe-to-book */}
       </GlassPanel>
       </Animated.View>
 
