@@ -41,23 +41,44 @@ const NATIVE_MODULE_RULES = `
 `;
 
 const withNativeModuleProguard = (config) => {
-  return withDangerousMod(config, [
+  // Step 1: Write proguard keep rules
+  config = withDangerousMod(config, [
     'android',
     (config) => {
-      const proguardPath = path.join(
-        config.modRequest.platformProjectRoot,
-        'app',
-        'proguard-rules.pro'
-      );
+      const root = config.modRequest.platformProjectRoot;
+
+      // Write proguard rules
+      const proguardPath = path.join(root, 'app', 'proguard-rules.pro');
       if (fs.existsSync(proguardPath)) {
         const existing = fs.readFileSync(proguardPath, 'utf8');
         if (!existing.includes('com.tencent.mmkv')) {
           fs.appendFileSync(proguardPath, NATIVE_MODULE_RULES);
         }
       }
+
+      // Step 2: Disable minification entirely in release build.
+      // Native modules (MMKV, maps, webview) crash at startup when R8
+      // strips their JNI bridge classes, even with keep rules.
+      // Handle both Groovy (build.gradle) and Kotlin DSL (build.gradle.kts).
+      const groovy = path.join(root, 'app', 'build.gradle');
+      const kotlin = path.join(root, 'app', 'build.gradle.kts');
+
+      if (fs.existsSync(groovy)) {
+        let src = fs.readFileSync(groovy, 'utf8');
+        src = src.replace(/minifyEnabled\s+\S+/g, 'minifyEnabled false');
+        fs.writeFileSync(groovy, src);
+      } else if (fs.existsSync(kotlin)) {
+        let src = fs.readFileSync(kotlin, 'utf8');
+        src = src.replace(/isMinifyEnabled\s*=\s*\S+/g, 'isMinifyEnabled = false');
+        src = src.replace(/minifyEnabled\s*=?\s*\S+/g, 'minifyEnabled false');
+        fs.writeFileSync(kotlin, src);
+      }
+
       return config;
     },
   ]);
+
+  return config;
 };
 
 module.exports = withNativeModuleProguard;
