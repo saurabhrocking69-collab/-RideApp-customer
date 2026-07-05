@@ -55,8 +55,28 @@ jobs:
       - name: Verify google-services.json copied to android/app
         run: |
           ls -lh android/app/google-services.json \
-            && echo "✅ google-services.json present in android/app" \
-            || (echo "❌ Missing from android/app — prebuild did not copy it"; exit 1)
+            && echo "google-services.json present in android/app" \
+            || (echo "ERROR: Missing from android/app — prebuild did not copy it"; exit 1)
+
+      # Release APKs with R8 minification crash at startup when native modules
+      # (MMKV, react-native-maps, webview) lack proguard consumer rules.
+      # Disable minification here — proguard rules in the plugin are the proper
+      # long-term fix, but this ensures the APK always works.
+      - name: Disable R8 minification in release build
+        run: |
+          python3 - << 'PYEOF'
+          import re, sys
+          path = 'android/app/build.gradle'
+          with open(path) as f:
+              content = f.read()
+          patched = re.sub(r'minifyEnabled\s+\S+', 'minifyEnabled false', content)
+          if patched == content:
+              print('WARNING: minifyEnabled not found in build.gradle — check output')
+          else:
+              with open(path, 'w') as f:
+                  f.write(patched)
+              print('minifyEnabled set to false in release build')
+          PYEOF
 
       # Generate a fresh keystore every build — alias and passwords are
       # hardcoded so there is never a secret/alias mismatch at sign time.
