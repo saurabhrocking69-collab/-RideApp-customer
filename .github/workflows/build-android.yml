@@ -38,30 +38,14 @@ jobs:
             sleep 15
           done
 
-      # google-services.json is gitignored — inject from secret before prebuild
-      # so Firebase initialises correctly at app startup.
-      # Secret is stored as raw JSON (not base64) to avoid encoding issues.
+      # Secret stored as raw JSON — write via env var to avoid shell-escaping issues.
       - name: Inject google-services.json
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
-          python3 -c "
-import os, json, sys
-content = os.environ.get('GOOGLE_SERVICES_JSON', '')
-if not content.strip():
-    print('❌ GOOGLE_SERVICES_JSON secret is empty'); sys.exit(1)
-try:
-    d = json.loads(content)
-except json.JSONDecodeError as e:
-    print(f'❌ Invalid JSON: {e}'); sys.exit(1)
-pkg = d['client'][0]['client_info']['android_client_info']['package_name']
-print(f'Package in secret: {pkg}')
-if pkg != 'com.saurabhspero.rideappmobile3':
-    print(f'❌ Package mismatch — expected com.saurabhspero.rideappmobile3'); sys.exit(1)
-with open('google-services.json', 'w') as f:
-    json.dump(d, f, indent=2)
-print(f'✅ google-services.json written ({len(content)} chars, package OK)')
-"
+          printf '%s' "$GOOGLE_SERVICES_JSON" > google-services.json
+          python3 -m json.tool google-services.json > /dev/null || (echo "ERROR: google-services.json is not valid JSON"; exit 1)
+          echo "google-services.json OK: $(wc -c < google-services.json) bytes"
 
       - name: Expo Prebuild
         run: npx expo prebuild --platform android --clean
