@@ -42,7 +42,7 @@ jobs:
       # so Firebase initialises correctly at app startup.
       - name: Inject google-services.json
         run: |
-          printf '%s' "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > google-services.json
+          printf '%s' "${{ secrets.GOOGLE_SERVICES_JSON }}" | tr -d '[:space:]' | base64 -d > google-services.json
           python3 -m json.tool google-services.json > /dev/null \
             && echo "✅ google-services.json valid JSON ($(wc -c < google-services.json) bytes)" \
             || (echo "❌ google-services.json invalid or empty — check GOOGLE_SERVICES_JSON secret"; exit 1)
