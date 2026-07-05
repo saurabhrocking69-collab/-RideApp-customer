@@ -375,7 +375,7 @@ export const LiveMap = memo(function LiveMap({
     }
     if (coords.length > 0) {
       mapRef.current.fitToCoordinates(coords, {
-        edgePadding: { top: 80, right: 60, bottom: 120, left: 60 },
+        edgePadding: { top: 96, right: 60, bottom: 130, left: 60 },
         animated: true,
       });
     }
@@ -390,7 +390,7 @@ export const LiveMap = memo(function LiveMap({
       const sampled = pts.filter((_, i) => i % stride === 0);
       if (sampled[sampled.length - 1] !== pts[pts.length - 1]) sampled.push(pts[pts.length - 1]);
       mapRef.current.fitToCoordinates(sampled, {
-        edgePadding: { top: 80, right: 60, bottom: 120, left: 60 }, animated: true,
+        edgePadding: { top: 96, right: 60, bottom: 130, left: 60 }, animated: true,
       });
       return;
     }
@@ -399,7 +399,7 @@ export const LiveMap = memo(function LiveMap({
       mapRef.current.fitToCoordinates([
         { latitude: pickupCoords.lat, longitude: pickupCoords.lng },
         { latitude: dropCoords.lat,   longitude: dropCoords.lng   },
-      ], { edgePadding: { top: 80, right: 60, bottom: 120, left: 60 }, animated: true });
+      ], { edgePadding: { top: 96, right: 60, bottom: 130, left: 60 }, animated: true });
       return;
     }
     // Fallback → center on user/driver

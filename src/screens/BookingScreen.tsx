@@ -11,9 +11,9 @@ import { apiGet, externalGet } from '../../api';
 import { useNearbyDrivers } from '../offline';
 
 const SCREEN_H   = Dimensions.get('window').height;
-const MAP_BIG    = Math.floor(SCREEN_H * 0.65);
-const MAP_MED    = Math.floor(SCREEN_H * 0.38);
-const MAP_SMALL  = Platform.OS === 'android' ? 110 : 130;
+const DRAWER_COMPACT = Math.round(SCREEN_H * 0.40); // route confirmed — 60% map visible
+const DRAWER_INPUT   = Math.round(SCREEN_H * 0.56); // searching / editing
+const DRAWER_BROWSE  = Math.round(SCREEN_H * 0.58); // expanded to browse vehicles
 
 const SWIPE_H     = 58;  // swipe-to-book track height
 const SWIPE_THUMB = 46;  // draggable thumb diameter
@@ -345,33 +345,45 @@ export function BookingScreen() {
     return () => loop.stop();
   }, []);
 
-  // ── Map height state machine ──────────────────────────────────────────────
-  //  keyboard open → MAP_SMALL  |  route set → MAP_BIG  |  searching → MAP_MED
-  const [inputFocused, setInputFocused] = useState(false);
-  const bothSet    = !!(pickupCoords && dropCoords);
+  // ── Drawer state machine ──────────────────────────────────────────────────
+  //  DRAWER_INPUT when searching | DRAWER_COMPACT when route confirmed | DRAWER_BROWSE when expanded
+  const [inputFocused, setInputFocused]     = useState(false);
+  const [drawerExpanded, setDrawerExpanded] = useState(false);
+  const bothSet = !!(pickupCoords && dropCoords);
 
-  const mapHeightAnim = useRef(new Animated.Value(MAP_MED)).current;
+  // Auto-collapse drawer when route is confirmed so map becomes prominent
   useEffect(() => {
-    const target = inputFocused ? MAP_SMALL
-      : bothSet                 ? MAP_BIG
-      : MAP_MED;
-    Animated.spring(mapHeightAnim, { toValue: target, friction: 9, tension: 70, useNativeDriver: false }).start();
-  }, [inputFocused, bothSet]);
+    if (bothSet) setDrawerExpanded(false);
+  }, [bothSet]);
 
-  // ── fitKey — re-triggers fitToCoordinates when map expands or route changes ──
+  const drawerHeightAnim = useRef(new Animated.Value(DRAWER_INPUT)).current;
+  useEffect(() => {
+    const target = !bothSet || inputFocused ? DRAWER_INPUT
+      : drawerExpanded                       ? DRAWER_BROWSE
+      : DRAWER_COMPACT;
+    Animated.spring(drawerHeightAnim, { toValue: target, friction: 8, tension: 85, useNativeDriver: false }).start();
+  }, [bothSet, inputFocused, drawerExpanded]);
+
+  // ── fitKey — re-triggers fitToCoordinates on route/map changes ───────────
   const [fitKey, setFitKey] = useState(0);
+  // Fit 720ms after both markers are set (drawer spring settles ~700ms)
   useEffect(() => {
     if (!bothSet) return;
-    // Fire 720ms after markers set (map spring settles ~700ms)
     const t = setTimeout(() => setFitKey(k => k + 1), 720);
     return () => clearTimeout(t);
   }, [bothSet, pickupCoords?.lat, pickupCoords?.lng, dropCoords?.lat, dropCoords?.lng]);
-  // Also re-fit 350ms after route polyline arrives — uses sampled route coords for tighter fit
+  // Re-fit 350ms after route polyline arrives — tighter fit using actual route coords
   useEffect(() => {
     if (!routeEta) return;
     const t = setTimeout(() => setFitKey(k => k + 1), 350);
     return () => clearTimeout(t);
   }, [routeEta]);
+  // Re-fit when drawer collapses (map grows, route should fill the new space)
+  useEffect(() => {
+    if (!bothSet || drawerExpanded) return;
+    const t = setTimeout(() => setFitKey(k => k + 1), 850);
+    return () => clearTimeout(t);
+  }, [bothSet, drawerExpanded]);
 
   // ── Route badge animation — slides up when route + ETA are ready ──────────
   const routeBadgeAnim = useRef(new Animated.Value(0)).current;
@@ -383,20 +395,12 @@ export function BookingScreen() {
     }
   }, [bothSet, routeEta]);
 
-  // Sheet entrance: fade + slide-up on mount
-  const sheetAnim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.timing(sheetAnim, { toValue: 1, duration: 380, useNativeDriver: true }).start();
-  }, []);
-  const sheetOpacity = sheetAnim;
-  const sheetTranslate = sheetAnim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] });
-
   return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <DotBG />
 
-      {/* ─── Map + floating transparent header ───────────── */}
-      <Animated.View style={{ height: mapHeightAnim, width: '100%' }}>
+      {/* ─── Map — flex:1 fills all space above the drawer ─── */}
+      <View style={{ flex: 1 }}>
         <LiveMap
           pickupCoords={pickupCoords}
           dropCoords={dropCoords}
@@ -470,25 +474,34 @@ export function BookingScreen() {
           </View>
         </Animated.View>
 
-      </Animated.View>
+      </View>
 
-      {/* ─── Bottom sheet ─── */}
-      <Animated.View style={{ flex: 1, opacity: sheetOpacity, transform: [{ translateY: sheetTranslate }] }}>
+      {/* ─── Bottom drawer — slides up/down over map ─── */}
+      <Animated.View style={{ height: drawerHeightAnim }}>
       <GlassPanel intensity={22} style={{
         flex: 1,
         borderTopLeftRadius: 28,
         borderTopRightRadius: 28,
         marginTop: -28,
         overflow: 'hidden',
-        elevation: 14,
+        elevation: 20,
         shadowColor: C.pink,
-        shadowOpacity: 0.10,
-        shadowRadius: 18,
+        shadowOpacity: 0.14,
+        shadowRadius: 20,
       }}>
-        {/* Drag handle */}
-        <View style={{ alignItems: 'center', paddingVertical: 10 }}>
+        {/* Drag handle — tap to expand/collapse when route is confirmed */}
+        <TouchableOpacity
+          activeOpacity={bothSet && !inputFocused ? 0.7 : 1}
+          onPress={() => { if (bothSet && !inputFocused) setDrawerExpanded(e => !e); }}
+          style={{ alignItems: 'center', paddingTop: 10, paddingBottom: bothSet && !inputFocused ? 2 : 10 }}>
           <View style={{ width: 48, height: 4, borderRadius: 2, backgroundColor: C.glassB2 }} />
-        </View>
+          {bothSet && !inputFocused && (
+            <Ionicons
+              name={drawerExpanded ? 'chevron-down' : 'chevron-up'}
+              size={15} color={C.textDim}
+              style={{ marginTop: 5 }} />
+          )}
+        </TouchableOpacity>
 
         <ScrollView
           showsVerticalScrollIndicator={false}
