@@ -260,16 +260,6 @@ export function BookingScreen() {
     if (loading) Animated.spring(swipeX, { toValue: 0, useNativeDriver: false }).start();
   }, [loading]);
 
-  // Haversine distance in km between two coords
-  const haversineKm = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
-    const R = 6371;
-    const dLat = (b.lat - a.lat) * Math.PI / 180;
-    const dLng = (b.lng - a.lng) * Math.PI / 180;
-    const s = Math.sin(dLat / 2) ** 2
-      + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
-    return R * 2 * Math.asin(Math.sqrt(s));
-  };
-
   // Reverse geocode a coordinate to a human-readable address
   const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
     try {
@@ -304,15 +294,6 @@ export function BookingScreen() {
     setPickupCoords(coords);
     setFareEstimates({}); setEta(''); lastFetchKey.current = '';
   };
-
-  // Draggable drop pin — re-geocode on drag end
-  const handleDropDragEnd = async (coords: { lat: number; lng: number }) => {
-    const addr = await reverseGeocode(coords.lat, coords.lng);
-    setDrop(addr);
-    setDropCoords(coords);
-    setFareEstimates({}); setEta(''); lastFetchKey.current = '';
-  };
-
 
   // ── Route ETA (from LiveMap directions API callback) ─────────────────────────
   const [routeEta, setRouteEta]   = useState('');
@@ -1156,7 +1137,7 @@ export function BookingScreen() {
 
               {/* Promo code toggle */}
               <TouchableOpacity
-                onPress={() => setShowPromoInput((p: boolean) => !p)}
+                onPress={() => setShowPromoInput(!showPromoInput)}
                 style={{ marginHorizontal: 16, marginBottom: showPromoInput ? 0 : 14, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Text style={{ fontSize: 13, fontWeight: '700', color: C.pink }}>🏷️ Have a promo code?</Text>
                 <Ionicons name={showPromoInput ? 'chevron-up' : 'chevron-down'} size={14} color={C.pink} />

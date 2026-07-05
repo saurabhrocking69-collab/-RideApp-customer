@@ -145,6 +145,28 @@ function DragHint({ visible, isAdjust }: { visible: boolean; isAdjust?: boolean 
   );
 }
 
+// ── "You are here" GPS marker ─────────────────────────────────────────────────
+function YouMarker() {
+  return (
+    <View style={{ alignItems: 'center' }}>
+      <View style={{
+        backgroundColor: 'rgba(255,255,255,0.97)',
+        borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2,
+        marginBottom: 4, borderWidth: 1.5, borderColor: C.pink,
+        elevation: 4,
+        shadowColor: C.pink, shadowOpacity: 0.22, shadowRadius: 4,
+      }}>
+        <Text style={{ fontSize: 10, fontWeight: '900', color: C.pink, letterSpacing: 0.4 }}>You</Text>
+      </View>
+      <View style={{
+        width: 14, height: 14, borderRadius: 7,
+        backgroundColor: '#3B82F6', borderWidth: 2.5, borderColor: '#fff',
+        elevation: 6, shadowColor: '#3B82F6', shadowOpacity: 0.55, shadowRadius: 6,
+      }} />
+    </View>
+  );
+}
+
 // ── Re-center button ──────────────────────────────────────────────────────────
 function RecenterBtn({ onPress }: { onPress: () => void }) {
   return (
@@ -480,30 +502,15 @@ export const LiveMap = memo(function LiveMap({
           />
         )}
 
-        {/* 2km green circle — around drop marker (always) or adjust origin (in drag mode) */}
-        {(dropCoords || adjustOrigin) && (
-          <Circle
-            center={{
-              latitude: (adjustOrigin ?? dropCoords)!.lat,
-              longitude: (adjustOrigin ?? dropCoords)!.lng,
-            }}
-            radius={2000}
-            fillColor="rgba(5,150,105,0.05)"
-            strokeColor="rgba(5,150,105,0.50)"
-            strokeWidth={2}
-          />
-        )}
-
-        {/* Original drop position marker during adjust mode — stays at center of green circle */}
-        {adjustOrigin && !dropCoords && (
+        {/* "You" GPS marker — blue dot with label */}
+        {userLat != null && userLng != null && (
           <Marker
-            coordinate={{ latitude: adjustOrigin.lat, longitude: adjustOrigin.lng }}
+            coordinate={{ latitude: userLat, longitude: userLng }}
             anchor={{ x: 0.5, y: 1 }}
             tracksViewChanges={false}
-            zIndex={10}
-            opacity={0.55}
+            zIndex={5}
           >
-            <DropMarker dragging={false} />
+            <YouMarker />
           </Marker>
         )}
 
