@@ -452,14 +452,13 @@ export function BookingScreen() {
     Animated.spring(mapHeightAnim, { toValue: target, friction: 9, tension: 70, useNativeDriver: false }).start();
   }, [inputFocused, adjustMode, bothSet, vehicleBrowsing]);
 
-  // ── fitKey — re-triggers fitToCoordinates when map expands ──
+  // ── fitKey — re-triggers fitToCoordinates when map expands or route changes ──
   const [fitKey, setFitKey] = useState(0);
   useEffect(() => {
-    // Fire when map is about to expand: route just set, or vehicle selected (browsing→false)
-    if (!bothSet || vehicleBrowsing) return;
+    if (!bothSet || vehicleBrowsing || adjustMode) return;
     const t = setTimeout(() => setFitKey(k => k + 1), 720);
     return () => clearTimeout(t);
-  }, [bothSet, vehicleBrowsing]);
+  }, [bothSet, vehicleBrowsing, adjustMode, pickupCoords?.lat, pickupCoords?.lng, dropCoords?.lat, dropCoords?.lng]);
 
   // Sheet entrance: fade + slide-up on mount
   const sheetAnim = useRef(new Animated.Value(0)).current;
@@ -481,7 +480,8 @@ export function BookingScreen() {
           userLat={userCoords?.latitude || userCoords?.lat}
           userLng={userCoords?.longitude || userCoords?.lng}
           userAccuracy={(userCoords as any)?.accuracy}
-          height={MAP_BIG}
+          fill={true}
+          cameraTarget={adjustOrigin}
           mode="booking"
           showRoute={!!(pickupCoords && dropCoords)}
           nearbyDrivers={!pickupCoords || !dropCoords ? nearbyDrivers : []}
@@ -494,7 +494,6 @@ export function BookingScreen() {
           onRegionChange={pickupCoords && !dropCoords
             ? (coords) => {
                 centerCoordsRef.current = coords;
-                // Debounce dragCenter state — avoid re-rendering on every drag frame
                 if (dragTimerRef.current) clearTimeout(dragTimerRef.current);
                 dragTimerRef.current = setTimeout(() => setDragCenter(coords), 120);
               }

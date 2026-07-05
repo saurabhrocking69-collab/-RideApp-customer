@@ -187,7 +187,9 @@ export interface LiveMapProps {
   skipAutoFit?: boolean;
   onRouteInfo?: (eta: string, dist: string) => void;
   fitKey?: number;
-  adjustOrigin?: { lat: number; lng: number } | null; // center of 2km green circle in adjust mode
+  adjustOrigin?: { lat: number; lng: number } | null;
+  fill?: boolean;           // flex:1 to fill parent instead of fixed height
+  cameraTarget?: { lat: number; lng: number } | null; // fly camera here when set
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -214,6 +216,8 @@ export const LiveMap = memo(function LiveMap({
   onRouteInfo,
   fitKey = 0,
   adjustOrigin = null,
+  fill = false,
+  cameraTarget = null,
 }: LiveMapProps) {
   const mapRef = useRef<MapView>(null);
   const prevPos = useRef<{ lat: number; lng: number } | null>(null);
@@ -356,6 +360,20 @@ export const LiveMap = memo(function LiveMap({
     );
   };
 
+  // Fly camera to cameraTarget (e.g. entering adjust mode — center on original drop)
+  useEffect(() => {
+    if (!cameraTarget || !mapRef.current) return;
+    const t = setTimeout(() => {
+      mapRef.current?.animateToRegion({
+        latitude: cameraTarget.lat,
+        longitude: cameraTarget.lng,
+        latitudeDelta: 0.036,   // ~4km view so 2km green circle is visible
+        longitudeDelta: 0.036,
+      }, 650);
+    }, 180);
+    return () => clearTimeout(t);
+  }, [cameraTarget?.lat, cameraTarget?.lng]);
+
   const centerLat = pickupCoords?.lat || userLat || 26.8467;
   const centerLng = pickupCoords?.lng || userLng || 80.9462;
 
@@ -376,7 +394,7 @@ export const LiveMap = memo(function LiveMap({
   }
 
   return (
-    <View style={{ height, width: '100%', overflow: 'hidden' }}>
+    <View style={fill ? { flex: 1, width: '100%', overflow: 'hidden' } : { height, width: '100%', overflow: 'hidden' }}>
       <MapView
         ref={mapRef}
         provider={PROVIDER_GOOGLE}
@@ -474,6 +492,19 @@ export const LiveMap = memo(function LiveMap({
             strokeColor="rgba(5,150,105,0.50)"
             strokeWidth={2}
           />
+        )}
+
+        {/* Original drop position marker during adjust mode — stays at center of green circle */}
+        {adjustOrigin && !dropCoords && (
+          <Marker
+            coordinate={{ latitude: adjustOrigin.lat, longitude: adjustOrigin.lng }}
+            anchor={{ x: 0.5, y: 1 }}
+            tracksViewChanges={false}
+            zIndex={10}
+            opacity={0.55}
+          >
+            <DropMarker dragging={false} />
+          </Marker>
         )}
 
         {/* Nearby unbooked drivers (booking mode only, max 20) */}
