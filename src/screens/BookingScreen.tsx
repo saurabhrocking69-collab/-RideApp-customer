@@ -109,6 +109,7 @@ export function BookingScreen() {
   const [placesLoading, setPlacesLoading] = useState(false);
   const [surgeMultiplier, setSurgeMultiplier] = useState(1.0);
   const [surgeLabel, setSurgeLabel]           = useState<string | null>(null);
+  const [vehicleBrowsing, setVehicleBrowsing] = useState(false);
   const [fareHistoryEntry, setFareHistoryEntry] = useState<{ fare: number; date: string } | null>(null);
   // Load fare history for current pickup+drop+rideType combo
   useEffect(() => {
