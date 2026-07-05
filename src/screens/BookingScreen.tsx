@@ -408,19 +408,13 @@ export function BookingScreen() {
 
   // ── Map height state machine ──────────────────────────────────────────────
   //
-  //  inDragMode  = pickup set + no drop → LiveMap shows teardrop pin (always)
-  //  adjustMode  = user EXPLICITLY tapped "Drag to adjust" → MAP_BIG + drag panel
-  //                (inDragMode is true here too, but adjustMode is the UI driver)
-  //
   //  Priority (high → low):
-  //    1. inputFocused   → MAP_SMALL   (keyboard always wins — show suggestions)
-  //    2. adjustMode     → MAP_ADJUST  (drag mode: 77% map, minimal sheet below)
-  //    3. !bothSet       → MAP_MED     (initial state: pickup set, searching drop)
-  //    4. vehicleBrowsing→ MAP_SMALL   (user scrolling vehicles)
-  //    5. default        → MAP_BIG     (route set, vehicle selected)
-  const [inputFocused,    setInputFocused]    = useState(false);
-  const [vehicleBrowsing, setVehicleBrowsing] = useState(false);
-  const [adjustMode,      setAdjustMode]      = useState(false);
+  //    1. inputFocused → MAP_SMALL  (keyboard always wins — show suggestions)
+  //    2. adjustMode   → MAP_ADJUST (full-screen drag overlay)
+  //    3. !bothSet     → MAP_MED    (searching drop → medium map)
+  //    4. default      → MAP_BIG    (route confirmed — show full route)
+  const [inputFocused, setInputFocused] = useState(false);
+  const [adjustMode,   setAdjustMode]   = useState(false);
   const [adjustOrigin,    setAdjustOrigin]    = useState<{ lat: number; lng: number } | null>(null);
   const bothSet    = !!(pickupCoords && dropCoords);
 
@@ -436,29 +430,27 @@ export function BookingScreen() {
   }, [dragCenter?.lat, dragCenter?.lng, adjustMode]);
   const inDragMode = !!(pickupCoords && !dropCoords); // for LiveMap teardrop pin prop only
 
-  // Reset adjust + browse mode when route is cleared or completed
+  // Reset adjust mode when route is cleared or completed
   useEffect(() => {
-    if (!bothSet) setVehicleBrowsing(false);
     if (bothSet || !pickupCoords) { setAdjustMode(false); setAdjustOrigin(null); }
   }, [bothSet, pickupCoords]);
 
   const mapHeightAnim = useRef(new Animated.Value(MAP_MED)).current;
   useEffect(() => {
-    const target = inputFocused   ? MAP_SMALL   // keyboard always collapses map
-      : adjustMode                ? MAP_ADJUST  // drag mode → 77% map, tiny sheet
-      : !bothSet                  ? MAP_MED     // searching drop → medium
-      : vehicleBrowsing           ? MAP_SMALL   // browsing vehicles
-      : MAP_BIG;                                // route confirmed / vehicle selected
+    const target = inputFocused ? MAP_SMALL   // keyboard — show suggestions
+      : adjustMode              ? MAP_ADJUST  // full-screen drag overlay
+      : !bothSet                ? MAP_MED     // searching drop → medium map
+      : MAP_BIG;                              // route confirmed — always show full route
     Animated.spring(mapHeightAnim, { toValue: target, friction: 9, tension: 70, useNativeDriver: false }).start();
-  }, [inputFocused, adjustMode, bothSet, vehicleBrowsing]);
+  }, [inputFocused, adjustMode, bothSet]);
 
   // ── fitKey — re-triggers fitToCoordinates when map expands or route changes ──
   const [fitKey, setFitKey] = useState(0);
   useEffect(() => {
-    if (!bothSet || vehicleBrowsing || adjustMode) return;
+    if (!bothSet || adjustMode) return;
     const t = setTimeout(() => setFitKey(k => k + 1), 720);
     return () => clearTimeout(t);
-  }, [bothSet, vehicleBrowsing, adjustMode, pickupCoords?.lat, pickupCoords?.lng, dropCoords?.lat, dropCoords?.lng]);
+  }, [bothSet, adjustMode, pickupCoords?.lat, pickupCoords?.lng, dropCoords?.lat, dropCoords?.lng]);
 
   // Sheet entrance: fade + slide-up on mount
   const sheetAnim = useRef(new Animated.Value(0)).current;
@@ -634,12 +626,11 @@ export function BookingScreen() {
         })()}
       </Animated.View>
 
-      {/* ─── Bottom sheet — glass panel floating over map ─── */}
-      <Animated.View style={{
-        flex: 1,
-        opacity: sheetOpacity,
-        transform: [{ translateY: sheetTranslate }],
-      }}>
+      {/* ─── Bottom sheet — hidden entirely in adjustMode so map gets full screen ─── */}
+      <Animated.View style={[
+        { flex: 1, opacity: sheetOpacity, transform: [{ translateY: sheetTranslate }] },
+        adjustMode && { flex: 0, height: 0, overflow: 'hidden' },
+      ]}>
       <GlassPanel intensity={22} style={{
         flex: 1,
         borderTopLeftRadius: 28,
@@ -660,7 +651,6 @@ export function BookingScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets
-          onScrollBeginDrag={() => { if (bothSet) setVehicleBrowsing(true); }}
           contentContainerStyle={{ paddingBottom: 16, paddingHorizontal: 14 }}>
 
           {/* ─── Location card — hidden while dragging so map gets full space ─── */}
