@@ -58,35 +58,32 @@ jobs:
             && echo "google-services.json present in android/app" \
             || (echo "ERROR: Missing from android/app — prebuild did not copy it"; exit 1)
 
-      # Disable R8 — native modules (MMKV, maps, webview) lack proguard rules
-      # and R8 strips their JNI bridge classes, crashing the app on startup.
+      # R8 strips expo-modules-core Kotlin internals (AnyTypeCache etc.) causing
+      # NoClassDefFoundError at startup. Disable minification and print debug
+      # info so we can see exactly what file/lines are being patched.
       - name: Disable R8 minification in release build
         run: |
-          python3 << 'PYEOF'
-import re, os, sys
-
-# Expo may generate Groovy DSL (build.gradle) or Kotlin DSL (build.gradle.kts)
-for path in ['android/app/build.gradle.kts', 'android/app/build.gradle']:
-    if os.path.exists(path):
-        print(f'Found: {path}')
-        with open(path) as f:
-            content = f.read()
-        # Groovy: minifyEnabled <expr>
-        # Kotlin: isMinifyEnabled = <expr>
-        patched = re.sub(r'minifyEnabled\s*=?\s*\S+', 'minifyEnabled false', content)
-        patched = re.sub(r'isMinifyEnabled\s*=\s*\S+', 'isMinifyEnabled = false', patched)
-        if patched == content:
-            print(f'WARNING: minifyEnabled not found in {path}')
-            print('Relevant lines:', [l for l in content.splitlines() if 'minify' in l.lower() or 'proguard' in l.lower()])
-        else:
-            with open(path, 'w') as f:
-                f.write(patched)
-            print(f'R8 disabled in {path}')
-        break
-else:
-    print('ERROR: No build.gradle found', file=sys.stderr)
-    sys.exit(1)
-PYEOF
+          echo "=== build.gradle files found ==="
+          find android -name "build.gradle*" | sort
+          echo "=== patching ==="
+          # Groovy DSL
+          if [ -f android/app/build.gradle ]; then
+            echo "--- minify lines before ---"
+            grep -n "minify\|Proguard\|proguard\|R8" android/app/build.gradle || echo "(none found)"
+            sed -i 's/minifyEnabled enableProguardInReleaseBuilds/minifyEnabled false/g' android/app/build.gradle
+            sed -i 's/minifyEnabled true/minifyEnabled false/g' android/app/build.gradle
+            echo "--- minify lines after ---"
+            grep -n "minify\|Proguard\|proguard" android/app/build.gradle || echo "(none found)"
+          fi
+          # Kotlin DSL
+          if [ -f android/app/build.gradle.kts ]; then
+            echo "--- minify lines before (kts) ---"
+            grep -n "minify\|Proguard\|proguard\|R8" android/app/build.gradle.kts || echo "(none found)"
+            sed -i 's/isMinifyEnabled = true/isMinifyEnabled = false/g' android/app/build.gradle.kts
+            sed -i 's/isMinifyEnabled =.*/isMinifyEnabled = false/g' android/app/build.gradle.kts
+            echo "--- minify lines after (kts) ---"
+            grep -n "minify\|Proguard\|proguard" android/app/build.gradle.kts || echo "(none found)"
+          fi
 
       # Generate a fresh keystore every build — alias and passwords are
       # hardcoded so there is never a secret/alias mismatch at sign time.

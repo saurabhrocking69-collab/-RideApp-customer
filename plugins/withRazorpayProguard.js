@@ -33,6 +33,11 @@ const NATIVE_MODULE_RULES = `
 -dontwarn com.google.firebase.**
 -dontwarn com.google.android.gms.**
 
+# ─── expo-modules-core (Kotlin internals stripped by R8) ─────────────────────
+-keep class expo.modules.** { *; }
+-keepclassmembers class expo.modules.** { *; }
+-dontwarn expo.modules.**
+
 # ─── JSI / Hermes / JNI (React Native core) ──────────────────────────────────
 -keep class com.facebook.hermes.** { *; }
 -keep class com.facebook.jni.** { *; }
