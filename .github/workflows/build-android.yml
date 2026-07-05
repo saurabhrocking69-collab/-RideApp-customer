@@ -40,17 +40,28 @@ jobs:
 
       # google-services.json is gitignored — inject from secret before prebuild
       # so Firebase initialises correctly at app startup.
+      # Secret is stored as raw JSON (not base64) to avoid encoding issues.
       - name: Inject google-services.json
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
-          printf '%s' "${{ secrets.GOOGLE_SERVICES_JSON }}" | tr -d '[:space:]' | base64 -d > google-services.json
-          python3 -m json.tool google-services.json > /dev/null \
-            && echo "✅ google-services.json valid JSON ($(wc -c < google-services.json) bytes)" \
-            || (echo "❌ google-services.json invalid or empty — check GOOGLE_SERVICES_JSON secret"; exit 1)
-          PKG=$(python3 -c "import json; d=json.load(open('google-services.json')); print(d['client'][0]['client_info']['android_client_info']['package_name'])")
-          echo "Package in secret: $PKG"
-          [ "$PKG" = "com.saurabhspero.rideappmobile3" ] \
-            && echo "✅ Package matches app" \
-            || (echo "❌ Package mismatch — google-services.json is for '$PKG', not 'com.saurabhspero.rideappmobile3'"; exit 1)
+          python3 -c "
+import os, json, sys
+content = os.environ.get('GOOGLE_SERVICES_JSON', '')
+if not content.strip():
+    print('❌ GOOGLE_SERVICES_JSON secret is empty'); sys.exit(1)
+try:
+    d = json.loads(content)
+except json.JSONDecodeError as e:
+    print(f'❌ Invalid JSON: {e}'); sys.exit(1)
+pkg = d['client'][0]['client_info']['android_client_info']['package_name']
+print(f'Package in secret: {pkg}')
+if pkg != 'com.saurabhspero.rideappmobile3':
+    print(f'❌ Package mismatch — expected com.saurabhspero.rideappmobile3'); sys.exit(1)
+with open('google-services.json', 'w') as f:
+    json.dump(d, f, indent=2)
+print(f'✅ google-services.json written ({len(content)} chars, package OK)')
+"
 
       - name: Expo Prebuild
         run: npx expo prebuild --platform android --clean
