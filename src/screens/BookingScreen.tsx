@@ -290,16 +290,20 @@ export function BookingScreen() {
     setDropSugg([]);
     originalDropRef.current = null;
     setDragCenter(null);
+    setAdjustMode(false);
+    setAdjustOrigin(null);
     setGeoLoading(false);
   };
 
-  // Enter drag-to-adjust mode: save original drop so 1km guard can reference it
+  // Enter drag-to-adjust mode: save original drop so 1km guard + green circle can reference it
   const enterAdjustMode = () => {
     if (dropCoords) {
       centerCoordsRef.current  = { ...dropCoords };
       originalDropRef.current  = { ...dropCoords };
       setDragCenter({ ...dropCoords });
+      setAdjustOrigin({ ...dropCoords }); // drives 1km green circle on map
     }
+    setAdjustMode(true);
     setDropCoords(null);
     setFareEstimates({});
     setEta('');
@@ -356,33 +360,40 @@ export function BookingScreen() {
     return () => loop.stop();
   }, []);
 
-  // ── Map height state machine ──────────────────────
-  // Phases:
-  //   !bothSet           → MAP_MED  (picking locations)
-  //   bothSet, browsing  → MAP_SMALL (user scrolled into vehicle list)
-  //   bothSet, !browsing → MAP_BIG  (route set OR vehicle just selected — confirmation peak)
+  // ── Map height state machine ──────────────────────────────────────────────
+  //
+  //  inDragMode  = pickup set + no drop → LiveMap shows teardrop pin (always)
+  //  adjustMode  = user EXPLICITLY tapped "Drag to adjust" → MAP_BIG + drag panel
+  //                (inDragMode is true here too, but adjustMode is the UI driver)
+  //
+  //  Priority (high → low):
+  //    1. inputFocused   → MAP_SMALL  (keyboard always wins — show suggestions)
+  //    2. adjustMode     → MAP_BIG    (explicit drag-to-adjust: big map to drag)
+  //    3. !bothSet       → MAP_MED    (initial state: pickup set, searching drop)
+  //    4. vehicleBrowsing→ MAP_SMALL  (user scrolling vehicles)
+  //    5. default        → MAP_BIG    (route set, vehicle selected)
   const [inputFocused,    setInputFocused]    = useState(false);
   const [vehicleBrowsing, setVehicleBrowsing] = useState(false);
+  const [adjustMode,      setAdjustMode]      = useState(false);
+  const [adjustOrigin,    setAdjustOrigin]    = useState<{ lat: number; lng: number } | null>(null);
   const bothSet    = !!(pickupCoords && dropCoords);
-  const inDragMode = !!(pickupCoords && !dropCoords);
+  const inDragMode = !!(pickupCoords && !dropCoords); // for LiveMap teardrop pin prop only
 
-  // Reset browse mode when route is cleared
-  useEffect(() => { if (!bothSet) setVehicleBrowsing(false); }, [bothSet]);
+  // Reset adjust + browse mode when route is cleared or completed
+  useEffect(() => {
+    if (!bothSet) setVehicleBrowsing(false);
+    if (bothSet || !pickupCoords) { setAdjustMode(false); setAdjustOrigin(null); }
+  }, [bothSet, pickupCoords]);
 
   const mapHeightAnim = useRef(new Animated.Value(MAP_MED)).current;
   useEffect(() => {
-    // Priority: drag mode → always big so user can see map clearly
-    const target = inDragMode
-      ? MAP_BIG
-      : inputFocused
-        ? MAP_SMALL
-        : !bothSet
-          ? MAP_MED
-          : vehicleBrowsing
-            ? MAP_SMALL
-            : MAP_BIG;
+    const target = inputFocused   ? MAP_SMALL   // keyboard always collapses map
+      : adjustMode                ? MAP_BIG     // explicit drag-adjust → full map
+      : !bothSet                  ? MAP_MED     // searching drop → medium
+      : vehicleBrowsing           ? MAP_SMALL   // browsing vehicles
+      : MAP_BIG;                                // route confirmed / vehicle selected
     Animated.spring(mapHeightAnim, { toValue: target, friction: 9, tension: 70, useNativeDriver: false }).start();
-  }, [inDragMode, inputFocused, bothSet, vehicleBrowsing]);
+  }, [inputFocused, adjustMode, bothSet, vehicleBrowsing]);
 
   // ── fitKey — re-triggers fitToCoordinates when map expands ──
   const [fitKey, setFitKey] = useState(0);
@@ -431,9 +442,10 @@ export function BookingScreen() {
                 dragTimerRef.current = setTimeout(() => setDragCenter(coords), 120);
               }
             : undefined}
-          skipAutoFit={!!(pickupCoords && !dropCoords)}
+          skipAutoFit={adjustMode}
           onRouteInfo={(et, dt) => { setRouteEta(et); setRouteDist(dt); }}
           fitKey={fitKey}
+          adjustOrigin={adjustOrigin}
         />
         <MapOverlay hasRoute={!!(pickupCoords && dropCoords)} pickup={pickup} drop={drop} />
 
@@ -819,7 +831,7 @@ export function BookingScreen() {
           )}
 
           {/* ─── Drag mode status panel ─────────────────────────────────────────── */}
-          {inDragMode && (() => {
+          {adjustMode && (() => {
             const dragDist = dragCenter && originalDropRef.current
               ? haversineKm(dragCenter, originalDropRef.current) : null;
             const tooFar = dragDist !== null && dragDist > 1;
@@ -931,7 +943,7 @@ export function BookingScreen() {
           ) : null}
 
           {/* ─── Vehicle + fare + promo — hidden in drag mode ───────────────────── */}
-          {!inDragMode && <>
+          {!adjustMode && <>
           <Text style={{ fontSize: 11, fontWeight: '900', color: C.textDim, letterSpacing: 1.4, marginBottom: 10, marginTop: 2, marginLeft: 2 }}>
             CHOOSE VEHICLE
           </Text>
@@ -1281,11 +1293,11 @@ export function BookingScreen() {
           ) : null}
 
           {result ? <Text style={[s.err, { marginTop: 12 }]}>{result}</Text> : null}
-          </>}{/* end !inDragMode */}
+          </>}{/* end !adjustMode */}
         </ScrollView>
 
         {/* ─── Sticky bottom button — swaps between drag mode and book mode ─── */}
-        {inDragMode ? (() => {
+        {adjustMode ? (() => {
           const dragDist = dragCenter && originalDropRef.current
             ? haversineKm(dragCenter, originalDropRef.current) : null;
           const tooFar = dragDist !== null && dragDist > 1;
@@ -1359,7 +1371,7 @@ export function BookingScreen() {
           </Bouncy>
           </Animated.View>
         </View>
-        )}{/* end !inDragMode book button */}
+        )}{/* end !adjustMode book button */}
       </GlassPanel>
       </Animated.View>
 

@@ -130,7 +130,7 @@ function EtaChip({ eta, distance }: { eta: string; distance: string }) {
 }
 
 // ── "Drag to set drop" label hint ────────────────────────────────────────────
-function DragHint({ visible }: { visible: boolean }) {
+function DragHint({ visible, isAdjust }: { visible: boolean; isAdjust?: boolean }) {
   const opacity = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.timing(opacity, { toValue: visible ? 1 : 0, duration: 280, useNativeDriver: true }).start();
@@ -138,7 +138,9 @@ function DragHint({ visible }: { visible: boolean }) {
   return (
     <Animated.View style={[styles.tapHint, { opacity, bottom: 56 }]} pointerEvents="none">
       <Ionicons name="move" size={13} color="#fff" />
-      <Text style={styles.tapHintTxt}>Drag map to set drop location</Text>
+      <Text style={styles.tapHintTxt}>
+        {isAdjust ? 'Drag to fine-tune — stay inside green circle' : 'Drag map to set drop location'}
+      </Text>
     </Animated.View>
   );
 }
@@ -185,6 +187,7 @@ export interface LiveMapProps {
   skipAutoFit?: boolean;
   onRouteInfo?: (eta: string, dist: string) => void;
   fitKey?: number;
+  adjustOrigin?: { lat: number; lng: number } | null; // center of 1km green circle in adjust mode
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -210,6 +213,7 @@ export const LiveMap = memo(function LiveMap({
   skipAutoFit = false,
   onRouteInfo,
   fitKey = 0,
+  adjustOrigin = null,
 }: LiveMapProps) {
   const mapRef = useRef<MapView>(null);
   const prevPos = useRef<{ lat: number; lng: number } | null>(null);
@@ -458,6 +462,17 @@ export const LiveMap = memo(function LiveMap({
           />
         )}
 
+        {/* 1km adjust-range circle — shown when user is drag-adjusting their drop */}
+        {adjustOrigin && (
+          <Circle
+            center={{ latitude: adjustOrigin.lat, longitude: adjustOrigin.lng }}
+            radius={1000}
+            fillColor="rgba(5,150,105,0.06)"
+            strokeColor="rgba(5,150,105,0.55)"
+            strokeWidth={2}
+          />
+        )}
+
         {/* Nearby unbooked drivers (booking mode only, max 20) */}
         {mode === 'booking' && nearbyDrivers.slice(0, 20).map((nd, i) => (
           <Marker
@@ -562,7 +577,7 @@ export const LiveMap = memo(function LiveMap({
       {etaText && mode !== 'booking' ? <EtaChip eta={etaText} distance={distText} /> : null}
 
       {/* Drag hint */}
-      <DragHint visible={dropDragMode} />
+      <DragHint visible={dropDragMode} isAdjust={!!adjustOrigin} />
 
       {/* Re-center button — bottom right */}
       <RecenterBtn onPress={recenter} />
