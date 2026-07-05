@@ -838,7 +838,7 @@ export function BookingScreen() {
           ) : null}
 
           {/* ─── Vehicle + fare + promo ───────────────────────────────────────────── */}
-          {<>
+          <>
           <Text style={{ fontSize: 11, fontWeight: '900', color: C.textDim, letterSpacing: 1.4, marginBottom: 10, marginTop: 2, marginLeft: 2 }}>
             CHOOSE VEHICLE
           </Text>
@@ -1273,7 +1273,6 @@ export function BookingScreen() {
 
             </View>
           </Animated.View>
-        </View>
         </View>
       </GlassPanel>
       </Animated.View>
