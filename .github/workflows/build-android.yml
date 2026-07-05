@@ -2,82 +2,79 @@ name: Build Android APK
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
   build:
+    name: Build Android APK
     runs-on: ubuntu-latest
-    timeout-minutes: 60
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node 22
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
           distribution: 'temurin'
+          java-version: '17'
 
-      - name: Install dependencies
-        run: npm install
-
-      - name: Align expo package versions to SDK 54
-        run: npx expo install --fix
+      - name: Install NDK 27.1.12297006
+        run: |
+          for i in 1 2 3; do
+            echo "y" | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager "ndk;27.1.12297006" && break
+            echo "Retry $i — waiting 15s..."
+            sleep 15
+          done
 
       - name: Expo Prebuild
-        run: npx expo prebuild --platform android --clean --no-install
+        run: npx expo prebuild --platform android --clean
         env:
-          EXPO_NO_TELEMETRY: 1
+          CI: '1'
 
-      - name: Force legacy native-lib packaging
-        run: echo "expo.useLegacyPackaging=true" >> android/gradle.properties
-
-      - name: Build signed Release APK
+      - name: Setup signing keystore
+        working-directory: android/app
         run: |
-          KEYSTORE="$(realpath .github/debug.keystore)"
-          cd android
-          chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon \
-            -Pandroid.injected.signing.store.file="$KEYSTORE" \
-            -Pandroid.injected.signing.store.password=android \
-            -Pandroid.injected.signing.key.alias=androiddebugkey \
-            -Pandroid.injected.signing.key.password=android
+          if [ -n "${{ secrets.KEYSTORE_B64 }}" ]; then
+            echo "${{ secrets.KEYSTORE_B64 }}" | base64 -d > sppero.keystore
+          else
+            keytool -genkeypair -v \
+              -keystore sppero.keystore \
+              -alias sppero-key \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass sppero123 -keypass sppero123 \
+              -dname "CN=Sppero,O=Sppero,C=IN"
+          fi
+
+      - name: Build Release APK
+        working-directory: android
         env:
-          JAVA_OPTS: "-Xmx4g"
-
-      - name: Verify APK is signed + show size
+          KS_PASS: ${{ secrets.KEY_STORE_PASSWORD }}
+          K_PASS: ${{ secrets.KEY_PASSWORD }}
+          K_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
-          APK=android/app/build/outputs/apk/release/app-release.apk
-          echo "APK size: $(du -sh $APK)"
-          BUILD_TOOLS=$(ls $ANDROID_SDK_ROOT/build-tools/ | sort -V | tail -1)
-          $ANDROID_SDK_ROOT/build-tools/$BUILD_TOOLS/apksigner verify --verbose $APK | head -10
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file="$(pwd)/app/sppero.keystore" \
+            -Pandroid.injected.signing.store.password="${KS_PASS:-sppero123}" \
+            -Pandroid.injected.signing.key.alias="${K_ALIAS:-sppero-key}" \
+            -Pandroid.injected.signing.key.password="${K_PASS:-sppero123}" \
+            -PreactNativeArchitectures=arm64-v8a \
+            --no-daemon
 
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: sppero-release
-          path: android/app/build/outputs/apk/release/app-release.apk
+          name: sppero-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
           retention-days: 30
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        if: github.ref == 'refs/heads/main'
-        with:
-          tag_name: build-${{ github.run_number }}
-          name: "Sppero APK - Build ${{ github.run_number }}"
-          body: |
-            Auto-built from commit ${{ github.sha }}
-            Download the APK below and install on Android.
-          files: android/app/build/outputs/apk/release/app-release.apk
-          make_latest: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
