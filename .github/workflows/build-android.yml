@@ -43,32 +43,25 @@ jobs:
         env:
           CI: '1'
 
-      - name: Setup signing keystore
-        working-directory: android/app
+      # Generate a fresh keystore every build — alias and passwords are
+      # hardcoded so there is never a secret/alias mismatch at sign time.
+      - name: Generate signing keystore
         run: |
-          if [ -n "${{ secrets.KEYSTORE_B64 }}" ]; then
-            echo "${{ secrets.KEYSTORE_B64 }}" | base64 -d > sppero.keystore
-          else
-            keytool -genkeypair -v \
-              -keystore sppero.keystore \
-              -alias sppero-key \
-              -keyalg RSA -keysize 2048 -validity 10000 \
-              -storepass sppero123 -keypass sppero123 \
-              -dname "CN=Sppero,O=Sppero,C=IN"
-          fi
+          keytool -genkeypair -v \
+            -keystore android/app/release.keystore \
+            -alias release \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass android123 -keypass android123 \
+            -dname "CN=Sppero,O=Sppero,C=IN"
 
       - name: Build Release APK
         working-directory: android
-        env:
-          KS_PASS: ${{ secrets.KEY_STORE_PASSWORD }}
-          K_PASS: ${{ secrets.KEY_PASSWORD }}
-          K_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           ./gradlew assembleRelease \
-            -Pandroid.injected.signing.store.file="$(pwd)/app/sppero.keystore" \
-            -Pandroid.injected.signing.store.password="${KS_PASS:-sppero123}" \
-            -Pandroid.injected.signing.key.alias="${K_ALIAS:-sppero-key}" \
-            -Pandroid.injected.signing.key.password="${K_PASS:-sppero123}" \
+            -Pandroid.injected.signing.store.file="$(pwd)/app/release.keystore" \
+            -Pandroid.injected.signing.store.password="android123" \
+            -Pandroid.injected.signing.key.alias="release" \
+            -Pandroid.injected.signing.key.password="android123" \
             -PreactNativeArchitectures=arm64-v8a \
             --no-daemon
 
