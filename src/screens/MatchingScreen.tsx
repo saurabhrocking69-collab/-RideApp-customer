@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { Storage as AsyncStorage } from '../storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
-import { Bouncy, FloatingDots, GlassPanel, PulseView, SlideUp, SuccessBurst } from '../components/ui';
+import { Bouncy, FloatingDots, GlassPanel, PulseView, SlideUp } from '../components/ui';
 import { LiveMap } from '../components/LiveMap';
 import { s, C, T, SP, R, SHADOW } from '../styles';
 import { apiPost } from '../../api';
@@ -63,6 +63,50 @@ const V_ICONS: Record<string, string> = {
   auto: '🛺', car: '🚕', bike: '🏍️', eriksha: '🛵', luxury: '🚙', green_bike: '⚡', electric_auto: '🌿',
 };
 
+// ── 4-statement flip banner shown when driver is matched ───────────────────
+function BuddyMessages({ visible }: { visible: boolean }) {
+  const CARDS = [
+    { border: C.pinkBorder, bg: C.pinkGlass, icon: '🤝', text: 'Sppero Buddy is connected' },
+    { border: C.plumBorder, bg: C.plumGlass, icon: '🛡️', text: 'Sppero Buddy dedicated to your ride' },
+    { border: C.glassBorder, bg: C.glass, icon: '💬', text: 'Keep patience and talk' },
+    { border: C.greenBorder, bg: C.greenGlass, icon: '✨', text: 'Make safe and good journey' },
+  ];
+  const [idx, setIdx] = useState(0);
+  const flipAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!visible) return;
+    const iv = setInterval(() => {
+      Animated.timing(flipAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start(({ finished }) => {
+        if (!finished) return;
+        setIdx(p => (p + 1) % CARDS.length);
+        flipAnim.setValue(-1);
+        Animated.timing(flipAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start();
+      });
+    }, 3200);
+    return () => clearInterval(iv);
+  }, [visible]);
+
+  const rotateX = flipAnim.interpolate({
+    inputRange: [-1, 0, 1],
+    outputRange: ['-90deg', '0deg', '90deg'],
+  });
+  const card = CARDS[idx];
+  return (
+    <Animated.View style={{
+      marginHorizontal: 20, marginTop: 6, marginBottom: 6,
+      backgroundColor: card.bg, borderRadius: 12,
+      borderWidth: 1.5, borderColor: card.border,
+      paddingVertical: 11, paddingHorizontal: 16,
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      transform: [{ perspective: 700 }, { rotateX }],
+    }}>
+      <Text style={{ fontSize: 20 }}>{card.icon}</Text>
+      <Text style={{ color: C.text, fontSize: 13, fontWeight: '700', flex: 1 }}>{card.text}</Text>
+    </Animated.View>
+  );
+}
+
 export function MatchingScreen() {
   const {
     phone,
@@ -98,15 +142,6 @@ export function MatchingScreen() {
     setChatOrigin,
     driverCancelPopup, setDriverCancelPopup,
   } = useApp();
-
-  // ── SuccessBurst auto-hide ─────────────────────────────────────────────────
-  const [showBurst, setShowBurst] = useState(true);
-  useEffect(() => {
-    if (!rideData?.driver) { setShowBurst(true); return; }
-    setShowBurst(true);
-    const t = setTimeout(() => setShowBurst(false), 2000);
-    return () => clearTimeout(t);
-  }, [rideData?.driver?.id ?? rideData?.driver]);
 
   // ── Chat icon bounce ───────────────────────────────────────────────────────
   const chatBounceAnim = useRef(new Animated.Value(1)).current;
@@ -285,7 +320,7 @@ export function MatchingScreen() {
           {/* ═══════════════ DRIVER ASSIGNED STATE ═══════════════ */}
           {rideData?.driver ? (
             <>
-              {showBurst && <SuccessBurst />}
+              {!driverArrived && <BuddyMessages visible />}
 
               {/* ── Row 1: ETA / Arrived status  +  inline OTP ── */}
               <View style={{
