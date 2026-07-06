@@ -530,16 +530,48 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const activeRideId = await AsyncStorage.getItem('activeStdRideId').catch(() => null);
           if (activeRideId) {
             try {
-              const r = await fetch(`${API}/api/rides/${activeRideId}`);
-              const d = await r.json();
-              const st = d.ride?.status || d.status;
-              if (st === 'searching' || st === 'matched' || st === 'arrived') {
-                setRideData(d.ride || d); setScreen('matching');
-              } else if (st === 'started') {
-                setRideData(d.ride || d); setScreen('inride');
+              // /api/rides/status/:id is the correct endpoint (/:id doesn't exist)
+              const r    = await fetch(`${API}/api/rides/status/${activeRideId}`);
+              const d    = await r.json();
+              const ride = d.ride;
+              const st   = ride?.status;
+
+              if (st === 'searching' || st === 'matched' || st === 'arrived' || st === 'started') {
+                // Reconstruct nested driver object from flat DB columns returned by status endpoint
+                const driver = ride.driver_name ? {
+                  name:          ride.driver_name,
+                  vehicle_no:    ride.vehicle_no,
+                  vehicle_brand: ride.vehicle_brand,
+                  vehicle_model: ride.vehicle_model,
+                  phone:         ride.driver_phone_masked,
+                  photo:         ride.driver_photo,
+                  rating:        ride.driver_rating,
+                  upi_id:        ride.driver_upi_id,
+                } : null;
+
+                setRideData({
+                  ...ride,
+                  ride_id:  ride.ride_id ?? ride.id,   // status endpoint uses 'id'; app uses 'ride_id'
+                  startOtp: st === 'started' ? '' : (ride.start_otp || ''),  // snake_case → camelCase
+                  driver,
+                });
+
+                // Restore pickup/drop strings + map coords
+                if (ride.pickup)        setPickup(ride.pickup);
+                if (ride.drop_location) setDrop(ride.drop_location);
+                if (ride.pickup_lat && ride.pickup_lng)
+                  setPickupCoords({ lat: parseFloat(ride.pickup_lat), lng: parseFloat(ride.pickup_lng) });
+                if (ride.drop_lat && ride.drop_lng)
+                  setDropCoords({ lat: parseFloat(ride.drop_lat), lng: parseFloat(ride.drop_lng) });
+
+                // CRITICAL: set before connectSocket so 'connect' handler emits joinRide
+                activeRideIdRef.current = activeRideId;
+
+                setScreen(st === 'started' ? 'inride' : 'matching');
               } else if (st === 'completed' || st === 'payment') {
                 setScreen('payment');
               } else {
+                AsyncStorage.removeItem('activeStdRideId').catch(() => {}); // stale — clean up
                 setScreen('home');
               }
             } catch { setScreen('home'); }
