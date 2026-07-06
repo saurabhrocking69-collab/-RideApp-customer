@@ -235,11 +235,14 @@ export function InRideScreen() {
               <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.mint, elevation: 2, shadowColor: C.mint, shadowOpacity: 0.7, shadowRadius: 6 }} />
             </PulseView>
             <View style={{ flex: 1 }}>
-              <Text style={{ ...T.bodyBold, color: C.mint }}>Live — In Progress</Text>
-              {(rideData?.distance || driverDist) ? (
+              <Text style={{ ...T.bodyBold, color: C.mint }}>Drop tak — Live</Text>
+              {(driverDist || rideData?.distance) ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
                   <View style={{ backgroundColor: 'rgba(0,200,83,0.12)', borderRadius: R.xs, paddingHorizontal: 6, paddingVertical: 2 }}>
-                    <Text style={{ ...T.caption, color: C.green }}>📏 {rideData?.distance || driverDist}</Text>
+                    {/* driverDist = remaining distance (haversine, live); fallback = total trip distance */}
+                    <Text style={{ ...T.caption, color: C.green }}>
+                      {driverDist ? `📍 ${driverDist} bacha` : `📏 ${rideData?.distance}`}
+                    </Text>
                   </View>
                   {rideData?.fare ? (
                     <View style={{ backgroundColor: C.pinkGlass, borderRadius: R.xs, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: C.pinkBorder }}>
@@ -251,7 +254,7 @@ export function InRideScreen() {
             </View>
             {driverEta ? (
               <View style={{ backgroundColor: C.green, borderRadius: R.sm, paddingHorizontal: 10, paddingVertical: 6, alignItems: 'center', elevation: 3, shadowColor: C.green, shadowOpacity: 0.4, shadowRadius: 6 }}>
-                <Text style={{ ...T.label, color: '#fff' }}>ETA</Text>
+                <Text style={{ ...T.label, color: '#fff' }}>DROP ETA</Text>
                 <Text style={{ ...T.bodyBold, color: '#fff', marginTop: 1 }}>{driverEta}</Text>
               </View>
             ) : null}

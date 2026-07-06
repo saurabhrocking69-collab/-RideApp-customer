@@ -17,6 +17,25 @@ import { Screen, Tab, Coords, HourlyStep, ExtendStep, WalletTxnTab } from '../ty
 let RazorpayCheckout: any = null;
 try { const _m = require('react-native-razorpay'); RazorpayCheckout = _m?.default || _m || null; } catch (_e) {}
 
+function _haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+function _fmtDist(km: number): string {
+  if (km < 0.05) return 'Yahaan hai';
+  if (km < 1) return `${Math.round(km * 1000 / 50) * 50} m`;
+  return `${km.toFixed(1)} km`;
+}
+function _fmtEta(km: number): string {
+  const min = Math.round((km / 18) * 60); // 18 km/h city average
+  if (min <= 0) return 'Abhi aa raha hai';
+  if (min === 1) return '1 min';
+  return `${min} min`;
+}
+
 // ─── Context Type ───────────────────────────────────────────────────────────
 interface AppContextType {
   // Navigation
@@ -379,6 +398,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [driverLoc, setDriverLoc] = useState<any>(null);
   const [driverEta, setDriverEta] = useState('');
   const [driverDist, setDriverDist] = useState('');
+
+  // Refs so socket handlers always see the latest coords + status without stale closures
+  const pickupCoordsRef = useRef<Coords>(null);
+  const dropCoordsRef   = useRef<Coords>(null);
+  const storeStatusRef  = useRef('idle');
+  useEffect(() => { pickupCoordsRef.current = pickupCoords; }, [pickupCoords]);
+  useEffect(() => { dropCoordsRef.current = dropCoords; }, [dropCoords]);
+  useEffect(() => { storeStatusRef.current = storeStatus; }, [storeStatus]);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelTimer, setCancelTimer] = useState(60);
   const [freeCancelsLeft, setFreeCancelsLeft] = useState(3);
@@ -1059,7 +1086,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     });
     s.on('driverMoved', (data: any) => {
-      if (data.lat && data.lng) setDriverLoc({ lat: data.lat, lng: data.lng });
+      if (!data.lat || !data.lng) return;
+      setDriverLoc({ lat: data.lat, lng: data.lng });
+      // Live distance + ETA — use haversine (no API cost), updates every ~4s
+      const status = storeStatusRef.current;
+      const dest =
+        (status === 'matched' || status === 'arrived') ? pickupCoordsRef.current :
+        status === 'started' ? dropCoordsRef.current : null;
+      if (dest?.lat && dest?.lng) {
+        const km = _haversineKm(data.lat, data.lng, dest.lat, dest.lng);
+        setDriverDist(_fmtDist(km));
+        setDriverEta(_fmtEta(km));
+      }
     });
     s.on('suggestAlternative', (data: any) => {
       if (data.alternatives?.length > 0) setAltSuggest({ alternatives: data.alternatives, current_type: data.current_type });

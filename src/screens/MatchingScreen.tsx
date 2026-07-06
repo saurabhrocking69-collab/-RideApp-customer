@@ -159,11 +159,11 @@ export function MatchingScreen() {
     }
   }, [unreadChat]);
 
-  // ── Live ETA countdown — synced from driverEta, ticks every second ─────────
+  // ── Live ETA countdown — syncs from driverEta on every update (haversine-backed, ~4s interval) ──
   const [etaRemaining, setEtaRemaining] = useState(0);
   useEffect(() => {
     const sec = parseEtaSec(driverEta || '');
-    if (sec > 0 && Math.abs(sec - etaRemaining) > 30) setEtaRemaining(sec);
+    if (sec > 0) setEtaRemaining(sec); // sync immediately — haversine updates are already smoothed
   }, [driverEta]);
   useEffect(() => {
     const driverArrived = cancelInfo?.driver_status === 'arrived';
