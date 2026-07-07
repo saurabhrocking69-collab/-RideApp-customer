@@ -277,6 +277,116 @@ function TipsCarousel() {
   );
 }
 
+// ── Circular ETA ring — spinner arc + countdown ────────────────────────────
+function EtaRing({ etaMins, etaColor, driverArrived }: { etaMins: number; etaColor: string; driverArrived: boolean }) {
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const glowAnim   = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    if (driverArrived) { rotateAnim.setValue(0); return; }
+    const loop = Animated.loop(
+      Animated.timing(rotateAnim, { toValue: 1, duration: 4800, useNativeDriver: true })
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [driverArrived]);
+
+  useEffect(() => {
+    const glow = Animated.loop(Animated.sequence([
+      Animated.timing(glowAnim, { toValue: 1,   duration: 1100, useNativeDriver: true }),
+      Animated.timing(glowAnim, { toValue: 0.3, duration: 1100, useNativeDriver: true }),
+    ]));
+    glow.start();
+    return () => glow.stop();
+  }, []);
+
+  const rotate = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+
+  return (
+    <View style={{ width: 140, height: 140, alignItems: 'center', justifyContent: 'center' }}>
+      {/* Outer pulsing glow ring */}
+      <Animated.View style={{
+        position: 'absolute', width: 140, height: 140, borderRadius: 70,
+        borderWidth: 2, borderColor: driverArrived ? C.green : etaColor,
+        opacity: glowAnim.interpolate({ inputRange: [0.3, 1], outputRange: [0.15, 0.45] }),
+      }} />
+      {/* Static background track */}
+      <View style={{ position: 'absolute', width: 116, height: 116, borderRadius: 58, borderWidth: 2.5, borderColor: C.glassBorder }} />
+      {/* Spinning arc (waiting state only) */}
+      {!driverArrived && (
+        <Animated.View style={{
+          position: 'absolute', width: 116, height: 116, borderRadius: 58,
+          borderWidth: 3.5,
+          borderTopColor: etaColor,
+          borderRightColor: (etaColor || '') + '55',
+          borderBottomColor: 'transparent',
+          borderLeftColor: 'transparent',
+          transform: [{ rotate }],
+        }} />
+      )}
+      {/* Inner content circle */}
+      <View style={{
+        width: 90, height: 90, borderRadius: 45,
+        backgroundColor: driverArrived ? 'rgba(5,150,105,0.10)' : C.bgDeep,
+        alignItems: 'center', justifyContent: 'center',
+        borderWidth: 2, borderColor: driverArrived ? C.greenBorder : C.glassMid,
+      }}>
+        {driverArrived ? (
+          <>
+            <Text style={{ fontSize: 28 }}>🙌</Text>
+            <Text style={{ fontSize: 8, color: C.green, fontWeight: '900', letterSpacing: 1, marginTop: 4 }}>HERE!</Text>
+          </>
+        ) : (
+          <>
+            <Text style={{ fontSize: 34, fontWeight: '900', color: etaColor, lineHeight: 38 }}>
+              {etaMins <= 0 ? '<1' : etaMins}
+            </Text>
+            <Text style={{ fontSize: 9, color: C.textMuted, fontWeight: '700', letterSpacing: 0.3 }}>min away</Text>
+          </>
+        )}
+      </View>
+    </View>
+  );
+}
+
+// ── OTP digits with staggered pop-in ──────────────────────────────────────
+function OtpDisplay({ otp }: { otp: string }) {
+  const digits = String(otp).split('').slice(0, 4);
+  const a0 = useRef(new Animated.Value(0)).current;
+  const a1 = useRef(new Animated.Value(0)).current;
+  const a2 = useRef(new Animated.Value(0)).current;
+  const a3 = useRef(new Animated.Value(0)).current;
+  const anims = [a0, a1, a2, a3];
+
+  useEffect(() => {
+    anims.slice(0, digits.length).forEach(a => a.setValue(0));
+    Animated.stagger(90, anims.slice(0, digits.length).map(a =>
+      Animated.spring(a, { toValue: 1, friction: 6, tension: 300, useNativeDriver: true })
+    )).start();
+  }, [otp]);
+
+  return (
+    <View style={{ flexDirection: 'row', gap: 10 }}>
+      {digits.map((digit, i) => (
+        <Animated.View key={i} style={{
+          transform: [{ scale: anims[i].interpolate({ inputRange: [0, 1], outputRange: [0.2, 1] }) }],
+          opacity: anims[i],
+        }}>
+          <View style={{
+            width: 44, height: 54, borderRadius: 12,
+            backgroundColor: C.plumGlass,
+            borderWidth: 2, borderColor: C.plumBorder,
+            alignItems: 'center', justifyContent: 'center',
+            elevation: 8, shadowColor: C.plum, shadowOpacity: 0.35, shadowRadius: 10,
+          }}>
+            <Text style={{ fontSize: 26, fontWeight: '900', color: C.plum }}>{digit}</Text>
+          </View>
+        </Animated.View>
+      ))}
+    </View>
+  );
+}
+
 export function MatchingScreen() {
   const {
     phone,
@@ -328,6 +438,19 @@ export function MatchingScreen() {
       chatBounceAnim.setValue(1);
     }
   }, [unreadChat]);
+
+  // ── Driver avatar breathing animation ──
+  const breatheAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!rideData?.driver) return;
+    const breathe = Animated.loop(Animated.sequence([
+      Animated.delay(2500),
+      Animated.timing(breatheAnim, { toValue: 1.028, duration: 850, useNativeDriver: true }),
+      Animated.timing(breatheAnim, { toValue: 1, duration: 850, useNativeDriver: true }),
+    ]));
+    breathe.start();
+    return () => breathe.stop();
+  }, [!!rideData?.driver]);
 
   // ── Live ETA countdown — syncs from driverEta on every update (haversine-backed, ~4s interval) ──
   const [etaRemaining, setEtaRemaining] = useState(0);
@@ -391,9 +514,9 @@ export function MatchingScreen() {
   const OVERLAP  = 24; // sheet overlaps map by this much (for rounded top corners)
 
   const sheetH = driverArrived
-    ? Math.round(SCREEN_H * 0.54)
+    ? Math.round(SCREEN_H * 0.64)
     : rideData?.driver
-      ? Math.round(SCREEN_H * 0.50)
+      ? Math.round(SCREEN_H * 0.60)
       : Math.round(SCREEN_H * 0.47);
   const mapH = SCREEN_H - sheetH + OVERLAP;
 
@@ -483,216 +606,192 @@ export function MatchingScreen() {
             <>
               {!driverArrived && <BuddyMessages visible />}
 
-              {/* ── Row 1: ETA / Arrived status  +  inline OTP ── */}
-              <View style={{
-                flexDirection: 'row', alignItems: 'center',
-                paddingHorizontal: 20, paddingVertical: 14,
-                borderBottomWidth: 1, borderBottomColor: C.glassBorder,
-              }}>
-                {/* Left: status text */}
-                <View style={{ flex: 1 }}>
-                  {driverArrived ? (
-                    <>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <PulseView>
-                          <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: C.green }} />
-                        </PulseView>
-                        <Text style={{ fontSize: 17, fontWeight: '900', color: C.green }}>
-                          Captain has arrived!
-                        </Text>
-                      </View>
-                      <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>
-                        {freeSecLeft > 0
-                          ? `🆓 Free wait: ${Math.floor(freeSecLeft / 60)}:${String(freeSecLeft % 60).padStart(2, '0')} left`
-                          : `⏳ Wait charge: +₹${waitFareAdd}`}
-                      </Text>
-                    </>
-                  ) : (
-                    <>
-                      <Text style={{ fontSize: 17, fontWeight: '900', color: C.text }}>
-                        {'Pickup in '}
-                        <Text style={{ color: etaColor }}>{etaDisplay}</Text>
-                      </Text>
-                      <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 4 }}>
-                        {driverDist ? `Captain ${driverDist} away` : 'Driver on the way...'}
-                      </Text>
-                    </>
-                  )}
-                </View>
+              {/* ══ ETA HERO — animated ring + status ══ */}
+              <View style={{ alignItems: 'center', paddingTop: 18, paddingBottom: 16, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: C.glassBorder }}>
+                <EtaRing etaMins={etaMins} etaColor={etaColor} driverArrived={driverArrived} />
 
-                {/* Right: compact OTP pill */}
-                {rideData.startOtp ? (
-                  <View style={{ alignItems: 'center', marginLeft: 12 }}>
-                    <Text style={{
-                      fontSize: 9, fontWeight: '800', letterSpacing: 0.8,
-                      color: C.textMuted, textTransform: 'uppercase', marginBottom: 5,
-                    }}>
-                      Ride PIN
+                <Text style={{ fontSize: 19, fontWeight: '900', color: driverArrived ? C.green : C.text, marginTop: 14, textAlign: 'center' }}>
+                  {driverArrived ? 'Sppero Buddy Has Arrived!' : `Pickup in ${etaDisplay}`}
+                </Text>
+                <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 5, textAlign: 'center' }}>
+                  {driverArrived
+                    ? 'Walk to your pickup point and show OTP'
+                    : driverDist ? `Your Buddy is ${driverDist} away` : 'Sppero Buddy is on the way…'}
+                </Text>
+
+                {/* Wait timer pill when driver has arrived */}
+                {driverArrived && (
+                  <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: freeSecLeft > 0 ? C.greenGlass : C.redGlass, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 9, borderWidth: 1.5, borderColor: freeSecLeft > 0 ? C.greenBorder : C.redBorder }}>
+                    <Ionicons name={freeSecLeft > 0 ? 'time-outline' : 'warning'} size={14} color={freeSecLeft > 0 ? C.green : C.red} />
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: freeSecLeft > 0 ? C.green : C.red }}>
+                      {freeSecLeft > 0
+                        ? `Free wait: ${Math.floor(freeSecLeft / 60)}m ${String(freeSecLeft % 60).padStart(2, '0')}s left`
+                        : `Wait charge active: +₹${waitFareAdd}`}
                     </Text>
-                    <View style={{ flexDirection: 'row', gap: 4 }}>
-                      {String(rideData.startOtp).split('').map((digit, i) => (
-                        <View key={i} style={{
-                          width: 30, height: 36, borderRadius: 8,
-                          backgroundColor: C.plumGlass,
-                          borderWidth: 1.5, borderColor: C.plumBorder,
-                          alignItems: 'center', justifyContent: 'center',
-                        }}>
-                          <Text style={{ fontSize: 17, fontWeight: '900', color: C.plum }}>{digit}</Text>
-                        </View>
-                      ))}
-                    </View>
                   </View>
-                ) : null}
+                )}
               </View>
 
-              {/* ── Row 2: Driver avatar  +  name/vehicle  +  Chat/Call ── */}
-              <View style={{
-                flexDirection: 'row', alignItems: 'center',
-                paddingHorizontal: 20, paddingVertical: 14,
-                borderBottomWidth: 1, borderBottomColor: C.glassBorder,
-              }}>
-                {/* Avatar */}
-                <View style={{
-                  width: 50, height: 50, borderRadius: 25,
-                  backgroundColor: C.bgCard,
-                  borderWidth: 2, borderColor: C.glassBorder,
-                  alignItems: 'center', justifyContent: 'center',
-                  marginRight: 12, overflow: 'hidden',
-                }}>
-                  {rideData.driver.photo
-                    ? <Image source={{ uri: rideData.driver.photo }} style={{ width: 50, height: 50 }} />
-                    : <Text style={{ color: C.textMuted, fontSize: 20, fontWeight: '900' }}>
-                        {(rideData.driver.name || 'D')[0].toUpperCase()}
-                      </Text>
-                  }
+              {/* ══ OTP CARD — prominent digit boxes with pop-in ══ */}
+              {rideData.startOtp ? (
+                <View style={{ marginHorizontal: 20, marginTop: 14 }}>
+                  <View style={{
+                    backgroundColor: C.plumGlass, borderRadius: 20,
+                    borderWidth: 2, borderColor: C.plumBorder,
+                    paddingVertical: 18, paddingHorizontal: 20, alignItems: 'center',
+                    elevation: 8, shadowColor: C.plum, shadowOpacity: 0.25, shadowRadius: 16,
+                  }}>
+                    <Text style={{ fontSize: 9, fontWeight: '900', color: C.plum, letterSpacing: 1.6, marginBottom: 14 }}>
+                      RIDE PIN — SHOW TO DRIVER TO START TRIP
+                    </Text>
+                    <OtpDisplay otp={String(rideData.startOtp)} />
+                  </View>
                 </View>
+              ) : null}
 
-                {/* Name + vehicle */}
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 15, fontWeight: '900', color: C.text }}>
-                    {rideData.driver.name}
-                  </Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 5, flexWrap: 'wrap' }}>
-                    {rideData.driver.vehicle_no ? (
+              {/* ══ DRIVER CARD — avatar + info + chat/call ══ */}
+              <View style={{ marginHorizontal: 20, marginTop: 14, backgroundColor: C.bgCard, borderRadius: 20, borderWidth: 1, borderColor: C.glassBorder, overflow: 'hidden', elevation: 4, shadowColor: '#000', shadowOpacity: 0.10, shadowRadius: 14 }}>
+                {/* Driver info row */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, gap: 14 }}>
+                  {/* Avatar with breathing animation + online dot */}
+                  <View>
+                    <Animated.View style={{ transform: [{ scale: breatheAnim }] }}>
                       <View style={{
-                        backgroundColor: C.glass, borderRadius: 6,
-                        paddingHorizontal: 7, paddingVertical: 2,
-                        borderWidth: 1, borderColor: C.glassBorder,
+                        width: 62, height: 62, borderRadius: 31,
+                        backgroundColor: C.glassMid,
+                        borderWidth: 2.5, borderColor: C.glassBorder,
+                        alignItems: 'center', justifyContent: 'center',
+                        overflow: 'hidden',
+                        elevation: 4, shadowColor: C.plum, shadowOpacity: 0.18, shadowRadius: 8,
                       }}>
-                        <Text style={{ fontSize: 11, color: C.text, fontWeight: '700', letterSpacing: 0.5 }}>
+                        {rideData.driver.photo
+                          ? <Image source={{ uri: rideData.driver.photo }} style={{ width: 62, height: 62 }} />
+                          : <Text style={{ color: C.plum, fontSize: 26, fontWeight: '900' }}>
+                              {(rideData.driver.name || 'D')[0].toUpperCase()}
+                            </Text>
+                        }
+                      </View>
+                    </Animated.View>
+                    {/* Online indicator */}
+                    <View style={{ position: 'absolute', bottom: 1, right: 1, width: 15, height: 15, borderRadius: 8, backgroundColor: C.green, borderWidth: 2.5, borderColor: C.bgCard }} />
+                  </View>
+
+                  {/* Name, rating, vehicle info */}
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: C.text }}>{rideData.driver.name}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.yellowGlass, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: C.yellowBorder }}>
+                        <Text style={{ fontSize: 10 }}>⭐</Text>
+                        <Text style={{ fontSize: 11, color: C.yellow, fontWeight: '900' }}>
+                          {rideData.driver.rating ? parseFloat(rideData.driver.rating).toFixed(1) : '4.8'}
+                        </Text>
+                      </View>
+                      {rideData.driver.vehicle_brand ? (
+                        <Text style={{ fontSize: 11, color: C.textMuted }}>
+                          {[rideData.driver.vehicle_brand, rideData.driver.vehicle_model].filter(Boolean).join(' ')}
+                        </Text>
+                      ) : null}
+                    </View>
+                    {/* Indian number plate */}
+                    {rideData.driver.vehicle_no ? (
+                      <View style={{ marginTop: 8, alignSelf: 'flex-start', backgroundColor: '#ffffff', borderRadius: 5, paddingHorizontal: 9, paddingVertical: 4, borderWidth: 1.5, borderColor: '#1a3a1a', elevation: 2 }}>
+                        <Text style={{ fontSize: 12, fontWeight: '900', color: '#1a3a1a', letterSpacing: 1.3 }}>
                           {rideData.driver.vehicle_no}
                         </Text>
                       </View>
                     ) : null}
-                    <Text style={{ fontSize: 12, color: C.yellow, fontWeight: '800' }}>
-                      ⭐ {rideData.driver.rating ? parseFloat(rideData.driver.rating).toFixed(1) : '4.8'}
-                    </Text>
-                    {rideData.driver.vehicle_brand ? (
-                      <Text style={{ fontSize: 11, color: C.textMuted }}>
-                        {[rideData.driver.vehicle_brand, rideData.driver.vehicle_model].filter(Boolean).join(' ')}
-                      </Text>
-                    ) : null}
                   </View>
                 </View>
 
-                {/* Chat + Call icon buttons */}
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  <Animated.View style={{ transform: [{ scale: chatBounceAnim }] }}>
-                    <Bouncy onPress={() => { setUnreadChat(0); setChatOrigin('matching'); setScreen('chat'); }}>
-                      <View style={{
-                        width: 42, height: 42, borderRadius: 21,
-                        backgroundColor: unreadChat > 0 ? C.plumGlass : C.bgCard,
-                        borderWidth: 1.5, borderColor: unreadChat > 0 ? C.plumBorder : C.glassBorder,
-                        alignItems: 'center', justifyContent: 'center',
-                      }}>
-                        <Ionicons name="chatbubble" size={17} color={unreadChat > 0 ? C.plum : C.textMuted} />
-                        {unreadChat > 0 && (
-                          <View style={{
-                            position: 'absolute', top: -2, right: -2,
-                            width: 16, height: 16, borderRadius: 8,
-                            backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center',
-                          }}>
-                            <Text style={{ color: '#fff', fontSize: 8, fontWeight: '900' }}>{unreadChat}</Text>
-                          </View>
-                        )}
-                      </View>
-                    </Bouncy>
-                  </Animated.View>
+                {/* Thin divider */}
+                <View style={{ height: 1, backgroundColor: C.glassBorder, marginHorizontal: 16 }} />
 
-                  <Bouncy onPress={callDriver}>
-                    <View style={{
-                      width: 42, height: 42, borderRadius: 21,
-                      backgroundColor: 'rgba(34,197,94,0.10)',
-                      borderWidth: 1.5, borderColor: C.greenBorder,
-                      alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <Ionicons name="call" size={17} color={C.green} />
-                    </View>
-                  </Bouncy>
+                {/* Chat + Call buttons row */}
+                <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 12, gap: 10 }}>
+                  <Animated.View style={{ flex: 1, transform: [{ scale: chatBounceAnim }] }}>
+                    <TouchableOpacity
+                      onPress={() => { setUnreadChat(0); setChatOrigin('matching'); setScreen('chat'); }}
+                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 13, borderRadius: 13, backgroundColor: unreadChat > 0 ? C.plumGlass : C.glassMid, borderWidth: 1.5, borderColor: unreadChat > 0 ? C.plumBorder : C.glassBorder }}>
+                      <Ionicons name="chatbubble" size={16} color={unreadChat > 0 ? C.plum : C.textMuted} />
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: unreadChat > 0 ? C.plum : C.textMuted }}>
+                        {unreadChat > 0 ? `Chat (${unreadChat})` : 'Chat'}
+                      </Text>
+                    </TouchableOpacity>
+                  </Animated.View>
+                  <TouchableOpacity
+                    onPress={callDriver}
+                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 13, borderRadius: 13, backgroundColor: 'rgba(34,197,94,0.10)', borderWidth: 1.5, borderColor: C.greenBorder }}>
+                    <Ionicons name="call" size={16} color={C.green} />
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: C.green }}>Call</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
 
-              {/* ── Row 3: Route card (From → To  +  Fare) ── */}
-              <View style={{
-                marginHorizontal: 20, marginTop: 12, marginBottom: 12,
-                borderRadius: 14, borderWidth: 1, borderColor: C.glassBorder,
-                backgroundColor: C.bgCard, overflow: 'hidden',
-              }}>
-                {/* Pickup row */}
-                <View style={{
-                  flexDirection: 'row', alignItems: 'center',
-                  padding: 12, borderBottomWidth: 1, borderBottomColor: C.glassBorder,
-                }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.green, marginRight: 10 }} />
-                  <Text style={{ fontSize: 12, color: C.textMuted, flex: 1 }} numberOfLines={1}>{pickup}</Text>
-                </View>
-                {/* Drop row + fare */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', padding: 12 }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: C.pink, marginRight: 10 }} />
-                  <Text style={{ fontSize: 12, color: C.textMuted, flex: 1 }} numberOfLines={1}>{drop}</Text>
-                  <Text style={{ fontSize: 16, fontWeight: '900', color: C.yellow, marginLeft: 8 }}>
+              {/* ══ TRIP TIMELINE — dotted route line with fare ══ */}
+              <View style={{ marginHorizontal: 20, marginTop: 14, backgroundColor: C.bgCard, borderRadius: 20, borderWidth: 1, borderColor: C.glassBorder, overflow: 'hidden' }}>
+                {/* Header */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 11, backgroundColor: C.glassMid, borderBottomWidth: 1, borderBottomColor: C.glassBorder }}>
+                  <Ionicons name="map" size={13} color={C.textMuted} />
+                  <Text style={{ fontSize: 10, fontWeight: '900', color: C.textMuted, letterSpacing: 1.3, flex: 1 }}>TRIP DETAILS</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '900', color: C.yellow }}>
                     {waitFareAdd > 0 ? `₹${newFare}` : (surgeFare || rideData.fare)}
                   </Text>
                 </View>
+
+                {/* Pickup → Drop with dotted connector */}
+                <View style={{ flexDirection: 'row', padding: 16, gap: 14 }}>
+                  {/* Timeline column */}
+                  <View style={{ alignItems: 'center', width: 14, paddingTop: 1 }}>
+                    <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: C.green, borderWidth: 2.5, borderColor: 'rgba(5,150,105,0.25)' }} />
+                    {[0, 1, 2, 3, 4, 5].map(i => (
+                      <View key={i} style={{ width: 2.5, height: 5, borderRadius: 1.5, backgroundColor: C.glassBorder, marginVertical: 1.5 }} />
+                    ))}
+                    <View style={{ width: 11, height: 11, borderRadius: 3, backgroundColor: C.pink, borderWidth: 2, borderColor: C.pinkBorder }} />
+                  </View>
+
+                  {/* Address column */}
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, color: C.text, fontWeight: '700', lineHeight: 16 }} numberOfLines={2}>{pickup}</Text>
+                    <View style={{ height: 28 }} />
+                    <Text style={{ fontSize: 12, color: C.text, fontWeight: '700', lineHeight: 16 }} numberOfLines={2}>{drop}</Text>
+                  </View>
+                </View>
+
+                {/* Wait fare row (only when wait charge is added) */}
+                {waitFareAdd > 0 && (
+                  <View style={{ paddingHorizontal: 16, paddingBottom: 14 }}>
+                    <View style={{ backgroundColor: C.saffGlass, borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 9, borderWidth: 1, borderColor: C.saffBorder }}>
+                      <Ionicons name="time" size={13} color={C.saffron} />
+                      <Text style={{ fontSize: 11, color: C.saffron, fontWeight: '700' }}>
+                        +₹{waitFareAdd} wait charge · driver waited {waitMin}m {waitSecRem}s
+                      </Text>
+                    </View>
+                  </View>
+                )}
               </View>
 
-              {/* ── Row 4: Action bar — Share | SOS | Cancel ── */}
-              <View style={{ flexDirection: 'row', gap: 8, marginHorizontal: 20, marginBottom: 10 }}>
-                <Bouncy onPress={shareTracking} style={{
-                  flex: 1, backgroundColor: C.bgCard, borderRadius: 12, paddingVertical: 12,
-                  alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 5,
-                  borderWidth: 1, borderColor: C.glassBorder,
-                }}>
+              {/* ══ ACTION BAR — Share · SOS · Cancel ══ */}
+              <View style={{ flexDirection: 'row', gap: 8, marginHorizontal: 20, marginTop: 14, marginBottom: 12 }}>
+                <Bouncy onPress={shareTracking} style={{ flex: 1, backgroundColor: C.bgCard, borderRadius: 13, paddingVertical: 13, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, borderWidth: 1, borderColor: C.glassBorder }}>
                   <Ionicons name="share-social" size={15} color={C.textMuted} />
                   <Text style={{ color: C.textMuted, fontSize: 12, fontWeight: '700' }}>Share</Text>
                 </Bouncy>
 
-                <TouchableOpacity onPress={triggerSOS} style={{
-                  flex: 1, backgroundColor: sosActive ? 'rgba(239,68,68,0.22)' : C.redGlass,
-                  borderRadius: 12, paddingVertical: 12,
-                  alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 5,
-                  borderWidth: 1.5, borderColor: C.red,
-                }}>
+                <TouchableOpacity onPress={triggerSOS} style={{ flex: 1, backgroundColor: sosActive ? 'rgba(239,68,68,0.22)' : C.redGlass, borderRadius: 13, paddingVertical: 13, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, borderWidth: 1.5, borderColor: C.red }}>
                   <Ionicons name="warning" size={15} color={C.red} />
-                  <Text style={{ color: C.red, fontSize: 12, fontWeight: '900' }}>
-                    {sosActive ? '🆘 Sent' : 'SOS'}
-                  </Text>
+                  <Text style={{ color: C.red, fontSize: 12, fontWeight: '900' }}>{sosActive ? '🆘 Sent' : 'SOS'}</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity onPress={() => setShowCancelModal(true)} style={{
-                  flex: 1, backgroundColor: C.pinkGlass, borderRadius: 12, paddingVertical: 12,
-                  alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 5,
-                  borderWidth: 1, borderColor: C.pinkBorder,
-                }}>
+                <TouchableOpacity onPress={() => setShowCancelModal(true)} style={{ flex: 1, backgroundColor: C.pinkGlass, borderRadius: 13, paddingVertical: 13, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, borderWidth: 1, borderColor: C.pinkBorder }}>
                   <Ionicons name="close" size={15} color={C.pink} />
                   <Text style={{ color: C.pink, fontSize: 12, fontWeight: '700' }}>Cancel</Text>
                 </TouchableOpacity>
               </View>
 
-              {/* Unread chat banner (fallback when no toast) */}
+              {/* Unread chat banner */}
               {!chatToast && unreadChat > 0 && (
                 <TouchableOpacity
-                  style={{ ...s.chatAlert, marginHorizontal: 20 }}
+                  style={{ ...s.chatAlert, marginHorizontal: 20, marginBottom: 8 }}
                   onPress={() => { setUnreadChat(0); setChatOrigin('matching'); setScreen('chat'); }}>
                   <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>
                     💬 {unreadChat} new message — tap to read
@@ -784,7 +883,7 @@ export function MatchingScreen() {
               {serverSurgeOffer && !noDriverFinal && (
                 <SurgeOfferCard
                   offer={serverSurgeOffer}
-                  onAccept={() => surgeFareNow()}
+                  onAccept={() => surgeFareNow(serverSurgeOffer!.amt)}
                   onDecline={() => setServerSurgeOffer(null)}
                 />
               )}
