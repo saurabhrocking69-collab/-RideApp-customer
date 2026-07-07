@@ -842,9 +842,15 @@ export function BookingScreen() {
 
           {/* ─── Vehicle + fare + promo ───────────────────────────────────────────── */}
           <>
-          <Text style={{ fontSize: 11, fontWeight: '900', color: C.textDim, letterSpacing: 1.4, marginBottom: 10, marginTop: 2, marginLeft: 2 }}>
-            CHOOSE VEHICLE
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, marginTop: 2 }}>
+            <Text style={{ fontSize: 11, fontWeight: '900', color: C.textDim, letterSpacing: 1.4, flex: 1 }}>CHOOSE VEHICLE</Text>
+            {etaLoaded && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.greenGlass, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: C.greenBorder }}>
+                <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: C.green }} />
+                <Text style={{ fontSize: 9, color: C.green, fontWeight: '800' }}>LIVE</Text>
+              </View>
+            )}
+          </View>
 
           {/* ─── Nearest driver recommendation banner ─── */}
           {etaLoaded && (() => {
@@ -868,7 +874,13 @@ export function BookingScreen() {
             );
           })()}
 
-          <View style={{ gap: 10, marginBottom: 4 }}>
+          {/* ─── Horizontal vehicle carousel ─── */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8, paddingRight: 4 }}
+            style={{ marginBottom: 10 }}
+          >
             {RIDES.map((r: any) => {
               const isSel = rideType === r.id;
               const isLux = r.id === 'luxury';
@@ -876,12 +888,15 @@ export function BookingScreen() {
               const fareText = fareLoading ? '...' : fareEstimates[r.id] ? `₹${fareEstimates[r.id].fare ?? fareEstimates[r.id]}` : `₹${cfgBase}+`;
               const anim = cardAnims[r.id];
               const entry = cardEntryAnims[r.id];
+              const info = driverEta[r.id];
+              const notAvail = etaLoaded && !info;
+              const isFar = info?.dist_km !== null && info?.dist_km > 5;
               return (
                 <Animated.View key={r.id} style={{ transform: [{ scale: anim }, { translateY: entry.ty }], opacity: entry.op }}>
                   <TouchableOpacity
                     onPress={() => {
                       setRideType(r.id);
-                      setVehicleBrowsing(false); // expand map — confirmation peak
+                      setVehicleBrowsing(false);
                       RIDES.forEach((ride: any) => {
                         Animated.spring(cardAnims[ride.id], {
                           toValue: ride.id === r.id ? 1.015 : 1,
@@ -889,168 +904,122 @@ export function BookingScreen() {
                         }).start();
                       });
                     }}
-                    activeOpacity={1}
+                    activeOpacity={0.82}
                     style={{
-                      flexDirection: 'row',
+                      width: 110,
                       alignItems: 'center',
-                      backgroundColor: isSel ? C.pinkGlass : C.bgCard,
+                      paddingHorizontal: 8,
+                      paddingTop: 10,
+                      paddingBottom: 10,
+                      backgroundColor: isSel ? C.pinkGlass : notAvail ? C.glassMid : C.bgCard,
                       borderRadius: R.md,
-                      padding: SP.md,
-                      gap: SP.md - 2,
-                      borderWidth: isSel ? 1.5 : 1,
+                      borderWidth: isSel ? 2 : 1,
                       borderColor: isSel ? C.pink : isLux ? C.purpleBorder : C.glassBorder,
+                      opacity: notAvail ? 0.55 : 1,
                       overflow: 'hidden',
                       ...(isSel ? SHADOW.pink : SHADOW.sm),
                     }}>
 
-                    {/* Left accent strip */}
-                    <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3.5, backgroundColor: isSel ? C.pink : 'transparent', borderTopLeftRadius: R.md, borderBottomLeftRadius: R.md }} />
+                    {/* Tag row — fixed 18px height so all icon circles align */}
+                    <View style={{ height: 18, marginBottom: 8, alignItems: 'center', justifyContent: 'center' }}>
+                      {r.tag ? (
+                        <View style={{ backgroundColor: isLux ? C.purple : r.tagColor, borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2 }}>
+                          <Text style={{ color: '#fff', fontSize: 7, fontWeight: '900', letterSpacing: 0.5 }}>{r.tag}</Text>
+                        </View>
+                      ) : null}
+                    </View>
 
                     {/* Icon circle */}
                     <View style={{
-                      width: 56, height: 56, borderRadius: 28,
+                      width: 44, height: 44, borderRadius: 22,
                       backgroundColor: isSel ? C.pinkGlass : isLux ? C.purpleGlass : C.glassMid,
                       alignItems: 'center', justifyContent: 'center',
                       borderWidth: isSel ? 2 : 1.5,
                       borderColor: isSel ? C.pink : isLux ? C.purpleBorder : C.glassBorder,
+                      marginBottom: 8,
                     }}>
-                      <RideVehicleIcon id={r.id} size={27} color={isSel ? C.pink : isLux ? C.purple : C.textMuted} />
+                      <RideVehicleIcon id={r.id} size={22} color={isSel ? C.pink : isLux ? C.purple : C.textMuted} />
                     </View>
 
-                    {/* Label + desc + eta */}
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <Text style={{ ...T.bodyBold, fontSize: 15, color: isSel ? C.text : C.textMuted }}>{r.label}</Text>
-                        {r.tag && (
-                          <View style={{ backgroundColor: isLux ? C.purple : r.tagColor, borderRadius: R.xs - 2, paddingHorizontal: 6, paddingVertical: 2 }}>
-                            <Text style={{ color: '#fff', fontSize: 8, fontWeight: '900', letterSpacing: 0.5 }}>{r.tag}</Text>
-                          </View>
-                        )}
-                      </View>
-                      <Text style={{ ...T.caption, color: C.textDim, marginTop: 2 }}>{r.desc}</Text>
+                    {/* Vehicle name */}
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: isSel ? C.text : notAvail ? C.textMuted : C.textDim, textAlign: 'center', marginBottom: 3 }} numberOfLines={1}>{r.label}</Text>
+
+                    {/* Fare */}
+                    <Text style={{ fontSize: 15, fontWeight: '900', color: fareLoading ? C.textDim : isSel ? C.pink : isLux ? C.purple : C.text, textAlign: 'center', marginBottom: 6 }}>
+                      {fareText}
+                    </Text>
+
+                    {/* ETA status row — fixed 14px height */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, height: 14 }}>
                       {!etaLoaded ? (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
-                          <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: C.textDim }} />
-                          <Text style={{ fontSize: 10, color: C.textDim }}>{r.eta}</Text>
-                        </View>
-                      ) : (() => {
-                        const info = driverEta[r.id];
-                        if (!info) {
-                          const bestAlt = RIDES
-                            .filter(alt => alt.id !== r.id && driverEta[alt.id])
-                            .sort((a, b) => ((driverEta[a.id]?.eta_min || 999) - (driverEta[b.id]?.eta_min || 999)))[0];
-                          return (
-                            <View style={{ marginTop: 4 }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                                <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: C.textMuted }} />
-                                <Text style={{ fontSize: 10, color: C.textMuted, fontWeight: '600' }}>Not available in this area right now</Text>
-                              </View>
-                              {bestAlt && (
-                                <TouchableOpacity
-                                  onPress={() => { setRideType(bestAlt.id); setVehicleBrowsing(false); }}
-                                  style={{ marginTop: 5, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.pinkGlass, borderRadius: R.xs - 2, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' }}>
-                                  <Text style={{ fontSize: 10, color: C.pink, fontWeight: '800' }}>
-                                    Try {bestAlt.label}{driverEta[bestAlt.id]?.eta_min != null ? ` · ~${driverEta[bestAlt.id]?.eta_min} min` : ''}
-                                  </Text>
-                                  <Ionicons name="arrow-forward" size={10} color={C.pink} />
-                                </TouchableOpacity>
-                              )}
-                            </View>
-                          );
-                        }
-                        const isFar = info.dist_km !== null && info.dist_km > 5;
-                        return (
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 }}>
-                            <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: isFar ? C.yellow : C.green }} />
-                            <Text style={{ fontSize: 10, color: isFar ? C.yellow : C.green, fontWeight: '800' }}>
-                              {info.eta_min !== null
-                                ? (isFar ? `${info.dist_km} km away · ~${info.eta_min} min wait` : `~${info.eta_min} min · ${info.dist_km} km away`)
-                                : 'Driver online · locating...'}
-                            </Text>
-                          </View>
-                        );
-                      })()}
-                    </View>
-
-                    {/* Fare + selection pill */}
-                    <View style={{ alignItems: 'flex-end', minWidth: 62 }}>
-                      <Text style={{
-                        fontSize: 19, fontWeight: '900',
-                        color: fareLoading ? C.textDim : isSel ? C.pink : isLux ? C.purple : C.textMuted,
-                      }}>{fareText}</Text>
-                      {isSel ? (
-                        <View style={{ marginTop: 5, backgroundColor: C.pink, borderRadius: R.full, paddingHorizontal: 8, paddingVertical: 3, elevation: 4, shadowColor: C.pink, shadowOpacity: 0.4, shadowRadius: 6 }}>
-                          <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900', letterSpacing: 0.5 }}>SELECTED</Text>
-                        </View>
+                        <Text style={{ fontSize: 8, color: C.textDim }}>{r.eta}</Text>
+                      ) : notAvail ? (
+                        <Text style={{ fontSize: 8, color: C.textMuted, fontWeight: '600' }}>No driver</Text>
+                      ) : info ? (
+                        <>
+                          <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: isFar ? C.yellow : C.green }} />
+                          <Text style={{ fontSize: 8, color: isFar ? C.yellow : C.green, fontWeight: '800' }}>
+                            {info.eta_min !== null ? `~${info.eta_min} min` : 'Locating'}
+                          </Text>
+                        </>
                       ) : null}
                     </View>
+
+                    {/* Selected checkmark badge */}
+                    {isSel && (
+                      <View style={{ position: 'absolute', top: 8, right: 8, width: 16, height: 16, borderRadius: 8, backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center' }}>
+                        <Ionicons name="checkmark" size={10} color="#fff" />
+                      </View>
+                    )}
                   </TouchableOpacity>
                 </Animated.View>
               );
             })}
-          </View>
+          </ScrollView>
 
-          {/* ─── Live driver availability banner ─── */}
-          {etaLoaded && (() => {
+          {/* ─── Selected vehicle detail strip ─── */}
+          {(() => {
             const info = driverEta[rideType];
-            const selLabel = RIDES.find(r => r.id === rideType)?.label || 'Ye vehicle';
-
-            if (info) {
-              const isFar = info.dist_km !== null && info.dist_km > 5;
-              return (
-                <View style={{ backgroundColor: isFar ? C.yellowGlass : C.greenGlass, borderRadius: R.sm, padding: 14, marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1.5, borderColor: isFar ? C.yellowBorder : C.greenBorder }}>
-                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: isFar ? C.yellowGlass : C.greenGlass, alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ fontSize: 20 }}>{isFar ? '🕐' : '✅'}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '800', color: isFar ? C.yellow : C.green }}>
-                      {selLabel} driver {isFar ? 'is a bit far' : 'is available'}
-                    </Text>
-                    <Text style={{ fontSize: 11, color: C.textDim, marginTop: 3 }}>
-                      {info.eta_min !== null
-                        ? `${info.dist_km} km away · arriving in ~${info.eta_min} min`
-                        : 'Online now · location updating...'}
-                    </Text>
-                  </View>
-                </View>
-              );
-            }
-
-            const availables = RIDES
-              .filter(r => driverEta[r.id])
-              .sort((a, b) => ((driverEta[a.id]?.eta_min || 999) - (driverEta[b.id]?.eta_min || 999)));
-            if (availables.length === 0) return (
-              <View style={{ backgroundColor: C.redGlass, borderRadius: R.sm, padding: 14, marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1.5, borderColor: C.redBorder }}>
-                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: C.redGlass, alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ fontSize: 20 }}>😕</Text>
+            const sel = RIDES.find((r: any) => r.id === rideType);
+            if (!sel) return null;
+            const notAvail = etaLoaded && !info;
+            const isFar = info?.dist_km !== null && info?.dist_km > 5;
+            const stripBg = notAvail ? C.redGlass : isFar ? C.yellowGlass : etaLoaded ? C.greenGlass : C.glassMid;
+            const stripBorder = notAvail ? C.redBorder : isFar ? C.yellowBorder : etaLoaded ? C.greenBorder : C.glassBorder;
+            const stripColor = notAvail ? C.red : isFar ? C.yellow : etaLoaded ? C.green : C.textMuted;
+            const bestAlt = notAvail
+              ? (RIDES as any[]).filter(r => r.id !== rideType && driverEta[r.id])
+                               .sort((a, b) => ((driverEta[a.id]?.eta_min || 999) - (driverEta[b.id]?.eta_min || 999)))[0]
+              : null;
+            return (
+              <View style={{ backgroundColor: stripBg, borderRadius: R.sm, padding: 12, marginBottom: 4, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: stripBorder }}>
+                <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: stripBg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: stripBorder }}>
+                  <RideVehicleIcon id={rideType} size={17} color={stripColor} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '800', color: C.red }}>No driver online in this area</Text>
-                  <Text style={{ fontSize: 11, color: C.textDim, marginTop: 3 }}>Please try again in a moment</Text>
-                </View>
-              </View>
-            );
-            return (
-              <View style={{ backgroundColor: C.yellowGlass, borderRadius: R.sm, padding: 14, marginTop: 10, borderWidth: 1.5, borderColor: C.yellowBorder }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                  <Text style={{ fontSize: 16 }}>⚡</Text>
-                  <Text style={{ fontSize: 12, fontWeight: '800', color: C.yellow, flex: 1 }}>
-                    {selLabel} not available right now — try these:
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: stripColor }} numberOfLines={1}>
+                    {notAvail
+                      ? `No ${sel.label} driver nearby`
+                      : isFar
+                        ? `${sel.label} driver is a bit far`
+                        : etaLoaded
+                          ? `${sel.label} driver available`
+                          : sel.label}
+                  </Text>
+                  <Text style={{ fontSize: 10, color: C.textDim, marginTop: 2 }} numberOfLines={1}>
+                    {sel.desc}
+                    {info?.eta_min != null ? `  ·  ~${info.eta_min} min` : ''}
+                    {info?.dist_km != null ? `  ·  ${info.dist_km} km away` : ''}
+                    {!etaLoaded ? '' : ''}
                   </Text>
                 </View>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {availables.slice(0, 3).map(alt => (
-                    <TouchableOpacity
-                      key={alt.id}
-                      onPress={() => { setRideType(alt.id); setVehicleBrowsing(false); }}
-                      style={{ backgroundColor: C.pink, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 6, elevation: 4, shadowColor: C.pink, shadowOpacity: 0.35, shadowRadius: 6 }}>
-                      <RideVehicleIcon id={alt.id} size={13} color="#fff" />
-                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900' }}>
-                        {alt.label} · ~{driverEta[alt.id]?.eta_min} min
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                {bestAlt && (
+                  <TouchableOpacity
+                    onPress={() => { setRideType(bestAlt.id); setVehicleBrowsing(false); }}
+                    style={{ backgroundColor: C.pink, borderRadius: R.xs, paddingHorizontal: 10, paddingVertical: 6, elevation: 4, shadowColor: C.pink, shadowOpacity: 0.35, shadowRadius: 6 }}>
+                    <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>Try {bestAlt.label}</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             );
           })()}
@@ -1207,6 +1176,25 @@ export function BookingScreen() {
           borderTopWidth: 1.5,
           borderTopColor: C.pinkBorder,
         }}>
+          {/* ── Trip summary row — vehicle + savings + payment method ── */}
+          {hasFare && !loading && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', paddingBottom: 10, gap: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                <RideVehicleIcon id={rideType} size={13} color={C.plum} />
+                <Text style={{ fontSize: 12, fontWeight: '700', color: C.textMuted }}>{selRide?.label}</Text>
+                {discount > 0 && (
+                  <View style={{ backgroundColor: C.greenGlass, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: C.greenBorder }}>
+                    <Text style={{ fontSize: 9, color: C.green, fontWeight: '800' }}>−₹{discount} saved</Text>
+                  </View>
+                )}
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.glassMid, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: C.glassBorder }}>
+                <Ionicons name="cash-outline" size={12} color={C.textMuted} />
+                <Text style={{ fontSize: 11, fontWeight: '700', color: C.textMuted }}>Cash</Text>
+              </View>
+            </View>
+          )}
+
           {/* ── Swipe-to-book track ── */}
           <Animated.View style={{ transform: [{ scale: bookPulseAnim }] }}>
             <View
