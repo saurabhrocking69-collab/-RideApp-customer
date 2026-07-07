@@ -6,9 +6,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { apiPost, apiGet } from '../../api';
 import { useRideStore } from '../../store';
 import { useApp } from '../context/AppContext';
-import { Bouncy, GlassPanel, PulseView, SlideUp, CountUp, EmptyAnim, GlowPulse, ShineCard } from '../components/ui';
+import { Bouncy, GlassPanel, PulseView, SlideUp, CountUp, EmptyAnim, GlowPulse, ShineCard, FadeIn } from '../components/ui';
 import { s, C, T, SP, R, SHADOW } from '../styles';
-import { MAPS_KEY } from '../constants';
+import { MAPS_KEY, API } from '../constants';
 import { useNearbyDrivers } from '../offline';
 import { NotifBell, NotificationCenter, getUnreadCount } from '../components/NotificationCenter';
 
@@ -1129,6 +1129,9 @@ function HistoryTab() {
     rideIcon, setScreen, setTab,
     setPickup, setDrop,
     setPickupCoords, setDropCoords,
+    scratchCard, setScratchCard,
+    scratched, setScratched,
+    scratchAnim, scratchNow,
   } = useApp();
 
   const [showDetail, setShowDetail] = useState(false);
@@ -1240,6 +1243,29 @@ _GST is included in the fare._
       </View>
 
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 14, paddingBottom: 100 }}>
+        {/* Scratch card — shown in Trips tab after a completed ride */}
+        {scratchCard && (
+          <Animated.View style={{ transform: [{ scale: scratched ? 1 : scratchAnim }], marginBottom: 14 }}>
+            <TouchableOpacity activeOpacity={0.85} onPress={scratchNow}
+              style={[s.scratchCard, { backgroundColor: scratched ? C.greenGlass : C.yellow, borderWidth: 2, borderColor: scratched ? C.greenBorder : C.yellow, borderRadius: 20 }]}>
+              {scratched ? (
+                <FadeIn style={{ alignItems: 'center' }}>
+                  <Text style={{ fontSize: 40 }}>🎉</Text>
+                  <Text style={{ fontSize: 14, color: C.textMuted, marginTop: 6 }}>You got a reward!</Text>
+                  <Text style={{ fontSize: 42, fontWeight: '900', color: C.green, marginTop: 4 }}>₹{scratchCard.reward}</Text>
+                  <Text style={{ fontSize: 12, color: C.green, marginTop: 4, fontWeight: '700' }}>✅ Added to your wallet!</Text>
+                </FadeIn>
+              ) : (
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={{ fontSize: 40 }}>🎟️</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '900', color: C.text, marginTop: 6 }}>Scratch Card Won!</Text>
+                  <Text style={{ fontSize: 13, color: 'rgba(0,0,0,0.7)', marginTop: 4 }}>👆 Tap to scratch & reveal your reward</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </Animated.View>
+        )}
+
         {historyRides.length === 0
           ? <EmptyAnim icon="🚖" title="No trips yet" sub="Book your first ride and see your history here!" />
           : historyRides.map((h: any, i: number) => {
@@ -1654,10 +1680,178 @@ function ProfileTab() {
   );
 }
 
+// ── Post-ride rating modal — appears on home after 3s auto-redirect ──────────
+function RatingModal() {
+  const {
+    showRatingModal, setShowRatingModal,
+    rideData, setRideData,
+    rating, setRating,
+    review, setReview,
+    tip, setTip,
+    starAnims, animateStar,
+    pickup, drop,
+    setPickup, setDrop, setEta,
+    setPromoDiscount, setPromoCode,
+    setDriverLoc, setDriverEta, setDriverDist,
+    setUnreadChat, setCashbackEarned,
+    setScratchCard, setScratched,
+    favouriteBuddy, addFavouriteBuddy,
+    setCmpType, setCmpDesc, setScreen,
+    phone, loadHistory, loadWallet,
+  } = useApp();
+  const { useRideStore } = require('../../store');
+  const ride = useRideStore();
+
+  const localStarAnims = useRef([0,1,2,3,4].map(() => new Animated.Value(0))).current;
+  useEffect(() => {
+    if (showRatingModal) {
+      setRating(0);
+      Animated.stagger(120, localStarAnims.map(a =>
+        Animated.spring(a, { toValue: 1, friction: 5, tension: 190, useNativeDriver: true })
+      )).start();
+    }
+  }, [showRatingModal]);
+
+  if (!showRatingModal) return null;
+
+  const fareNum = Math.round(parseFloat(String(rideData?.fare ?? 0).replace(/[^0-9.]/g, '')) || 0);
+
+  const dismiss = async (submitRating = false) => {
+    if (submitRating && rating > 0 && rideData?.ride_id) {
+      try {
+        await fetch(`${API}/api/rides/rate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ride_id: rideData.ride_id, rating, review, tip }),
+        });
+      } catch (_e) {}
+    }
+    setShowRatingModal(false);
+    setRideData(null);
+    setRating(0); setReview(''); setTip(0);
+    setPickup(''); setDrop(''); setEta('');
+    setPromoDiscount(0); setPromoCode(''); setUnreadChat(0);
+    setDriverLoc(null); setDriverEta(''); setDriverDist('');
+    setCashbackEarned([]);
+    ride.clearRide();
+    loadHistory(phone); loadWallet(phone);
+  };
+
+  return (
+    <Modal visible={showRatingModal} transparent animationType="slide" onRequestClose={() => dismiss(false)}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' }}>
+        <View style={{ backgroundColor: C.bgCard, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: 34, maxHeight: '90%' }}>
+
+          {/* Handle */}
+          <View style={{ width: 40, height: 4, backgroundColor: C.glassBorder, borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 16 }} />
+
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 8 }}>
+
+            {/* Trip preview */}
+            <View style={{ backgroundColor: C.pinkGlass, borderRadius: 18, padding: 14, borderWidth: 1.5, borderColor: C.pinkBorder, marginBottom: 20 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                {rideData?.driver?.photo ? (
+                  <Image source={{ uri: rideData.driver.photo }} style={{ width: 46, height: 46, borderRadius: 23, borderWidth: 2, borderColor: C.pink }} contentFit="cover" />
+                ) : (
+                  <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.pinkBorder }}>
+                    <Text style={{ fontSize: 22 }}>👤</Text>
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '900', color: C.text }}>
+                    {rideData?.driver?.name || 'Your Driver'}
+                  </Text>
+                  <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>Trip completed ✓</Text>
+                </View>
+                {fareNum > 0 && (
+                  <Text style={{ fontSize: 22, fontWeight: '900', color: C.pink }}>₹{fareNum}</Text>
+                )}
+              </View>
+              {(pickup || drop) ? (
+                <Text style={{ fontSize: 11, color: C.textDim, lineHeight: 16 }} numberOfLines={2}>
+                  📍 {pickup}  →  🏁 {drop}
+                </Text>
+              ) : null}
+            </View>
+
+            {/* Rate driver */}
+            <Text style={{ fontSize: 17, fontWeight: '900', color: C.text, textAlign: 'center', marginBottom: 14 }}>
+              How was your ride?
+            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 14, gap: 4 }}>
+              {[1,2,3,4,5].map(star => (
+                <Animated.View key={star} style={{ opacity: localStarAnims[star-1], transform: [{ scale: localStarAnims[star-1].interpolate({ inputRange: [0, 0.6, 0.85, 1], outputRange: [0, 1.35, 0.88, 1] }) }] }}>
+                  <TouchableOpacity onPress={() => { setRating(star); animateStar(star - 1); }} style={{ padding: 4 }}>
+                    <Animated.Text style={{ fontSize: 40, color: star <= rating ? C.yellow : C.glassMid, transform: [{ scale: starAnims[star - 1] }], textShadowColor: star <= rating ? C.yellow : 'transparent', textShadowRadius: 10, textShadowOffset: { width: 0, height: 0 } }}>★</Animated.Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              ))}
+            </View>
+
+            <TextInput
+              style={[s.input, { height: 68, textAlignVertical: 'top', backgroundColor: C.glassMid, color: C.text, borderColor: C.glassBorder, marginBottom: 14 }]}
+              placeholder="Comment (optional)..." placeholderTextColor={C.textDim}
+              multiline value={review} onChangeText={setReview} />
+
+            {/* Sppero Buddy */}
+            {rideData?.driver?.phone && (() => {
+              const alreadyBuddy = favouriteBuddy?.driver_phone === rideData.driver.phone;
+              return (
+                <TouchableOpacity
+                  onPress={async () => { if (!alreadyBuddy) { const res = await addFavouriteBuddy(rideData.driver.phone); if (res?.error) alert('⚠️ ' + res.error); } }}
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: alreadyBuddy ? C.greenGlass : C.yellowGlass, borderRadius: 14, padding: 12, marginBottom: 14, borderWidth: 1.5, borderColor: alreadyBuddy ? C.greenBorder : C.yellowBorder }}>
+                  <Text style={{ fontSize: 18, marginRight: 8 }}>{alreadyBuddy ? '✅' : '⭐'}</Text>
+                  <View>
+                    <Text style={{ fontWeight: '800', fontSize: 13, color: alreadyBuddy ? C.green : C.yellow }}>
+                      {alreadyBuddy ? 'This is your Sppero Buddy!' : `Make ${rideData.driver.name} your Sppero Buddy`}
+                    </Text>
+                    {!alreadyBuddy && <Text style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>Book them directly next time</Text>}
+                  </View>
+                </TouchableOpacity>
+              );
+            })()}
+
+            {/* Tip */}
+            <Text style={{ ...T.bodyBold, color: C.textMuted, marginBottom: 10 }}>💰 Add a tip (optional)</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+              {[0, 10, 20, 50].map(t => (
+                <Bouncy key={t}
+                  style={{ flex: 1, paddingVertical: 11, borderRadius: R.sm, borderWidth: 1.5, alignItems: 'center',
+                    backgroundColor: tip === t ? C.pinkGlass : C.glassMid,
+                    borderColor: tip === t ? C.pinkBorder : C.glassBorder }}
+                  onPress={() => setTip(t)}>
+                  <Text style={{ ...T.bodyBold, color: tip === t ? C.pink : C.textMuted }}>{t === 0 ? 'Skip' : '₹' + t}</Text>
+                </Bouncy>
+              ))}
+            </View>
+
+            {/* Complaint */}
+            <TouchableOpacity onPress={() => { dismiss(false); setCmpType(''); setCmpDesc(''); setScreen('complaint-new'); }}
+              style={{ backgroundColor: C.redGlass, borderRadius: 14, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1.5, borderColor: C.redBorder, marginBottom: 14 }}>
+              <Text style={{ fontSize: 16 }}>⚠️</Text>
+              <Text style={{ color: C.red, fontWeight: '700', fontSize: 13 }}>Ride Issue? File a Complaint</Text>
+            </TouchableOpacity>
+
+            {/* Submit */}
+            <Bouncy style={[s.btn, { marginBottom: 4 }]} onPress={() => dismiss(true)}>
+              <Text style={s.btnTxt}>{rating > 0 ? `Submit ${rating}★ Rating` : 'Skip Rating'}</Text>
+            </Bouncy>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export function HomeScreen() {
   const { tab } = useApp();
-  if (tab === 'live')    return <LiveTab />;
-  if (tab === 'history') return <HistoryTab />;
-  if (tab === 'profile') return <ProfileTab />;
-  return <HomeTab />;
+  return (
+    <>
+      {tab === 'live'    ? <LiveTab />    :
+       tab === 'history' ? <HistoryTab /> :
+       tab === 'profile' ? <ProfileTab /> :
+       <HomeTab />}
+      <RatingModal />
+    </>
+  );
 }

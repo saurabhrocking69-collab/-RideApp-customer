@@ -119,6 +119,7 @@ interface AppContextType {
   tip: number; setTip: (t: number) => void;
   review: string; setReview: (r: string) => void;
   paymentDone: boolean; setPaymentDone: (v: boolean) => void;
+  showRatingModal: boolean; setShowRatingModal: (v: boolean) => void;
   showUpiQr: boolean; setShowUpiQr: (v: boolean) => void;
   fareCount: number; setFareCount: (n: number) => void;
   scratchCard: any; setScratchCard: (c: any) => void;
@@ -438,6 +439,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [tip, setTip] = useState(0);
   const [review, setReview] = useState('');
   const [paymentDone, setPaymentDone] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
   const [showUpiQr, setShowUpiQr] = useState(false);
   const [fareCount, setFareCount] = useState(0);
   const [scratchCard, setScratchCard] = useState<any>(null);
@@ -1719,7 +1721,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     notifToast, setNotifToast,
     chatMsgs, setChatMsgs, chatInput, setChatInput, unreadChat, setUnreadChat, lastChatCount, chatToast, setChatToast, chatOrigin, setChatOrigin,
     rating, setRating, tip, setTip, review, setReview,
-    paymentDone, setPaymentDone, showUpiQr, setShowUpiQr, fareCount, setFareCount,
+    paymentDone, setPaymentDone, showRatingModal, setShowRatingModal, showUpiQr, setShowUpiQr, fareCount, setFareCount,
     scratchCard, setScratchCard, scratched, setScratched, scratchAnim, starAnims, sosActive, setSosActive,
     walletBalance, setWalletBalance, walletTxns, setWalletTxns, walletStats, setWalletStats,
     walletTxnTab, setWalletTxnTab, walletAddInput, setWalletAddInput,

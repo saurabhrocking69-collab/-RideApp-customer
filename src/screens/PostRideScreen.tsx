@@ -1,11 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
-import { Animated, Modal, ScrollView, Share, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useState, useEffect } from 'react';
+import { Modal, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Storage as AsyncStorage } from '../storage';
 import { useApp } from '../context/AppContext';
 import { Bouncy, Confetti, CountUp, DotBG, FadeIn, ScreenIn, TripSteps } from '../components/ui';
 import { s, C, T, SP, R, SHADOW } from '../styles';
-import { API } from '../constants';
 import { apiGet } from '../../api';
 
 export function PostRideScreen() {
@@ -13,29 +11,14 @@ export function PostRideScreen() {
     phone,
     setScreen, setTab,
     pickup, drop,
-    rideData, setRideData,
+    rideData,
     paymentDone, setPaymentDone,
-    rating, setRating,
-    review, setReview,
-    tip, setTip,
-    scratchCard, setScratchCard,
-    scratched, setScratched,
-    scratchAnim,
-    starAnims,
-    animateStar, scratchNow,
+    setShowRatingModal,
     result, setResult,
-    favouriteBuddy, addFavouriteBuddy,
-    setPickup, setDrop, setEta,
-    setPromoDiscount, setPromoCode,
-    setDriverLoc, setDriverEta, setDriverDist,
-    setUnreadChat,
     setCmpType, setCmpDesc,
     loadHistory, loadWallet,
-    cashbackEarned, setCashbackEarned,
+    cashbackEarned,
   } = useApp();
-
-  const { useRideStore } = require('../../store');
-  const ride = useRideStore();
 
   const [showBill, setShowBill] = useState(false);
   const [billData, setBillData] = useState<any>(null);
@@ -43,23 +26,33 @@ export function PostRideScreen() {
 
   const fareNum = Math.round(parseFloat(String(rideData?.fare ?? billData?.fare ?? 0).replace(/[^0-9.]/g, '')) || 0);
   const gstAmt = Math.round((fareNum * 5 / 105) * 100) / 100;
-
-  // Star entry animation — stagger spring pop-in on mount
-  const localStarAnims = useRef([0,1,2,3,4].map(() => new Animated.Value(0))).current;
-  useEffect(() => {
-    Animated.stagger(120, localStarAnims.map(a =>
-      Animated.spring(a, { toValue: 1, friction: 5, tension: 190, useNativeDriver: true })
-    )).start();
-  }, []);
   const baseAmt = Math.round((fareNum - gstAmt) * 100) / 100;
 
-  // Auto-load ride details on mount for trip stats card
+  // Auto-load ride details for trip stats card
   useEffect(() => {
     if (!rideData?.ride_id) return;
     apiGet(`/api/rides/status/${rideData.ride_id}`)
       .then(d => { if (d?.ride) setBillData(d.ride); })
       .catch(() => {});
   }, [rideData?.ride_id]);
+
+  // 3-second auto-redirect to home — open rating modal there
+  const [countdown, setCountdown] = useState(3);
+  useEffect(() => {
+    const interval = setInterval(() => setCountdown(c => c - 1), 1000);
+    const timer = setTimeout(() => goHome(), 3000);
+    return () => { clearInterval(interval); clearTimeout(timer); };
+  }, []);
+
+  const goHome = () => {
+    setShowRatingModal(true);
+    setScreen('home');
+    setTab('home');
+    setPaymentDone(false);
+    setResult('');
+    loadHistory(phone);
+    loadWallet(phone);
+  };
 
   const openBill = async () => {
     setBillLoading(true);
@@ -187,30 +180,6 @@ _GST is included in the fare — not charged separately._
           ) : null}
         </View>
 
-        {scratchCard && (
-          <View style={{ paddingHorizontal: 14, paddingTop: 14 }}>
-            <Animated.View style={{ transform: [{ scale: scratched ? 1 : scratchAnim }] }}>
-              <TouchableOpacity activeOpacity={0.85} onPress={scratchNow}
-                style={[s.scratchCard, { backgroundColor: scratched ? C.greenGlass : C.yellow, borderWidth: 2, borderColor: scratched ? C.greenBorder : C.yellow, borderRadius: 20 }]}>
-                {scratched ? (
-                  <FadeIn style={{ alignItems: 'center' }}>
-                    <Text style={{ fontSize: 40 }}>🎉</Text>
-                    <Text style={{ fontSize: 14, color: C.textMuted, marginTop: 6 }}>You got a reward!</Text>
-                    <Text style={{ fontSize: 42, fontWeight: '900', color: C.green, marginTop: 4, textShadowColor: C.green, textShadowRadius: 10 }}>₹{scratchCard.reward}</Text>
-                    <Text style={{ fontSize: 12, color: C.green, marginTop: 4, fontWeight: '700' }}>✅ Added to your wallet!</Text>
-                  </FadeIn>
-                ) : (
-                  <View style={{ alignItems: 'center' }}>
-                    <Text style={{ fontSize: 40 }}>🎟️</Text>
-                    <Text style={{ fontSize: 18, fontWeight: '900', color: C.text, marginTop: 6 }}>Scratch Card Won!</Text>
-                    <Text style={{ fontSize: 13, color: 'rgba(0,0,0,0.7)', marginTop: 4 }}>👆 Tap to scratch</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            </Animated.View>
-          </View>
-        )}
-
         {cashbackEarned.length > 0 && (
           <FadeIn style={{ marginHorizontal: 14, marginTop: 14 }}>
             <View style={{ backgroundColor: C.greenGlass, borderRadius: 16, padding: 16, borderWidth: 1.5, borderColor: C.greenBorder }}>
@@ -228,84 +197,26 @@ _GST is included in the fare — not charged separately._
                   <Text style={{ fontSize: 12, fontWeight: '700', color: C.green }}>+₹{c.amount}</Text>
                 </View>
               ))}
-              <TouchableOpacity onPress={() => setScreen('rewards')}
-                style={{ marginTop: 12, backgroundColor: C.green, borderRadius: 10, paddingVertical: 9, alignItems: 'center', elevation: 4, shadowColor: C.green, shadowOpacity: 0.35, shadowRadius: 8 }}>
-                <Text style={{ color: C.text, fontWeight: '900', fontSize: 13 }}>View All Rewards →</Text>
-              </TouchableOpacity>
             </View>
           </FadeIn>
         )}
 
-        <View style={{ marginHorizontal: 14, marginTop: 16, backgroundColor: C.bgCard, borderRadius: R.md, padding: SP.md, borderWidth: 1.5, borderColor: C.glassBorder, elevation: 8, shadowColor: C.pink, shadowOpacity: 0.10, shadowRadius: 16 }}>
-          <Text style={{ ...T.title, color: C.text, textAlign: 'center', marginBottom: SP.md }}>Rate Your Driver</Text>
-          <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: SP.md, gap: 4 }}>
-            {[1,2,3,4,5].map(star => (
-              <Animated.View key={star} style={{ opacity: localStarAnims[star-1], transform: [{ scale: localStarAnims[star-1].interpolate({ inputRange: [0, 0.6, 0.85, 1], outputRange: [0, 1.35, 0.88, 1] }) }] }}>
-                <TouchableOpacity onPress={() => { setRating(star); animateStar(star - 1); }} style={{ padding: 4 }}>
-                  <Animated.Text style={{ fontSize: 40, color: star <= rating ? C.yellow : C.glassMid, transform: [{ scale: starAnims[star - 1] }], textShadowColor: star <= rating ? C.yellow : 'transparent', textShadowRadius: 10, textShadowOffset: { width: 0, height: 0 } }}>★</Animated.Text>
-                </TouchableOpacity>
-              </Animated.View>
-            ))}
-          </View>
-          <TextInput
-            style={[s.input, { height: 70, textAlignVertical: 'top', backgroundColor: C.glassMid, color: C.text, borderColor: C.glassBorder }]}
-            placeholder="Comment (optional)..." placeholderTextColor={C.textDim}
-            multiline value={review} onChangeText={setReview} />
-
-          {rideData?.driver?.phone && (() => {
-            const alreadyBuddy = favouriteBuddy?.driver_phone === rideData.driver.phone;
-            return (
-              <TouchableOpacity
-                onPress={async () => {
-                  if (alreadyBuddy) return;
-                  const res = await addFavouriteBuddy(rideData.driver.phone);
-                  if (res?.error) alert('⚠️ ' + res.error);
-                }}
-                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: alreadyBuddy ? C.greenGlass : C.yellowGlass, borderRadius: 14, padding: 12, marginVertical: 10, borderWidth: 1.5, borderColor: alreadyBuddy ? C.greenBorder : C.yellowBorder }}>
-                <Text style={{ fontSize: 18, marginRight: 8 }}>{alreadyBuddy ? '✅' : '⭐'}</Text>
-                <View>
-                  <Text style={{ fontWeight: '800', fontSize: 13, color: alreadyBuddy ? C.green : C.yellow }}>
-                    {alreadyBuddy ? 'This is your Sppero Buddy!' : `Make ${rideData.driver.name} your Sppero Buddy`}
-                  </Text>
-                  {!alreadyBuddy && <Text style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>Book them directly next time</Text>}
-                </View>
-              </TouchableOpacity>
-            );
-          })()}
-
-          <Text style={{ ...T.bodyBold, color: C.textMuted, marginTop: SP.sm, marginBottom: 10 }}>💰 Add a tip (optional)</Text>
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
-            {[0, 10, 20, 50].map(t => (
-              <Bouncy key={t}
-                style={{ flex: 1, paddingVertical: 11, borderRadius: R.sm, borderWidth: 1.5, alignItems: 'center',
-                  backgroundColor: tip === t ? C.pinkGlass : C.glassMid,
-                  borderColor: tip === t ? C.pinkBorder : C.glassBorder,
-                  elevation: tip === t ? 4 : 0, shadowColor: C.pink, shadowOpacity: tip === t ? 0.2 : 0, shadowRadius: 6 }}
-                onPress={() => setTip(t)}>
-                <Text style={{ ...T.bodyBold, color: tip === t ? C.pink : C.textMuted }}>{t === 0 ? 'Skip' : '₹' + t}</Text>
-              </Bouncy>
-            ))}
-          </View>
-
+        <View style={{ marginHorizontal: 14, marginTop: 16, marginBottom: 10 }}>
           <TouchableOpacity onPress={() => { setCmpType(''); setCmpDesc(''); setScreen('complaint-new'); }}
-            style={{ backgroundColor: C.redGlass, borderRadius: 14, padding: 14, marginTop: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1.5, borderColor: C.redBorder }}>
+            style={{ backgroundColor: C.redGlass, borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1.5, borderColor: C.redBorder }}>
             <Text style={{ fontSize: 18 }}>⚠️</Text>
             <Text style={{ color: C.red, fontWeight: '700', fontSize: 14 }}>Ride Issue? File a Complaint</Text>
           </TouchableOpacity>
 
-          <Bouncy style={[s.btn, { marginTop: 14 }]} onPress={async () => {
-            if (rating > 0 && rideData?.ride_id) {
-              try { await fetch(`${API}/api/rides/rate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, rating, review, tip }) }); } catch (_e) {}
-            }
-            setScreen('home'); setPickup(''); setDrop(''); setRating(0); setTab('home');
-            setRideData(null); setPaymentDone(false); setResult(''); setScratchCard(null); setScratched(false); setEta(''); setPromoDiscount(0); setPromoCode(''); setUnreadChat(0); setCashbackEarned([]);
-            setDriverLoc(null); setDriverEta(''); setDriverDist('');
-            ride.clearRide();
-            AsyncStorage.removeItem('activeStdRideId').catch(() => {});
-            loadHistory(phone); loadWallet(phone);
-          }}>
-            <Text style={s.btnTxt}>Done 🏠 Go Home</Text>
-          </Bouncy>
+          {/* Auto-redirect countdown */}
+          <View style={{ alignItems: 'center', marginTop: 20 }}>
+            <Text style={{ fontSize: 13, color: C.textMuted }}>
+              Going to home in <Text style={{ fontWeight: '900', color: C.pink }}>{countdown}</Text>s…
+            </Text>
+            <TouchableOpacity onPress={goHome} style={{ marginTop: 10 }}>
+              <Text style={{ fontSize: 13, color: C.pink, fontWeight: '800' }}>Go Now →</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
 
