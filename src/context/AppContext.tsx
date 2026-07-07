@@ -1054,12 +1054,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setScreen('home'); setResult('❌ Ride cancelled');
       }
       if (st === 'surge_offer') {
-        // Server detected no driver accepted — offer surge to customer
         setServerSurgeOffer({
           amt: data.suggested_surge_amt || 25,
           label: data.surge_label || `+₹${data.suggested_surge_amt || 25}`,
-          timeout_sec: data.timeout_sec || 30,
+          timeout_sec: data.timeout_sec || 20,
         });
+        setScreen('surge');
       }
       if (st === 'no_driver_final') {
         // Both base fare and surge round failed — show alternatives + retry

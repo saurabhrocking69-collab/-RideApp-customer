@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { Storage as AsyncStorage } from '../storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
-import { Bouncy, FloatingDots, GlassPanel, PulseView, SlideUp } from '../components/ui';
+import { Bouncy, GlassPanel, PulseView, SlideUp } from '../components/ui';
 import { LiveMap } from '../components/LiveMap';
 import { s, C, T, SP, R, SHADOW } from '../styles';
 import { apiPost } from '../../api';
@@ -227,15 +227,6 @@ export function MatchingScreen() {
       : Math.round(SCREEN_H * 0.47);
   const mapH = SCREEN_H - sheetH + OVERLAP;
 
-  // ── Surge offer options ────────────────────────────────────────────────────
-  const baseFare = parseInt((surgeFare || rideData?.fare || '0').replace(/[^0-9]/g, '')) || 0;
-  const surgeOpts = [
-    { label: '+₹15',  amount: 15,  color: '#8BC34A' },
-    { label: '+₹25',  amount: 25,  color: '#FFC107' },
-    { label: '+₹40',  amount: 40,  color: '#FF9800' },
-    { label: '+₹65',  amount: 65,  color: '#F44336' },
-    { label: '+₹100', amount: 100, color: '#9C27B0' },
-  ];
 
   return (
     <View style={{ flex: 1, backgroundColor: C.night }}>
@@ -553,11 +544,7 @@ export function MatchingScreen() {
                 <Text style={{ fontSize: 22 }}>{rideIcon(rideType)}</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 15, fontWeight: '900', color: C.text }}>
-                    {!serverSurgeOffer && !noDriverFinal
-                      ? '🔍 Finding your ride...'
-                      : noDriverFinal
-                        ? '😔 No driver found'
-                        : '⚡ Increase fare to get a driver'}
+                    {noDriverFinal ? '😔 No driver found' : '🔍 Finding your ride...'}
                   </Text>
                   <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }} numberOfLines={1}>
                     {VEHICLE_LABELS[rideType] || rideType} · {drop}
@@ -576,7 +563,7 @@ export function MatchingScreen() {
               </View>
 
               {/* ── Search progress bar ── */}
-              {!serverSurgeOffer && !noDriverFinal && (
+              {!noDriverFinal && (
                 <View style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 12 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
                     <Text style={{ fontSize: 12, color: C.textMuted }}>
@@ -624,52 +611,7 @@ export function MatchingScreen() {
                 </View>
               )}
 
-              {/* ── Server-triggered surge offer ── */}
-              {serverSurgeOffer && surgeCount < 3 && (
-                <SlideUp>
-                  <View style={{ paddingHorizontal: 20, paddingBottom: 10 }}>
-                    <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 10 }}>
-                      {'Current: '}
-                      <Text style={{ color: C.text, fontWeight: '700' }}>{surgeFare || rideData?.fare}</Text>
-                      {'  ·  Suggested: '}
-                      <Text style={{ color: C.yellow, fontWeight: '700' }}>{serverSurgeOffer.label}</Text>
-                      {'  ·  '}
-                      <Text style={{ color: C.saffron }}>{3 - surgeCount}/3 tries left</Text>
-                    </Text>
-                    <View style={{ gap: 8 }}>
-                      {surgeOpts.map(opt => (
-                        <Bouncy key={opt.amount}
-                          onPress={() => { setServerSurgeOffer(null); surgeFareNow(opt.amount); }}
-                          disabled={surging}
-                          style={{
-                            flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-                            backgroundColor: opt.amount === serverSurgeOffer.amt ? opt.color + '18' : C.bgCard,
-                            borderRadius: 12, padding: 12,
-                            borderWidth: opt.amount === serverSurgeOffer.amt ? 2 : 1,
-                            borderColor: opt.amount === serverSurgeOffer.amt ? opt.color : C.glassBorder,
-                            opacity: surging ? 0.6 : 1,
-                          }}>
-                          <Text style={{ fontSize: 16, fontWeight: '900', color: C.text }}>
-                            {opt.label}{opt.amount === serverSurgeOffer.amt ? ' ⭐' : ''}
-                          </Text>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                            <Text style={{ fontSize: 12, color: C.textMuted }}>₹{baseFare + opt.amount}</Text>
-                            <View style={{ backgroundColor: opt.color, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 5 }}>
-                              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 13 }}>Pick</Text>
-                            </View>
-                          </View>
-                        </Bouncy>
-                      ))}
-                    </View>
-                    {surging && (
-                      <View style={{ alignItems: 'center', marginTop: 12 }}>
-                        <FloatingDots color={C.yellow} />
-                        <Text style={{ color: C.yellow, fontSize: 12, fontWeight: '700', marginTop: 6 }}>Updating fare...</Text>
-                      </View>
-                    )}
-                  </View>
-                </SlideUp>
-              )}
+              {/* Surge offer now handled by SurgePricingScreen (full-screen) */}
 
               {/* ── No driver final — alternatives + retry ── */}
               {noDriverFinal && (
