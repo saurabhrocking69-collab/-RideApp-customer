@@ -950,7 +950,7 @@ export function BookingScreen() {
                                   onPress={() => { setRideType(bestAlt.id); setVehicleBrowsing(false); }}
                                   style={{ marginTop: 5, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.pinkGlass, borderRadius: R.xs - 2, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' }}>
                                   <Text style={{ fontSize: 10, color: C.pink, fontWeight: '800' }}>
-                                    Try {bestAlt.label} · ~{driverEta[bestAlt.id]?.eta_min} min
+                                    Try {bestAlt.label}{driverEta[bestAlt.id]?.eta_min != null ? ` · ~${driverEta[bestAlt.id]?.eta_min} min` : ''}
                                   </Text>
                                   <Ionicons name="arrow-forward" size={10} color={C.pink} />
                                 </TouchableOpacity>
@@ -958,12 +958,14 @@ export function BookingScreen() {
                             </View>
                           );
                         }
-                        const isFar = info.dist_km > 5;
+                        const isFar = info.dist_km !== null && info.dist_km > 5;
                         return (
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 }}>
                             <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: isFar ? C.yellow : C.green }} />
                             <Text style={{ fontSize: 10, color: isFar ? C.yellow : C.green, fontWeight: '800' }}>
-                              {isFar ? `${info.dist_km} km away · ~${info.eta_min} min wait` : `~${info.eta_min} min · ${info.dist_km} km away`}
+                              {info.eta_min !== null
+                                ? (isFar ? `${info.dist_km} km away · ~${info.eta_min} min wait` : `~${info.eta_min} min · ${info.dist_km} km away`)
+                                : 'Driver online · locating...'}
                             </Text>
                           </View>
                         );
@@ -994,7 +996,7 @@ export function BookingScreen() {
             const selLabel = RIDES.find(r => r.id === rideType)?.label || 'Ye vehicle';
 
             if (info) {
-              const isFar = info.dist_km > 5;
+              const isFar = info.dist_km !== null && info.dist_km > 5;
               return (
                 <View style={{ backgroundColor: isFar ? C.yellowGlass : C.greenGlass, borderRadius: R.sm, padding: 14, marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1.5, borderColor: isFar ? C.yellowBorder : C.greenBorder }}>
                   <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: isFar ? C.yellowGlass : C.greenGlass, alignItems: 'center', justifyContent: 'center' }}>
@@ -1002,10 +1004,12 @@ export function BookingScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 13, fontWeight: '800', color: isFar ? C.yellow : C.green }}>
-                      {selLabel} driver {isFar ? 'is a bit far' : 'is nearby'}
+                      {selLabel} driver {isFar ? 'is a bit far' : 'is available'}
                     </Text>
                     <Text style={{ fontSize: 11, color: C.textDim, marginTop: 3 }}>
-                      {info.dist_km} km away · arriving in ~{info.eta_min} min
+                      {info.eta_min !== null
+                        ? `${info.dist_km} km away · arriving in ~${info.eta_min} min`
+                        : 'Online now · location updating...'}
                     </Text>
                   </View>
                 </View>
