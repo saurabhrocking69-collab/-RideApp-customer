@@ -1059,7 +1059,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           label: data.surge_label || `+₹${data.suggested_surge_amt || 25}`,
           timeout_sec: data.timeout_sec || 20,
         });
-        setScreen('surge');
+        // stays on matching screen — inline surge card handles selection
       }
       if (st === 'no_driver_final') {
         // Both base fare and surge round failed — show alternatives + retry

@@ -107,6 +107,176 @@ function BuddyMessages({ visible }: { visible: boolean }) {
   );
 }
 
+// ── Radar sonar rings — pulse outward while searching ─────────────────────
+function RadarPulse({ active }: { active: boolean }) {
+  const r1 = useRef(new Animated.Value(0)).current;
+  const r2 = useRef(new Animated.Value(0)).current;
+  const r3 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!active) { [r1, r2, r3].forEach(r => r.setValue(0)); return; }
+    const mkLoop = (val: Animated.Value, delay: number) =>
+      Animated.loop(Animated.sequence([
+        Animated.delay(delay),
+        Animated.timing(val, { toValue: 1, duration: 2000, useNativeDriver: true }),
+        Animated.timing(val, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ]));
+    const a1 = mkLoop(r1, 0);
+    const a2 = mkLoop(r2, 660);
+    const a3 = mkLoop(r3, 1320);
+    [a1, a2, a3].forEach(a => a.start());
+    return () => [a1, a2, a3].forEach(a => a.stop());
+  }, [active]);
+
+  const ringStyle = (r: Animated.Value) => ({
+    position: 'absolute' as const,
+    width: 160, height: 160, borderRadius: 80,
+    borderWidth: 1.5, borderColor: C.pink,
+    opacity: r.interpolate({ inputRange: [0, 0.12, 0.65, 1], outputRange: [0, 0.55, 0.18, 0] }),
+    transform: [{ scale: r.interpolate({ inputRange: [0, 1], outputRange: [0.28, 1] }) }],
+  });
+
+  return (
+    <View style={{ position: 'absolute', width: 160, height: 160, alignItems: 'center', justifyContent: 'center' }}>
+      <Animated.View style={ringStyle(r1)} />
+      <Animated.View style={ringStyle(r2)} />
+      <Animated.View style={ringStyle(r3)} />
+    </View>
+  );
+}
+
+// ── Inline surge boost card — shown when backend emits surge_offer ─────────
+function SurgeOfferCard({
+  offer, onAccept, onDecline,
+}: {
+  offer: { amt: number; label: string; timeout_sec: number };
+  onAccept: () => void;
+  onDecline: () => void;
+}) {
+  const [remaining, setRemaining] = useState(offer.timeout_sec);
+  const countdownAnim = useRef(new Animated.Value(1)).current;
+  const pulseAnim     = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.timing(countdownAnim, { toValue: 0, duration: offer.timeout_sec * 1000, useNativeDriver: false }).start();
+    const pulse = Animated.loop(Animated.sequence([
+      Animated.timing(pulseAnim, { toValue: 1.03, duration: 650, useNativeDriver: true }),
+      Animated.timing(pulseAnim, { toValue: 1,    duration: 650, useNativeDriver: true }),
+    ]));
+    pulse.start();
+    return () => pulse.stop();
+  }, []);
+
+  useEffect(() => {
+    if (remaining <= 0) return;
+    const t = setTimeout(() => setRemaining(r => r - 1), 1000);
+    return () => clearTimeout(t);
+  }, [remaining]);
+
+  const urgent = remaining < 7;
+
+  return (
+    <Animated.View style={{ transform: [{ scale: pulseAnim }], marginHorizontal: 20, marginBottom: 12 }}>
+      <View style={{
+        backgroundColor: urgent ? C.redGlass : C.saffGlass,
+        borderRadius: 18,
+        borderWidth: 2,
+        borderColor: urgent ? C.red : C.saffron,
+        overflow: 'hidden',
+        elevation: 8,
+        shadowColor: urgent ? C.red : C.saffron,
+        shadowOpacity: 0.35,
+        shadowRadius: 14,
+      }}>
+        {/* Animated countdown bar */}
+        <View style={{ height: 4, backgroundColor: 'rgba(0,0,0,0.12)', overflow: 'hidden' }}>
+          <Animated.View style={{
+            height: '100%',
+            width: countdownAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
+            backgroundColor: urgent ? C.red : C.saffron,
+          }} />
+        </View>
+
+        <View style={{ padding: 16 }}>
+          {/* Header row */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+            <View style={{
+              width: 48, height: 48, borderRadius: 24,
+              backgroundColor: urgent ? C.redGlass : C.saffGlass,
+              alignItems: 'center', justifyContent: 'center',
+              borderWidth: 2, borderColor: urgent ? C.red : C.saffron,
+            }}>
+              <Text style={{ fontSize: 22 }}>⚡</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: '900', color: urgent ? C.red : C.saffron }}>
+                Boost your ride request
+              </Text>
+              <Text style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>
+                Pay {offer.label} more — attract drivers faster
+              </Text>
+            </View>
+            <View style={{ alignItems: 'center' }}>
+              <Text style={{ fontSize: 26, fontWeight: '900', color: urgent ? C.red : C.saffron, lineHeight: 28 }}>{remaining}</Text>
+              <Text style={{ fontSize: 8, color: C.textMuted, letterSpacing: 0.5 }}>SEC LEFT</Text>
+            </View>
+          </View>
+
+          {/* Buttons */}
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <TouchableOpacity onPress={onDecline}
+              style={{ flex: 1, borderRadius: 12, paddingVertical: 12, alignItems: 'center', backgroundColor: C.glassMid, borderWidth: 1, borderColor: C.glassBorder }}>
+              <Text style={{ color: C.textMuted, fontWeight: '700', fontSize: 12 }}>Keep Waiting</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={onAccept}
+              style={{ flex: 2, borderRadius: 12, paddingVertical: 12, alignItems: 'center', backgroundColor: urgent ? C.red : C.saffron, elevation: 6, shadowColor: urgent ? C.red : C.saffron, shadowOpacity: 0.45, shadowRadius: 10 }}>
+              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 13 }}>Accept {offer.label} Boost ⚡</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Animated.View>
+  );
+}
+
+// ── Tips carousel — rotates safety/feature tips while customer waits ────────
+const WAIT_TIPS = [
+  { icon: '🛡️', text: 'Every Sppero Buddy is verified & background-checked' },
+  { icon: '⭐', text: 'Rate your Buddy after the ride — it really helps drivers!' },
+  { icon: '🔔', text: 'You\'ll be notified the moment a Buddy accepts your request' },
+  { icon: '🗺️', text: 'Live tracking starts as soon as your Buddy is assigned' },
+  { icon: '💬', text: 'Chat directly with your Buddy once they\'re matched' },
+  { icon: '🔒', text: 'Share your ride OTP only after boarding — never before' },
+];
+function TipsCarousel() {
+  const [idx, setIdx] = useState(0);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const iv = setInterval(() => {
+      Animated.timing(fadeAnim, { toValue: 0, duration: 220, useNativeDriver: true }).start(() => {
+        setIdx(i => (i + 1) % WAIT_TIPS.length);
+        Animated.timing(fadeAnim, { toValue: 1, duration: 280, useNativeDriver: true }).start();
+      });
+    }, 3600);
+    return () => clearInterval(iv);
+  }, []);
+
+  const tip = WAIT_TIPS[idx];
+  return (
+    <Animated.View style={{
+      opacity: fadeAnim,
+      marginHorizontal: 20, marginBottom: 10,
+      flexDirection: 'row', alignItems: 'center', gap: 10,
+      backgroundColor: C.glassMid, borderRadius: 12, padding: 12,
+      borderWidth: 1, borderColor: C.glassBorder,
+    }}>
+      <Text style={{ fontSize: 18 }}>{tip.icon}</Text>
+      <Text style={{ fontSize: 12, color: C.textMuted, flex: 1, lineHeight: 18 }}>{tip.text}</Text>
+    </Animated.View>
+  );
+}
+
 export function MatchingScreen() {
   const {
     phone,
@@ -535,75 +705,103 @@ export function MatchingScreen() {
 
             /* ═══════════════ SEARCHING STATE ═══════════════ */
             <>
-              {/* ── Header: vehicle emoji + fare + status title ── */}
-              <View style={{
-                flexDirection: 'row', alignItems: 'center', gap: 12,
-                paddingHorizontal: 20, paddingTop: 12, paddingBottom: 14,
-                borderBottomWidth: 1, borderBottomColor: C.glassBorder,
-              }}>
-                <Text style={{ fontSize: 22 }}>{rideIcon(rideType)}</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 15, fontWeight: '900', color: C.text }}>
-                    {noDriverFinal ? '😔 No driver found' : '🔍 Finding your ride...'}
-                  </Text>
-                  <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }} numberOfLines={1}>
-                    {VEHICLE_LABELS[rideType] || rideType} · {drop}
-                  </Text>
+              {/* ── Hero: radar rings + vehicle icon + status ── */}
+              <View style={{ alignItems: 'center', paddingTop: 16, paddingBottom: 6 }}>
+                {/* Radar + icon */}
+                <View style={{ width: 160, height: 160, alignItems: 'center', justifyContent: 'center' }}>
+                  <RadarPulse active={!noDriverFinal} />
+                  <View style={{
+                    width: 76, height: 76, borderRadius: 38,
+                    backgroundColor: noDriverFinal ? C.redGlass : C.pinkGlass,
+                    alignItems: 'center', justifyContent: 'center',
+                    borderWidth: 2.5,
+                    borderColor: noDriverFinal ? C.red : C.pink,
+                    elevation: 12,
+                    shadowColor: noDriverFinal ? C.red : C.pink,
+                    shadowOpacity: 0.5, shadowRadius: 18,
+                  }}>
+                    <Text style={{ fontSize: 38 }}>{V_ICONS[rideType] || '🚗'}</Text>
+                  </View>
                 </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={{ fontSize: 19, fontWeight: '900', color: C.yellow }}>
-                    {surgeFare || rideData?.fare}
-                  </Text>
-                  {surgeCount > 0 && (
-                    <View style={{ backgroundColor: C.yellow, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, marginTop: 3 }}>
-                      <Text style={{ color: '#000', fontSize: 9, fontWeight: '900' }}>⚡ SURGE {surgeCount}×</Text>
-                    </View>
-                  )}
+
+                {/* Title */}
+                <Text style={{ fontSize: 19, fontWeight: '900', color: noDriverFinal ? C.red : C.text, textAlign: 'center', marginTop: 8 }}>
+                  {noDriverFinal ? '😔 No Buddy Found' : 'Summoning Sppero Buddy'}
+                </Text>
+
+                {/* Search phase subtitle */}
+                <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 4, textAlign: 'center' }}>
+                  {noDriverFinal
+                    ? 'Try another vehicle or wait a moment'
+                    : searchElapsed < 25
+                      ? 'Requesting nearby drivers within 5km…'
+                      : searchElapsed < 55
+                        ? 'Expanding search radius to 10km…'
+                        : 'Searching all available drivers up to 15km…'}
+                </Text>
+
+                {/* Fare + vehicle pill */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 }}>
+                  <View style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 6,
+                    backgroundColor: C.bgCard, borderRadius: 20,
+                    paddingHorizontal: 14, paddingVertical: 7,
+                    borderWidth: 1, borderColor: C.glassBorder,
+                    elevation: 3, shadowColor: '#000', shadowOpacity: 0.10, shadowRadius: 6,
+                  }}>
+                    <Text style={{ fontSize: 12, color: C.textMuted }}>{VEHICLE_LABELS[rideType] || rideType}</Text>
+                    <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: C.glassBorder }} />
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: C.yellow }}>{surgeFare || rideData?.fare}</Text>
+                    {surgeCount > 0 && (
+                      <View style={{ backgroundColor: C.yellow, borderRadius: 5, paddingHorizontal: 6, paddingVertical: 1 }}>
+                        <Text style={{ color: '#000', fontSize: 8, fontWeight: '900' }}>⚡ {surgeCount}×</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
               </View>
 
-              {/* ── Search progress bar ── */}
+              {/* ── Search progress bar (hidden when no driver final) ── */}
               {!noDriverFinal && (
-                <View style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 12 }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
-                    <Text style={{ fontSize: 12, color: C.textMuted }}>
-                      {searchElapsed < 30 ? 'Requesting nearby drivers...' :
-                       searchElapsed < 60 ? 'Pinging all drivers in area...' :
-                       'Searching up to 15km...'}
-                    </Text>
-                    <Text style={{
-                      fontSize: 14, fontWeight: '900',
-                      color: searchElapsed >= 75 ? C.red : searchElapsed >= 50 ? C.yellow : C.textMuted,
-                    }}>
-                      {searchElapsed}s
-                    </Text>
-                  </View>
-                  <View style={{ height: 6, backgroundColor: C.glass, borderRadius: 3, overflow: 'hidden', borderWidth: 1, borderColor: C.glassBorder }}>
+                <View style={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 14 }}>
+                  <View style={{ height: 5, backgroundColor: C.glassMid, borderRadius: 3, overflow: 'hidden', borderWidth: 1, borderColor: C.glassBorder }}>
                     <Animated.View style={{
                       height: '100%', borderRadius: 3,
                       width: surgeBarAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
                       backgroundColor: surgeBarAnim.interpolate({
-                        inputRange: [0, 0.6, 0.8, 1],
+                        inputRange: [0, 0.55, 0.78, 1],
                         outputRange: [C.green, C.yellow, C.saffron, C.pink],
                       }),
                     }} />
                   </View>
+                  <Text style={{ fontSize: 10, color: C.textMuted, textAlign: 'right', marginTop: 5 }}>
+                    {searchElapsed}s elapsed
+                  </Text>
                 </View>
               )}
 
-              {/* ── Alt vehicle suggest (early hint while still searching) ── */}
+              {/* ── Inline surge boost card ── */}
+              {serverSurgeOffer && !noDriverFinal && (
+                <SurgeOfferCard
+                  offer={serverSurgeOffer}
+                  onAccept={() => surgeFareNow()}
+                  onDecline={() => setServerSurgeOffer(null)}
+                />
+              )}
+
+              {/* ── Alt vehicle suggest ── */}
               {altSuggest && altSuggest.alternatives.length > 0 && !noDriverFinal && (
                 <View style={{ paddingHorizontal: 20, marginBottom: 10 }}>
                   <View style={{ backgroundColor: C.yellowGlass, borderRadius: 14, padding: 14, borderWidth: 1.5, borderColor: C.yellowBorder }}>
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: C.yellow, marginBottom: 10 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: C.yellow, marginBottom: 10 }}>
                       No {altSuggest.current_type?.toUpperCase()} available — switch vehicle?
                     </Text>
                     <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
                       {altSuggest.alternatives.map((alt: string) => (
                         <Bouncy key={alt} onPress={() => switchVehicle(alt)} disabled={switchingVehicle}
                           style={{ backgroundColor: switchingVehicle ? C.glass : C.pink, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Text style={{ fontSize: 15 }}>{V_ICONS[alt] || '🚗'}</Text>
-                          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>{VEHICLE_LABELS[alt] || alt}</Text>
+                          <Text style={{ fontSize: 14 }}>{V_ICONS[alt] || '🚗'}</Text>
+                          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>{VEHICLE_LABELS[alt] || alt}</Text>
                         </Bouncy>
                       ))}
                     </View>
@@ -611,15 +809,15 @@ export function MatchingScreen() {
                 </View>
               )}
 
-              {/* Surge offer now handled by SurgePricingScreen (full-screen) */}
+              {/* ── Tips carousel (hidden when surge card or no driver final) ── */}
+              {!serverSurgeOffer && !noDriverFinal && <TipsCarousel />}
 
               {/* ── No driver final — alternatives + retry ── */}
               {noDriverFinal && (
                 <SlideUp>
                   <View style={{ paddingHorizontal: 20, paddingBottom: 14 }}>
                     <View style={{ backgroundColor: C.redGlass, borderRadius: 16, padding: 18, borderWidth: 1.5, borderColor: C.redBorder, alignItems: 'center' }}>
-                      <Text style={{ fontSize: 30, marginBottom: 8 }}>😔</Text>
-                      <Text style={{ color: C.red, fontSize: 15, fontWeight: '900', textAlign: 'center', marginBottom: 4 }}>
+                      <Text style={{ color: C.red, fontSize: 14, fontWeight: '900', textAlign: 'center', marginBottom: 4 }}>
                         No driver found in this area
                       </Text>
                       <Text style={{ color: C.textMuted, fontSize: 12, textAlign: 'center', marginBottom: 14 }}>
@@ -630,8 +828,8 @@ export function MatchingScreen() {
                           {noDriverFinal.alternatives.map((alt: string) => (
                             <Bouncy key={alt} onPress={() => { setNoDriverFinal(null); switchVehicle(alt); }} disabled={switchingVehicle}
                               style={{ backgroundColor: switchingVehicle ? C.glass : C.pink, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                              <Text style={{ fontSize: 15 }}>{V_ICONS[alt] || '🚗'}</Text>
-                              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>{VEHICLE_LABELS[alt] || alt}</Text>
+                              <Text style={{ fontSize: 14 }}>{V_ICONS[alt] || '🚗'}</Text>
+                              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>{VEHICLE_LABELS[alt] || alt}</Text>
                             </Bouncy>
                           ))}
                         </View>
@@ -645,8 +843,8 @@ export function MatchingScreen() {
                 </SlideUp>
               )}
 
-              {/* ── Cancel info + buttons ── */}
-              <View style={{ paddingHorizontal: 20 }}>
+              {/* ── Cancel info + action buttons ── */}
+              <View style={{ paddingHorizontal: 20, marginTop: 4 }}>
                 <Text style={{ textAlign: 'center', fontSize: 11, color: C.textMuted, marginBottom: 10 }}>
                   {cancelTimer > 0
                     ? `✅ Free cancel for ${cancelTimer}s · ${freeCancelsLeft} free cancels today`
@@ -658,7 +856,7 @@ export function MatchingScreen() {
                     paddingVertical: 13, alignItems: 'center',
                     borderWidth: 1.5, borderColor: C.pinkBorder,
                   }}>
-                    <Text style={{ color: C.pink, fontWeight: '800', fontSize: 14 }}>
+                    <Text style={{ color: C.pink, fontWeight: '800', fontSize: 13 }}>
                       ✕ Cancel {cancelInfo ? (cancelInfo.is_free ? '(Free)' : `(₹${cancelInfo.fee})`) : cancelTimer > 0 ? '(Free)' : '(₹10)'}
                     </Text>
                   </Bouncy>
@@ -672,7 +870,7 @@ export function MatchingScreen() {
                     paddingVertical: 13, alignItems: 'center',
                     borderWidth: 1, borderColor: C.glassBorder,
                   }}>
-                    <Text style={{ color: C.text, fontWeight: '800', fontSize: 14 }}>🔄 Retry</Text>
+                    <Text style={{ color: C.text, fontWeight: '800', fontSize: 13 }}>🔄 Retry</Text>
                   </Bouncy>
                 </View>
               </View>
