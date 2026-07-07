@@ -1070,6 +1070,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         });
         // Cancel ride state so alternatives/retry can work cleanly
         setAltSuggest(data.alternatives?.length ? { alternatives: data.alternatives, current_type: rideDataRef.current?.vehicle_type || '' } : null);
+        // If customer is on surge screen when this fires, navigate back so no-driver UI renders
+        setScreen(prev => prev === 'surge' ? 'matching' : prev);
       }
       if (st === 'no_driver') {
         AsyncStorage.removeItem('activeStdRideId').catch(() => {});
