@@ -145,26 +145,24 @@ function RadarPulse({ active }: { active: boolean }) {
   );
 }
 
-// ── Inline surge boost card — shown when backend emits surge_offer ─────────
-function SurgeOfferCard({
-  offer, onAccept, onDecline,
+// ── Surge price step slider — shown when backend emits surge_offer ──────────
+const SURGE_STEPS = [10, 20, 30, 40, 50, 80, 100, 150];
+
+function SurgePriceSlider({
+  offer, baseFare, onSelect, onDecline, surging,
 }: {
-  offer: { amt: number; label: string; timeout_sec: number };
-  onAccept: () => void;
+  offer: { timeout_sec: number };
+  baseFare: number;
+  onSelect: (amt: number) => void;
   onDecline: () => void;
+  surging: boolean;
 }) {
+  const [selected, setSelected] = useState<number | null>(null);
   const [remaining, setRemaining] = useState(offer.timeout_sec);
   const countdownAnim = useRef(new Animated.Value(1)).current;
-  const pulseAnim     = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.timing(countdownAnim, { toValue: 0, duration: offer.timeout_sec * 1000, useNativeDriver: false }).start();
-    const pulse = Animated.loop(Animated.sequence([
-      Animated.timing(pulseAnim, { toValue: 1.03, duration: 650, useNativeDriver: true }),
-      Animated.timing(pulseAnim, { toValue: 1,    duration: 650, useNativeDriver: true }),
-    ]));
-    pulse.start();
-    return () => pulse.stop();
   }, []);
 
   useEffect(() => {
@@ -173,23 +171,23 @@ function SurgeOfferCard({
     return () => clearTimeout(t);
   }, [remaining]);
 
-  const urgent = remaining < 7;
+  const urgent = remaining < 20;
 
   return (
-    <Animated.View style={{ transform: [{ scale: pulseAnim }], marginHorizontal: 20, marginBottom: 12 }}>
+    <View style={{ marginHorizontal: 16, marginBottom: 12 }}>
       <View style={{
-        backgroundColor: urgent ? C.redGlass : C.saffGlass,
-        borderRadius: 18,
+        backgroundColor: C.bgCard,
+        borderRadius: 20,
         borderWidth: 2,
         borderColor: urgent ? C.red : C.saffron,
         overflow: 'hidden',
-        elevation: 8,
+        elevation: 10,
         shadowColor: urgent ? C.red : C.saffron,
-        shadowOpacity: 0.35,
-        shadowRadius: 14,
+        shadowOpacity: 0.28,
+        shadowRadius: 16,
       }}>
-        {/* Animated countdown bar */}
-        <View style={{ height: 4, backgroundColor: 'rgba(0,0,0,0.12)', overflow: 'hidden' }}>
+        {/* Countdown bar */}
+        <View style={{ height: 4, backgroundColor: 'rgba(0,0,0,0.08)' }}>
           <Animated.View style={{
             height: '100%',
             width: countdownAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
@@ -198,44 +196,83 @@ function SurgeOfferCard({
         </View>
 
         <View style={{ padding: 16 }}>
-          {/* Header row */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-            <View style={{
-              width: 48, height: 48, borderRadius: 24,
-              backgroundColor: urgent ? C.redGlass : C.saffGlass,
-              alignItems: 'center', justifyContent: 'center',
-              borderWidth: 2, borderColor: urgent ? C.red : C.saffron,
-            }}>
-              <Text style={{ fontSize: 22 }}>⚡</Text>
-            </View>
+          {/* Header */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+            <Text style={{ fontSize: 22, marginRight: 10 }}>⚡</Text>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 14, fontWeight: '900', color: urgent ? C.red : C.saffron }}>
-                Boost your ride request
-              </Text>
-              <Text style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>
-                Pay {offer.label} more — attract drivers faster
+              <Text style={{ fontSize: 15, fontWeight: '900', color: C.text }}>Offer a higher fare</Text>
+              <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>
+                Tap an amount — search restarts instantly
               </Text>
             </View>
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{ fontSize: 26, fontWeight: '900', color: urgent ? C.red : C.saffron, lineHeight: 28 }}>{remaining}</Text>
-              <Text style={{ fontSize: 8, color: C.textMuted, letterSpacing: 0.5 }}>SEC LEFT</Text>
+            <View style={{
+              alignItems: 'center',
+              backgroundColor: urgent ? C.redGlass : C.saffGlass,
+              borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5,
+              borderWidth: 1, borderColor: urgent ? C.red : C.saffron,
+            }}>
+              <Text style={{ fontSize: 20, fontWeight: '900', color: urgent ? C.red : C.saffron, lineHeight: 24 }}>{remaining}</Text>
+              <Text style={{ fontSize: 8, color: C.textMuted, letterSpacing: 0.5 }}>SEC</Text>
             </View>
           </View>
 
-          {/* Buttons */}
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <TouchableOpacity onPress={onDecline}
-              style={{ flex: 1, borderRadius: 12, paddingVertical: 12, alignItems: 'center', backgroundColor: C.glassMid, borderWidth: 1, borderColor: C.glassBorder }}>
-              <Text style={{ color: C.textMuted, fontWeight: '700', fontSize: 12 }}>Keep Waiting</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={onAccept}
-              style={{ flex: 2, borderRadius: 12, paddingVertical: 12, alignItems: 'center', backgroundColor: urgent ? C.red : C.saffron, elevation: 6, shadowColor: urgent ? C.red : C.saffron, shadowOpacity: 0.45, shadowRadius: 10 }}>
-              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 13 }}>Accept {offer.label} Boost ⚡</Text>
-            </TouchableOpacity>
+          {/* Fare display */}
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginBottom: 14 }}>
+            <Text style={{ fontSize: 13, color: C.textMuted, fontWeight: '600' }}>Base</Text>
+            <Text style={{ fontSize: 26, fontWeight: '900', color: C.text, letterSpacing: -0.5 }}>₹{baseFare}</Text>
+            {selected !== null && (
+              <>
+                <Text style={{ fontSize: 15, color: C.textDim, fontWeight: '700' }}>+</Text>
+                <Text style={{ fontSize: 20, fontWeight: '800', color: C.saffron }}>₹{selected}</Text>
+                <Text style={{ fontSize: 15, color: C.textDim, fontWeight: '700' }}>=</Text>
+                <Text style={{ fontSize: 26, fontWeight: '900', color: C.green, letterSpacing: -0.5 }}>₹{baseFare + selected}</Text>
+              </>
+            )}
           </View>
+
+          {/* Step chips */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
+            <View style={{ flexDirection: 'row', gap: 8, paddingRight: 4 }}>
+              {SURGE_STEPS.map(amt => {
+                const isSel = selected === amt;
+                return (
+                  <TouchableOpacity
+                    key={amt}
+                    onPress={() => { setSelected(amt); onSelect(amt); }}
+                    disabled={surging}
+                    activeOpacity={0.75}
+                    style={{
+                      borderRadius: 13,
+                      paddingVertical: 10,
+                      paddingHorizontal: 14,
+                      backgroundColor: isSel ? C.saffron : C.saffGlass,
+                      borderWidth: 1.5,
+                      borderColor: isSel ? C.saffron : C.saffBorder,
+                      alignItems: 'center',
+                      minWidth: 58,
+                      opacity: surging && !isSel ? 0.45 : 1,
+                    }}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: '900', color: isSel ? '#fff' : C.saffron }}>
+                      +₹{amt}
+                    </Text>
+                    <Text style={{ fontSize: 9, color: isSel ? 'rgba(255,255,255,0.75)' : C.textDim, marginTop: 2 }}>
+                      ₹{baseFare + amt}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </ScrollView>
+
+          {/* Decline */}
+          <TouchableOpacity onPress={onDecline} disabled={surging} activeOpacity={0.7}
+            style={{ alignItems: 'center', paddingVertical: 6 }}>
+            <Text style={{ fontSize: 12, color: C.textMuted, fontWeight: '600' }}>Keep original fare</Text>
+          </TouchableOpacity>
         </View>
       </View>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -879,12 +916,14 @@ export function MatchingScreen() {
                 </View>
               )}
 
-              {/* ── Inline surge boost card ── */}
+              {/* ── Surge price slider ── */}
               {serverSurgeOffer && !noDriverFinal && (
-                <SurgeOfferCard
+                <SurgePriceSlider
                   offer={serverSurgeOffer}
-                  onAccept={() => surgeFareNow(serverSurgeOffer!.amt)}
+                  baseFare={parseInt(String(rideData?.fare ?? '0').replace(/[^\d]/g, '')) || 0}
+                  onSelect={(amt) => surgeFareNow(amt)}
                   onDecline={() => setServerSurgeOffer(null)}
+                  surging={surging}
                 />
               )}
 

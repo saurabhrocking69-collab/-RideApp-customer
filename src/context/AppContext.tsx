@@ -1403,7 +1403,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const surgeFareNow = async (amount: number) => {
-    if (!rideData?.ride_id || surging || surgeCount >= 3) return;
+    if (!rideData?.ride_id || surging) return;
     setSurging(true);
     try {
       const res = await apiPost('/api/rides/surge-fare', { ride_id: rideData.ride_id, customer_phone: phone || '9999999999', surge_amount: amount });
