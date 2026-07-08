@@ -60,6 +60,30 @@ function interpolateRoute(
   return coords[coords.length - 1];
 }
 
+// ── Quadratic Bezier arch between two map coords ─────────────────────────────
+function generateArcPoints(
+  lat1: number, lng1: number,
+  lat2: number, lng2: number,
+  steps = 60,
+): { latitude: number; longitude: number }[] {
+  const mx = (lat1 + lat2) / 2;
+  const my = (lng1 + lng2) / 2;
+  const dx = lat2 - lat1;
+  const dy = lng2 - lng1;
+  // Control point lifted perpendicular to route — arch height = 45% of distance
+  const cx = mx - dy * 0.45;
+  const cy = my + dx * 0.45;
+  const pts: { latitude: number; longitude: number }[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    pts.push({
+      latitude:  (1 - t) ** 2 * lat1 + 2 * (1 - t) * t * cx + t ** 2 * lat2,
+      longitude: (1 - t) ** 2 * lng1 + 2 * (1 - t) * t * cy + t ** 2 * lng2,
+    });
+  }
+  return pts;
+}
+
 // ── Vehicle icons ─────────────────────────────────────────────────────────────
 const VEHICLE_ICONS: Record<string, string> = {
   bike: '🏍️', green_bike: '⚡', auto: '🛺', electric_auto: '🌿',
@@ -274,20 +298,33 @@ export const LiveMap = memo(function LiveMap({
   // ── Travelling dot along booking route ───────────────────────────────────
   const dotProgressRef    = useRef(0);
   const remainingRef      = useRef<{ latitude: number; longitude: number }[]>([]);
-  const [dotPos, setDotPos] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [dotPos, setDotPos]   = useState<{ latitude: number; longitude: number } | null>(null);
+  const [animDone, setAnimDone] = useState(false);
+  const animTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    if (!routeCoords.length || mode !== 'booking') { setDotPos(null); dotProgressRef.current = 0; return; }
-    const DURATION = 2800; // ms — full pickup→drop journey
+    if (!routeCoords.length || mode !== 'booking') {
+      setDotPos(null); setAnimDone(false); dotProgressRef.current = 0; return;
+    }
+    setAnimDone(false);
+    dotProgressRef.current = 0;
+    const DURATION = 6000; // ms — slow, one-shot pickup→drop sweep
     const TICK     = 40;   // ms — ~25 fps
     const STEP     = TICK / DURATION;
-    const timer = setInterval(() => {
-      dotProgressRef.current += STEP;
-      if (dotProgressRef.current > 1) dotProgressRef.current = 0;
-      const pos = interpolateRoute(remainingRef.current, dotProgressRef.current);
-      setDotPos(pos);
+    animTimerRef.current = setInterval(() => {
+      dotProgressRef.current = Math.min(dotProgressRef.current + STEP, 1);
+      if (dotProgressRef.current >= 1) {
+        if (animTimerRef.current) clearInterval(animTimerRef.current);
+        setDotPos(null);
+        setAnimDone(true);
+        return;
+      }
+      setDotPos(interpolateRoute(remainingRef.current, dotProgressRef.current));
     }, TICK);
-    return () => { clearInterval(timer); setDotPos(null); };
+    return () => {
+      if (animTimerRef.current) clearInterval(animTimerRef.current);
+      setDotPos(null);
+    };
   }, [routeCoords.length, mode]);
 
   // Smooth driver position + compute bearing
@@ -490,14 +527,30 @@ export const LiveMap = memo(function LiveMap({
           <Polyline coordinates={completedCoords} strokeColor="rgba(5,150,105,0.5)" strokeWidth={5} lineCap="round" />
         )}
 
-        {/* Booking: pink trail behind arrow */}
-        {mode === 'booking' && bookingBehind.length > 1 && (
+        {/* Booking: pink trail behind arrow — hidden once animation finishes */}
+        {mode === 'booking' && !animDone && bookingBehind.length > 1 && (
           <Polyline coordinates={bookingBehind} strokeColor={C.pink} strokeWidth={5} lineCap="round" />
         )}
-        {/* Booking: green route ahead of arrow (or full route before animation starts) */}
-        {mode === 'booking' && bookingAhead.length > 1 && (
+        {/* Booking: green route ahead of arrow — hidden once animation finishes */}
+        {mode === 'booking' && !animDone && bookingAhead.length > 1 && (
           <Polyline coordinates={bookingAhead} strokeColor={C.green} strokeWidth={5} lineCap="round" />
         )}
+        {/* Dotted arch — appears after animation completes */}
+        {mode === 'booking' && animDone && pickupCoords && dropCoords && (() => {
+          const archPts = generateArcPoints(
+            pickupCoords.lat, pickupCoords.lng,
+            dropCoords.lat,   dropCoords.lng,
+          );
+          return (
+            <Polyline
+              coordinates={archPts}
+              strokeColor="rgba(160,90,255,0.82)"
+              strokeWidth={3}
+              lineDashPattern={[9, 7]}
+              lineCap="round"
+            />
+          );
+        })()}
 
         {/* Non-booking route */}
         {mode !== 'booking' && remainingCoords.length > 1 && (
@@ -521,7 +574,7 @@ export const LiveMap = memo(function LiveMap({
         )}
 
         {/* Travelling arrow — green circle with directional arrow, rotates to face route direction */}
-        {dotPos && mode === 'booking' && routeCoords.length > 1 && (
+        {dotPos && !animDone && mode === 'booking' && routeCoords.length > 1 && (
           <Marker
             coordinate={dotPos}
             anchor={{ x: 0.5, y: 0.5 }}

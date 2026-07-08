@@ -531,29 +531,29 @@ function HomeTab() {
 
   return (
     <View style={[s.screen, { backgroundColor: C.bg }]}>
-      {/* ── Creamy pink header ── */}
-      <Animated.View style={{ height: headerH, backgroundColor: '#FFF1F5', overflow: 'hidden' }}>
-        {/* Decorative soft rose circles — subtle on light background */}
-        <View style={{ position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(233,69,96,0.07)', top: -90, right: -60 }} />
-        <View style={{ position: 'absolute', width: 110, height: 110, borderRadius: 55, backgroundColor: 'rgba(233,69,96,0.05)', bottom: -40, left: 20 }} />
-        <View style={{ position: 'absolute', width: 70,  height: 70,  borderRadius: 35, backgroundColor: 'rgba(233,69,96,0.04)', top: 10, left: '42%' }} />
+      {/* ── Golden yellow header ── */}
+      <Animated.View style={{ height: headerH, backgroundColor: '#FFFBE6', overflow: 'hidden' }}>
+        {/* Decorative amber circles */}
+        <View style={{ position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(245,158,11,0.10)', top: -90, right: -60 }} />
+        <View style={{ position: 'absolute', width: 110, height: 110, borderRadius: 55, backgroundColor: 'rgba(245,158,11,0.07)', bottom: -40, left: 20 }} />
+        <View style={{ position: 'absolute', width: 70,  height: 70,  borderRadius: 35, backgroundColor: 'rgba(245,158,11,0.05)', top: 10, left: '42%' }} />
 
         {/* Full header */}
         <Animated.View style={{ paddingTop: Platform.OS === 'android' ? 38 : 50, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', opacity: fullAlpha }}>
           <View style={{ flex: 1 }}>
-            <Animated.Text style={{ color: '#B8708A', fontSize: 12, fontWeight: '600', opacity: greetFade, transform: [{ translateY: greetSlide }] }}>
+            <Animated.Text style={{ color: '#92650A', fontSize: 12, fontWeight: '600', opacity: greetFade, transform: [{ translateY: greetSlide }] }}>
               {GREETINGS[greetIdx]}
             </Animated.Text>
-            <Text style={{ color: '#2D1528', fontSize: 22, fontWeight: '900', letterSpacing: -0.5, marginTop: 3 }}>{userName || 'Rider'}</Text>
+            <Text style={{ color: '#1A1200', fontSize: 22, fontWeight: '900', letterSpacing: -0.5, marginTop: 3 }}>{userName || 'Rider'}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
-              <Ionicons name="location-outline" size={11} color="#C0829A" />
-              <Text style={{ color: '#C0829A', fontSize: 10, fontWeight: '600' }}>India</Text>
+              <Ionicons name="location-outline" size={11} color="#A87B0A" />
+              <Text style={{ color: '#A87B0A', fontSize: 10, fontWeight: '600' }}>India</Text>
             </View>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <NotifBell onPress={() => { setNotifOpen(true); setUnreadNotif(0); }} unread={unreadNotif} />
             <TouchableOpacity onPress={() => { setTab('profile'); loadWallet(phone); }}
-              style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center', ...SHADOW.pink }}>
+              style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: C.yellow, alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: C.yellow, shadowOpacity: 0.45, shadowRadius: 8 }}>
               <Text style={{ color: '#fff', fontWeight: '900', fontSize: 18 }}>{(userName || 'R')[0].toUpperCase()}</Text>
             </TouchableOpacity>
           </View>
@@ -561,9 +561,9 @@ function HomeTab() {
 
         {/* Mini row — compact when scrolled */}
         <Animated.View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', opacity: miniAlpha }}>
-          <Text style={{ color: '#2D1528', fontSize: 15, fontWeight: '900', letterSpacing: -0.3 }}>{userName || 'Rider'}</Text>
+          <Text style={{ color: '#1A1200', fontSize: 15, fontWeight: '900', letterSpacing: -0.3 }}>{userName || 'Rider'}</Text>
           <TouchableOpacity onPress={() => { setTab('profile'); loadWallet(phone); }}
-            style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center', ...SHADOW.pink }}>
+            style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: C.yellow, alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: C.yellow, shadowOpacity: 0.45, shadowRadius: 8 }}>
             <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>{(userName || 'R')[0].toUpperCase()}</Text>
           </TouchableOpacity>
         </Animated.View>

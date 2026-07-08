@@ -17,11 +17,11 @@ export const GlassPanel = ({ children, style, tint = 'light' }: {
   <View style={[{
     backgroundColor: tint === 'dark'
       ? 'rgba(26,13,46,0.88)'
-      : 'rgba(255,255,255,0.92)',
+      : C.bg,
     borderWidth: 1,
     borderColor: tint === 'dark'
       ? 'rgba(255,255,255,0.10)'
-      : 'rgba(255,255,255,0.80)',
+      : 'rgba(180,160,255,0.22)',
     ...SHADOW.md,
     shadowColor: tint === 'dark' ? '#2E1461' : C.pink,
   }, style]}>
