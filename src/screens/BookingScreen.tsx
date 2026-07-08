@@ -428,7 +428,7 @@ export function BookingScreen() {
       </View>
 
       {/* ─── Bottom drawer — slides up/down over map ─── */}
-      <Animated.View style={{ height: drawerHeightAnim }}>
+      <Animated.View style={{ height: drawerHeightAnim, backgroundColor: C.bg }}>
       <GlassPanel intensity={22} style={{
         flex: 1,
         borderTopLeftRadius: 28,
@@ -1173,7 +1173,7 @@ export function BookingScreen() {
         <View style={{
           paddingHorizontal: 14,
           paddingTop: 10,
-          paddingBottom: Platform.OS === 'android' ? 34 : 28,
+          paddingBottom: Platform.OS === 'android' ? 10 : 8,
           backgroundColor: C.bg,
           borderTopWidth: 1.5,
           borderTopColor: C.pinkBorder,
@@ -1214,12 +1214,12 @@ export function BookingScreen() {
                 shadowRadius: 14,
               }}>
 
-              {/* Pink fill — expands as thumb slides right */}
+              {/* Fill — expands as thumb slides right, fades pink→yellow */}
               {hasFare && !loading && (
                 <Animated.View style={{
                   position: 'absolute', left: 0, top: 0, bottom: 0,
                   width: swipeX.interpolate({ inputRange: [0, 500], outputRange: [SWIPE_THUMB + SWIPE_PAD, SWIPE_THUMB + SWIPE_PAD + 500], extrapolate: 'extend' }),
-                  backgroundColor: C.pink,
+                  backgroundColor: swipeX.interpolate({ inputRange: [0, 280], outputRange: [C.pink, C.yellow], extrapolate: 'clamp' }),
                   borderRadius: SWIPE_H / 2,
                 }} />
               )}
