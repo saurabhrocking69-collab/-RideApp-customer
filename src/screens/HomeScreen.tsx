@@ -460,6 +460,17 @@ function HomeTab() {
   const { data: nearbyDriversData } = useNearbyDrivers(userLat, userLng);
   const nearbyCount = Array.isArray(nearbyDriversData) ? nearbyDriversData.length : 0;
 
+  // Search box micro-animation: pulsing pink border glow (native driver, smooth)
+  const searchGlowOpacity = useRef(new Animated.Value(0.18)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(searchGlowOpacity, { toValue: 0.92, duration: 950, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(searchGlowOpacity, { toValue: 0.18, duration: 950, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadNotif, setUnreadNotif] = useState(() => getUnreadCount());
   // Refresh unread count when screen comes into view
@@ -520,37 +531,23 @@ function HomeTab() {
 
   return (
     <View style={[s.screen, { backgroundColor: C.bg }]}>
-      {/* ── Plum brand header ── */}
-      <Animated.View style={{ height: headerH, backgroundColor: C.plum, overflow: 'hidden' }}>
-        {/* Decorative pink glow circles */}
-        <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,45,120,0.18)', top: -80, right: -50 }} />
-        <View style={{ position: 'absolute', width: 100, height: 100, borderRadius: 50,  backgroundColor: 'rgba(255,45,120,0.10)', bottom: -30, left: 30 }} />
-        <View style={{ position: 'absolute', width: 60,  height: 60,  borderRadius: 30,  backgroundColor: 'rgba(255,255,255,0.04)', top: 20, left: '45%' }} />
+      {/* ── Creamy pink header ── */}
+      <Animated.View style={{ height: headerH, backgroundColor: '#FFF1F5', overflow: 'hidden' }}>
+        {/* Decorative soft rose circles — subtle on light background */}
+        <View style={{ position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(233,69,96,0.07)', top: -90, right: -60 }} />
+        <View style={{ position: 'absolute', width: 110, height: 110, borderRadius: 55, backgroundColor: 'rgba(233,69,96,0.05)', bottom: -40, left: 20 }} />
+        <View style={{ position: 'absolute', width: 70,  height: 70,  borderRadius: 35, backgroundColor: 'rgba(233,69,96,0.04)', top: 10, left: '42%' }} />
 
         {/* Full header */}
         <Animated.View style={{ paddingTop: Platform.OS === 'android' ? 38 : 50, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', opacity: fullAlpha }}>
           <View style={{ flex: 1 }}>
-            <Animated.Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, fontWeight: '600', opacity: greetFade, transform: [{ translateY: greetSlide }] }}>
+            <Animated.Text style={{ color: '#B8708A', fontSize: 12, fontWeight: '600', opacity: greetFade, transform: [{ translateY: greetSlide }] }}>
               {GREETINGS[greetIdx]}
             </Animated.Text>
-            <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900', letterSpacing: -0.5, marginTop: 3 }}>{userName || 'Rider'}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Ionicons name="location-outline" size={11} color="rgba(255,255,255,0.45)" />
-                <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, fontWeight: '600' }}>India</Text>
-              </View>
-              {nearbyCount > 0 && (
-                <Animated.View style={{
-                  flexDirection: 'row', alignItems: 'center', gap: 4,
-                  backgroundColor: 'rgba(5,150,105,0.20)', borderRadius: 10,
-                  paddingHorizontal: 7, paddingVertical: 2,
-                  borderWidth: 1, borderColor: 'rgba(5,150,105,0.35)',
-                  transform: [{ scale: nearbyAnim }],
-                }}>
-                  <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: C.green }} />
-                  <Text style={{ color: C.green, fontSize: 9, fontWeight: '800' }}>{nearbyCount} nearby</Text>
-                </Animated.View>
-              )}
+            <Text style={{ color: '#2D1528', fontSize: 22, fontWeight: '900', letterSpacing: -0.5, marginTop: 3 }}>{userName || 'Rider'}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
+              <Ionicons name="location-outline" size={11} color="#C0829A" />
+              <Text style={{ color: '#C0829A', fontSize: 10, fontWeight: '600' }}>India</Text>
             </View>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -564,7 +561,7 @@ function HomeTab() {
 
         {/* Mini row — compact when scrolled */}
         <Animated.View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', opacity: miniAlpha }}>
-          <Text style={{ color: '#fff', fontSize: 15, fontWeight: '900', letterSpacing: -0.3 }}>{userName || 'Rider'}</Text>
+          <Text style={{ color: '#2D1528', fontSize: 15, fontWeight: '900', letterSpacing: -0.3 }}>{userName || 'Rider'}</Text>
           <TouchableOpacity onPress={() => { setTab('profile'); loadWallet(phone); }}
             style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center', ...SHADOW.pink }}>
             <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>{(userName || 'R')[0].toUpperCase()}</Text>
@@ -580,26 +577,68 @@ function HomeTab() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: 90 }}
       >
-        {/* 1. ── Search bar — FIRST ── */}
-        <TouchableOpacity onPress={() => setScreen('booking')} activeOpacity={0.88} style={{
-          marginHorizontal: 16, marginTop: -10,
-          backgroundColor: C.bgCard,
-          borderRadius: 20, paddingVertical: 16, paddingHorizontal: 18,
-          flexDirection: 'row', alignItems: 'center', gap: 12,
-          ...SHADOW.lg,
-          borderWidth: 0,
-          zIndex: 10,
-        }}>
-          <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.pinkBorder }}>
-            <Ionicons name="search" size={16} color={C.pink} />
-          </View>
-          <Text style={{ flex: 1, fontSize: 15, color: C.textMuted, fontWeight: '500' }}>Where are you going?</Text>
-          <View style={{ backgroundColor: C.pink, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8, ...SHADOW.pink }}>
-            <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900', letterSpacing: 0.5 }}>Go</Text>
-          </View>
-        </TouchableOpacity>
+        {/* 1. ── Vehicle quick-select chips — FIRST ── */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}
+          style={{ marginTop: 10 }}
+          contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
+          {([
+            { id: 'auto',   icon: 'car-outline' as const,        label: 'Auto',    hourly: false },
+            { id: 'bike',   icon: 'bicycle-outline' as const,    label: 'Bike',    hourly: false },
+            { id: 'car',    icon: 'car-sport-outline' as const,  label: 'Car',     hourly: false },
+            { id: 'luxury', icon: 'diamond-outline' as const,    label: 'Luxury',  hourly: false },
+            { id: 'hourly', icon: 'time-outline' as const,       label: 'By Hour', hourly: true  },
+          ]).map(v => (
+            <TouchableOpacity key={v.id}
+              onPress={() => {
+                if (v.hourly) {
+                  setHourlyStep('book'); setHPickup(''); setHDrop(''); setHPickupCoords(null); setHDropCoords(null);
+                  setHPickupSugg([]); setHDropSugg([]); setHRoundTrip(false); setHStayHours(1);
+                  setHourlyBooking(null); setScreen('hourly');
+                } else {
+                  setRideType(v.id); setScreen('booking');
+                }
+              }}
+              style={{
+                alignItems: 'center', paddingHorizontal: 18, paddingVertical: 12,
+                backgroundColor: C.bgCard, borderRadius: 16,
+                borderWidth: 1.5, borderColor: v.hourly ? C.purpleBorder : C.glassBorder,
+                ...SHADOW.sm,
+              }}>
+              <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: v.hourly ? C.purpleGlass : C.plumGlass, alignItems: 'center', justifyContent: 'center', marginBottom: 6, borderWidth: 1, borderColor: v.hourly ? C.purpleBorder : C.plumBorder }}>
+                <Ionicons name={v.icon} size={20} color={v.hourly ? C.purple : C.plum} />
+              </View>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: v.hourly ? C.purple : C.plum }}>{v.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
-        {/* 1b. ── Live city pulse ticker ── */}
+        {/* 2. ── Search bar with micro-animation — BELOW CHIPS ── */}
+        <View style={{ marginHorizontal: 16, marginTop: 12, position: 'relative' }}>
+          {/* Animated glowing border ring (native driver, opacity only) */}
+          <Animated.View pointerEvents="none" style={{
+            position: 'absolute', top: -2, left: -2, right: -2, bottom: -2,
+            borderRadius: 22, borderWidth: 2.5, borderColor: C.pink,
+            opacity: searchGlowOpacity,
+          }} />
+          <TouchableOpacity onPress={() => setScreen('booking')} activeOpacity={0.88} style={{
+            backgroundColor: C.bgCard,
+            borderRadius: 20, paddingVertical: 15, paddingHorizontal: 18,
+            flexDirection: 'row', alignItems: 'center', gap: 12,
+            ...SHADOW.lg,
+            borderWidth: 1.5, borderColor: 'rgba(233,69,96,0.18)',
+            zIndex: 10,
+          }}>
+            <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.pinkBorder }}>
+              <Ionicons name="search" size={16} color={C.pink} />
+            </View>
+            <Text style={{ flex: 1, fontSize: 15, color: C.textMuted, fontWeight: '500' }}>Where are you going?</Text>
+            <View style={{ backgroundColor: C.pink, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8, ...SHADOW.pink }}>
+              <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900', letterSpacing: 0.5 }}>Go</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* 2b. ── Live city pulse ticker ── */}
         <View style={{
           marginHorizontal: 16, marginTop: 10,
           height: 30, borderRadius: 10, overflow: 'hidden',
@@ -634,41 +673,6 @@ function HomeTab() {
             ))}
           </Animated.View>
         </View>
-
-        {/* 2. ── Vehicle quick-select chips ── */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}
-          style={{ marginTop: 12 }}
-          contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
-          {([
-            { id: 'auto',   icon: 'car-outline' as const,        label: 'Auto',    hourly: false },
-            { id: 'bike',   icon: 'bicycle-outline' as const,    label: 'Bike',    hourly: false },
-            { id: 'car',    icon: 'car-sport-outline' as const,  label: 'Car',     hourly: false },
-            { id: 'luxury', icon: 'diamond-outline' as const,    label: 'Luxury',  hourly: false },
-            { id: 'hourly', icon: 'time-outline' as const,       label: 'By Hour', hourly: true  },
-          ]).map(v => (
-            <TouchableOpacity key={v.id}
-              onPress={() => {
-                if (v.hourly) {
-                  setHourlyStep('book'); setHPickup(''); setHDrop(''); setHPickupCoords(null); setHDropCoords(null);
-                  setHPickupSugg([]); setHDropSugg([]); setHRoundTrip(false); setHStayHours(1);
-                  setHourlyBooking(null); setScreen('hourly');
-                } else {
-                  setRideType(v.id); setScreen('booking');
-                }
-              }}
-              style={{
-                alignItems: 'center', paddingHorizontal: 18, paddingVertical: 12,
-                backgroundColor: C.bgCard, borderRadius: 16,
-                borderWidth: 1.5, borderColor: v.hourly ? C.purpleBorder : C.glassBorder,
-                ...SHADOW.sm,
-              }}>
-              <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: v.hourly ? C.purpleGlass : C.plumGlass, alignItems: 'center', justifyContent: 'center', marginBottom: 6, borderWidth: 1, borderColor: v.hourly ? C.purpleBorder : C.plumBorder }}>
-                <Ionicons name={v.icon} size={20} color={v.hourly ? C.purple : C.plum} />
-              </View>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: v.hourly ? C.purple : C.plum }}>{v.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
 
         {/* 3. ── Smart "Drivers nearby" CTA ── */}
         {nearbyCount > 0 && (
@@ -786,7 +790,7 @@ function HomeTab() {
             </SlideUp>
           )}
 
-          {/* 7. ── Quick-rebook history chips ── */}
+          {/* 7. ── Recent routes — 2 trips, above footer, pickup→dotted→drop design ── */}
           {historyRides.length > 0 && (() => {
             const seen = new Set<string>();
             const uniqueRoutes = (historyRides as any[]).filter((h: any) => {
@@ -794,32 +798,40 @@ function HomeTab() {
               const key = `${h.pickup.trim()}||${h.drop_location.trim()}`;
               if (seen.has(key)) return false;
               seen.add(key); return true;
-            }).slice(0, 5);
+            }).slice(0, 2);
             if (!uniqueRoutes.length) return null;
             return (
               <SlideUp delay={80}>
-                <View style={{ marginBottom: 14 }}>
-                  <Text style={{ fontSize: 11, fontWeight: '800', color: C.textDim, letterSpacing: 1, marginBottom: 10 }}>RECENT ROUTES</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                    {uniqueRoutes.map((h: any, i: number) => {
-                      const shortPick = h.pickup.split(',')[0];
-                      const shortDrop = h.drop_location.split(',')[0];
-                      return (
-                        <TouchableOpacity key={i}
-                          onPress={() => { setPickup(h.pickup); setDrop(h.drop_location); setRideType(h.ride_type || 'auto'); setScreen('booking'); }}
-                          style={{ backgroundColor: C.bgCard, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: C.glassBorder, maxWidth: 175 }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: C.green }} />
-                            <Text style={{ color: C.text, fontSize: 11, fontWeight: '700', flex: 1 }} numberOfLines={1}>{shortPick}</Text>
-                          </View>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <View style={{ width: 6, height: 6, borderRadius: 1.5, backgroundColor: C.pink }} />
-                            <Text style={{ color: C.textMuted, fontSize: 11, flex: 1 }} numberOfLines={1}>{shortDrop}</Text>
-                          </View>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </ScrollView>
+                <View style={{ marginBottom: 6, marginTop: 6 }}>
+                  <Text style={{ fontSize: 10, fontWeight: '800', color: C.textDim, letterSpacing: 1.2, marginBottom: 10 }}>RECENT ROUTES</Text>
+                  {uniqueRoutes.map((h: any, i: number) => {
+                    const shortPick = h.pickup.split(',')[0].trim();
+                    const shortDrop = h.drop_location.split(',')[0].trim();
+                    return (
+                      <TouchableOpacity key={i}
+                        onPress={() => { setPickup(h.pickup); setDrop(h.drop_location); setRideType(h.ride_type || 'auto'); setScreen('booking'); }}
+                        activeOpacity={0.88}
+                        style={{ backgroundColor: C.bgCard, borderRadius: 18, marginBottom: 9, borderWidth: 1, borderColor: C.glassBorder, ...SHADOW.sm, flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingLeft: 14, paddingRight: 14 }}>
+                        {/* Route line indicator: circle → dots → square */}
+                        <View style={{ width: 16, alignItems: 'center', marginRight: 12 }}>
+                          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.green, borderWidth: 2, borderColor: C.bgCard }} />
+                          <View style={{ width: 2, height: 4, backgroundColor: 'transparent', borderLeftWidth: 1.5, borderLeftColor: C.textDim, borderStyle: 'dashed', marginVertical: 1 }} />
+                          <View style={{ width: 2, height: 4, backgroundColor: 'transparent', borderLeftWidth: 1.5, borderLeftColor: C.textDim, borderStyle: 'dashed', marginVertical: 1 }} />
+                          <View style={{ width: 2, height: 4, backgroundColor: 'transparent', borderLeftWidth: 1.5, borderLeftColor: C.textDim, borderStyle: 'dashed', marginVertical: 1 }} />
+                          <View style={{ width: 9, height: 9, borderRadius: 2.5, backgroundColor: C.pink, borderWidth: 2, borderColor: C.bgCard }} />
+                        </View>
+                        {/* Route text */}
+                        <View style={{ flex: 1 }}>
+                          <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: '700', color: C.text, marginBottom: 10 }}>{shortPick}</Text>
+                          <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: '500', color: C.textMuted }}>{shortDrop}</Text>
+                        </View>
+                        {/* Book chip */}
+                        <View style={{ backgroundColor: C.pinkGlass, borderRadius: 12, paddingHorizontal: 13, paddingVertical: 7, borderWidth: 1, borderColor: C.pinkBorder, marginLeft: 10 }}>
+                          <Text style={{ color: C.pink, fontSize: 12, fontWeight: '900' }}>Book →</Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </SlideUp>
             );
