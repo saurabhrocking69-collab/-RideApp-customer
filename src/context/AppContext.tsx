@@ -1057,6 +1057,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                       rating: d.ride.driver_rating,
                       photo: d.ride.driver_photo,
                       verified: d.ride.driver_verified ?? false,
+                      upi_id: d.ride.driver_upi_id || null,
                     },
                   } : p);
                 }
