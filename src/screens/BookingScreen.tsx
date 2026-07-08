@@ -439,6 +439,8 @@ export function BookingScreen() {
         shadowColor: C.pink,
         shadowOpacity: 0.14,
         shadowRadius: 20,
+        backgroundColor: C.bg,
+        borderColor: 'rgba(180,160,255,0.18)',
       }}>
         {/* Drag handle — tap to expand/collapse when route is confirmed */}
         <TouchableOpacity
