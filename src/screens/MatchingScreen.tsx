@@ -536,7 +536,7 @@ export function MatchingScreen() {
           <Text style={{ fontSize: 34 }}>🚫</Text>
         </View>
         <Text style={{ fontSize: 20, fontWeight: '900', color: '#0F172A', marginBottom: 8, textAlign: 'center' }}>Driver ne Cancel Kiya</Text>
-        <Text style={{ fontSize: 14, color: '#64748B', textAlign: 'center', marginBottom: 28, lineHeight: 20 }}>Aapke liye naya driver dhundh rahe hain...</Text>
+        <Text style={{ fontSize: 14, color: '#64748B', textAlign: 'center', marginBottom: 28, lineHeight: 20 }}>Ride cancel ho gayi. Dobara book karne ke liye home se search karein.</Text>
         <TouchableOpacity
           onPress={() => setDriverCancelPopup(false)}
           style={{ backgroundColor: C.pink, borderRadius: 14, paddingVertical: 15, paddingHorizontal: 52 }}>
