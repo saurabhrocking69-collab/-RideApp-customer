@@ -1107,7 +1107,20 @@ function LiveTab() {
               ) : (
                 <View style={{ backgroundColor: C.yellowGlass, borderRadius: 12, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: C.yellowBorder }}>
                   <Text style={{ fontSize: 20, marginRight: 10 }}>🔍</Text>
-                  <Text style={{ color: C.yellow, fontSize: 13, fontWeight: '700' }}>Looking for a driver...</Text>
+                  <Text style={{ color: C.yellow, fontSize: 13, fontWeight: '700', flex: 1 }}>Looking for a driver...</Text>
+                  {hourlyBooking?.status === 'pending' && (
+                    <TouchableOpacity
+                      onPress={async () => {
+                        try {
+                          await apiPost('/api/hourly/cancel', { booking_id: hourlyBooking.id });
+                        } catch (_) {}
+                        setHourlyBooking(null);
+                        setHourlyStep('book');
+                      }}
+                      style={{ backgroundColor: 'rgba(255,59,48,0.15)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: 'rgba(255,59,48,0.35)', marginLeft: 10 }}>
+                      <Text style={{ color: '#ff3b30', fontSize: 12, fontWeight: '800' }}>Cancel</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               )}
               <Bouncy onPress={() => setScreen('hourly')} style={{ backgroundColor: C.pink, borderRadius: 14, padding: 14, alignItems: 'center', elevation: 8, shadowColor: C.pink, shadowOpacity: 0.5, shadowRadius: 10 }}>
