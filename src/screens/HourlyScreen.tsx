@@ -72,7 +72,7 @@ export function HourlyScreen() {
     let active = true;
     const load = async () => {
       try {
-        const d = await apiGet(`/api/hourly/chat/${hourlyBooking.id}`);
+        const d = await apiGet(`/api/chat/h_${hourlyBooking.id}`);
         if (active && !d._error && Array.isArray(d.messages)) {
           setHChatMsgs(d.messages);
           setHChatUnread(0);
@@ -149,13 +149,13 @@ export function HourlyScreen() {
     const msg = hChatInput.trim();
     if (!msg || !hourlyBooking?.id) return;
     setHChatInput('');
-    const result = await apiPost('/api/hourly/chat/send', { booking_id: hourlyBooking.id, sender: 'customer', message: msg });
+    const result = await apiPost('/api/chat/send', { ride_id: `h_${hourlyBooking.id}`, sender: 'customer', message: msg });
     if (result._error) {
       setHChatInput(msg);
       Alert.alert('', 'Message not sent — check your connection and try again.');
       return;
     }
-    const d = await apiGet(`/api/hourly/chat/${hourlyBooking.id}`);
+    const d = await apiGet(`/api/chat/h_${hourlyBooking.id}`);
     if (!d._error && Array.isArray(d.messages)) setHChatMsgs(d.messages);
   };
 

@@ -890,7 +890,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (screen !== 'hourly' || !hChatOpen || !hourlyBooking?.id) return;
     const load = async () => {
       try {
-        const d = await apiGet(`/api/hourly/chat/${hourlyBooking.id}`);
+        const d = await apiGet(`/api/chat/h_${hourlyBooking.id}`);
         if (!d._error && Array.isArray(d.messages)) { setHChatMsgs(d.messages); setHChatUnread(0); }
       } catch (_e) {}
     };
@@ -905,7 +905,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     let lastCount = hChatMsgs.length;
     const iv = setInterval(async () => {
       try {
-        const d = await apiGet(`/api/hourly/chat/${hourlyBooking.id}`);
+        const d = await apiGet(`/api/chat/h_${hourlyBooking.id}`);
         if (d._error || !Array.isArray(d.messages)) return;
         const msgs = d.messages;
         if (msgs.length > lastCount) {
