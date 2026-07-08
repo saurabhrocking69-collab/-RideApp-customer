@@ -605,7 +605,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               }
             } catch { setScreen('home'); }
           } else {
-            setScreen('home');
+            // No active standard ride — check for active hourly booking
+            try {
+              const hr = await fetch(`${API}/api/hourly/active?phone=${savedPhone}`);
+              const hd = await hr.json();
+              if (hd.booking && ['pending','matched','active'].includes(hd.booking.status)) {
+                setHourlyBooking({ ...hd.booking, driver: hd.driver });
+                activeHourlyIdRef.current = hd.booking.id;
+                const step: HourlyStep = hd.booking.status === 'active' ? 'active'
+                  : hd.booking.status === 'matched' ? 'matched' : 'pending';
+                setHourlyStep(step);
+                setScreen('hourly');
+              } else {
+                setScreen('home');
+              }
+            } catch { setScreen('home'); }
           }
           fetchAppConfig();
           loadHistory(savedPhone); loadWallet(savedPhone);
@@ -682,10 +696,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         loadWallet(phone); loadHistory(phone);
         registerFCM(phone);
         if (socketRef.current && !socketRef.current.connected) socketRef.current.connect();
+        // Restore hourly booking if state was lost while app was backgrounded
+        if (!hourlyBooking) {
+          fetch(`${API}/api/hourly/active?phone=${phone}`)
+            .then(r => r.json())
+            .then(hd => {
+              if (hd.booking && ['pending','matched','active'].includes(hd.booking.status)) {
+                setHourlyBooking({ ...hd.booking, driver: hd.driver });
+                activeHourlyIdRef.current = hd.booking.id;
+                const step: HourlyStep = hd.booking.status === 'active' ? 'active'
+                  : hd.booking.status === 'matched' ? 'matched' : 'pending';
+                setHourlyStep(step);
+                if (screen === 'home') setScreen('hourly');
+              }
+            })
+            .catch(() => {});
+        }
       }
     });
     return () => sub.remove();
-  }, [phone]);
+  }, [phone, hourlyBooking, screen]);
 
   // App config refresh every 5 minutes
   useEffect(() => {
