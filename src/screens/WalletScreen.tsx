@@ -1,9 +1,24 @@
-import { useEffect } from 'react';
-import { Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Dimensions, Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
-import { CountUp, DotBG, FadeIn, ScreenIn, ShineCard } from '../components/ui';
+import { CountUp, DotBG, FadeIn, ScreenIn, ShineCard, SkeletonBox } from '../components/ui';
 import { s, C, T, R, SP } from '../styles';
+
+const WALLET_W = Dimensions.get('window').width;
+
+function SkeletonWalletTxn() {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)' }}>
+      <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.09)', marginRight: 12 }} />
+      <View style={{ flex: 1, gap: 8 }}>
+        <SkeletonBox width={Math.round(WALLET_W * 0.42)} height={13} radius={6} />
+        <SkeletonBox width={Math.round(WALLET_W * 0.26)} height={11} radius={5} />
+      </View>
+      <SkeletonBox width={54} height={18} radius={5} />
+    </View>
+  );
+}
 
 const SB_H = Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 0;
 
@@ -23,6 +38,13 @@ export function WalletScreen() {
   } = useApp();
 
   useEffect(() => { loadWalletDetail(phone); loadRewardsDash(phone); }, []);
+
+  const [txnsLoading, setTxnsLoading] = useState(walletTxns.length === 0);
+  useEffect(() => {
+    if (walletTxns.length > 0) { setTxnsLoading(false); return; }
+    const t = setTimeout(() => setTxnsLoading(false), 2500);
+    return () => clearTimeout(t);
+  }, [walletTxns.length]);
 
   const filteredTxns = walletTxns.filter((t: any) => {
     if (walletTxnTab === 'all') return true;
@@ -170,7 +192,9 @@ export function WalletScreen() {
 
         {/* ── Transactions ── */}
         <View style={{ marginHorizontal: 16, marginTop: 12 }}>
-          {filteredTxns.length === 0 ? (
+          {txnsLoading ? (
+            [1, 2, 3, 4, 5].map(i => <SkeletonWalletTxn key={i} />)
+          ) : filteredTxns.length === 0 ? (
             <View style={{ alignItems: 'center', padding: 40 }}>
               <Text style={{ fontSize: 40 }}>💸</Text>
               <Text style={{ color: C.textDim, marginTop: 10, fontSize: 14 }}>No transactions found</Text>

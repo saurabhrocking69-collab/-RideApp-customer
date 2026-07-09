@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { apiPost, apiGet } from '../../api';
 import { useRideStore } from '../../store';
 import { useApp } from '../context/AppContext';
-import { Bouncy, GlassPanel, PulseView, SlideUp, CountUp, EmptyAnim, GlowPulse, ShineCard, FadeIn } from '../components/ui';
+import { Bouncy, GlassPanel, PulseView, SlideUp, CountUp, EmptyAnim, GlowPulse, ShineCard, FadeIn, SkeletonBox } from '../components/ui';
 import { s, C, T, SP, R, SHADOW } from '../styles';
 import { MAPS_KEY, API } from '../constants';
 import { useNearbyDrivers } from '../offline';
@@ -1151,6 +1151,34 @@ function LiveTab() {
   );
 }
 
+function SkeletonTripCard() {
+  const cw = SCREEN_W - 60;
+  return (
+    <View style={{ backgroundColor: C.bgCard, borderRadius: 20, marginBottom: 12, borderWidth: 1, borderColor: C.glassBorder, overflow: 'hidden' }}>
+      <View style={{ height: 3.5, backgroundColor: 'rgba(255,255,255,0.10)' }} />
+      <View style={{ padding: 16 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+          <SkeletonBox width={72} height={26} radius={20} />
+          <View style={{ flex: 1 }} />
+          <SkeletonBox width={70} height={13} radius={6} />
+          <SkeletonBox width={78} height={26} radius={8} />
+        </View>
+        <View style={{ flexDirection: 'row', gap: 14 }}>
+          <View style={{ flex: 1, gap: 8 }}>
+            <SkeletonBox width={Math.round(cw * 0.82)} height={14} radius={6} />
+            <SkeletonBox width={Math.round(cw * 0.34)} height={11} radius={5} />
+            <SkeletonBox width={Math.round(cw * 0.64)} height={11} radius={5} />
+          </View>
+          <View style={{ gap: 6 }}>
+            <SkeletonBox width={48} height={26} radius={6} />
+            <SkeletonBox width={36} height={12} radius={4} />
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 function HistoryTab() {
   const { bottom: bottomInset } = useSafeAreaInsets();
   const {
@@ -1169,6 +1197,13 @@ function HistoryTab() {
   const [detailRide, setDetailRide] = useState<any>(null);
   const [detailData, setDetailData] = useState<any>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+
+  const [histLoading, setHistLoading] = useState(historyRides.length === 0);
+  useEffect(() => {
+    if (historyRides.length > 0) { setHistLoading(false); return; }
+    const t = setTimeout(() => setHistLoading(false), 2200);
+    return () => clearTimeout(t);
+  }, [historyRides.length]);
 
   const openDetail = async (h: any) => {
     setDetailRide(h);
@@ -1297,7 +1332,9 @@ _GST is included in the fare._
           </Animated.View>
         )}
 
-        {historyRides.length === 0
+        {histLoading
+          ? [1, 2, 3, 4].map(i => <SkeletonTripCard key={i} />)
+          : historyRides.length === 0
           ? <EmptyAnim icon="🚖" title="No trips yet" sub="Book your first ride and see your history here!" />
           : historyRides.map((h: any, i: number) => {
             const pickup    = h.pickup?.trim()        || null;
@@ -1500,7 +1537,12 @@ _GST is included in the fare._
                       </View>
                     )}
                     {detailLoading
-                      ? <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 3 }}>Loading vehicle info...</Text>
+                      ? (
+                        <View style={{ gap: 6, marginTop: 4 }}>
+                          <SkeletonBox height={13} width={Math.round(SCREEN_W * 0.38)} radius={5} />
+                          <SkeletonBox height={22} width={90} radius={7} />
+                        </View>
+                      )
                       : (
                         <View style={{ marginTop: 4 }}>
                           {vehicleLabel && <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12 }}>{vehicleLabel}</Text>}
@@ -1520,28 +1562,52 @@ _GST is included in the fare._
               <View style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: C.glassBorder }}>
                 <Text style={{ color: C.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 1.5, marginBottom: 14 }}>FARE BREAKDOWN</Text>
 
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 14 }}>Base Fare</Text>
-                  <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>₹{base.toFixed(2)}</Text>
-                </View>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 14 }}>
-                  <View>
-                    <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 14 }}>GST (5%)</Text>
-                    <Text style={{ color: C.textMuted, fontSize: 10, marginTop: 2 }}>Included in fare</Text>
+                {detailLoading ? (
+                  <View style={{ gap: 12 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <SkeletonBox width={80} height={14} radius={5} />
+                      <SkeletonBox width={60} height={14} radius={5} />
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <SkeletonBox width={60} height={14} radius={5} />
+                      <SkeletonBox width={50} height={14} radius={5} />
+                    </View>
+                    <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.08)' }} />
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <SkeletonBox width={90} height={18} radius={6} />
+                      <SkeletonBox width={80} height={28} radius={7} />
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <SkeletonBox width={65} height={12} radius={5} />
+                      <SkeletonBox width={100} height={12} radius={5} />
+                    </View>
                   </View>
-                  <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>₹{gst.toFixed(2)}</Text>
-                </View>
+                ) : (
+                  <>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 14 }}>Base Fare</Text>
+                      <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>₹{base.toFixed(2)}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 14 }}>
+                      <View>
+                        <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 14 }}>GST (5%)</Text>
+                        <Text style={{ color: C.textMuted, fontSize: 10, marginTop: 2 }}>Included in fare</Text>
+                      </View>
+                      <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>₹{gst.toFixed(2)}</Text>
+                    </View>
 
-                <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginBottom: 14 }} />
+                    <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginBottom: 14 }} />
 
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900' }}>Total Paid</Text>
-                  <Text style={{ color: C.pink, fontSize: 28, fontWeight: '900' }}>₹{fareNum}</Text>
-                </View>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text style={{ color: C.textMuted, fontSize: 12 }}>Payment</Text>
-                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{payLabel()}</Text>
-                </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                      <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900' }}>Total Paid</Text>
+                      <Text style={{ color: C.pink, fontSize: 28, fontWeight: '900' }}>₹{fareNum}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                      <Text style={{ color: C.textMuted, fontSize: 12 }}>Payment</Text>
+                      <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{payLabel()}</Text>
+                    </View>
+                  </>
+                )}
               </View>
 
               {/* ── Section 5: Rating given ── */}
