@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
-import { Animated, Dimensions, Linking, Platform, ScrollView, Share, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Easing, Dimensions, Linking, Platform, ScrollView, Share, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Storage as AsyncStorage } from '../storage';
@@ -142,6 +142,66 @@ function RadarPulse({ active }: { active: boolean }) {
       <Animated.View style={ringStyle(r1)} />
       <Animated.View style={ringStyle(r2)} />
       <Animated.View style={ringStyle(r3)} />
+    </View>
+  );
+}
+
+// ── Horizontal scan-line animation for the searching hero ───────────────────
+const SCAN_LINES = [
+  { speed: 1600, delay: 0,    dir: 1,  opacity: 0.13, h: 2 },
+  { speed: 2200, delay: 400,  dir: -1, opacity: 0.09, h: 1 },
+  { speed: 1300, delay: 800,  dir: 1,  opacity: 0.18, h: 3 },
+  { speed: 2600, delay: 200,  dir: -1, opacity: 0.07, h: 1 },
+  { speed: 1900, delay: 1000, dir: 1,  opacity: 0.11, h: 2 },
+  { speed: 1100, delay: 600,  dir: -1, opacity: 0.15, h: 2 },
+  { speed: 3000, delay: 300,  dir: 1,  opacity: 0.06, h: 1 },
+  { speed: 1500, delay: 900,  dir: -1, opacity: 0.12, h: 3 },
+];
+const HERO_H = 240; // approximate height of the searching hero box
+
+function ScanLines({ active }: { active: boolean }) {
+  const anims = useRef(
+    SCAN_LINES.map((l, i) => new Animated.Value(l.dir > 0 ? -10 : HERO_H + 10))
+  ).current;
+
+  useEffect(() => {
+    if (!active) return;
+    const loops = SCAN_LINES.map((cfg, i) => {
+      const start = cfg.dir > 0 ? -10 : HERO_H + 10;
+      const end   = cfg.dir > 0 ? HERO_H + 10 : -10;
+      anims[i].setValue(start);
+      return Animated.loop(
+        Animated.sequence([
+          Animated.delay(cfg.delay),
+          Animated.timing(anims[i], {
+            toValue: end,
+            duration: cfg.speed,
+            easing: Easing.linear,
+            useNativeDriver: true,
+          }),
+          Animated.timing(anims[i], { toValue: start, duration: 0, useNativeDriver: true }),
+        ])
+      );
+    });
+    loops.forEach(l => l.start());
+    return () => loops.forEach(l => l.stop());
+  }, [active]);
+
+  return (
+    <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+      {SCAN_LINES.map((cfg, i) => (
+        <Animated.View
+          key={i}
+          style={{
+            position: 'absolute',
+            left: 0, right: 0,
+            height: cfg.h,
+            backgroundColor: '#fff',
+            opacity: cfg.opacity,
+            transform: [{ translateY: anims[i] }],
+          }}
+        />
+      ))}
     </View>
   );
 }
@@ -842,8 +902,10 @@ export function MatchingScreen() {
 
             /* ═══════════════ SEARCHING STATE ═══════════════ */
             <>
-              {/* ── Hero: radar rings + vehicle icon + status ── */}
-              <View style={{ backgroundColor: '#FF2D78', borderRadius: 20, marginHorizontal: 12, marginTop: 8, marginBottom: 4 }}>
+              {/* ── Hero: scan lines + radar rings + vehicle icon + status ── */}
+              <View style={{ backgroundColor: '#FF2D78', borderRadius: 20, marginHorizontal: 12, marginTop: 8, marginBottom: 4, overflow: 'hidden' }}>
+              {/* Horizontal scan-line micro-animation */}
+              <ScanLines active={!noDriverFinal} />
               <View style={{ alignItems: 'center', paddingTop: 20, paddingBottom: 16 }}>
                 {/* Radar + icon */}
                 <View style={{ width: 160, height: 160, alignItems: 'center', justifyContent: 'center' }}>

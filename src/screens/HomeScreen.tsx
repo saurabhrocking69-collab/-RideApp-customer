@@ -8,7 +8,6 @@ import { apiPost, apiGet } from '../../api';
 import { useRideStore } from '../../store';
 import { useApp } from '../context/AppContext';
 import { Bouncy, GlassPanel, PulseView, SlideUp, CountUp, EmptyAnim, GlowPulse, ShineCard, FadeIn } from '../components/ui';
-import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
 import { s, C, T, SP, R, SHADOW } from '../styles';
 import { MAPS_KEY, API } from '../constants';
 import { useNearbyDrivers } from '../offline';
@@ -535,47 +534,31 @@ function HomeTab() {
 
   return (
     <View style={[s.screen, { backgroundColor: C.bg }]}>
-      {/* ── Map header ── */}
-      <Animated.View style={{ height: headerH, overflow: 'hidden' }}>
-        {/* Live map background */}
-        <MapView
-          style={StyleSheet.absoluteFillObject}
-          provider={PROVIDER_GOOGLE}
-          region={{
-            latitude: userLat || 26.8467,
-            longitude: userLng || 80.9462,
-            latitudeDelta: 0.018,
-            longitudeDelta: 0.018,
-          }}
-          scrollEnabled={false}
-          zoomEnabled={false}
-          rotateEnabled={false}
-          pitchEnabled={false}
-          showsUserLocation
-          showsMyLocationButton={false}
-          showsCompass={false}
-          toolbarEnabled={false}
-          pointerEvents="none"
-        />
-        {/* White wash — keeps dark text legible */}
-        <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.68)' }} pointerEvents="none" />
+      {/* ── Green header ── */}
+      <Animated.View style={{ height: headerH, overflow: 'hidden', backgroundColor: '#16A34A' }}>
+        {/* Subtle diagonal stripe texture */}
+        <View style={{ ...StyleSheet.absoluteFillObject, opacity: 0.08 }}>
+          {[0,1,2,3,4,5,6,7].map(i => (
+            <View key={i} style={{ position: 'absolute', top: -20, left: i * 48 - 20, width: 18, height: 300, backgroundColor: '#fff', transform: [{ rotate: '20deg' }] }} />
+          ))}
+        </View>
 
         {/* Full header */}
         <Animated.View style={{ paddingTop: Platform.OS === 'android' ? 38 : 50, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', opacity: fullAlpha }}>
           <View style={{ flex: 1 }}>
-            <Animated.Text style={{ color: '#1A3028', fontSize: 12, fontWeight: '600', opacity: greetFade, transform: [{ translateY: greetSlide }] }}>
+            <Animated.Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '600', opacity: greetFade, transform: [{ translateY: greetSlide }] }}>
               {GREETINGS[greetIdx]}
             </Animated.Text>
-            <Text style={{ color: '#0A1A10', fontSize: 22, fontWeight: '900', letterSpacing: -0.5, marginTop: 3 }}>{userName || 'Rider'}</Text>
+            <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900', letterSpacing: -0.5, marginTop: 3 }}>{userName || 'Rider'}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
-              <Ionicons name="location-outline" size={11} color="#0A5040" />
-              <Text style={{ color: '#0A5040', fontSize: 10, fontWeight: '600' }}>India</Text>
+              <Ionicons name="location-outline" size={11} color="rgba(255,255,255,0.7)" />
+              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: '600' }}>India</Text>
             </View>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <NotifBell onPress={() => { setNotifOpen(true); setUnreadNotif(0); }} unread={unreadNotif} />
             <TouchableOpacity onPress={() => { setTab('profile'); loadWallet(phone); }}
-              style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#FF2D78', alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#FF2D78', shadowOpacity: 0.45, shadowRadius: 8 }}>
+              style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 8, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)' }}>
               <Text style={{ color: '#fff', fontWeight: '900', fontSize: 18 }}>{(userName || 'R')[0].toUpperCase()}</Text>
             </TouchableOpacity>
           </View>
@@ -583,9 +566,9 @@ function HomeTab() {
 
         {/* Mini row — compact when scrolled */}
         <Animated.View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', opacity: miniAlpha }}>
-          <Text style={{ color: '#0A1A10', fontSize: 15, fontWeight: '900', letterSpacing: -0.3 }}>{userName || 'Rider'}</Text>
+          <Text style={{ color: '#fff', fontSize: 15, fontWeight: '900', letterSpacing: -0.3 }}>{userName || 'Rider'}</Text>
           <TouchableOpacity onPress={() => { setTab('profile'); loadWallet(phone); }}
-            style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#FF2D78', alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#FF2D78', shadowOpacity: 0.45, shadowRadius: 8 }}>
+            style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)' }}>
             <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>{(userName || 'R')[0].toUpperCase()}</Text>
           </TouchableOpacity>
         </Animated.View>
