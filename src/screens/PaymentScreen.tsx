@@ -34,6 +34,8 @@ export function PaymentScreen() {
   const fareNum = Math.round(
     parseFloat(String(rideData?.fare ?? '').replace(/[^0-9.]/g, '') || '0') || fareCount
   );
+  const fareGst  = fareNum > 0 ? Math.round((fareNum * 5 / 105) * 100) / 100 : 0;
+  const fareBase = fareNum > 0 ? Math.round((fareNum - fareGst) * 100) / 100 : 0;
   const upiLink = driverUpiId
     ? `upi://pay?pa=${encodeURIComponent(driverUpiId)}&pn=${encodeURIComponent(rideData?.driver?.name || 'Driver')}&am=${fareNum}&cu=INR&tn=Sppero%20Trip`
     : '';
@@ -232,6 +234,15 @@ export function PaymentScreen() {
           <Text style={{ color: '#fff', fontSize: 72, fontWeight: '900', textAlign: 'center', letterSpacing: -2, lineHeight: 76 }}>
             ₹{fareNum}
           </Text>
+
+          {/* Fare breakdown */}
+          {fareNum > 0 && (
+            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 6 }}>
+              <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, fontWeight: '700' }}>Base ₹{fareBase.toFixed(0)}</Text>
+              <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.35)' }} />
+              <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, fontWeight: '700' }}>GST 5% ₹{fareGst.toFixed(0)}</Text>
+            </View>
+          )}
 
           {/* Route pill */}
           <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 16, padding: 12, marginTop: 16, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}>

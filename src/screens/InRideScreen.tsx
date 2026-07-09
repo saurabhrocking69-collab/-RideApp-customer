@@ -123,6 +123,27 @@ export function InRideScreen() {
     return () => clearInterval(id);
   }, []);
 
+  // ETA live countdown — resets whenever socket fires driverEta, ticks down every 60s between
+  const etaIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [etaMins, setEtaMins] = useState<number | null>(null);
+  useEffect(() => {
+    if (!driverEta) return;
+    const m = parseInt((driverEta.match(/\d+/) || [])[0] || '0', 10);
+    if (m <= 0) return;
+    setEtaMins(m);
+    if (etaIntervalRef.current) clearInterval(etaIntervalRef.current);
+    let remaining = m;
+    etaIntervalRef.current = setInterval(() => {
+      remaining -= 1;
+      if (remaining > 0) setEtaMins(remaining);
+      else clearInterval(etaIntervalRef.current!);
+    }, 60000);
+    return () => { if (etaIntervalRef.current) clearInterval(etaIntervalRef.current); };
+  }, [driverEta]);
+  const etaDisplay = etaMins !== null
+    ? (etaMins <= 1 ? '< 1 min' : `${etaMins} min`)
+    : driverEta;
+
   const handleSOS = async () => {
     setSosActive(true);
     await triggerSOS();
@@ -132,6 +153,10 @@ export function InRideScreen() {
   const driver = rideData?.driver;
   const vType  = (rideData?.vehicle_type || rideData?.ride_type || rideType || 'auto').toLowerCase();
   const vEmoji = VEHICLE_EMOJI[vType] || '🚗';
+
+  const fareNum  = Math.round(parseFloat(String(rideData?.fare ?? '').replace(/[^0-9.]/g, '')) || 0);
+  const fareGst  = fareNum > 0 ? Math.round((fareNum * 5 / 105) * 100) / 100 : 0;
+  const fareBase = fareNum > 0 ? Math.round((fareNum - fareGst) * 100) / 100 : 0;
 
   return (
     <View style={s.screen}>
@@ -252,13 +277,36 @@ export function InRideScreen() {
                 </View>
               ) : null}
             </View>
-            {driverEta ? (
+            {etaDisplay ? (
               <View style={{ backgroundColor: C.green, borderRadius: R.sm, paddingHorizontal: 10, paddingVertical: 6, alignItems: 'center', elevation: 3, shadowColor: C.green, shadowOpacity: 0.4, shadowRadius: 6 }}>
                 <Text style={{ ...T.label, color: '#fff' }}>DROP ETA</Text>
-                <Text style={{ ...T.bodyBold, color: '#fff', marginTop: 1 }}>{driverEta}</Text>
+                <Text style={{ ...T.bodyBold, color: '#fff', marginTop: 1 }}>{etaDisplay}</Text>
               </View>
             ) : null}
           </View>
+
+          {/* Fare Breakdown */}
+          {fareNum > 0 && (
+            <View style={{
+              backgroundColor: C.glass, borderRadius: R.md, padding: SP.md,
+              marginBottom: 10, borderWidth: 1, borderColor: C.glassBorder,
+            }}>
+              <Text style={{ ...T.label, color: C.textMuted, marginBottom: 10 }}>FARE BREAKDOWN</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                <Text style={{ fontSize: 13, color: C.textMuted }}>Base Fare</Text>
+                <Text style={{ fontSize: 13, color: C.text, fontVariant: ['tabular-nums'] }}>₹{fareBase.toFixed(0)}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                <Text style={{ fontSize: 13, color: C.textMuted }}>GST (5%)</Text>
+                <Text style={{ fontSize: 13, color: C.text, fontVariant: ['tabular-nums'] }}>₹{fareGst.toFixed(0)}</Text>
+              </View>
+              <View style={{ height: 1, backgroundColor: C.glassBorder, marginBottom: 10 }} />
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text style={{ fontSize: 15, color: C.text, fontWeight: '800' }}>Total</Text>
+                <Text style={{ fontSize: 22, color: C.pink, fontWeight: '900', fontVariant: ['tabular-nums'] }}>₹{fareNum}</Text>
+              </View>
+            </View>
+          )}
 
           {/* Pickup → Drop */}
           <View style={{
