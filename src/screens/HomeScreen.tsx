@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ScrollView, View, Text, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, Animated, Easing, Share, Dimensions } from 'react-native';
+import { ScrollView, StyleSheet, View, Text, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, Animated, Easing, Share, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Storage as AsyncStorage } from '../storage';
@@ -8,7 +8,7 @@ import { apiPost, apiGet } from '../../api';
 import { useRideStore } from '../../store';
 import { useApp } from '../context/AppContext';
 import { Bouncy, GlassPanel, PulseView, SlideUp, CountUp, EmptyAnim, GlowPulse, ShineCard, FadeIn } from '../components/ui';
-import { FluidGradient, GRADIENT } from '../components/FluidGradient';
+import { SilkRibbon, RIBBON } from '../components/SilkRibbon';
 import { s, C, T, SP, R, SHADOW } from '../styles';
 import { MAPS_KEY, API } from '../constants';
 import { useNearbyDrivers } from '../offline';
@@ -534,29 +534,29 @@ function HomeTab() {
 
   return (
     <View style={[s.screen, { backgroundColor: C.bg }]}>
-      {/* ── Golden yellow header ── */}
-      <Animated.View style={{ height: headerH, backgroundColor: '#FFFBE6', overflow: 'hidden' }}>
-        {/* Decorative amber circles */}
-        <View style={{ position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(245,158,11,0.10)', top: -90, right: -60 }} />
-        <View style={{ position: 'absolute', width: 110, height: 110, borderRadius: 55, backgroundColor: 'rgba(245,158,11,0.07)', bottom: -40, left: 20 }} />
-        <View style={{ position: 'absolute', width: 70,  height: 70,  borderRadius: 35, backgroundColor: 'rgba(245,158,11,0.05)', top: 10, left: '42%' }} />
+      {/* ── Silk ribbon header — Rose + Aqua (light) ── */}
+      <Animated.View style={{ height: headerH, overflow: 'hidden' }}>
+        {/* Ribbon background (absolute, fills animated height) */}
+        <SilkRibbon palette={RIBBON.roseAqua} style={StyleSheet.absoluteFillObject} />
+        {/* Frosted overlay — keeps dark text legible over vivid ribbons */}
+        <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(234,242,238,0.40)' }} pointerEvents="none" />
 
         {/* Full header */}
         <Animated.View style={{ paddingTop: Platform.OS === 'android' ? 38 : 50, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', opacity: fullAlpha }}>
           <View style={{ flex: 1 }}>
-            <Animated.Text style={{ color: '#92650A', fontSize: 12, fontWeight: '600', opacity: greetFade, transform: [{ translateY: greetSlide }] }}>
+            <Animated.Text style={{ color: '#1A3028', fontSize: 12, fontWeight: '600', opacity: greetFade, transform: [{ translateY: greetSlide }] }}>
               {GREETINGS[greetIdx]}
             </Animated.Text>
-            <Text style={{ color: '#1A1200', fontSize: 22, fontWeight: '900', letterSpacing: -0.5, marginTop: 3 }}>{userName || 'Rider'}</Text>
+            <Text style={{ color: '#0A1A10', fontSize: 22, fontWeight: '900', letterSpacing: -0.5, marginTop: 3 }}>{userName || 'Rider'}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
-              <Ionicons name="location-outline" size={11} color="#A87B0A" />
-              <Text style={{ color: '#A87B0A', fontSize: 10, fontWeight: '600' }}>India</Text>
+              <Ionicons name="location-outline" size={11} color="#0A5040" />
+              <Text style={{ color: '#0A5040', fontSize: 10, fontWeight: '600' }}>India</Text>
             </View>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <NotifBell onPress={() => { setNotifOpen(true); setUnreadNotif(0); }} unread={unreadNotif} />
             <TouchableOpacity onPress={() => { setTab('profile'); loadWallet(phone); }}
-              style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: C.yellow, alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: C.yellow, shadowOpacity: 0.45, shadowRadius: 8 }}>
+              style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#A01850', alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#A01850', shadowOpacity: 0.45, shadowRadius: 8 }}>
               <Text style={{ color: '#fff', fontWeight: '900', fontSize: 18 }}>{(userName || 'R')[0].toUpperCase()}</Text>
             </TouchableOpacity>
           </View>
@@ -564,9 +564,9 @@ function HomeTab() {
 
         {/* Mini row — compact when scrolled */}
         <Animated.View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', opacity: miniAlpha }}>
-          <Text style={{ color: '#1A1200', fontSize: 15, fontWeight: '900', letterSpacing: -0.3 }}>{userName || 'Rider'}</Text>
+          <Text style={{ color: '#0A1A10', fontSize: 15, fontWeight: '900', letterSpacing: -0.3 }}>{userName || 'Rider'}</Text>
           <TouchableOpacity onPress={() => { setTab('profile'); loadWallet(phone); }}
-            style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: C.yellow, alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: C.yellow, shadowOpacity: 0.45, shadowRadius: 8 }}>
+            style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#A01850', alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#A01850', shadowOpacity: 0.45, shadowRadius: 8 }}>
             <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>{(userName || 'R')[0].toUpperCase()}</Text>
           </TouchableOpacity>
         </Animated.View>
@@ -1614,17 +1614,18 @@ function ProfileTab() {
     <View style={s.screen}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
 
-        {/* ── Plum hero ─────────────────────────────────────────── */}
-        <View style={{ backgroundColor: C.plum, overflow: 'hidden', paddingTop: Platform.OS === 'android' ? 46 : 56, paddingBottom: 52, paddingHorizontal: SP.lg }}>
-          <View style={{ position: 'absolute', width: 240, height: 240, borderRadius: 120, backgroundColor: 'rgba(255,45,120,0.18)', top: -80, right: -60 }} />
-          <View style={{ position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,45,120,0.10)', bottom: -40, left: 30 }} />
-          <Text style={{ ...T.title, color: 'rgba(255,255,255,0.55)', letterSpacing: 1.5, marginBottom: SP.lg }}>PROFILE</Text>
+        {/* ── Silk ribbon hero — Rose + Aqua Dark ──────────────── */}
+        <SilkRibbon
+          palette={RIBBON.roseAquaDark}
+          style={{ paddingTop: Platform.OS === 'android' ? 46 : 56, paddingBottom: 52, paddingHorizontal: SP.lg }}
+        >
+          <Text style={{ ...T.title, color: 'rgba(255,255,255,0.70)', letterSpacing: 1.5, marginBottom: SP.lg }}>PROFILE</Text>
           <View style={{ alignItems: 'center' }}>
-            <View style={{ width: 90, height: 90, borderRadius: 45, backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: 3, borderColor: C.pink, alignItems: 'center', justifyContent: 'center', elevation: 10, shadowColor: C.pink, shadowOpacity: 0.5, shadowRadius: 16 }}>
+            <View style={{ width: 90, height: 90, borderRadius: 45, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 3, borderColor: '#FFA8C8', alignItems: 'center', justifyContent: 'center', elevation: 10, shadowColor: '#88E8F8', shadowOpacity: 0.55, shadowRadius: 18 }}>
               <Text style={{ color: '#fff', fontSize: 38, fontWeight: '900' }}>{(userName||'R')[0].toUpperCase()}</Text>
             </View>
           </View>
-        </View>
+        </SilkRibbon>
 
         {/* ── Name card — overlaps hero ──────────────────────────── */}
         <View style={{ backgroundColor: C.bgCard, borderRadius: R.xl, paddingHorizontal: SP.lg, paddingTop: SP.xl, paddingBottom: SP.md, marginHorizontal: SP.md, marginTop: -36, alignItems: 'center', borderWidth: 1.5, borderColor: C.glassBorder, ...SHADOW.md, marginBottom: SP.md }}>
@@ -1777,9 +1778,9 @@ function RatingModal() {
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 8 }}>
 
-            {/* Trip preview — fluid gradient header */}
-            <FluidGradient
-              palette={GRADIENT.pinkGold}
+            {/* Trip preview — silk ribbon header */}
+            <SilkRibbon
+              palette={RIBBON.coralMint}
               style={{ borderRadius: 18, marginBottom: 20 }}
             >
               <View style={{ padding: 16 }}>
@@ -1807,7 +1808,7 @@ function RatingModal() {
                   </Text>
                 ) : null}
               </View>
-            </FluidGradient>
+            </SilkRibbon>
 
             {/* Rate driver */}
             <Text style={{ fontSize: 17, fontWeight: '900', color: C.text, textAlign: 'center', marginBottom: 14 }}>

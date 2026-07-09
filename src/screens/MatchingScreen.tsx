@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { Bouncy, GlassPanel, PulseView, SlideUp } from '../components/ui';
 import { LiveMap } from '../components/LiveMap';
-import { FluidGradient, GRADIENT } from '../components/FluidGradient';
+import { SilkRibbon, RIBBON } from '../components/SilkRibbon';
 import { s, C, T, SP, R, SHADOW } from '../styles';
 import { apiPost } from '../../api';
 import { API } from '../constants';
@@ -844,8 +844,8 @@ export function MatchingScreen() {
             /* ═══════════════ SEARCHING STATE ═══════════════ */
             <>
               {/* ── Hero: radar rings + vehicle icon + status ── */}
-              <FluidGradient
-                palette={noDriverFinal ? GRADIENT.roseCream : GRADIENT.coralSunset}
+              <SilkRibbon
+                palette={RIBBON.coralMint}
                 style={{ borderRadius: 20, marginHorizontal: 12, marginTop: 8, marginBottom: 4 }}
               >
               <View style={{ alignItems: 'center', paddingTop: 20, paddingBottom: 16 }}>
@@ -901,7 +901,7 @@ export function MatchingScreen() {
                   </View>
                 </View>
               </View>
-              </FluidGradient>
+              </SilkRibbon>
 
               {/* ── Search progress bar (hidden when no driver final) ── */}
               {!noDriverFinal && (

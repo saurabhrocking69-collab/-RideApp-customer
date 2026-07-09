@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { useApp } from '../context/AppContext';
 import { Bouncy, Confetti, CountUp, DotBG, FadeIn, ScreenIn, TripSteps } from '../components/ui';
-import { FluidGradient, GRADIENT } from '../components/FluidGradient';
+import { SilkRibbon, RIBBON } from '../components/SilkRibbon';
 import { s, C, T, SP, R, SHADOW } from '../styles';
 import { apiGet } from '../../api';
 
@@ -119,9 +119,9 @@ _GST is included in the fare — not charged separately._
       <DotBG />
       <Confetti />
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
-        <FluidGradient
-          palette={GRADIENT.pinkGold}
-          style={{ borderBottomLeftRadius: 36, borderBottomRightRadius: 36, elevation: 12, shadowColor: C.pink, shadowOpacity: 0.45, shadowRadius: 20 }}
+        <SilkRibbon
+          palette={RIBBON.coralMint}
+          style={{ borderBottomLeftRadius: 36, borderBottomRightRadius: 36, elevation: 12, shadowColor: '#D05060', shadowOpacity: 0.45, shadowRadius: 20 }}
         >
         <View style={{ paddingTop: 52, paddingBottom: 28, alignItems: 'center' }}>
           <View style={{ position: 'absolute', width: 240, height: 240, borderRadius: 120, backgroundColor: 'rgba(255,255,255,0.08)', top: -80, right: -60 }} />
@@ -160,7 +160,7 @@ _GST is included in the fare — not charged separately._
             <Text style={{ ...T.bodyBold, color: '#fff' }}>{billLoading ? 'Loading...' : 'Full Bill & Share'}</Text>
           </Bouncy>
         </View>
-        </FluidGradient>
+        </SilkRibbon>
 
         <View style={{ paddingHorizontal: 14, paddingTop: 16 }}>
           <TripSteps step={3} />
