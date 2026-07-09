@@ -1,4 +1,4 @@
-import { Animated, Dimensions, KeyboardAvoidingView, PanResponder, Platform, ScrollView, StatusBar, TextInput, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Dimensions, KeyboardAvoidingView, Modal, PanResponder, Platform, ScrollView, StatusBar, TextInput, Text, TouchableOpacity, View } from 'react-native';
 import { useState, useRef, useEffect } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,7 +8,7 @@ import { GlassPanel, RideVehicleIcon, DotBG } from '../components/ui';
 import { LiveMap } from '../components/LiveMap';
 import { s, C, T, R, SP, SHADOW } from '../styles';
 import { RIDES, MAPS_KEY } from '../constants';
-import { apiGet, externalGet } from '../../api';
+import { apiGet, apiPost, externalGet } from '../../api';
 import { useNearbyDrivers } from '../offline';
 
 const SCREEN_H   = Dimensions.get('window').height;
@@ -40,6 +40,8 @@ export function BookingScreen() {
     searchPlaces, geocodePlace, useMyLocation, swapLocations, applyPromo, bookRide,
     dropHistory,
     userCoords,
+    phone,
+    availablePromos, setAvailablePromos,
   } = useApp();
 
   const selRide   = RIDES.find(r => r.id === rideType);
@@ -302,6 +304,46 @@ export function BookingScreen() {
   const [routeDist, setRouteDist] = useState('');
   // Reset when route is cleared
   useEffect(() => { if (!dropCoords) { setRouteEta(''); setRouteDist(''); } }, [dropCoords]);
+
+  // ── Coupon modal ──────────────────────────────────────────────────────────
+  const [showCouponModal, setShowCouponModal] = useState(false);
+  const [couponApplying, setCouponApplying]   = useState(false);
+  const [couponError, setCouponError]         = useState('');
+  const promosFetchedRef = useRef(false);
+
+  useEffect(() => {
+    if (!routeEta || promosFetchedRef.current) return;
+    promosFetchedRef.current = true;
+    apiGet('/api/promo/list').then(d => {
+      if (!d._error && d.promos) setAvailablePromos(d.promos);
+    }).catch(() => {});
+  }, [routeEta]);
+
+  const handleApplyCoupon = async (code: string) => {
+    setCouponApplying(true);
+    setCouponError('');
+    try {
+      const fare = fareEstimates[rideType]?.fare ?? rawFare ?? 100;
+      const d = await apiPost('/api/promo/validate', { code, fare, phone });
+      if (d.valid) {
+        setPromoCode(code);
+        setPromoDiscount(d.discount);
+        setShowCouponModal(false);
+      } else {
+        setCouponError(d.message || 'Invalid coupon');
+      }
+    } catch {
+      setCouponError('Network error, try again');
+    } finally {
+      setCouponApplying(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setPromoCode('');
+    setPromoDiscount(0);
+    setInstantApplied(false);
+  };
 
   // ETA card animations
   const etaCardFade  = useRef(new Animated.Value(0)).current;
@@ -845,6 +887,52 @@ export function BookingScreen() {
               <Text style={{ color: C.plum, fontWeight: '700', fontSize: 12, opacity: 0.7 }}>Calculating route…</Text>
             </View>
           ) : null}
+
+          {/* ── Coupon tag — appears after route ETA is calculated ── */}
+          {!!routeEta && (
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => { setCouponError(''); setShowCouponModal(true); }}
+              style={{
+                flexDirection: 'row', alignItems: 'center',
+                backgroundColor: promoDiscount > 0 ? '#F0FFF4' : C.bgCard,
+                borderRadius: 14, paddingVertical: 10, paddingHorizontal: 14,
+                marginBottom: 14,
+                elevation: 4,
+                shadowColor: promoDiscount > 0 ? '#22C55E' : '#FF2D78',
+                shadowOpacity: 0.18, shadowRadius: 10,
+                borderWidth: 1.5,
+                borderColor: promoDiscount > 0 ? '#22C55E' : '#FF2D78',
+              }}>
+              <View style={{
+                width: 34, height: 34, borderRadius: 10,
+                backgroundColor: promoDiscount > 0 ? '#DCFCE7' : '#FFF0F6',
+                alignItems: 'center', justifyContent: 'center', marginRight: 10,
+              }}>
+                <Ionicons
+                  name={promoDiscount > 0 ? 'checkmark-circle' : 'pricetag-outline'}
+                  size={18}
+                  color={promoDiscount > 0 ? '#22C55E' : '#FF2D78'}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                {promoDiscount > 0 ? (
+                  <>
+                    <Text style={{ fontSize: 12, fontWeight: '900', color: '#16A34A' }}>{promoCode} Applied ✓</Text>
+                    <Text style={{ fontSize: 11, color: '#22C55E', fontWeight: '700', marginTop: 1 }}>₹{promoDiscount} off on this ride</Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={{ fontSize: 12, fontWeight: '900', color: '#FF2D78' }}>
+                      {availablePromos.length > 0 ? `${availablePromos.length} Coupon${availablePromos.length !== 1 ? 's' : ''} Available` : 'Apply Coupon Code'}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: '600', marginTop: 1 }}>Tap to apply & save on this ride</Text>
+                  </>
+                )}
+              </View>
+              <Ionicons name="chevron-forward" size={17} color={promoDiscount > 0 ? '#22C55E' : '#FF2D78'} />
+            </TouchableOpacity>
+          )}
 
           {/* ─── Vehicle + fare + promo ───────────────────────────────────────────── */}
           <>
@@ -1431,6 +1519,133 @@ export function BookingScreen() {
           </View>
         </View>
       )}
+
+      {/* ── Coupon / Promo Modal ─────────────────────────────────────────── */}
+      <Modal
+        visible={showCouponModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCouponModal(false)}
+        statusBarTranslucent
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.48)', justifyContent: 'flex-end' }}>
+          {/* Backdrop tap closes modal */}
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowCouponModal(false)} />
+
+          <View style={{
+            backgroundColor: C.bg,
+            borderTopLeftRadius: 26, borderTopRightRadius: 26,
+            paddingBottom: bottomInset + 20,
+            maxHeight: '78%',
+          }}>
+            {/* Handle + header */}
+            <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 4 }}>
+              <View style={{ width: 44, height: 4, borderRadius: 2, backgroundColor: C.glassB2 }} />
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14 }}>
+              <View style={{ width: 38, height: 38, borderRadius: 11, backgroundColor: '#FFF0F6', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                <Ionicons name="pricetag" size={20} color="#FF2D78" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 17, fontWeight: '900', color: C.text }}>Apply Coupon</Text>
+                <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: '600', marginTop: 1 }}>Select a coupon to get instant discount</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowCouponModal(false)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                <Ionicons name="close-circle" size={26} color={C.textDim} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Hairline */}
+            <View style={{ height: 1, backgroundColor: C.glassBorder, marginHorizontal: 0 }} />
+
+            {/* Applied banner */}
+            {promoDiscount > 0 && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0FFF4', paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#BBF7D0' }}>
+                <Ionicons name="checkmark-circle" size={18} color="#22C55E" style={{ marginRight: 8 }} />
+                <Text style={{ flex: 1, fontSize: 13, fontWeight: '800', color: '#16A34A' }}>
+                  {promoCode} applied — ₹{promoDiscount} off
+                </Text>
+                <TouchableOpacity onPress={() => { handleRemoveCoupon(); setShowCouponModal(false); }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#EF4444' }}>Remove</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Error message */}
+            {!!couponError && (
+              <View style={{ backgroundColor: '#FFF5F5', paddingHorizontal: 20, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#FECACA' }}>
+                <Text style={{ fontSize: 12, color: '#EF4444', fontWeight: '700' }}>{couponError}</Text>
+              </View>
+            )}
+
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8 }}>
+              {availablePromos.length === 0 ? (
+                <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+                  <Ionicons name="pricetag-outline" size={44} color={C.textDim} />
+                  <Text style={{ color: C.textMuted, fontWeight: '700', fontSize: 14, marginTop: 12 }}>No coupons available right now</Text>
+                  <Text style={{ color: C.textDim, fontSize: 12, marginTop: 4 }}>Check back later for exciting offers</Text>
+                </View>
+              ) : (
+                availablePromos.map((promo: any, idx: number) => {
+                  const isApplied = promoCode === promo.code && promoDiscount > 0;
+                  const discLabel = promo.discount_type === 'percent'
+                    ? `${promo.discount_value}% off (max ₹${promo.max_discount})`
+                    : `₹${promo.discount_value} flat off`;
+                  return (
+                    <View
+                      key={promo.code}
+                      style={{
+                        borderRadius: 16,
+                        borderWidth: 1.5,
+                        borderColor: isApplied ? '#22C55E' : C.glassBorder,
+                        backgroundColor: isApplied ? '#F0FFF4' : C.bgCard,
+                        marginBottom: 10,
+                        overflow: 'hidden',
+                      }}>
+                      {/* Dashed left accent */}
+                      <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: 4, backgroundColor: isApplied ? '#22C55E' : '#FF2D78' }} />
+                      <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingLeft: 18, paddingRight: 14 }}>
+                        {/* Code badge */}
+                        <View style={{ flex: 1 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                            <View style={{ backgroundColor: isApplied ? '#DCFCE7' : '#FFF0F6', borderRadius: 7, paddingHorizontal: 10, paddingVertical: 4 }}>
+                              <Text style={{ fontSize: 13, fontWeight: '900', color: isApplied ? '#16A34A' : '#FF2D78', letterSpacing: 0.5 }}>{promo.code}</Text>
+                            </View>
+                            {isApplied && <Ionicons name="checkmark-circle" size={16} color="#22C55E" />}
+                          </View>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: C.text }}>{discLabel}</Text>
+                          {promo.min_fare > 0 && (
+                            <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>Min fare: ₹{promo.min_fare}</Text>
+                          )}
+                          {promo.description ? (
+                            <Text style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>{promo.description}</Text>
+                          ) : null}
+                        </View>
+                        {/* Apply button */}
+                        {isApplied ? (
+                          <TouchableOpacity
+                            onPress={() => { handleRemoveCoupon(); }}
+                            style={{ backgroundColor: '#FFF5F5', borderRadius: 10, borderWidth: 1, borderColor: '#FECACA', paddingHorizontal: 14, paddingVertical: 8 }}>
+                            <Text style={{ fontSize: 12, fontWeight: '900', color: '#EF4444' }}>Remove</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <TouchableOpacity
+                            onPress={() => handleApplyCoupon(promo.code)}
+                            disabled={couponApplying}
+                            style={{ backgroundColor: '#FF2D78', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, opacity: couponApplying ? 0.6 : 1 }}>
+                            <Text style={{ fontSize: 12, fontWeight: '900', color: '#fff' }}>{couponApplying ? '…' : 'Apply'}</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
     </KeyboardAvoidingView>
   );
 }
