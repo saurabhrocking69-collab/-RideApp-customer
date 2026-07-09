@@ -7,7 +7,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { Bouncy, GlassPanel, PulseView, SlideUp } from '../components/ui';
 import { LiveMap } from '../components/LiveMap';
-import { SilkRibbon, RIBBON } from '../components/SilkRibbon';
 import { s, C, T, SP, R, SHADOW } from '../styles';
 import { apiPost } from '../../api';
 import { API } from '../constants';
@@ -844,10 +843,7 @@ export function MatchingScreen() {
             /* ═══════════════ SEARCHING STATE ═══════════════ */
             <>
               {/* ── Hero: radar rings + vehicle icon + status ── */}
-              <SilkRibbon
-                palette={RIBBON.coralMint}
-                style={{ borderRadius: 20, marginHorizontal: 12, marginTop: 8, marginBottom: 4 }}
-              >
+              <View style={{ backgroundColor: '#FF2D78', borderRadius: 20, marginHorizontal: 12, marginTop: 8, marginBottom: 4 }}>
               <View style={{ alignItems: 'center', paddingTop: 20, paddingBottom: 16 }}>
                 {/* Radar + icon */}
                 <View style={{ width: 160, height: 160, alignItems: 'center', justifyContent: 'center' }}>
@@ -901,7 +897,7 @@ export function MatchingScreen() {
                   </View>
                 </View>
               </View>
-              </SilkRibbon>
+              </View>
 
               {/* ── Search progress bar (hidden when no driver final) ── */}
               {!noDriverFinal && (

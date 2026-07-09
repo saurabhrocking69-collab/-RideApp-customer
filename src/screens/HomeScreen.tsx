@@ -8,7 +8,7 @@ import { apiPost, apiGet } from '../../api';
 import { useRideStore } from '../../store';
 import { useApp } from '../context/AppContext';
 import { Bouncy, GlassPanel, PulseView, SlideUp, CountUp, EmptyAnim, GlowPulse, ShineCard, FadeIn } from '../components/ui';
-import { SilkRibbon, RIBBON } from '../components/SilkRibbon';
+import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
 import { s, C, T, SP, R, SHADOW } from '../styles';
 import { MAPS_KEY, API } from '../constants';
 import { useNearbyDrivers } from '../offline';
@@ -534,12 +534,30 @@ function HomeTab() {
 
   return (
     <View style={[s.screen, { backgroundColor: C.bg }]}>
-      {/* ── Silk ribbon header — Rose + Aqua (light) ── */}
+      {/* ── Map header ── */}
       <Animated.View style={{ height: headerH, overflow: 'hidden' }}>
-        {/* Ribbon background (absolute, fills animated height) */}
-        <SilkRibbon palette={RIBBON.roseAqua} style={StyleSheet.absoluteFillObject} />
-        {/* Frosted overlay — keeps dark text legible over vivid ribbons */}
-        <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(234,242,238,0.40)' }} pointerEvents="none" />
+        {/* Live map background */}
+        <MapView
+          style={StyleSheet.absoluteFillObject}
+          provider={PROVIDER_GOOGLE}
+          region={{
+            latitude: userLat || 26.8467,
+            longitude: userLng || 80.9462,
+            latitudeDelta: 0.018,
+            longitudeDelta: 0.018,
+          }}
+          scrollEnabled={false}
+          zoomEnabled={false}
+          rotateEnabled={false}
+          pitchEnabled={false}
+          showsUserLocation
+          showsMyLocationButton={false}
+          showsCompass={false}
+          toolbarEnabled={false}
+          pointerEvents="none"
+        />
+        {/* White wash — keeps dark text legible */}
+        <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.68)' }} pointerEvents="none" />
 
         {/* Full header */}
         <Animated.View style={{ paddingTop: Platform.OS === 'android' ? 38 : 50, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', opacity: fullAlpha }}>
@@ -556,7 +574,7 @@ function HomeTab() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <NotifBell onPress={() => { setNotifOpen(true); setUnreadNotif(0); }} unread={unreadNotif} />
             <TouchableOpacity onPress={() => { setTab('profile'); loadWallet(phone); }}
-              style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#A01850', alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#A01850', shadowOpacity: 0.45, shadowRadius: 8 }}>
+              style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#FF2D78', alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#FF2D78', shadowOpacity: 0.45, shadowRadius: 8 }}>
               <Text style={{ color: '#fff', fontWeight: '900', fontSize: 18 }}>{(userName || 'R')[0].toUpperCase()}</Text>
             </TouchableOpacity>
           </View>
@@ -566,7 +584,7 @@ function HomeTab() {
         <Animated.View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', opacity: miniAlpha }}>
           <Text style={{ color: '#0A1A10', fontSize: 15, fontWeight: '900', letterSpacing: -0.3 }}>{userName || 'Rider'}</Text>
           <TouchableOpacity onPress={() => { setTab('profile'); loadWallet(phone); }}
-            style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#A01850', alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#A01850', shadowOpacity: 0.45, shadowRadius: 8 }}>
+            style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#FF2D78', alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#FF2D78', shadowOpacity: 0.45, shadowRadius: 8 }}>
             <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>{(userName || 'R')[0].toUpperCase()}</Text>
           </TouchableOpacity>
         </Animated.View>
@@ -1614,18 +1632,15 @@ function ProfileTab() {
     <View style={s.screen}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
 
-        {/* ── Silk ribbon hero — Rose + Aqua Dark ──────────────── */}
-        <SilkRibbon
-          palette={RIBBON.roseAquaDark}
-          style={{ paddingTop: Platform.OS === 'android' ? 46 : 56, paddingBottom: 52, paddingHorizontal: SP.lg }}
-        >
-          <Text style={{ ...T.title, color: 'rgba(255,255,255,0.70)', letterSpacing: 1.5, marginBottom: SP.lg }}>PROFILE</Text>
+        {/* ── Profile hero ──────────────────────────────────────── */}
+        <View style={{ backgroundColor: '#FF2D78', paddingTop: Platform.OS === 'android' ? 46 : 56, paddingBottom: 52, paddingHorizontal: SP.lg }}>
+          <Text style={{ ...T.title, color: 'rgba(255,255,255,0.75)', letterSpacing: 1.5, marginBottom: SP.lg }}>PROFILE</Text>
           <View style={{ alignItems: 'center' }}>
-            <View style={{ width: 90, height: 90, borderRadius: 45, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 3, borderColor: '#FFA8C8', alignItems: 'center', justifyContent: 'center', elevation: 10, shadowColor: '#88E8F8', shadowOpacity: 0.55, shadowRadius: 18 }}>
+            <View style={{ width: 90, height: 90, borderRadius: 45, backgroundColor: 'rgba(255,255,255,0.20)', borderWidth: 3, borderColor: 'rgba(255,255,255,0.55)', alignItems: 'center', justifyContent: 'center', elevation: 10, shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 18 }}>
               <Text style={{ color: '#fff', fontSize: 38, fontWeight: '900' }}>{(userName||'R')[0].toUpperCase()}</Text>
             </View>
           </View>
-        </SilkRibbon>
+        </View>
 
         {/* ── Name card — overlaps hero ──────────────────────────── */}
         <View style={{ backgroundColor: C.bgCard, borderRadius: R.xl, paddingHorizontal: SP.lg, paddingTop: SP.xl, paddingBottom: SP.md, marginHorizontal: SP.md, marginTop: -36, alignItems: 'center', borderWidth: 1.5, borderColor: C.glassBorder, ...SHADOW.md, marginBottom: SP.md }}>
@@ -1778,17 +1793,14 @@ function RatingModal() {
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 8 }}>
 
-            {/* Trip preview — silk ribbon header */}
-            <SilkRibbon
-              palette={RIBBON.coralMint}
-              style={{ borderRadius: 18, marginBottom: 20 }}
-            >
+            {/* Trip preview */}
+            <View style={{ backgroundColor: '#FF2D78', borderRadius: 18, marginBottom: 20 }}>
               <View style={{ padding: 16 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: fareNum > 0 || pickup ? 10 : 0 }}>
                   {rideData?.driver?.photo ? (
                     <Image source={{ uri: rideData.driver.photo }} style={{ width: 48, height: 48, borderRadius: 24, borderWidth: 2, borderColor: 'rgba(255,255,255,0.5)' }} contentFit="cover" />
                   ) : (
-                    <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.35)' }}>
+                    <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.20)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.40)' }}>
                       <Text style={{ fontSize: 24 }}>👤</Text>
                     </View>
                   )}
@@ -1796,19 +1808,19 @@ function RatingModal() {
                     <Text style={{ fontSize: 15, fontWeight: '900', color: '#fff' }}>
                       {rideData?.driver?.name || 'Your Driver'}
                     </Text>
-                    <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.70)', marginTop: 2 }}>Trip completed ✓</Text>
+                    <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>Trip completed ✓</Text>
                   </View>
                   {fareNum > 0 && (
-                    <Text style={{ fontSize: 24, fontWeight: '900', color: '#FFD580' }}>₹{fareNum}</Text>
+                    <Text style={{ fontSize: 24, fontWeight: '900', color: '#fff' }}>₹{fareNum}</Text>
                   )}
                 </View>
                 {(pickup || drop) ? (
-                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.60)', lineHeight: 16 }} numberOfLines={2}>
+                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', lineHeight: 16 }} numberOfLines={2}>
                     📍 {pickup}  →  🏁 {drop}
                   </Text>
                 ) : null}
               </View>
-            </SilkRibbon>
+            </View>
 
             {/* Rate driver */}
             <Text style={{ fontSize: 17, fontWeight: '900', color: C.text, textAlign: 'center', marginBottom: 14 }}>
