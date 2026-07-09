@@ -79,7 +79,7 @@ function BuddyBookModal() {
     buddyPUDebRef, buddyDRDebRef,
     phone, userCoords,
     setRideData, setPickup, setDrop, setPickupCoords, setDropCoords,
-    joinRideSocket, setScreen,
+    joinRideSocket, setScreen, setRideType,
     rideIcon,
   } = useApp();
 
@@ -134,6 +134,7 @@ function BuddyBookModal() {
       });
       if (res.success) {
         setRideData({ ride_id: res.ride_id, fare: res.fare, startOtp: '', driver: null });
+        if (res.vehicle_type) setRideType(res.vehicle_type);
         setPickup(buddyBookPU); setDrop(buddyBookDR);
         if (buddyBookPUCoords) setPickupCoords(buddyBookPUCoords);
         if (buddyBookDRCoords) setDropCoords(buddyBookDRCoords);
