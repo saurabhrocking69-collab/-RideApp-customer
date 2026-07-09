@@ -187,7 +187,7 @@ export function ARDriverFinder({ driverLat, driverLng, driverName, onClose }: Pr
   const relAngle    = normalizeAngle(bearing - compassHeading);
   const arrowX      = W / 2 + (relAngle / (FOV / 2)) * (W / 2);
   const isInFOV     = Math.abs(relAngle) < FOV / 2 - 4;
-  const isTooClose  = distance !== null && distance < 30;
+  const isTooClose  = distance !== null && distance < 50;
   const isStale     = locationAge > 15;
 
   // Smooth arrow movement
