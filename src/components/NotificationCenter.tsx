@@ -122,7 +122,7 @@ export function NotificationCenter({ visible, onClose, phone }: CenterProps) {
 
     // Also fetch backend in-app notifications and merge
     if (phone) {
-      fetch(`${API}/api/notifications?target=${phone}`)
+      fetch(`${API}/api/notifications?target=${phone}&role=customer`)
         .then(r => r.json())
         .then(d => {
           if (!Array.isArray(d.notifications)) return;
