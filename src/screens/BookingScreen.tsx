@@ -502,6 +502,59 @@ export function BookingScreen() {
           )}
         </TouchableOpacity>
 
+        {/* ── Top-edge coupon banner — stuck to top of drawer, full-width ── */}
+        {bothSet && !!routeEta && (() => {
+          const maxSave = availablePromos.length > 0
+            ? Math.max(...availablePromos.map((p: any) => parseFloat(String(p.max_discount)) || 0))
+            : 0;
+          const applied = promoDiscount > 0;
+          return (
+            <TouchableOpacity
+              activeOpacity={0.88}
+              onPress={() => { setCouponError(''); setShowCouponModal(true); }}
+              style={{
+                flexDirection: 'row', alignItems: 'center',
+                backgroundColor: applied ? '#16A34A' : '#FF2D78',
+                paddingVertical: 9, paddingHorizontal: 16, gap: 10,
+              }}>
+              {/* Icon bubble */}
+              <View style={{
+                width: 30, height: 30, borderRadius: 9,
+                backgroundColor: 'rgba(255,255,255,0.22)',
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Ionicons
+                  name={applied ? 'checkmark-circle' : 'pricetag'}
+                  size={16} color="#fff"
+                />
+              </View>
+              {/* Text block */}
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12, letterSpacing: 0.1 }}>
+                  {applied
+                    ? `${promoCode} Applied — ₹${promoDiscount} saved on this ride!`
+                    : availablePromos.length > 0
+                      ? `${availablePromos.length} coupon${availablePromos.length !== 1 ? 's' : ''} available${maxSave > 0 ? ` · Save up to ₹${maxSave}` : ''}!`
+                      : 'Have a coupon? Apply & save now!'}
+                </Text>
+                {!applied && (
+                  <Text style={{ color: 'rgba(255,255,255,0.78)', fontSize: 10, marginTop: 1, fontWeight: '600' }}>
+                    {availablePromos.length > 0 ? 'Tap to see & apply offers' : 'Enter code in fare section below'}
+                  </Text>
+                )}
+              </View>
+              <View style={{
+                backgroundColor: 'rgba(255,255,255,0.22)',
+                borderRadius: 20, paddingHorizontal: 8, paddingVertical: 4,
+              }}>
+                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>
+                  {applied ? 'Change' : 'Apply'}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })()}
+
         <ScrollView
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -888,52 +941,6 @@ export function BookingScreen() {
             </View>
           ) : null}
 
-          {/* ── Coupon tag — appears after route ETA is calculated ── */}
-          {!!routeEta && (
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => { setCouponError(''); setShowCouponModal(true); }}
-              style={{
-                flexDirection: 'row', alignItems: 'center',
-                backgroundColor: promoDiscount > 0 ? '#F0FFF4' : C.bgCard,
-                borderRadius: 14, paddingVertical: 10, paddingHorizontal: 14,
-                marginBottom: 14,
-                elevation: 4,
-                shadowColor: promoDiscount > 0 ? '#22C55E' : '#FF2D78',
-                shadowOpacity: 0.18, shadowRadius: 10,
-                borderWidth: 1.5,
-                borderColor: promoDiscount > 0 ? '#22C55E' : '#FF2D78',
-              }}>
-              <View style={{
-                width: 34, height: 34, borderRadius: 10,
-                backgroundColor: promoDiscount > 0 ? '#DCFCE7' : '#FFF0F6',
-                alignItems: 'center', justifyContent: 'center', marginRight: 10,
-              }}>
-                <Ionicons
-                  name={promoDiscount > 0 ? 'checkmark-circle' : 'pricetag-outline'}
-                  size={18}
-                  color={promoDiscount > 0 ? '#22C55E' : '#FF2D78'}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                {promoDiscount > 0 ? (
-                  <>
-                    <Text style={{ fontSize: 12, fontWeight: '900', color: '#16A34A' }}>{promoCode} Applied ✓</Text>
-                    <Text style={{ fontSize: 11, color: '#22C55E', fontWeight: '700', marginTop: 1 }}>₹{promoDiscount} off on this ride</Text>
-                  </>
-                ) : (
-                  <>
-                    <Text style={{ fontSize: 12, fontWeight: '900', color: '#FF2D78' }}>
-                      {availablePromos.length > 0 ? `${availablePromos.length} Coupon${availablePromos.length !== 1 ? 's' : ''} Available` : 'Apply Coupon Code'}
-                    </Text>
-                    <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: '600', marginTop: 1 }}>Tap to apply & save on this ride</Text>
-                  </>
-                )}
-              </View>
-              <Ionicons name="chevron-forward" size={17} color={promoDiscount > 0 ? '#22C55E' : '#FF2D78'} />
-            </TouchableOpacity>
-          )}
-
           {/* ─── Vehicle + fare + promo ───────────────────────────────────────────── */}
           <>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, marginTop: 2 }}>
@@ -1232,7 +1239,7 @@ export function BookingScreen() {
                 <Ionicons name={showPromoInput ? 'chevron-up' : 'chevron-down'} size={14} color={C.pink} />
               </TouchableOpacity>
               {showPromoInput && (
-                <View style={{ marginHorizontal: 16, marginBottom: 14, marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.glassMid, borderRadius: 12, padding: 10, borderWidth: 1, borderColor: C.glassBorder }}>
+                <View style={{ marginHorizontal: 16, marginBottom: 10, marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.glassMid, borderRadius: 12, padding: 10, borderWidth: 1, borderColor: C.glassBorder }}>
                   <Ionicons name="pricetag" size={16} color={C.textMuted} />
                   <TextInput
                     style={{ flex: 1, fontSize: 13, color: C.text, fontWeight: '700', letterSpacing: 1 }}
@@ -1249,6 +1256,83 @@ export function BookingScreen() {
                   </TouchableOpacity>
                 </View>
               )}
+
+              {/* ── Coupon section — applied state OR quick-apply chips ── */}
+              {promoDiscount > 0 && promoCode && !instantApplied ? (
+                /* Applied coupon confirmation card */
+                <View style={{
+                  marginHorizontal: 16, marginBottom: 14,
+                  backgroundColor: '#F0FFF4', borderRadius: 14, padding: 12,
+                  flexDirection: 'row', alignItems: 'center', gap: 10,
+                  borderWidth: 1.5, borderColor: '#22C55E',
+                  elevation: 3, shadowColor: '#22C55E', shadowOpacity: 0.18, shadowRadius: 8,
+                }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#DCFCE7', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '900', color: '#16A34A' }}>{promoCode} Applied ✓</Text>
+                    <Text style={{ fontSize: 11, color: '#22C55E', fontWeight: '700', marginTop: 1 }}>₹{promoDiscount} discount on this ride</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={handleRemoveCoupon}
+                    style={{ backgroundColor: '#FFF5F5', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: '#FECACA' }}>
+                    <Text style={{ fontSize: 11, fontWeight: '900', color: '#EF4444' }}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : availablePromos.length > 0 && promoDiscount === 0 ? (
+                /* Quick-apply coupon chips */
+                <View style={{ marginHorizontal: 16, marginBottom: 14 }}>
+                  {/* Section header */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1 }}>
+                      <Ionicons name="sparkles" size={11} color="#FF2D78" />
+                      <Text style={{ fontSize: 10, fontWeight: '900', color: '#FF2D78', letterSpacing: 1 }}>AVAILABLE OFFERS</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => { setCouponError(''); setShowCouponModal(true); }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: C.plum }}>View all →</Text>
+                    </TouchableOpacity>
+                  </View>
+                  {/* First 2 promo quick-apply rows */}
+                  {availablePromos.slice(0, 2).map((promo: any) => {
+                    const discLabel = promo.discount_type === 'percent'
+                      ? `${promo.discount_value}% off (max ₹${promo.max_discount})`
+                      : `₹${promo.discount_value} flat off`;
+                    return (
+                      <View key={promo.code} style={{
+                        flexDirection: 'row', alignItems: 'center',
+                        backgroundColor: C.bgCard, borderRadius: 12, padding: 10,
+                        marginBottom: 6, borderWidth: 1.5, borderColor: C.glassBorder,
+                        borderStyle: 'dashed',
+                        overflow: 'hidden',
+                      }}>
+                        {/* Left pink accent line */}
+                        <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: 3, backgroundColor: '#FF2D78' }} />
+                        <View style={{ flex: 1, paddingLeft: 8 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 2 }}>
+                            <View style={{ backgroundColor: '#FFF0F6', borderRadius: 5, paddingHorizontal: 8, paddingVertical: 3 }}>
+                              <Text style={{ fontSize: 12, fontWeight: '900', color: '#FF2D78', letterSpacing: 0.5 }}>{promo.code}</Text>
+                            </View>
+                          </View>
+                          <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: '600' }}>{discLabel}</Text>
+                        </View>
+                        <TouchableOpacity
+                          onPress={() => handleApplyCoupon(promo.code)}
+                          disabled={couponApplying}
+                          style={{
+                            backgroundColor: '#FF2D78', borderRadius: 8,
+                            paddingHorizontal: 13, paddingVertical: 7,
+                            elevation: 3, shadowColor: '#FF2D78', shadowOpacity: 0.35, shadowRadius: 6,
+                          }}>
+                          <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900' }}>
+                            {couponApplying ? '…' : 'Apply'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
+                </View>
+              ) : null}
             </View>
           ) : fareLoading ? (
             <View style={{ backgroundColor: C.bgCard, borderRadius: 16, padding: 20, marginTop: 16, alignItems: 'center', gap: 8, elevation: 2, borderWidth: 1, borderColor: C.glassBorder }}>
