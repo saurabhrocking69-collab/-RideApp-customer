@@ -1,5 +1,6 @@
 import { Animated, Dimensions, KeyboardAvoidingView, PanResponder, Platform, ScrollView, StatusBar, TextInput, Text, TouchableOpacity, View } from 'react-native';
 import { useState, useRef, useEffect } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Storage as AsyncStorage } from '../storage';
 import { useApp } from '../context/AppContext';
@@ -20,6 +21,7 @@ const SWIPE_THUMB = 46;  // draggable thumb diameter
 const SWIPE_PAD   = 6;   // thumb inset from track edge
 
 export function BookingScreen() {
+  const { bottom: bottomInset } = useSafeAreaInsets();
   const {
     screen, setScreen,
     pickup, setPickup, drop, setDrop,
@@ -428,7 +430,9 @@ export function BookingScreen() {
       </View>
 
       {/* ─── Bottom drawer — slides up/down over map ─── */}
-      <Animated.View style={{ height: drawerHeightAnim, backgroundColor: C.bg }}>
+      {/* Floor seal: covers any gap below the drawer and blocks DotBG blobs */}
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 120, backgroundColor: C.bg }} pointerEvents="none" />
+      <Animated.View style={{ height: drawerHeightAnim, backgroundColor: C.bg, elevation: 3, zIndex: 2 }}>
       <GlassPanel intensity={22} style={{
         flex: 1,
         borderTopLeftRadius: 28,
@@ -1173,7 +1177,7 @@ export function BookingScreen() {
         <View style={{
           paddingHorizontal: 14,
           paddingTop: 10,
-          paddingBottom: Platform.OS === 'android' ? 10 : 8,
+          paddingBottom: 10 + bottomInset,
           backgroundColor: C.bg,
           borderTopWidth: 1.5,
           borderTopColor: C.pinkBorder,
@@ -1281,7 +1285,7 @@ export function BookingScreen() {
         const selLabel = RIDES.find(r => r.id === rideType)?.label || 'Ride';
         return (
           <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end', zIndex: 999 }}>
-            <View style={{ backgroundColor: C.bgDark, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, borderTopWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)' }}>
+            <View style={{ backgroundColor: C.bgDark, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 24, paddingTop: 24, paddingBottom: 24 + bottomInset, borderTopWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)' }}>
 
               {/* Warning icon + title */}
               <View style={{ alignItems: 'center', marginBottom: 20 }}>
@@ -1360,7 +1364,7 @@ export function BookingScreen() {
       {showSavePicker && (
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end', zIndex: 999 }}>
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowSavePicker(false)} />
-          <View style={{ backgroundColor: C.bg, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 20, paddingBottom: Platform.OS === 'android' ? 36 : 44, borderTopWidth: 1.5, borderColor: C.glassBorder }}>
+          <View style={{ backgroundColor: C.bg, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 20 + bottomInset, borderTopWidth: 1.5, borderColor: C.glassBorder }}>
 
             {/* Handle */}
             <View style={{ alignItems: 'center', marginBottom: 20 }}>

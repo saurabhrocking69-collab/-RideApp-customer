@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { ScrollView, View, Text, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, Animated, Easing, Share, Dimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Storage as AsyncStorage } from '../storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +8,7 @@ import { apiPost, apiGet } from '../../api';
 import { useRideStore } from '../../store';
 import { useApp } from '../context/AppContext';
 import { Bouncy, GlassPanel, PulseView, SlideUp, CountUp, EmptyAnim, GlowPulse, ShineCard, FadeIn } from '../components/ui';
+import { FluidGradient, GRADIENT } from '../components/FluidGradient';
 import { s, C, T, SP, R, SHADOW } from '../styles';
 import { MAPS_KEY, API } from '../constants';
 import { useNearbyDrivers } from '../offline';
@@ -60,6 +62,7 @@ function NavBar() {
 }
 
 function BuddyBookModal() {
+  const { bottom: bottomInset } = useSafeAreaInsets();
   const {
     showBuddyBook, setShowBuddyBook,
     favouriteBuddy,
@@ -167,7 +170,7 @@ function BuddyBookModal() {
     <Modal visible={showBuddyBook} animationType="slide" transparent statusBarTranslucent onRequestClose={closeModal}>
       <TouchableOpacity style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} activeOpacity={1} onPress={closeModal} />
       <KeyboardAvoidingView style={{ flex: 1, justifyContent: 'flex-end' }} behavior="padding">
-        <View style={{ backgroundColor: C.bgCard, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 6, paddingHorizontal: 20, paddingBottom: 34, maxHeight: '90%', borderTopWidth: 1, borderColor: C.glassBorder, elevation: 30 }}>
+        <View style={{ backgroundColor: C.bgCard, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 6, paddingHorizontal: 20, paddingBottom: 14 + bottomInset, maxHeight: '90%', borderTopWidth: 1, borderColor: C.glassBorder, elevation: 30 }}>
           <View style={s.sheetHandle} />
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="always" contentContainerStyle={{ paddingBottom: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
@@ -963,8 +966,8 @@ function HomeTab() {
 
 function LiveTab() {
   const {
-    rideData, storeStatus, paymentDone, hourlyBooking,
-    hourlyStep, hourlyTimerSec,
+    rideData, storeStatus, paymentDone, hourlyBooking, setHourlyBooking,
+    hourlyStep, setHourlyStep, hourlyTimerSec,
     pickup, drop,
     setScreen, setTab,
     callDriver, initiateCall,
@@ -1147,6 +1150,7 @@ function LiveTab() {
 }
 
 function HistoryTab() {
+  const { bottom: bottomInset } = useSafeAreaInsets();
   const {
     historyRides,
     favouriteBuddy,
@@ -1416,7 +1420,7 @@ _GST is included in the fare._
             {/* Drag handle */}
             <View style={{ width: 40, height: 4, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 2, alignSelf: 'center', marginTop: 12 }} />
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 36 }}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 + bottomInset }}>
 
               {/* ── Section 1: Status + IDs ── */}
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 18, marginBottom: 4 }}>
@@ -1707,6 +1711,7 @@ function ProfileTab() {
 
 // ── Post-ride rating modal — appears on home after 3s auto-redirect ──────────
 function RatingModal() {
+  const { bottom: bottomInset } = useSafeAreaInsets();
   const {
     showRatingModal, setShowRatingModal,
     rideData, setRideData,
@@ -1765,39 +1770,44 @@ function RatingModal() {
   return (
     <Modal visible={showRatingModal} transparent animationType="slide" onRequestClose={() => dismiss(false)}>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' }}>
-        <View style={{ backgroundColor: C.bgCard, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: 34, maxHeight: '90%' }}>
+        <View style={{ backgroundColor: C.bgCard, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: 14 + bottomInset, maxHeight: '90%' }}>
 
           {/* Handle */}
           <View style={{ width: 40, height: 4, backgroundColor: C.glassBorder, borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 16 }} />
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 8 }}>
 
-            {/* Trip preview */}
-            <View style={{ backgroundColor: C.pinkGlass, borderRadius: 18, padding: 14, borderWidth: 1.5, borderColor: C.pinkBorder, marginBottom: 20 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                {rideData?.driver?.photo ? (
-                  <Image source={{ uri: rideData.driver.photo }} style={{ width: 46, height: 46, borderRadius: 23, borderWidth: 2, borderColor: C.pink }} contentFit="cover" />
-                ) : (
-                  <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.pinkBorder }}>
-                    <Text style={{ fontSize: 22 }}>👤</Text>
+            {/* Trip preview — fluid gradient header */}
+            <FluidGradient
+              palette={GRADIENT.pinkGold}
+              style={{ borderRadius: 18, marginBottom: 20 }}
+            >
+              <View style={{ padding: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: fareNum > 0 || pickup ? 10 : 0 }}>
+                  {rideData?.driver?.photo ? (
+                    <Image source={{ uri: rideData.driver.photo }} style={{ width: 48, height: 48, borderRadius: 24, borderWidth: 2, borderColor: 'rgba(255,255,255,0.5)' }} contentFit="cover" />
+                  ) : (
+                    <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.35)' }}>
+                      <Text style={{ fontSize: 24 }}>👤</Text>
+                    </View>
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 15, fontWeight: '900', color: '#fff' }}>
+                      {rideData?.driver?.name || 'Your Driver'}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.70)', marginTop: 2 }}>Trip completed ✓</Text>
                   </View>
-                )}
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 15, fontWeight: '900', color: C.text }}>
-                    {rideData?.driver?.name || 'Your Driver'}
-                  </Text>
-                  <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>Trip completed ✓</Text>
+                  {fareNum > 0 && (
+                    <Text style={{ fontSize: 24, fontWeight: '900', color: '#FFD580' }}>₹{fareNum}</Text>
+                  )}
                 </View>
-                {fareNum > 0 && (
-                  <Text style={{ fontSize: 22, fontWeight: '900', color: C.pink }}>₹{fareNum}</Text>
-                )}
+                {(pickup || drop) ? (
+                  <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.60)', lineHeight: 16 }} numberOfLines={2}>
+                    📍 {pickup}  →  🏁 {drop}
+                  </Text>
+                ) : null}
               </View>
-              {(pickup || drop) ? (
-                <Text style={{ fontSize: 11, color: C.textDim, lineHeight: 16 }} numberOfLines={2}>
-                  📍 {pickup}  →  🏁 {drop}
-                </Text>
-              ) : null}
-            </View>
+            </FluidGradient>
 
             {/* Rate driver */}
             <Text style={{ fontSize: 17, fontWeight: '900', color: C.text, textAlign: 'center', marginBottom: 14 }}>
@@ -1807,7 +1817,7 @@ function RatingModal() {
               {[1,2,3,4,5].map(star => (
                 <Animated.View key={star} style={{ opacity: localStarAnims[star-1], transform: [{ scale: localStarAnims[star-1].interpolate({ inputRange: [0, 0.6, 0.85, 1], outputRange: [0, 1.35, 0.88, 1] }) }] }}>
                   <TouchableOpacity onPress={() => { setRating(star); animateStar(star - 1); }} style={{ padding: 4 }}>
-                    <Animated.Text style={{ fontSize: 40, color: star <= rating ? C.yellow : C.glassMid, transform: [{ scale: starAnims[star - 1] }], textShadowColor: star <= rating ? C.yellow : 'transparent', textShadowRadius: 10, textShadowOffset: { width: 0, height: 0 } }}>★</Animated.Text>
+                    <Animated.Text style={{ fontSize: 40, color: star <= rating ? C.yellow : C.glassBorder, transform: [{ scale: starAnims[star - 1] }], textShadowColor: star <= rating ? C.yellow : 'transparent', textShadowRadius: 10, textShadowOffset: { width: 0, height: 0 } }}>★</Animated.Text>
                   </TouchableOpacity>
                 </Animated.View>
               ))}
@@ -1823,7 +1833,7 @@ function RatingModal() {
               const alreadyBuddy = favouriteBuddy?.driver_phone === rideData.driver.phone;
               return (
                 <TouchableOpacity
-                  onPress={async () => { if (!alreadyBuddy) { const res = await addFavouriteBuddy(rideData.driver.phone); if (res?.error) alert('⚠️ ' + res.error); } }}
+                  onPress={async () => { if (!alreadyBuddy) { await addFavouriteBuddy(rideData.driver.phone); } }}
                   style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: alreadyBuddy ? C.greenGlass : C.yellowGlass, borderRadius: 14, padding: 12, marginBottom: 14, borderWidth: 1.5, borderColor: alreadyBuddy ? C.greenBorder : C.yellowBorder }}>
                   <Text style={{ fontSize: 18, marginRight: 8 }}>{alreadyBuddy ? '✅' : '⭐'}</Text>
                   <View>

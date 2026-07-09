@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Modal, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, Platform, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { useApp } from '../context/AppContext';
 import { Bouncy, Confetti, CountUp, DotBG, FadeIn, ScreenIn, TripSteps } from '../components/ui';
+import { FluidGradient, GRADIENT } from '../components/FluidGradient';
 import { s, C, T, SP, R, SHADOW } from '../styles';
 import { apiGet } from '../../api';
 
 export function PostRideScreen() {
+  const { bottom: bottomInset } = useSafeAreaInsets();
   const {
     phone,
     setScreen, setTab,
@@ -116,9 +119,13 @@ _GST is included in the fare — not charged separately._
       <DotBG />
       <Confetti />
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
-        <View style={{ paddingTop: 52, paddingBottom: 28, backgroundColor: C.pink, borderBottomLeftRadius: 36, borderBottomRightRadius: 36, alignItems: 'center', overflow: 'hidden', elevation: 12, shadowColor: C.pink, shadowOpacity: 0.45, shadowRadius: 20 }}>
-          <View style={{ position: 'absolute', width: 240, height: 240, borderRadius: 120, backgroundColor: 'rgba(255,255,255,0.10)', top: -80, right: -60 }} />
-          <View style={{ position: 'absolute', width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(255,255,255,0.07)', bottom: -40, left: -40 }} />
+        <FluidGradient
+          palette={GRADIENT.pinkGold}
+          style={{ borderBottomLeftRadius: 36, borderBottomRightRadius: 36, elevation: 12, shadowColor: C.pink, shadowOpacity: 0.45, shadowRadius: 20 }}
+        >
+        <View style={{ paddingTop: 52, paddingBottom: 28, alignItems: 'center' }}>
+          <View style={{ position: 'absolute', width: 240, height: 240, borderRadius: 120, backgroundColor: 'rgba(255,255,255,0.08)', top: -80, right: -60 }} />
+          <View style={{ position: 'absolute', width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(255,255,255,0.05)', bottom: -40, left: -40 }} />
 
           {/* Driver photo + completion emoji */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 }}>
@@ -153,6 +160,7 @@ _GST is included in the fare — not charged separately._
             <Text style={{ ...T.bodyBold, color: '#fff' }}>{billLoading ? 'Loading...' : 'Full Bill & Share'}</Text>
           </Bouncy>
         </View>
+        </FluidGradient>
 
         <View style={{ paddingHorizontal: 14, paddingTop: 16 }}>
           <TripSteps step={3} />
@@ -223,7 +231,7 @@ _GST is included in the fare — not charged separately._
       {/* Bill Modal */}
       <Modal visible={showBill} transparent animationType="slide" onRequestClose={() => setShowBill(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' }}>
-          <View style={{ backgroundColor: C.bgDark, borderTopLeftRadius: R.lg, borderTopRightRadius: R.lg, paddingBottom: 32 }}>
+          <View style={{ backgroundColor: C.bgDark, borderTopLeftRadius: R.lg, borderTopRightRadius: R.lg, paddingBottom: 16 + bottomInset }}>
 
             {/* Handle */}
             <View style={{ width: 40, height: 4, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 4 }} />

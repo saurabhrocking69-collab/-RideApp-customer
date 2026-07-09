@@ -1,11 +1,13 @@
 import { useRef, useEffect, useState } from 'react';
 import { Animated, Dimensions, Linking, Platform, ScrollView, Share, StatusBar, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Storage as AsyncStorage } from '../storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { Bouncy, GlassPanel, PulseView, SlideUp } from '../components/ui';
 import { LiveMap } from '../components/LiveMap';
+import { FluidGradient, GRADIENT } from '../components/FluidGradient';
 import { s, C, T, SP, R, SHADOW } from '../styles';
 import { apiPost } from '../../api';
 import { API } from '../constants';
@@ -842,13 +844,17 @@ export function MatchingScreen() {
             /* ═══════════════ SEARCHING STATE ═══════════════ */
             <>
               {/* ── Hero: radar rings + vehicle icon + status ── */}
-              <View style={{ alignItems: 'center', paddingTop: 16, paddingBottom: 6 }}>
+              <FluidGradient
+                palette={noDriverFinal ? GRADIENT.roseCream : GRADIENT.coralSunset}
+                style={{ borderRadius: 20, marginHorizontal: 12, marginTop: 8, marginBottom: 4 }}
+              >
+              <View style={{ alignItems: 'center', paddingTop: 20, paddingBottom: 16 }}>
                 {/* Radar + icon */}
                 <View style={{ width: 160, height: 160, alignItems: 'center', justifyContent: 'center' }}>
                   <RadarPulse active={!noDriverFinal} />
                   <View style={{
                     width: 76, height: 76, borderRadius: 38,
-                    backgroundColor: noDriverFinal ? C.redGlass : C.pinkGlass,
+                    backgroundColor: noDriverFinal ? 'rgba(239,68,68,0.22)' : 'rgba(255,45,120,0.22)',
                     alignItems: 'center', justifyContent: 'center',
                     borderWidth: 2.5,
                     borderColor: noDriverFinal ? C.red : C.pink,
@@ -861,12 +867,12 @@ export function MatchingScreen() {
                 </View>
 
                 {/* Title */}
-                <Text style={{ fontSize: 19, fontWeight: '900', color: noDriverFinal ? C.red : C.text, textAlign: 'center', marginTop: 8 }}>
+                <Text style={{ fontSize: 19, fontWeight: '900', color: noDriverFinal ? '#FDA4AF' : '#fff', textAlign: 'center', marginTop: 8 }}>
                   {noDriverFinal ? '😔 No Buddy Found' : 'Summoning Sppero Buddy'}
                 </Text>
 
                 {/* Search phase subtitle */}
-                <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 4, textAlign: 'center' }}>
+                <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', marginTop: 4, textAlign: 'center', paddingHorizontal: 16 }}>
                   {noDriverFinal
                     ? 'Try another vehicle or wait a moment'
                     : searchElapsed < 25
@@ -877,25 +883,25 @@ export function MatchingScreen() {
                 </Text>
 
                 {/* Fare + vehicle pill */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 }}>
                   <View style={{
                     flexDirection: 'row', alignItems: 'center', gap: 6,
-                    backgroundColor: C.bgCard, borderRadius: 20,
+                    backgroundColor: 'rgba(0,0,0,0.35)', borderRadius: 20,
                     paddingHorizontal: 14, paddingVertical: 7,
-                    borderWidth: 1, borderColor: C.glassBorder,
-                    elevation: 3, shadowColor: '#000', shadowOpacity: 0.10, shadowRadius: 6,
+                    borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)',
                   }}>
-                    <Text style={{ fontSize: 12, color: C.textMuted }}>{VEHICLE_LABELS[rideType] || rideType}</Text>
-                    <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: C.glassBorder }} />
-                    <Text style={{ fontSize: 16, fontWeight: '900', color: C.yellow }}>{surgeFare || rideData?.fare}</Text>
+                    <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>{VEHICLE_LABELS[rideType] || rideType}</Text>
+                    <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.30)' }} />
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: '#FFD580' }}>{surgeFare || rideData?.fare}</Text>
                     {surgeCount > 0 && (
-                      <View style={{ backgroundColor: C.yellow, borderRadius: 5, paddingHorizontal: 6, paddingVertical: 1 }}>
+                      <View style={{ backgroundColor: '#FFD580', borderRadius: 5, paddingHorizontal: 6, paddingVertical: 1 }}>
                         <Text style={{ color: '#000', fontSize: 8, fontWeight: '900' }}>⚡ {surgeCount}×</Text>
                       </View>
                     )}
                   </View>
                 </View>
               </View>
+              </FluidGradient>
 
               {/* ── Search progress bar (hidden when no driver final) ── */}
               {!noDriverFinal && (
@@ -1034,63 +1040,107 @@ function CancelModal() {
 
   const { useRideStore } = require('../../store');
   const ride = useRideStore();
+  const { bottom: bottomInset } = useSafeAreaInsets();
 
   const isFree = cancelInfo ? cancelInfo.is_free : cancelTimer > 0;
-  const fee    = cancelInfo?.fee ?? (cancelTimer > 0 ? 0 : 10);
+  const fee        = cancelInfo?.fee ?? (cancelTimer > 0 ? 0 : 10);
   const waitSec    = cancelInfo?.driver_wait_sec ?? 0;
   const waitMin    = Math.floor(waitSec / 60);
   const waitSecRem = waitSec % 60;
 
+  const doCancel = async (reason: string) => {
+    if (rideData?.ride_id) {
+      const cd = await apiPost('/api/rides/cancel-smart', { ride_id: rideData.ride_id, cancelled_by: 'customer', reason, phone: phone || '9999999999' });
+      if (cd._error) setResult('❌ ' + cd.message);
+      else setResult(cd.penalty > 0 ? `⚠️ ${cd.message}` : `✅ ${cd.message}`);
+      ride.clearRide();
+      AsyncStorage.removeItem('activeStdRideId').catch(() => {});
+    }
+    setShowCancelModal(false); setScreen('home'); setRideData(null);
+    setPickup(''); setDrop(''); setPickupCoords(null); setDropCoords(null); setEta('');
+    setAltSuggest(null); setDriverLoc(null);
+  };
+
+  const REASONS = ['Booked by mistake', 'Waiting too long', 'Plans changed', 'Driver is too far', 'Other reason'];
+
   return (
     <View style={s.screen}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.62)', justifyContent: 'flex-end' }}>
-        <GlassPanel intensity={24} style={{ borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 34 }}>
-          <View style={s.sheetHandle} />
-          <Text style={{ fontSize: 18, fontWeight: '800', color: C.text, marginBottom: 8 }}>Cancel Ride?</Text>
-          <View style={{
-            backgroundColor: isFree ? C.greenGlass : C.yellowGlass, borderRadius: 12, padding: 12,
-            marginBottom: waitSec > 0 ? 8 : 16, borderWidth: 1, borderColor: isFree ? C.greenBorder : C.yellowBorder,
-          }}>
-            <Text style={{ fontSize: 13, color: isFree ? C.green : C.yellow, fontWeight: '700' }}>
-              {isFree
-                ? `✅ Cancel is FREE right now${cancelInfo ? ` (${cancelInfo.sec_since_book}s since booking)` : ` (${cancelTimer}s left)`}`
-                : `⚠️ Cancel fee ₹${fee} applies`}
-            </Text>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' }}>
+        <View style={{ backgroundColor: C.bgCard, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: 14 + bottomInset }}>
+
+          {/* Handle */}
+          <View style={{ width: 40, height: 4, backgroundColor: C.glassBorder, borderRadius: 2, alignSelf: 'center', marginTop: 12 }} />
+
+          {/* Icon header */}
+          <View style={{ alignItems: 'center', paddingTop: 18, paddingBottom: 16 }}>
+            <View style={{ width: 62, height: 62, borderRadius: 20, backgroundColor: C.redGlass, borderWidth: 2, borderColor: C.redBorder, alignItems: 'center', justifyContent: 'center', marginBottom: 12, elevation: 2, shadowColor: C.red, shadowOpacity: 0.18, shadowRadius: 8 }}>
+              <Ionicons name="close-circle" size={30} color={C.red} />
+            </View>
+            <Text style={{ fontSize: 20, fontWeight: '900', color: C.text, letterSpacing: -0.4 }}>Cancel Ride?</Text>
+            <Text style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>Select a reason to proceed</Text>
           </View>
-          {waitSec > 0 && (
-            <View style={{ backgroundColor: C.redGlass, borderRadius: 10, padding: 10, marginBottom: 12, borderWidth: 1, borderColor: C.redBorder, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Text style={{ fontSize: 18 }}>⏱️</Text>
-              <View>
-                <Text style={{ fontSize: 12, fontWeight: '800', color: C.red }}>Driver has been waiting {waitMin}m {waitSecRem}s</Text>
-                {!isFree && <Text style={{ fontSize: 11, color: C.red, marginTop: 2, opacity: 0.7 }}>Longer wait = higher fee</Text>}
+
+          <View style={{ paddingHorizontal: 18 }}>
+
+            {/* Free / fee badge */}
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', gap: 10,
+              backgroundColor: isFree ? C.greenGlass : C.yellowGlass,
+              borderRadius: 14, padding: 14,
+              marginBottom: waitSec > 0 ? 10 : 14,
+              borderWidth: 1.5, borderColor: isFree ? C.greenBorder : C.yellowBorder,
+            }}>
+              <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: isFree ? 'rgba(5,150,105,0.12)' : 'rgba(245,158,11,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name={isFree ? 'checkmark-circle' : 'warning'} size={20} color={isFree ? C.green : C.yellow} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, color: isFree ? C.green : C.yellow, fontWeight: '800' }}>
+                  {isFree ? 'Free Cancellation' : `₹${fee} Cancellation Fee`}
+                </Text>
+                <Text style={{ fontSize: 11, color: isFree ? C.green : C.yellow, opacity: 0.75, marginTop: 2 }}>
+                  {isFree
+                    ? `${cancelInfo ? cancelInfo.sec_since_book + 's' : cancelTimer + 's'} since booking — no charge`
+                    : 'Fee applies as window has passed'}
+                </Text>
               </View>
             </View>
-          )}
-          <Text style={{ fontSize: 14, fontWeight: '700', color: C.textMuted, marginBottom: 10 }}>Reason for cancelling?</Text>
-          {['Booked by mistake', 'Waiting too long', 'Plans changed', 'Driver is too far', 'Other reason'].map((reason, i) => (
-            <TouchableOpacity key={i}
-              style={{ backgroundColor: C.glass, borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: C.glassBorder }}
-              onPress={async () => {
-                if (rideData?.ride_id) {
-                  const cd = await apiPost('/api/rides/cancel-smart', { ride_id: rideData.ride_id, cancelled_by: 'customer', reason, phone: phone || '9999999999' });
-                  if (cd._error) setResult('❌ ' + cd.message);
-                  else setResult(cd.penalty > 0 ? `⚠️ ${cd.message}` : `✅ ${cd.message}`);
-                  ride.clearRide();
-                  AsyncStorage.removeItem('activeStdRideId').catch(() => {});
-                }
-                setShowCancelModal(false); setScreen('home'); setRideData(null);
-                setPickup(''); setDrop(''); setPickupCoords(null); setDropCoords(null); setEta('');
-                setAltSuggest(null); setDriverLoc(null);
-              }}>
-              <Text style={{ fontSize: 14, color: C.text, fontWeight: '500' }}>{reason}</Text>
+
+            {/* Driver waiting warning */}
+            {waitSec > 0 && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.redGlass, borderRadius: 14, padding: 14, marginBottom: 14, borderWidth: 1.5, borderColor: C.redBorder }}>
+                <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: 'rgba(239,68,68,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="time" size={20} color={C.red} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: C.red }}>Driver waiting {waitMin}m {waitSecRem}s</Text>
+                  {!isFree && <Text style={{ fontSize: 11, color: C.red, marginTop: 2, opacity: 0.75 }}>Longer wait increases the fee</Text>}
+                </View>
+              </View>
+            )}
+
+            {/* Reasons */}
+            <Text style={{ fontSize: 11, fontWeight: '900', color: C.textDim, letterSpacing: 1.3, marginBottom: 10 }}>REASON FOR CANCELLING</Text>
+            {REASONS.map((reason, i) => (
+              <TouchableOpacity key={i}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.glass, borderRadius: 14, paddingVertical: 13, paddingHorizontal: 14, marginBottom: 8, borderWidth: 1, borderColor: C.glassBorder }}
+                onPress={() => doCancel(reason)}
+                activeOpacity={0.7}>
+                <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: C.glassBorder }} />
+                <Text style={{ fontSize: 14, color: C.text, fontWeight: '600', flex: 1 }}>{reason}</Text>
+                <Ionicons name="chevron-forward" size={15} color={C.textDim} />
+              </TouchableOpacity>
+            ))}
+
+            {/* Keep ride — pink primary */}
+            <TouchableOpacity
+              style={{ backgroundColor: C.pink, borderRadius: 16, paddingVertical: 15, alignItems: 'center', marginTop: 6, elevation: 6, shadowColor: C.pink, shadowOpacity: 0.38, shadowRadius: 12 }}
+              onPress={() => setShowCancelModal(false)}
+              activeOpacity={0.85}>
+              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15, letterSpacing: 0.2 }}>Keep My Ride →</Text>
             </TouchableOpacity>
-          ))}
-          <TouchableOpacity
-            style={{ borderWidth: 1.5, borderColor: C.glassBorder, borderRadius: 14, padding: 14, alignItems: 'center', marginTop: 8, backgroundColor: C.glass }}
-            onPress={() => setShowCancelModal(false)}>
-            <Text style={{ color: C.text, fontWeight: '800', fontSize: 14 }}>No, keep my ride</Text>
-          </TouchableOpacity>
-        </GlassPanel>
+
+          </View>
+        </View>
       </View>
     </View>
   );

@@ -1,5 +1,6 @@
 import { Component, ReactNode, useEffect, useRef } from 'react';
 import { BackHandler, ToastAndroid, View, Text, TouchableOpacity } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppProvider, useApp } from './src/context/AppContext';
 import { Router } from './src/Router';
 
@@ -97,11 +98,13 @@ function BackHandlerWrapper() {
 
 function App() {
   return (
-    <AppProvider>
-      <ErrorBoundary>
-        <BackHandlerWrapper />
-      </ErrorBoundary>
-    </AppProvider>
+    <SafeAreaProvider>
+      <AppProvider>
+        <ErrorBoundary>
+          <BackHandlerWrapper />
+        </ErrorBoundary>
+      </AppProvider>
+    </SafeAreaProvider>
   );
 }
 

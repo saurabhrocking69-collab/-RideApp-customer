@@ -3,6 +3,7 @@ import {
   Animated, KeyboardAvoidingView, Modal, Platform, ScrollView,
   Text, TextInput, TouchableOpacity, View, Alert,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
@@ -140,6 +141,7 @@ function TimePicker({ value, onChange }: { value: Date; onChange: (d: Date) => v
 
 export function ScheduledRideScreen() {
   const { setScreen, phone, userCoords, appConfig } = useApp();
+  const { bottom: bottomInset } = useSafeAreaInsets();
 
   // Form state
   const defaultTime = new Date(Date.now() + 60 * 60 * 1000); // 1hr from now
@@ -160,6 +162,8 @@ export function ScheduledRideScreen() {
   const [loading, setLoading]     = useState(false);
   const [msg, setMsg]             = useState('');
   const [scheduled, setScheduled] = useState<any[]>([]);
+  const [schedSuccessInfo, setSchedSuccessInfo] = useState<{ dateStr: string; timeStr: string } | null>(null);
+  const [cancelConfirmId, setCancelConfirmId]   = useState<number | null>(null);
   const [listLoading, setListLoading] = useState(false);
   const [fareEst, setFareEst]         = useState<number | null>(null);
   const [fareBreakdown, setFareBreakdown] = useState<any>(null);
@@ -248,7 +252,10 @@ export function ScheduledRideScreen() {
       });
       if (d.success) {
         setMsg('');
-        Alert.alert('✅ Ride Scheduled!', `Your ride is booked for ${schedTime.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} at ${schedTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}.`, [{ text: 'OK', onPress: () => { setStep('list'); setPickup(''); setDrop(''); loadScheduled(); } }]);
+        setSchedSuccessInfo({
+          dateStr: schedTime.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', weekday: 'short' }),
+          timeStr: schedTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+        });
       } else {
         setMsg('❌ ' + (d.error || 'Something went wrong'));
       }
@@ -257,21 +264,23 @@ export function ScheduledRideScreen() {
   };
 
   const cancelScheduled = (id: number) => {
-    Alert.alert('Cancel This Ride?', 'This scheduled ride will be cancelled.', [
-      { text: 'No', style: 'cancel' },
-      { text: 'Yes, Cancel', style: 'destructive', onPress: async () => {
-        try {
-          const { API } = await import('../../api');
-          const res = await fetch(`${API}/api/rides/scheduled/${id}`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone }),
-          });
-          const data = await res.json();
-          if (data.success) loadScheduled();
-        } catch (_e) {}
-      }},
-    ]);
+    setCancelConfirmId(id);
+  };
+
+  const doConfirmCancel = async () => {
+    const id = cancelConfirmId;
+    setCancelConfirmId(null);
+    if (!id) return;
+    try {
+      const { API } = await import('../../api');
+      const res = await fetch(`${API}/api/rides/scheduled/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      });
+      const data = await res.json();
+      if (data.success) loadScheduled();
+    } catch (_e) {}
   };
 
   const fmt = (d: any) => {
@@ -537,6 +546,71 @@ export function ScheduledRideScreen() {
           </SlideUp>
         )}
       </ScrollView>
+
+      {/* ── Ride Scheduled Success Modal ──────────────────────────────── */}
+      {schedSuccessInfo && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end', zIndex: 999 }}>
+          <View style={{ backgroundColor: C.bgCard, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 22, paddingTop: 14, paddingBottom: 18 + bottomInset }}>
+            <View style={{ width: 40, height: 4, backgroundColor: C.glassBorder, borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />
+            {/* Icon */}
+            <View style={{ alignItems: 'center', marginBottom: 18 }}>
+              <View style={{ width: 68, height: 68, borderRadius: 22, backgroundColor: 'rgba(5,150,105,0.10)', borderWidth: 2, borderColor: 'rgba(5,150,105,0.28)', alignItems: 'center', justifyContent: 'center', marginBottom: 14, elevation: 2, shadowColor: C.green, shadowOpacity: 0.2, shadowRadius: 8 }}>
+                <Ionicons name="checkmark-circle" size={36} color={C.green} />
+              </View>
+              <Text style={{ fontSize: 21, fontWeight: '900', color: C.text, letterSpacing: -0.4 }}>Ride Scheduled!</Text>
+              <Text style={{ fontSize: 13, color: C.textDim, marginTop: 6 }}>We'll find you a driver on time</Text>
+            </View>
+            {/* Date / time card */}
+            <View style={{ backgroundColor: C.greenGlass, borderRadius: 16, padding: 16, marginBottom: 20, borderWidth: 1.5, borderColor: C.greenBorder, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              <View style={{ width: 42, height: 42, borderRadius: 14, backgroundColor: 'rgba(5,150,105,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="calendar" size={22} color={C.green} />
+              </View>
+              <View>
+                <Text style={{ fontSize: 15, fontWeight: '900', color: C.green }}>{schedSuccessInfo.dateStr}</Text>
+                <Text style={{ fontSize: 13, color: C.green, opacity: 0.8, marginTop: 2 }}>at {schedSuccessInfo.timeStr}</Text>
+              </View>
+            </View>
+            {/* CTA */}
+            <TouchableOpacity
+              style={{ backgroundColor: C.pink, borderRadius: 16, paddingVertical: 15, alignItems: 'center', elevation: 6, shadowColor: C.pink, shadowOpacity: 0.38, shadowRadius: 12 }}
+              onPress={() => { setSchedSuccessInfo(null); setStep('list'); setPickup(''); setDrop(''); loadScheduled(); }}
+              activeOpacity={0.85}>
+              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>View Scheduled Rides →</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* ── Cancel Confirmation Modal ──────────────────────────────────── */}
+      {cancelConfirmId !== null && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end', zIndex: 999 }}>
+          <View style={{ backgroundColor: C.bgCard, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 22, paddingTop: 14, paddingBottom: 18 + bottomInset }}>
+            <View style={{ width: 40, height: 4, backgroundColor: C.glassBorder, borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />
+            {/* Icon */}
+            <View style={{ alignItems: 'center', marginBottom: 18 }}>
+              <View style={{ width: 62, height: 62, borderRadius: 20, backgroundColor: C.redGlass, borderWidth: 2, borderColor: C.redBorder, alignItems: 'center', justifyContent: 'center', marginBottom: 12, elevation: 2, shadowColor: C.red, shadowOpacity: 0.18, shadowRadius: 8 }}>
+                <Ionicons name="trash" size={28} color={C.red} />
+              </View>
+              <Text style={{ fontSize: 20, fontWeight: '900', color: C.text, letterSpacing: -0.4 }}>Cancel This Ride?</Text>
+              <Text style={{ fontSize: 13, color: C.textDim, marginTop: 6, textAlign: 'center' }}>This scheduled ride will be permanently cancelled</Text>
+            </View>
+            {/* Buttons */}
+            <TouchableOpacity
+              style={{ backgroundColor: C.red, borderRadius: 16, paddingVertical: 15, alignItems: 'center', marginBottom: 10, elevation: 4, shadowColor: C.red, shadowOpacity: 0.32, shadowRadius: 10 }}
+              onPress={doConfirmCancel}
+              activeOpacity={0.85}>
+              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>Yes, Cancel Ride</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{ borderWidth: 1.5, borderColor: C.glassBorder, borderRadius: 16, paddingVertical: 14, alignItems: 'center', backgroundColor: C.glass }}
+              onPress={() => setCancelConfirmId(null)}
+              activeOpacity={0.8}>
+              <Text style={{ color: C.text, fontWeight: '700', fontSize: 14 }}>No, Keep It</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
     </KeyboardAvoidingView>
   );
 }
