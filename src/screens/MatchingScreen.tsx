@@ -10,6 +10,7 @@ import { LiveMap } from '../components/LiveMap';
 import { s, C, T, SP, R, SHADOW } from '../styles';
 import { apiPost } from '../../api';
 import { API } from '../constants';
+import { ARDriverFinder } from '../components/ARDriverFinder';
 
 // ── Parse Google Maps duration text → seconds ──────────────────────────────
 function parseEtaSec(text: string): number {
@@ -521,6 +522,8 @@ export function MatchingScreen() {
     driverCancelPopup, setDriverCancelPopup,
   } = useApp();
 
+  const [showAR, setShowAR] = useState(false);
+
   // ── Chat icon bounce ───────────────────────────────────────────────────────
   const chatBounceAnim = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -606,6 +609,18 @@ export function MatchingScreen() {
       </View>
     </View>
   );
+
+  // ── AR finder overlay ─────────────────────────────────────────────────────
+  if (showAR && driverLoc?.lat && driverLoc?.lng) {
+    return (
+      <ARDriverFinder
+        driverLat={driverLoc.lat}
+        driverLng={driverLoc.lng}
+        driverName={rideData?.driver?.name}
+        onClose={() => setShowAR(false)}
+      />
+    );
+  }
 
   // ── Layout math ────────────────────────────────────────────────────────────
   const SCREEN_H = Dimensions.get('window').height;
@@ -804,23 +819,34 @@ export function MatchingScreen() {
                 {/* Thin divider */}
                 <View style={{ height: 1, backgroundColor: C.glassBorder, marginHorizontal: 16 }} />
 
-                {/* Chat + Call buttons row */}
-                <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 12, gap: 10 }}>
+                {/* Chat + AR + Call buttons row */}
+                <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 12, gap: 8 }}>
                   <Animated.View style={{ flex: 1, transform: [{ scale: chatBounceAnim }] }}>
                     <TouchableOpacity
                       onPress={() => { setUnreadChat(0); setChatOrigin('matching'); setScreen('chat'); }}
-                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 13, borderRadius: 13, backgroundColor: unreadChat > 0 ? C.plumGlass : C.glassMid, borderWidth: 1.5, borderColor: unreadChat > 0 ? C.plumBorder : C.glassBorder }}>
-                      <Ionicons name="chatbubble" size={16} color={unreadChat > 0 ? C.plum : C.textMuted} />
-                      <Text style={{ fontSize: 13, fontWeight: '800', color: unreadChat > 0 ? C.plum : C.textMuted }}>
+                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 13, borderRadius: 13, backgroundColor: unreadChat > 0 ? C.plumGlass : C.glassMid, borderWidth: 1.5, borderColor: unreadChat > 0 ? C.plumBorder : C.glassBorder }}>
+                      <Ionicons name="chatbubble" size={15} color={unreadChat > 0 ? C.plum : C.textMuted} />
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: unreadChat > 0 ? C.plum : C.textMuted }}>
                         {unreadChat > 0 ? `Chat (${unreadChat})` : 'Chat'}
                       </Text>
                     </TouchableOpacity>
                   </Animated.View>
+
+                  {/* AR Driver Finder button — only when driver is en route */}
+                  {!driverArrived && driverLoc?.lat && (
+                    <TouchableOpacity
+                      onPress={() => setShowAR(true)}
+                      style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 13, borderRadius: 13, backgroundColor: 'rgba(255,45,120,0.09)', borderWidth: 1.5, borderColor: C.pinkBorder }}>
+                      <Ionicons name="camera" size={15} color={C.pink} />
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: C.pink }}>AR Find</Text>
+                    </TouchableOpacity>
+                  )}
+
                   <TouchableOpacity
                     onPress={callDriver}
-                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 13, borderRadius: 13, backgroundColor: 'rgba(34,197,94,0.10)', borderWidth: 1.5, borderColor: C.greenBorder }}>
-                    <Ionicons name="call" size={16} color={C.green} />
-                    <Text style={{ fontSize: 13, fontWeight: '800', color: C.green }}>Call</Text>
+                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 13, borderRadius: 13, backgroundColor: 'rgba(34,197,94,0.10)', borderWidth: 1.5, borderColor: C.greenBorder }}>
+                    <Ionicons name="call" size={15} color={C.green} />
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: C.green }}>Call</Text>
                   </TouchableOpacity>
                 </View>
               </View>
