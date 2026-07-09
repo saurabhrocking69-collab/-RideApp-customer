@@ -32,6 +32,7 @@ const TYPE_ICON: Record<string, { icon: string; color: string }> = {
   refund:             { icon: 'wallet',            color: C.green },
   wallet_topup:       { icon: 'wallet',            color: C.green },
   warning:            { icon: 'warning',           color: C.yellow },
+  broadcast:          { icon: 'megaphone',         color: '#6366F1' },
   default:            { icon: 'notifications',     color: C.pink },
 };
 

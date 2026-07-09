@@ -65,6 +65,7 @@ const ICON_CFG: Record<string, { icon: string; color: string; bg: string }> = {
   refund:             { icon: 'wallet',           color: C.green,     bg: C.greenGlass },
   wallet_topup:       { icon: 'wallet',           color: C.green,     bg: C.greenGlass },
   warning:            { icon: 'warning',          color: C.yellow,    bg: C.yellowGlass },
+  broadcast:          { icon: 'megaphone',        color: '#6366F1',   bg: '#6366F115' },
   default:            { icon: 'notifications',    color: C.pink,      bg: C.pinkGlass },
 };
 
