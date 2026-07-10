@@ -1023,11 +1023,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setUnreadChat((prev: number) => prev + 1);
     });
     s.on('paymentConfirmed', (data: any) => {
+      // Guard: ignore events for old/different ride rooms we haven't left yet
+      if (data.ride_id && rideDataRef.current?.ride_id &&
+          String(data.ride_id) !== String(rideDataRef.current.ride_id)) return;
       if (data.status === 'completed' && rideDataRef.current?.ride_id) {
         if (data.cashbacks?.length) setCashbackEarned(data.cashbacks);
         setPaymentDone(true);
         setScreen('postride');
         AsyncStorage.removeItem('activeStdRideId').catch(() => {});
+        s.emit('leaveRide', { rideId: data.ride_id }); // leave room so old events can't leak again
       }
     });
     s.on('rideUpdate', (data: any) => {
@@ -1084,6 +1088,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       if (st === 'started') { setScreen('inride'); useRideStore.setState({ rideStatus: 'started', startOtp: '' }); }
       if (st === 'completed' && rideDataRef.current?.ride_id) {
+        if (data.rideId && String(data.rideId) !== String(activeRideIdRef.current)) return;
         AsyncStorage.removeItem('activeStdRideId').catch(() => {});
         useRideStore.setState({ rideStatus: 'completed' });
         setScreen((cur: Screen) => (cur === 'payment' || cur === 'postride') ? cur : 'payment');
@@ -1091,11 +1096,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       if (st === 'buddy_declined') { buddyWaitingRef.current = false; setBuddyWaiting(false); setBuddyBookMsg('⚠️ Buddy did not accept. Searching other drivers...'); }
       if (st === 'cancelled') {
+        if (data.rideId && String(data.rideId) !== String(activeRideIdRef.current)) return;
         AsyncStorage.removeItem('activeStdRideId').catch(() => {});
         ride.clearRide();
         setRideData(null); setAltSuggest(null); setDriverLoc(null); setServerSurgeOffer(null); setNoDriverFinal(null);
         setPickup(''); setDrop(''); setPickupCoords(null); setDropCoords(null); setEta('');
         buddyWaitingRef.current = false; setBuddyWaiting(false); setBuddyBookMsg('');
+        s.emit('leaveRide', { rideId: data.rideId });
         setScreen('home'); setResult('❌ Ride cancelled');
       }
       if (st === 'surge_offer') {
@@ -1119,10 +1126,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setScreen(prev => prev === 'surge' ? 'matching' : prev);
       }
       if (st === 'no_driver') {
+        if (data.rideId && String(data.rideId) !== String(activeRideIdRef.current)) return;
         AsyncStorage.removeItem('activeStdRideId').catch(() => {});
         ride.clearRide();
         setRideData(null); setAltSuggest(null); setDriverLoc(null); setServerSurgeOffer(null); setNoDriverFinal(null);
         setPickup(''); setDrop(''); setPickupCoords(null); setDropCoords(null); setEta('');
+        s.emit('leaveRide', { rideId: data.rideId });
         if (buddyWaitingRef.current) {
           buddyWaitingRef.current = false; setBuddyWaiting(false);
           setBuddyBookMsg('⏰ Driver did not respond in 25 seconds — try a new ride');
