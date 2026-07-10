@@ -654,6 +654,12 @@ export function MatchingScreen() {
           showRoute
           followDriver={!!rideData?.driver}
           showTraffic={false}
+          walkOrigin={
+            (userCoords as any)?.latitude != null
+              ? { lat: (userCoords as any).latitude ?? (userCoords as any).lat,
+                  lng: (userCoords as any).longitude ?? (userCoords as any).lng }
+              : null
+          }
         />
 
         {/* Minimal top overlay — back button + chat toast */}

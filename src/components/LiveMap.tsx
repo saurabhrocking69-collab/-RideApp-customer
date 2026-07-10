@@ -21,6 +21,37 @@ function decodePolyline(encoded: string): { latitude: number; longitude: number 
   return pts;
 }
 
+// ── Haversine distance (metres) ───────────────────────────────────────────────
+function haversineM(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// ── Walk distance + time chip (on the dotted line midpoint) ──────────────────
+function WalkChip({ distM }: { distM: number }) {
+  const dist  = distM < 1000 ? `${Math.round(distM)}m` : `${(distM / 1000).toFixed(1)}km`;
+  const mins  = Math.max(1, Math.ceil(distM / 83)); // 5 km/h ≈ 83 m/min
+  return (
+    <View style={{
+      backgroundColor: '#FFFFFF',
+      borderRadius: 12, paddingHorizontal: 9, paddingVertical: 4,
+      borderWidth: 1.5, borderColor: '#60A5FA',
+      flexDirection: 'row', alignItems: 'center', gap: 4,
+      elevation: 5,
+      shadowColor: '#3B82F6', shadowOpacity: 0.22, shadowRadius: 6,
+    }}>
+      <Text style={{ fontSize: 11 }}>🚶</Text>
+      <Text style={{ fontSize: 11, fontWeight: '800', color: '#1D4ED8' }}>
+        {dist} · {mins} min
+      </Text>
+    </View>
+  );
+}
+
 // ── Compass bearing between two coords ───────────────────────────────────────
 function computeBearing(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const toR = (d: number) => d * Math.PI / 180;
@@ -236,6 +267,7 @@ export interface LiveMapProps {
   adjustOrigin?: { lat: number; lng: number } | null;
   fill?: boolean;           // flex:1 to fill parent instead of fixed height
   cameraTarget?: { lat: number; lng: number } | null; // fly camera here when set
+  walkOrigin?: { lat: number; lng: number } | null;   // user GPS — draws dotted walk line to pickup
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -264,6 +296,7 @@ export const LiveMap = memo(function LiveMap({
   adjustOrigin = null,
   fill = false,
   cameraTarget = null,
+  walkOrigin = null,
 }: LiveMapProps) {
   const mapRef = useRef<MapView>(null);
   const prevPos = useRef<{ lat: number; lng: number } | null>(null);
@@ -595,6 +628,35 @@ export const LiveMap = memo(function LiveMap({
           </Marker>
         )}
 
+        {/* ── Walk-to-pickup dotted line (user GPS → pickup point) ─────────── */}
+        {walkOrigin && pickupCoords && (() => {
+          const distM = haversineM(walkOrigin.lat, walkOrigin.lng, pickupCoords.lat, pickupCoords.lng);
+          if (distM < 100) return null;
+          const midLat = (walkOrigin.lat + pickupCoords.lat) / 2;
+          const midLng = (walkOrigin.lng + pickupCoords.lng) / 2;
+          return (
+            <>
+              <Polyline
+                coordinates={[
+                  { latitude: walkOrigin.lat,   longitude: walkOrigin.lng   },
+                  { latitude: pickupCoords.lat, longitude: pickupCoords.lng },
+                ]}
+                strokeColor="#3B82F6"
+                strokeWidth={2.5}
+                lineDashPattern={[9, 7]}
+                lineCap="butt"
+              />
+              <Marker
+                coordinate={{ latitude: midLat, longitude: midLng }}
+                anchor={{ x: 0.5, y: 1 }}
+                tracksViewChanges={false}
+              >
+                <WalkChip distM={distM} />
+              </Marker>
+            </>
+          );
+        })()}
+
         {/* User accuracy ring */}
         {userLat != null && userLng != null && userAccuracy != null && userAccuracy > 5 && (
           <Circle
@@ -723,6 +785,33 @@ export const LiveMap = memo(function LiveMap({
 
       {/* Drag hint */}
       <DragHint visible={dropDragMode} isAdjust={!!adjustOrigin} />
+
+      {/* Walk-to-pickup hint pill */}
+      {walkOrigin && pickupCoords && mode !== 'inride' && (() => {
+        const distM = haversineM(walkOrigin.lat, walkOrigin.lng, pickupCoords.lat, pickupCoords.lng);
+        if (distM < 100) return null;
+        const dist = distM < 1000 ? `${Math.round(distM)}m` : `${(distM / 1000).toFixed(1)}km`;
+        const mins = Math.max(1, Math.ceil(distM / 83));
+        return (
+          <View
+            style={{ position: 'absolute', bottom: 54, left: 16, right: 16, alignItems: 'center' }}
+            pointerEvents="none"
+          >
+            <View style={{
+              backgroundColor: 'rgba(29,78,216,0.92)',
+              borderRadius: 22, paddingHorizontal: 14, paddingVertical: 8,
+              flexDirection: 'row', alignItems: 'center', gap: 7,
+              elevation: 6,
+              shadowColor: '#1D4ED8', shadowOpacity: 0.35, shadowRadius: 10,
+            }}>
+              <Text style={{ fontSize: 15 }}>🚶</Text>
+              <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>
+                Walk {dist} to your pickup · {mins} min
+              </Text>
+            </View>
+          </View>
+        );
+      })()}
 
       {/* Re-center button — bottom right */}
       <RecenterBtn onPress={recenter} />

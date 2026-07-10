@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import MapView, { PROVIDER_GOOGLE, Region } from 'react-native-maps';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, R, SP, SHADOW } from '../styles';
@@ -19,6 +19,15 @@ import { MAPS_KEY } from '../constants';
 import { externalGet } from '../../api';
 
 const { width: W } = Dimensions.get('window');
+
+function haversineM(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 interface Props {
   visible: boolean;
@@ -32,6 +41,7 @@ export function PickupMapPicker({ visible, initialCoords, onConfirm, onClose }: 
   const [address, setAddress]     = useState('');
   const [geocoding, setGeocoding] = useState(false);
   const [saveLabel, setSaveLabel] = useState<'Home' | 'Work' | null>(null);
+  const [mapCenter, setMapCenter] = useState(initialCoords);
   const currentCoords = useRef(initialCoords);
   const geocodeTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -52,6 +62,7 @@ export function PickupMapPicker({ visible, initialCoords, onConfirm, onClose }: 
   useEffect(() => {
     if (!visible) return;
     currentCoords.current = initialCoords;
+    setMapCenter(initialCoords);
     setAddress('');
     setSaveLabel(null);
     doGeocode(initialCoords.lat, initialCoords.lng);
@@ -61,6 +72,7 @@ export function PickupMapPicker({ visible, initialCoords, onConfirm, onClose }: 
     const lat = region.latitude;
     const lng = region.longitude;
     currentCoords.current = { lat, lng };
+    setMapCenter({ lat, lng });
     if (geocodeTimer.current) clearTimeout(geocodeTimer.current);
     geocodeTimer.current = setTimeout(() => doGeocode(lat, lng), 650);
   }, []);
@@ -69,6 +81,13 @@ export function PickupMapPicker({ visible, initialCoords, onConfirm, onClose }: 
     if (geocoding || !address) return;
     onConfirm(address, currentCoords.current, saveLabel);
   };
+
+  const walkDistM = haversineM(initialCoords.lat, initialCoords.lng, mapCenter.lat, mapCenter.lng);
+  const walkDistLabel = walkDistM < 1000
+    ? `${Math.round(walkDistM)}m`
+    : `${(walkDistM / 1000).toFixed(1)}km`;
+  const walkMins  = Math.max(1, Math.ceil(walkDistM / 83));
+  const showWalkLine = walkDistM > 50;
 
   return (
     <Modal
@@ -96,7 +115,45 @@ export function PickupMapPicker({ visible, initialCoords, onConfirm, onClose }: 
             rotateEnabled={false}
             pitchEnabled={false}
             toolbarEnabled={false}
-          />
+          >
+            {/* Dotted walk line: user GPS origin → current map center */}
+            {showWalkLine && (
+              <>
+                <Polyline
+                  coordinates={[
+                    { latitude: initialCoords.lat, longitude: initialCoords.lng },
+                    { latitude: mapCenter.lat,     longitude: mapCenter.lng     },
+                  ]}
+                  strokeColor="#3B82F6"
+                  strokeWidth={2.5}
+                  lineDashPattern={[9, 7]}
+                  lineCap="butt"
+                />
+                <Marker
+                  coordinate={{
+                    latitude:  (initialCoords.lat + mapCenter.lat) / 2,
+                    longitude: (initialCoords.lng + mapCenter.lng) / 2,
+                  }}
+                  anchor={{ x: 0.5, y: 1.4 }}
+                  tracksViewChanges={false}
+                >
+                  <View style={{
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: 11, paddingHorizontal: 9, paddingVertical: 4,
+                    borderWidth: 1.5, borderColor: '#60A5FA',
+                    flexDirection: 'row', alignItems: 'center', gap: 4,
+                    elevation: 5,
+                    shadowColor: '#3B82F6', shadowOpacity: 0.22, shadowRadius: 6,
+                  }}>
+                    <Text style={{ fontSize: 11 }}>🚶</Text>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#1D4ED8' }}>
+                      {walkDistLabel}
+                    </Text>
+                  </View>
+                </Marker>
+              </>
+            )}
+          </MapView>
 
           {/* Fixed pin at center of map view — pointerEvents none so map pans beneath */}
           <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
@@ -186,6 +243,27 @@ export function PickupMapPicker({ visible, initialCoords, onConfirm, onClose }: 
           </View>
 
           <View style={{ height: 1, backgroundColor: C.glassBorder, marginBottom: 14 }} />
+
+          {/* Walk hint — shown when pickup differs from GPS origin */}
+          {showWalkLine && (
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', gap: 10,
+              backgroundColor: 'rgba(59,130,246,0.07)',
+              borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
+              borderWidth: 1, borderColor: 'rgba(96,165,250,0.35)',
+              marginBottom: 14,
+            }}>
+              <Text style={{ fontSize: 20 }}>🚶</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: '#1D4ED8', marginBottom: 1 }}>
+                  Walk to your pickup point
+                </Text>
+                <Text style={{ fontSize: 11, color: '#3B82F6', fontWeight: '600' }}>
+                  {walkDistLabel} away · about {walkMins} min on foot
+                </Text>
+              </View>
+            </View>
+          )}
 
           {/* Save as: Home / Work chips */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 18 }}>

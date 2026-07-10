@@ -302,8 +302,9 @@ export function BookingScreen() {
   };
 
   // ── Pickup map picker ─────────────────────────────────────────────────────────
-  const [pickerCoords, setPickerCoords]   = useState<{ lat: number; lng: number } | null>(null);
-  const [pickerLoading, setPickerLoading] = useState(false);
+  const [pickerCoords, setPickerCoords]     = useState<{ lat: number; lng: number } | null>(null);
+  const [pickerLoading, setPickerLoading]   = useState(false);
+  const [walkGpsOrigin, setWalkGpsOrigin]   = useState<{ lat: number; lng: number } | null>(null);
 
   const handleUseMyLocation = async () => {
     setPickerLoading(true);
@@ -311,7 +312,9 @@ export function BookingScreen() {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') { setPickerLoading(false); return; }
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      setPickerCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+      const coords = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+      setWalkGpsOrigin(coords);
+      setPickerCoords(coords);
     } catch (_e) {}
     setPickerLoading(false);
   };
@@ -485,6 +488,7 @@ export function BookingScreen() {
           onPickupDragEnd={handlePickupDragEnd}
           onRouteInfo={(et, dt) => { setRouteEta(et); setRouteDist(dt); }}
           fitKey={fitKey}
+          walkOrigin={walkGpsOrigin}
         />
         {/* Floating back button */}
         <TouchableOpacity
@@ -695,7 +699,7 @@ export function BookingScreen() {
                     returnKeyType="next"
                   />
                   {pickup ? (
-                    <TouchableOpacity onPress={() => { setPickup(''); setPickupCoords(null); setPickupSugg([]); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; }} style={{ padding: 4 }}>
+                    <TouchableOpacity onPress={() => { setPickup(''); setPickupCoords(null); setPickupSugg([]); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; setWalkGpsOrigin(null); }} style={{ padding: 4 }}>
                       <Ionicons name="close-circle" size={19} color={C.textDim} />
                     </TouchableOpacity>
                   ) : pickerLoading ? (
