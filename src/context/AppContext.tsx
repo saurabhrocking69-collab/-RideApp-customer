@@ -1278,30 +1278,46 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') { setResult('❌ Location permission denied'); return; }
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+
+      // Fast path: use OS-cached position (instant, no satellite wait)
+      const last = await Location.getLastKnownPositionAsync({ maxAge: 120000, requiredAccuracy: 200 });
+      if (last) {
+        const lt = last.coords.latitude; const lg = last.coords.longitude;
+        setUserCoords({ latitude: lt, longitude: lg }); setPickupCoords({ lat: lt, lng: lg });
+        geocodePickup(lt, lg);
+      }
+
+      // Precise fix in background (Balanced = network-assisted, ~2-5s on Android)
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       const lat = loc.coords.latitude; const lng = loc.coords.longitude;
       setUserCoords({ latitude: lat, longitude: lng }); setPickupCoords({ lat, lng });
-      try {
-        const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${MAPS_KEY}&language=en`);
-        const data = await res.json();
-        if (data.results?.[0]) {
-          setPickup(data.results[0].formatted_address); setResult('✅ Location found!');
-          if (drop) {
-            const etaRes = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${lat},${lng}&destinations=${encodeURIComponent(drop)}&key=${MAPS_KEY}&mode=driving&departure_time=now`);
-            const etaData = await etaRes.json();
-            const el = etaData.rows?.[0]?.elements?.[0];
-            if (el?.status === 'OK') { const km = el.distance.value / 1000; setEta(`🕐 ${el.duration_in_traffic?.text || el.duration.text} · 📍 ${el.distance.text}`); loadFareEstimates(km); }
-          }
-        } else {
-          const geo = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
-          if (geo[0]) { const a = geo[0]; setPickup([a.streetNumber, a.street, a.district, a.city].filter(Boolean).join(', ')); setResult('✅ Location found!'); }
+      geocodePickup(lat, lng);
+    } catch (_e) { setResult('❌ Location error'); }
+  };
+
+  const geocodePickup = async (lat: number, lng: number) => {
+    try {
+      const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${MAPS_KEY}&language=en`);
+      const data = await res.json();
+      if (data.results?.[0]) {
+        setPickup(data.results[0].formatted_address); setResult('✅ Location found!');
+        if (drop) {
+          const etaRes = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${lat},${lng}&destinations=${encodeURIComponent(drop)}&key=${MAPS_KEY}&mode=driving&departure_time=now`);
+          const etaData = await etaRes.json();
+          const el = etaData.rows?.[0]?.elements?.[0];
+          if (el?.status === 'OK') { const km = el.distance.value / 1000; setEta(`🕐 ${el.duration_in_traffic?.text || el.duration.text} · 📍 ${el.distance.text}`); loadFareEstimates(km); }
         }
-      } catch (_e) {
+      } else {
+        const geo = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
+        if (geo[0]) { const a = geo[0]; setPickup([a.streetNumber, a.street, a.district, a.city].filter(Boolean).join(', ')); setResult('✅ Location found!'); }
+      }
+    } catch (_e) {
+      try {
         const geo = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
         if (geo[0]) { const a = geo[0]; setPickup([a.streetNumber, a.street, a.city].filter(Boolean).join(', ')); }
         setResult('✅ Location found!');
-      }
-    } catch (_e) { setResult('❌ Location error'); }
+      } catch (_e2) {}
+    }
   };
 
   const searchPlaces = (text: string, type: 'pickup' | 'drop') => {
