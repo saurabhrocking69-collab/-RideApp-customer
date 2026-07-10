@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Storage as AsyncStorage } from '../storage';
 import { useApp } from '../context/AppContext';
-import { GlassPanel, RideVehicleIcon, DotBG } from '../components/ui';
+import { GlassPanel, RideVehicleIcon, DotBG, SkeletonBox } from '../components/ui';
 import { LiveMap } from '../components/LiveMap';
 import { s, C, T, R, SP, SHADOW } from '../styles';
 import { RIDES, MAPS_KEY } from '../constants';
@@ -713,8 +713,10 @@ export function BookingScreen() {
                   </View>
                 )}
                 {placesLoading && !pickup && nearbyPlaces.length === 0 && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, marginBottom: 4, paddingHorizontal: 4 }}>
-                    <Text style={{ fontSize: 11, color: C.textDim }}>📍 Finding nearby spots...</Text>
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, marginBottom: 4, paddingHorizontal: 4 }}>
+                    <SkeletonBox width={100} height={34} radius={22} />
+                    <SkeletonBox width={118} height={34} radius={22} />
+                    <SkeletonBox width={88} height={34} radius={22} />
                   </View>
                 )}
 
@@ -1046,9 +1048,13 @@ export function BookingScreen() {
                     <Text style={{ fontSize: 11, fontWeight: '800', color: isSel ? C.text : notAvail ? C.textMuted : C.textDim, textAlign: 'center', marginBottom: 3 }} numberOfLines={1}>{r.label}</Text>
 
                     {/* Fare */}
-                    <Text style={{ fontSize: 15, fontWeight: '900', color: fareLoading ? C.textDim : isSel ? C.pink : isLux ? C.purple : C.text, textAlign: 'center', marginBottom: 6 }}>
-                      {fareText}
-                    </Text>
+                    {fareLoading ? (
+                      <SkeletonBox width={52} height={16} radius={6} style={{ marginBottom: 6, alignSelf: 'center' }} />
+                    ) : (
+                      <Text style={{ fontSize: 15, fontWeight: '900', color: isSel ? C.pink : isLux ? C.purple : C.text, textAlign: 'center', marginBottom: 6 }}>
+                        {fareText}
+                      </Text>
+                    )}
 
                     {/* ETA status row — fixed 14px height */}
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, height: 14 }}>
@@ -1335,9 +1341,19 @@ export function BookingScreen() {
               ) : null}
             </View>
           ) : fareLoading ? (
-            <View style={{ backgroundColor: C.bgCard, borderRadius: 16, padding: 20, marginTop: 16, alignItems: 'center', gap: 8, elevation: 2, borderWidth: 1, borderColor: C.glassBorder }}>
-              <Text style={{ fontSize: 24 }}>⏳</Text>
-              <Text style={{ fontSize: 13, fontWeight: '700', color: C.textMuted }}>Calculating fare...</Text>
+            <View style={{ backgroundColor: C.bgCard, borderRadius: 16, padding: 16, marginTop: 16, gap: 14, elevation: 2, borderWidth: 1, borderColor: C.glassBorder }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <SkeletonBox width={90} height={14} radius={6} />
+                <SkeletonBox width={64} height={22} radius={8} />
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <SkeletonBox width={72} height={12} radius={5} />
+                <SkeletonBox width={50} height={12} radius={5} />
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <SkeletonBox width={82} height={12} radius={5} />
+                <SkeletonBox width={55} height={12} radius={5} />
+              </View>
             </View>
           ) : null}
 
