@@ -266,6 +266,23 @@ export function BookingScreen() {
     if (loading) Animated.spring(swipeX, { toValue: 0, useNativeDriver: false }).start();
   }, [loading]);
 
+  // Forward geocode an address string → lat/lng (used before opening picker)
+  const geocodeForPicker = async (address: string): Promise<{ lat: number; lng: number } | null> => {
+    try {
+      const res = await externalGet(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${MAPS_KEY}`
+      );
+      const loc = res?.results?.[0]?.geometry?.location;
+      return loc ? { lat: loc.lat, lng: loc.lng } : null;
+    } catch { return null; }
+  };
+
+  // Picker cancel — if opened via suggestion (text set, coords not yet confirmed) apply geocoded coords
+  const handlePickerClose = () => {
+    if (pickup && !pickupCoords && pickerCoords) setPickupCoords(pickerCoords);
+    setPickerCoords(null);
+  };
+
   // Reverse geocode a coordinate to a human-readable address
   const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
     try {
@@ -698,14 +715,14 @@ export function BookingScreen() {
                     }}
                     returnKeyType="next"
                   />
-                  {pickup ? (
-                    <TouchableOpacity onPress={() => { setPickup(''); setPickupCoords(null); setPickupSugg([]); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; setWalkGpsOrigin(null); }} style={{ padding: 4 }}>
-                      <Ionicons name="close-circle" size={19} color={C.textDim} />
-                    </TouchableOpacity>
-                  ) : pickerLoading ? (
+                  {pickerLoading ? (
                     <View style={{ padding: 7 }}>
                       <ActivityIndicator size="small" color={C.pink} />
                     </View>
+                  ) : pickup ? (
+                    <TouchableOpacity onPress={() => { setPickup(''); setPickupCoords(null); setPickupSugg([]); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; setWalkGpsOrigin(null); }} style={{ padding: 4 }}>
+                      <Ionicons name="close-circle" size={19} color={C.textDim} />
+                    </TouchableOpacity>
                   ) : (
                     <TouchableOpacity onPress={handleUseMyLocation} style={{ padding: 7, borderRadius: 20, backgroundColor: C.pinkGlass, borderWidth: 1.5, borderColor: C.pinkBorder }}>
                       <Ionicons name="navigate" size={16} color={C.pink} />
@@ -717,7 +734,22 @@ export function BookingScreen() {
                   <View style={[s.suggBox, { zIndex: 100 }]}>
                     {pickupSugg.slice(0, 5).map((sg: any, i: number) => (
                       <TouchableOpacity key={i} style={[s.suggItem, { paddingVertical: 12 }]}
-                        onPress={() => { setPickup(sg.text); setPickupSugg([]); geocodePlace(sg.text, 'pickup'); }}>
+                        onPress={async () => {
+                          setPickup(sg.text);
+                          setPickupSugg([]);
+                          setPickerLoading(true);
+                          // Set walk GPS origin from current user coords if available
+                          const uLat = (userCoords as any)?.latitude ?? (userCoords as any)?.lat;
+                          const uLng = (userCoords as any)?.longitude ?? (userCoords as any)?.lng;
+                          if (uLat && uLng) setWalkGpsOrigin({ lat: uLat, lng: uLng });
+                          const coords = await geocodeForPicker(sg.text);
+                          setPickerLoading(false);
+                          if (coords) {
+                            setPickerCoords(coords);
+                          } else {
+                            geocodePlace(sg.text, 'pickup'); // fallback: set coords silently
+                          }
+                        }}>
                         <Ionicons name="location" size={15} color={C.green} style={{ marginRight: 8 }} />
                         <Text style={{ fontSize: 13, color: C.text, flex: 1, fontWeight: '500' }} numberOfLines={2}>{sg.text}</Text>
                       </TouchableOpacity>
@@ -1793,7 +1825,7 @@ export function BookingScreen() {
         visible={!!pickerCoords}
         initialCoords={pickerCoords || { lat: 26.8467, lng: 80.9462 }}
         onConfirm={handlePickerConfirm}
-        onClose={() => setPickerCoords(null)}
+        onClose={handlePickerClose}
       />
 
     </KeyboardAvoidingView>
