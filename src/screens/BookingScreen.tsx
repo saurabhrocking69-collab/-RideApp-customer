@@ -321,7 +321,11 @@ export function BookingScreen() {
   // ── Pickup map picker ─────────────────────────────────────────────────────────
   const [pickerCoords, setPickerCoords]     = useState<{ lat: number; lng: number } | null>(null);
   const [pickerLoading, setPickerLoading]   = useState(false);
-  const [walkGpsOrigin, setWalkGpsOrigin]   = useState<{ lat: number; lng: number } | null>(null);
+  const walkGpsOrigin = (() => {
+    const lat = (userCoords as any)?.latitude ?? (userCoords as any)?.lat;
+    const lng = (userCoords as any)?.longitude ?? (userCoords as any)?.lng;
+    return lat != null ? { lat: lat as number, lng: lng as number } : null;
+  })();
 
   const handleUseMyLocation = async () => {
     setPickerLoading(true);
@@ -330,7 +334,6 @@ export function BookingScreen() {
       if (status !== 'granted') { setPickerLoading(false); return; }
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
       const coords = { lat: loc.coords.latitude, lng: loc.coords.longitude };
-      setWalkGpsOrigin(coords);
       setPickerCoords(coords);
     } catch (_e) {}
     setPickerLoading(false);
@@ -720,7 +723,7 @@ export function BookingScreen() {
                       <ActivityIndicator size="small" color={C.pink} />
                     </View>
                   ) : pickup ? (
-                    <TouchableOpacity onPress={() => { setPickup(''); setPickupCoords(null); setPickupSugg([]); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; setWalkGpsOrigin(null); }} style={{ padding: 4 }}>
+                    <TouchableOpacity onPress={() => { setPickup(''); setPickupCoords(null); setPickupSugg([]); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; }} style={{ padding: 4 }}>
                       <Ionicons name="close-circle" size={19} color={C.textDim} />
                     </TouchableOpacity>
                   ) : (
@@ -738,10 +741,6 @@ export function BookingScreen() {
                           setPickup(sg.text);
                           setPickupSugg([]);
                           setPickerLoading(true);
-                          // Set walk GPS origin from current user coords if available
-                          const uLat = (userCoords as any)?.latitude ?? (userCoords as any)?.lat;
-                          const uLng = (userCoords as any)?.longitude ?? (userCoords as any)?.lng;
-                          if (uLat && uLng) setWalkGpsOrigin({ lat: uLat, lng: uLng });
                           const coords = await geocodeForPicker(sg.text);
                           setPickerLoading(false);
                           if (coords) {

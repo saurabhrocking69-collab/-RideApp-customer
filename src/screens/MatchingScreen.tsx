@@ -654,12 +654,11 @@ export function MatchingScreen() {
           showRoute
           followDriver={!!rideData?.driver}
           showTraffic={false}
-          walkOrigin={
-            (userCoords as any)?.latitude != null
-              ? { lat: (userCoords as any).latitude ?? (userCoords as any).lat,
-                  lng: (userCoords as any).longitude ?? (userCoords as any).lng }
-              : null
-          }
+          walkOrigin={(() => {
+            const lat = (userCoords as any)?.latitude ?? (userCoords as any)?.lat;
+            const lng = (userCoords as any)?.longitude ?? (userCoords as any)?.lng;
+            return lat != null ? { lat: lat as number, lng: lng as number } : null;
+          })()}
         />
 
         {/* Minimal top overlay — back button + chat toast */}
