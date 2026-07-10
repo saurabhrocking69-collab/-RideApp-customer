@@ -702,17 +702,18 @@ export const SkeletonBox = ({ width, height = 16, radius = 8, style }: {
   const shimmer = useRef(new Animated.Value(0)).current;
   const { width: W } = useWindowDimensions();
   const w = width ?? W - 64;
+  const sweepW = Math.max(60, Math.round(w * 0.45));
   useEffect(() => {
     Animated.loop(
-      Animated.timing(shimmer, { toValue: 1, duration: 1100, useNativeDriver: true, easing: Easing.linear })
+      Animated.timing(shimmer, { toValue: 1, duration: 1000, useNativeDriver: true, easing: Easing.linear })
     ).start();
   }, []);
   return (
-    <View style={[{ width: w, height, borderRadius: radius, backgroundColor: C.glassMid, overflow: 'hidden' }, style]}>
+    <View style={[{ width: w, height, borderRadius: radius, backgroundColor: '#D6D0F0', overflow: 'hidden' }, style]}>
       <Animated.View style={{
-        position: 'absolute', top: 0, bottom: 0, width: 80,
-        backgroundColor: 'rgba(255,255,255,0.72)',
-        transform: [{ translateX: shimmer.interpolate({ inputRange: [0, 1], outputRange: [-80, w + 80] }) }],
+        position: 'absolute', top: 0, bottom: 0, width: sweepW,
+        backgroundColor: 'rgba(255,255,255,0.55)',
+        transform: [{ translateX: shimmer.interpolate({ inputRange: [0, 1], outputRange: [-sweepW, w + sweepW] }) }],
       }} />
     </View>
   );
