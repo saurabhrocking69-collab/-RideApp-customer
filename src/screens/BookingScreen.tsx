@@ -614,7 +614,7 @@ export function BookingScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets
-          contentContainerStyle={{ paddingBottom: 16, paddingHorizontal: 14 }}>
+          contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 14 }}>
 
           {/* ─── Location card ─── */}
           {pickupCoords && dropCoords ? (
@@ -1435,108 +1435,6 @@ export function BookingScreen() {
           </>
         </ScrollView>
 
-        {/* ─── Sticky bottom — swipe-to-book ─── */}
-        <View style={{
-          paddingHorizontal: 14,
-          paddingTop: 10,
-          paddingBottom: 10 + bottomInset,
-          backgroundColor: C.bg,
-          borderTopWidth: 1.5,
-          borderTopColor: C.pinkBorder,
-        }}>
-          {/* ── Trip summary row — vehicle + savings + payment method ── */}
-          {hasFare && !loading && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', paddingBottom: 10, gap: 8 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
-                <RideVehicleIcon id={rideType} size={13} color={C.plum} />
-                <Text style={{ fontSize: 12, fontWeight: '700', color: C.textMuted }}>{selRide?.label}</Text>
-                {discount > 0 && (
-                  <View style={{ backgroundColor: C.greenGlass, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: C.greenBorder }}>
-                    <Text style={{ fontSize: 9, color: C.green, fontWeight: '800' }}>−₹{discount} saved</Text>
-                  </View>
-                )}
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.glassMid, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: C.glassBorder }}>
-                <Ionicons name="cash-outline" size={12} color={C.textMuted} />
-                <Text style={{ fontSize: 11, fontWeight: '700', color: C.textMuted }}>Cash</Text>
-              </View>
-            </View>
-          )}
-
-          {/* ── Swipe-to-book track ── */}
-          <Animated.View style={{ transform: [{ scale: bookPulseAnim }] }}>
-            <View
-              onLayout={e => { trackWidthRef.current = e.nativeEvent.layout.width; }}
-              style={{
-                height: SWIPE_H,
-                borderRadius: SWIPE_H / 2,
-                backgroundColor: hasFare ? C.bgDeep : C.glassMid,
-                overflow: 'hidden',
-                borderWidth: 1.5,
-                borderColor: hasFare ? C.pinkBorder : C.glassBorder,
-                elevation: hasFare && !loading ? 10 : 2,
-                shadowColor: C.pink,
-                shadowOpacity: hasFare && !loading ? 0.32 : 0,
-                shadowRadius: 14,
-              }}>
-
-              {/* Fill — expands as thumb slides right, fades pink→yellow */}
-              {hasFare && !loading && (
-                <Animated.View style={{
-                  position: 'absolute', left: 0, top: 0, bottom: 0,
-                  width: swipeX.interpolate({ inputRange: [0, 500], outputRange: [SWIPE_THUMB + SWIPE_PAD, SWIPE_THUMB + SWIPE_PAD + 500], extrapolate: 'extend' }),
-                  backgroundColor: swipeX.interpolate({ inputRange: [0, 280], outputRange: [C.pink, C.yellow], extrapolate: 'clamp' }),
-                  borderRadius: SWIPE_H / 2,
-                }} />
-              )}
-
-              {/* Center label — fades as thumb moves right */}
-              <Animated.View style={{
-                position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
-                alignItems: 'center', justifyContent: 'center',
-                opacity: swipeX.interpolate({ inputRange: [0, 70], outputRange: [1, 0], extrapolate: 'clamp' }),
-              }}>
-                <Text style={{ fontSize: 13, fontWeight: '800', color: hasFare ? C.plum : C.textMuted, letterSpacing: 0.2 }} numberOfLines={1}>
-                  {loading
-                    ? 'Finding driver…'
-                    : hasFare
-                      ? `${selRide?.label || 'Ride'} · ₹${finalFare}${discount > 0 ? ` · saved ₹${discount}` : ''}`
-                      : 'Set a route to see fare'}
-                </Text>
-              </Animated.View>
-
-              {/* Right chevron — fades when thumb moves */}
-              <Animated.View style={{
-                position: 'absolute', right: 20, top: 0, bottom: 0,
-                alignItems: 'center', justifyContent: 'center',
-                opacity: swipeX.interpolate({ inputRange: [0, 50], outputRange: [0.4, 0], extrapolate: 'clamp' }),
-              }}>
-                <Ionicons name="chevron-forward" size={20} color={C.plum} />
-              </Animated.View>
-
-              {/* Draggable thumb */}
-              <Animated.View
-                {...(hasFare && !loading ? swipePan.panHandlers : {})}
-                style={{
-                  position: 'absolute',
-                  top: SWIPE_PAD, left: SWIPE_PAD,
-                  width: SWIPE_THUMB, height: SWIPE_THUMB,
-                  borderRadius: SWIPE_THUMB / 2,
-                  backgroundColor: loading ? C.glassMid : hasFare ? C.plum : C.glassHigh,
-                  alignItems: 'center', justifyContent: 'center',
-                  elevation: 6,
-                  shadowColor: C.plum, shadowOpacity: 0.28, shadowRadius: 8,
-                  transform: [{ translateX: swipeX }],
-                }}>
-                {loading
-                  ? <Ionicons name="ellipsis-horizontal" size={18} color={C.textMuted} />
-                  : <RideVehicleIcon id={rideType} size={22} color={hasFare ? '#fff' : C.textDim} />
-                }
-              </Animated.View>
-
-            </View>
-          </Animated.View>
-        </View>
       </GlassPanel>
       </Animated.View>
 
@@ -1819,6 +1717,115 @@ export function BookingScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* ─── Fixed book button — pinned above device nav bar ─── */}
+      <View style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0,
+        zIndex: 20,
+        backgroundColor: C.bg,
+        paddingHorizontal: 14,
+        paddingTop: 10,
+        paddingBottom: 10 + bottomInset,
+        borderTopWidth: 1,
+        borderTopColor: C.pinkBorder,
+        elevation: 16,
+        shadowColor: C.pink,
+        shadowOpacity: 0.10,
+        shadowRadius: 14,
+      }}>
+        {/* Compact summary: vehicle · cash · discount — single tight row */}
+        {hasFare && !loading && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+            <RideVehicleIcon id={rideType} size={12} color={C.plum} />
+            <Text style={{ fontSize: 11, fontWeight: '700', color: C.textMuted }}>{selRide?.label}</Text>
+            <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: C.textDim }} />
+            <Ionicons name="cash-outline" size={10} color={C.textMuted} />
+            <Text style={{ fontSize: 11, fontWeight: '700', color: C.textMuted }}>Cash</Text>
+            {discount > 0 && (
+              <>
+                <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: C.textDim }} />
+                <View style={{ backgroundColor: C.greenGlass, borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1, borderWidth: 1, borderColor: C.greenBorder }}>
+                  <Text style={{ fontSize: 9, color: C.green, fontWeight: '800' }}>−₹{discount} saved</Text>
+                </View>
+              </>
+            )}
+          </View>
+        )}
+
+        {/* Swipe-to-book track */}
+        <Animated.View style={{ transform: [{ scale: bookPulseAnim }] }}>
+          <View
+            onLayout={e => { trackWidthRef.current = e.nativeEvent.layout.width; }}
+            style={{
+              height: SWIPE_H,
+              borderRadius: SWIPE_H / 2,
+              backgroundColor: hasFare ? C.bgDeep : C.glassMid,
+              overflow: 'hidden',
+              borderWidth: 1.5,
+              borderColor: hasFare ? C.pinkBorder : C.glassBorder,
+              elevation: hasFare && !loading ? 10 : 2,
+              shadowColor: C.pink,
+              shadowOpacity: hasFare && !loading ? 0.32 : 0,
+              shadowRadius: 14,
+            }}>
+
+            {/* Fill — expands as thumb slides right, fades pink → yellow */}
+            {hasFare && !loading && (
+              <Animated.View style={{
+                position: 'absolute', left: 0, top: 0, bottom: 0,
+                width: swipeX.interpolate({ inputRange: [0, 500], outputRange: [SWIPE_THUMB + SWIPE_PAD, SWIPE_THUMB + SWIPE_PAD + 500], extrapolate: 'extend' }),
+                backgroundColor: swipeX.interpolate({ inputRange: [0, 280], outputRange: [C.pink, C.yellow], extrapolate: 'clamp' }),
+                borderRadius: SWIPE_H / 2,
+              }} />
+            )}
+
+            {/* Center label — fades as thumb moves right */}
+            <Animated.View style={{
+              position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
+              alignItems: 'center', justifyContent: 'center',
+              opacity: swipeX.interpolate({ inputRange: [0, 70], outputRange: [1, 0], extrapolate: 'clamp' }),
+            }}>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: hasFare ? C.plum : C.textMuted, letterSpacing: 0.2 }} numberOfLines={1}>
+                {loading
+                  ? 'Finding driver…'
+                  : hasFare
+                    ? `${selRide?.label || 'Ride'} · ₹${finalFare}${discount > 0 ? ` · saved ₹${discount}` : ''}`
+                    : 'Set a route to see fare'}
+              </Text>
+            </Animated.View>
+
+            {/* Right chevron — fades when thumb moves */}
+            <Animated.View style={{
+              position: 'absolute', right: 20, top: 0, bottom: 0,
+              alignItems: 'center', justifyContent: 'center',
+              opacity: swipeX.interpolate({ inputRange: [0, 50], outputRange: [0.4, 0], extrapolate: 'clamp' }),
+            }}>
+              <Ionicons name="chevron-forward" size={20} color={C.plum} />
+            </Animated.View>
+
+            {/* Draggable thumb */}
+            <Animated.View
+              {...(hasFare && !loading ? swipePan.panHandlers : {})}
+              style={{
+                position: 'absolute',
+                top: SWIPE_PAD, left: SWIPE_PAD,
+                width: SWIPE_THUMB, height: SWIPE_THUMB,
+                borderRadius: SWIPE_THUMB / 2,
+                backgroundColor: loading ? C.glassMid : hasFare ? C.plum : C.glassHigh,
+                alignItems: 'center', justifyContent: 'center',
+                elevation: 6,
+                shadowColor: C.plum, shadowOpacity: 0.28, shadowRadius: 8,
+                transform: [{ translateX: swipeX }],
+              }}>
+              {loading
+                ? <Ionicons name="ellipsis-horizontal" size={18} color={C.textMuted} />
+                : <RideVehicleIcon id={rideType} size={22} color={hasFare ? '#fff' : C.textDim} />
+              }
+            </Animated.View>
+
+          </View>
+        </Animated.View>
+      </View>
 
       {/* ─── Pickup map picker modal ─── */}
       <PickupMapPicker
