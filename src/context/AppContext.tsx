@@ -775,9 +775,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     ]).start();
   }, [screen]);
 
-  // Auto GPS on booking screen
+  // Auto GPS on home and booking screen
   useEffect(() => {
-    if (screen === 'booking' && !pickup) useMyLocation();
+    if ((screen === 'home' || screen === 'booking') && !pickup) useMyLocation();
   }, [screen]);
 
   // Reactively recalculate fares when coords change
