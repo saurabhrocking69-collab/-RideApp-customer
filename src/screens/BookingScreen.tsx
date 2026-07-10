@@ -1725,7 +1725,7 @@ export function BookingScreen() {
         backgroundColor: C.bg,
         paddingHorizontal: 14,
         paddingTop: 10,
-        paddingBottom: 10 + bottomInset,
+        paddingBottom: Math.max(bottomInset, 8),
         borderTopWidth: 1,
         borderTopColor: C.pinkBorder,
         elevation: 16,
