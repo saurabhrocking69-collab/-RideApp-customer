@@ -106,8 +106,8 @@ export function PickupMapPicker({ visible, initialCoords, onConfirm, onClose }: 
             initialRegion={{
               latitude: initialCoords.lat,
               longitude: initialCoords.lng,
-              latitudeDelta: 0.006,
-              longitudeDelta: 0.006,
+              latitudeDelta: 0.014,
+              longitudeDelta: 0.014,
             }}
             onRegionChangeComplete={onRegionChangeComplete}
             showsUserLocation
