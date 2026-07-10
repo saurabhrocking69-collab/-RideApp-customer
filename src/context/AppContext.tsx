@@ -73,7 +73,6 @@ interface AppContextType {
   fareLoading: boolean;
   eta: string; setEta: (e: string) => void;
   userCoords: any; setUserCoords: (c: any) => void;
-  locationLoading: boolean;
   showPromoInput: boolean; setShowPromoInput: (v: boolean) => void;
   instantApplied: boolean; setInstantApplied: (v: boolean) => void;
   lastFetchKey: React.MutableRefObject<string>;
@@ -373,7 +372,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [fareLoading, setFareLoading] = useState(false);
   const [eta, setEta] = useState('');
   const [userCoords, setUserCoords] = useState<any>(null);
-  const [locationLoading, setLocationLoading] = useState(false);
   const [showPromoInput, setShowPromoInput] = useState(false);
   const [instantApplied, setInstantApplied] = useState(false);
   const lastFetchKey = useRef('');
@@ -777,9 +775,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     ]).start();
   }, [screen]);
 
-  // Auto GPS on home and booking screen
+  // Silent background GPS — sets userCoords only (for walk line / nearby drivers), never touches pickup
   useEffect(() => {
-    if ((screen === 'home' || screen === 'booking') && !pickup) useMyLocation();
+    if (screen !== 'home' && screen !== 'booking') return;
+    Location.requestForegroundPermissionsAsync().then(({ status }) => {
+      if (status !== 'granted') return;
+      Location.getLastKnownPositionAsync({ maxAge: 300000 }).then(last => {
+        if (last) { setUserCoords({ latitude: last.coords.latitude, longitude: last.coords.longitude }); return; }
+        Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low }).then(loc => {
+          setUserCoords({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+        }).catch(() => {});
+      }).catch(() => {});
+    }).catch(() => {});
   }, [screen]);
 
   // Reactively recalculate fares when coords change
@@ -1276,11 +1283,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // ── Location + ETA ───────────────────────────────────────────────────────
   const useMyLocation = async () => {
-    setLocationLoading(true);
     setResult('📍 Getting your location...');
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') { setResult('❌ Location permission denied'); setLocationLoading(false); return; }
+      if (status !== 'granted') { setResult('❌ Location permission denied'); return; }
 
       // Fast path: OS-cached position (instant)
       const last = await Location.getLastKnownPositionAsync({ maxAge: 120000, requiredAccuracy: 200 });
@@ -1288,7 +1294,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const lt = last.coords.latitude; const lg = last.coords.longitude;
         setUserCoords({ latitude: lt, longitude: lg }); setPickupCoords({ lat: lt, lng: lg });
         await geocodePickup(lt, lg);
-        return; // cached position is good enough — skip the slower precise fix
+        return;
       }
 
       // Fallback: network-assisted fix (~2–5s on Android)
@@ -1297,7 +1303,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setUserCoords({ latitude: lat, longitude: lng }); setPickupCoords({ lat, lng });
       await geocodePickup(lat, lng);
     } catch (_e) { setResult('❌ Location error'); }
-    setLocationLoading(false);
   };
 
   const geocodePickup = async (lat: number, lng: number) => {
@@ -1766,7 +1771,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     pickup, setPickup, drop, setDrop, pickupCoords, setPickupCoords, dropCoords, setDropCoords,
     rideType, setRideType, pickupSugg, setPickupSugg, dropSugg, setDropSugg, dropHistory,
     appConfig,
-    fareEstimates, setFareEstimates, fareLoading, eta, setEta, userCoords, setUserCoords, locationLoading,
+    fareEstimates, setFareEstimates, fareLoading, eta, setEta, userCoords, setUserCoords,
     showPromoInput, setShowPromoInput, instantApplied, setInstantApplied, lastFetchKey,
     promoCode, setPromoCode, promoDiscount, setPromoDiscount,
     promoScreenCode, setPromoScreenCode, promoScreenMsg, setPromoScreenMsg,

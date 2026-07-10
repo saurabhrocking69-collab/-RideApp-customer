@@ -41,8 +41,7 @@ export function BookingScreen() {
     lastFetchKey,
     searchPlaces, geocodePlace, useMyLocation, swapLocations, applyPromo, bookRide,
     dropHistory,
-    userCoords,
-    locationLoading,
+    userCoords, setUserCoords,
     phone,
     availablePromos, setAvailablePromos,
   } = useApp();
@@ -322,6 +321,10 @@ export function BookingScreen() {
   // ── Pickup map picker ─────────────────────────────────────────────────────────
   const [pickerCoords, setPickerCoords]     = useState<{ lat: number; lng: number } | null>(null);
   const [pickerLoading, setPickerLoading]   = useState(false);
+
+  // ── Drop map picker ───────────────────────────────────────────────────────────
+  const [dropPickerOpen, setDropPickerOpen]     = useState(false);
+  const [dropPickerLoading, setDropPickerLoading] = useState(false);
   const walkGpsOrigin = (() => {
     const lat = (userCoords as any)?.latitude ?? (userCoords as any)?.lat;
     const lng = (userCoords as any)?.longitude ?? (userCoords as any)?.lng;
@@ -334,6 +337,7 @@ export function BookingScreen() {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') { setPickerLoading(false); return; }
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      setUserCoords({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
       const coords = { lat: loc.coords.latitude, lng: loc.coords.longitude };
       setPickerCoords(coords);
     } catch (_e) {}
@@ -355,6 +359,31 @@ export function BookingScreen() {
       else                     updated.office = target;
       persistSavedPlaces(updated);
     }
+  };
+
+  const handleOpenDropPicker = async () => {
+    // If we already have drop coords, jump straight there; otherwise geocode the typed text first
+    if (dropCoords) { setDropPickerOpen(true); return; }
+    if (drop) {
+      setDropPickerLoading(true);
+      const coords = await geocodeForPicker(drop);
+      setDropPickerLoading(false);
+      if (coords) setDropCoords(coords);
+    }
+    setDropPickerOpen(true);
+  };
+
+  const handleDropPickerConfirm = (
+    address: string,
+    coords: { lat: number; lng: number },
+    _saveLabel: 'Home' | 'Work' | null,
+  ) => {
+    setDrop(address);
+    setDropCoords(coords);
+    setDropSugg([]);
+    setDropPickerOpen(false);
+    // Clear fare so it recalculates with the new coords
+    setFareEstimates({}); setEta(''); lastFetchKey.current = '';
   };
 
   // ── Route ETA (from LiveMap directions API callback) ─────────────────────────
@@ -707,8 +736,8 @@ export function BookingScreen() {
                   <View style={{ width: 13, height: 13, borderRadius: 6.5, backgroundColor: C.green, borderWidth: 2.5, borderColor: 'rgba(5,150,105,0.3)' }} />
                   <TextInput
                     style={{ flex: 1, fontSize: 14, color: C.text, fontWeight: '600', paddingVertical: 9 }}
-                    placeholder={locationLoading && !pickup ? 'Getting your location…' : 'Pickup location...'}
-                    placeholderTextColor={locationLoading && !pickup ? C.pink : C.textDim}
+                    placeholder="Pickup location..."
+                    placeholderTextColor={C.textDim}
                     value={pickup}
                     onFocus={() => setInputFocused(true)}
                     onBlur={() => setInputFocused(false)}
@@ -719,7 +748,7 @@ export function BookingScreen() {
                     }}
                     returnKeyType="next"
                   />
-                  {pickerLoading || (locationLoading && !pickup) ? (
+                  {pickerLoading ? (
                     <View style={{ padding: 7 }}>
                       <ActivityIndicator size="small" color={C.pink} />
                     </View>
@@ -821,11 +850,19 @@ export function BookingScreen() {
                     }}
                     returnKeyType="done"
                   />
-                  {drop ? (
+                  {dropPickerLoading ? (
+                    <View style={{ padding: 7 }}>
+                      <ActivityIndicator size="small" color={C.pink} />
+                    </View>
+                  ) : drop ? (
                     <TouchableOpacity onPress={() => { setDrop(''); setDropCoords(null); setDropSugg([]); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; }} style={{ padding: 4 }}>
                       <Ionicons name="close-circle" size={19} color={C.textDim} />
                     </TouchableOpacity>
-                  ) : null}
+                  ) : (
+                    <TouchableOpacity onPress={handleOpenDropPicker} style={{ padding: 7, borderRadius: 20, backgroundColor: C.pinkGlass, borderWidth: 1.5, borderColor: C.pinkBorder }}>
+                      <Ionicons name="map-outline" size={16} color={C.pink} />
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
 
@@ -1833,6 +1870,22 @@ export function BookingScreen() {
         initialCoords={pickerCoords || { lat: 26.8467, lng: 80.9462 }}
         onConfirm={handlePickerConfirm}
         onClose={handlePickerClose}
+      />
+
+      {/* ─── Drop map picker modal ─── */}
+      <PickupMapPicker
+        visible={dropPickerOpen}
+        mode="drop"
+        initialCoords={
+          dropCoords ??
+          pickupCoords ??
+          (userCoords?.latitude ? { lat: userCoords.latitude, lng: userCoords.longitude } : null) ??
+          (userCoords?.lat ? { lat: userCoords.lat, lng: userCoords.lng } : null) ??
+          { lat: 26.8467, lng: 80.9462 }
+        }
+        originCoords={pickupCoords}
+        onConfirm={handleDropPickerConfirm}
+        onClose={() => setDropPickerOpen(false)}
       />
 
     </KeyboardAvoidingView>

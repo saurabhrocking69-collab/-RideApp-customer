@@ -31,12 +31,23 @@ function haversineM(lat1: number, lng1: number, lat2: number, lng2: number): num
 
 interface Props {
   visible: boolean;
+  /** 'pickup' (default) — user sets their pickup. 'drop' — user sets their destination. */
+  mode?: 'pickup' | 'drop';
   initialCoords: { lat: number; lng: number };
+  /** Drop mode only: the confirmed pickup coords — used to draw the route line origin. */
+  originCoords?: { lat: number; lng: number } | null;
   onConfirm: (address: string, coords: { lat: number; lng: number }, saveLabel: 'Home' | 'Work' | null) => void;
   onClose: () => void;
 }
 
-export function PickupMapPicker({ visible, initialCoords, onConfirm, onClose }: Props) {
+export function PickupMapPicker({
+  visible,
+  mode = 'pickup',
+  initialCoords,
+  originCoords,
+  onConfirm,
+  onClose,
+}: Props) {
   const { top, bottom } = useSafeAreaInsets();
   const [address, setAddress]     = useState('');
   const [geocoding, setGeocoding] = useState(false);
@@ -44,6 +55,8 @@ export function PickupMapPicker({ visible, initialCoords, onConfirm, onClose }: 
   const [mapCenter, setMapCenter] = useState(initialCoords);
   const currentCoords = useRef(initialCoords);
   const geocodeTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const isDrop = mode === 'drop';
 
   const doGeocode = async (lat: number, lng: number) => {
     setGeocoding(true);
@@ -79,15 +92,36 @@ export function PickupMapPicker({ visible, initialCoords, onConfirm, onClose }: 
 
   const handleConfirm = () => {
     if (geocoding || !address) return;
-    onConfirm(address, currentCoords.current, saveLabel);
+    onConfirm(address, currentCoords.current, isDrop ? null : saveLabel);
   };
 
-  const walkDistM = haversineM(initialCoords.lat, initialCoords.lng, mapCenter.lat, mapCenter.lng);
-  const walkDistLabel = walkDistM < 1000
-    ? `${Math.round(walkDistM)}m`
-    : `${(walkDistM / 1000).toFixed(1)}km`;
-  const walkMins  = Math.max(1, Math.ceil(walkDistM / 83));
-  const showWalkLine = walkDistM > 50;
+  // ── Line geometry ────────────────────────────────────────────────────────
+  // Pickup mode: line from GPS origin (initialCoords) → map center (how far you moved from where you stand)
+  // Drop mode:   line from pickup coords (originCoords) → map center (the route you'll travel)
+  const lineOrigin = isDrop ? (originCoords ?? null) : initialCoords;
+  const lineDistM  = lineOrigin
+    ? haversineM(lineOrigin.lat, lineOrigin.lng, mapCenter.lat, mapCenter.lng)
+    : 0;
+  const lineDistLabel = lineDistM < 1000
+    ? `${Math.round(lineDistM)}m`
+    : `${(lineDistM / 1000).toFixed(1)}km`;
+  const lineMins = isDrop
+    ? Math.max(1, Math.ceil(lineDistM / 667))  // ~40 km/h city drive = 667 m/min
+    : Math.max(1, Math.ceil(lineDistM / 83));  // ~5 km/h walk        = 83 m/min
+  const showLine = !!lineOrigin && lineDistM > 50;
+
+  // ── Per-mode theming ─────────────────────────────────────────────────────
+  const lineColor   = isDrop ? '#A855F7' : '#3B82F6';
+  const chipBorder  = isDrop ? '#C084FC' : '#60A5FA';
+  const chipTextCol = isDrop ? '#7E22CE' : '#1D4ED8';
+  const chipBg      = isDrop ? 'rgba(168,85,247,0.09)' : '#FFFFFF';
+  const hintBg      = isDrop ? 'rgba(168,85,247,0.07)' : 'rgba(59,130,246,0.07)';
+  const hintBorder  = isDrop ? 'rgba(192,132,252,0.35)' : 'rgba(96,165,250,0.35)';
+  const hintTitle   = isDrop ? '#6B21A8' : '#1D4ED8';
+  const hintSub     = isDrop ? '#9333EA' : '#3B82F6';
+  const pinColor    = isDrop ? C.pink : C.green;
+  const iconBg      = isDrop ? C.pinkGlass : C.greenGlass;
+  const iconColor   = isDrop ? C.pink : C.green;
 
   return (
     <Modal
@@ -98,16 +132,16 @@ export function PickupMapPicker({ visible, initialCoords, onConfirm, onClose }: 
     >
       <View style={{ flex: 1 }}>
 
-        {/* ─── Map fills the top flex area ─── */}
+        {/* ─── Map ─── */}
         <View style={{ flex: 1 }}>
           <MapView
             provider={PROVIDER_GOOGLE}
             style={StyleSheet.absoluteFillObject}
             initialRegion={{
-              latitude: initialCoords.lat,
-              longitude: initialCoords.lng,
-              latitudeDelta: 0.003,
-              longitudeDelta: 0.003,
+              latitude:      initialCoords.lat,
+              longitude:     initialCoords.lng,
+              latitudeDelta:  isDrop ? 0.012 : 0.003,
+              longitudeDelta: isDrop ? 0.012 : 0.003,
             }}
             onRegionChangeComplete={onRegionChangeComplete}
             showsUserLocation
@@ -116,38 +150,57 @@ export function PickupMapPicker({ visible, initialCoords, onConfirm, onClose }: 
             pitchEnabled={false}
             toolbarEnabled={false}
           >
-            {/* Dotted walk line: user GPS origin → current map center */}
-            {showWalkLine && (
+            {showLine && lineOrigin && (
               <>
+                {/* Dashed route / walk line */}
                 <Polyline
                   coordinates={[
-                    { latitude: initialCoords.lat, longitude: initialCoords.lng },
-                    { latitude: mapCenter.lat,     longitude: mapCenter.lng     },
+                    { latitude: lineOrigin.lat, longitude: lineOrigin.lng },
+                    { latitude: mapCenter.lat,  longitude: mapCenter.lng  },
                   ]}
-                  strokeColor="#3B82F6"
+                  strokeColor={lineColor}
                   strokeWidth={2.5}
                   lineDashPattern={[9, 7]}
                   lineCap="butt"
                 />
+
+                {/* Fixed origin dot in drop mode (marks the pickup point on the map) */}
+                {isDrop && (
+                  <Marker
+                    coordinate={{ latitude: lineOrigin.lat, longitude: lineOrigin.lng }}
+                    anchor={{ x: 0.5, y: 0.5 }}
+                    tracksViewChanges={false}
+                  >
+                    <View style={{
+                      width: 14, height: 14, borderRadius: 7,
+                      backgroundColor: C.green,
+                      borderWidth: 2.5, borderColor: '#fff',
+                      elevation: 4,
+                      shadowColor: C.green, shadowOpacity: 0.4, shadowRadius: 4,
+                    }} />
+                  </Marker>
+                )}
+
+                {/* Midpoint distance chip */}
                 <Marker
                   coordinate={{
-                    latitude:  (initialCoords.lat + mapCenter.lat) / 2,
-                    longitude: (initialCoords.lng + mapCenter.lng) / 2,
+                    latitude:  (lineOrigin.lat + mapCenter.lat) / 2,
+                    longitude: (lineOrigin.lng + mapCenter.lng) / 2,
                   }}
                   anchor={{ x: 0.5, y: 1.4 }}
                   tracksViewChanges={false}
                 >
                   <View style={{
-                    backgroundColor: '#FFFFFF',
+                    backgroundColor: chipBg,
                     borderRadius: 11, paddingHorizontal: 9, paddingVertical: 4,
-                    borderWidth: 1.5, borderColor: '#60A5FA',
+                    borderWidth: 1.5, borderColor: chipBorder,
                     flexDirection: 'row', alignItems: 'center', gap: 4,
                     elevation: 5,
-                    shadowColor: '#3B82F6', shadowOpacity: 0.22, shadowRadius: 6,
+                    shadowColor: lineColor, shadowOpacity: 0.22, shadowRadius: 6,
                   }}>
-                    <Text style={{ fontSize: 11 }}>🚶</Text>
-                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#1D4ED8' }}>
-                      {walkDistLabel}
+                    <Text style={{ fontSize: 11 }}>{isDrop ? '🚗' : '🚶'}</Text>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: chipTextCol }}>
+                      {lineDistLabel}
                     </Text>
                   </View>
                 </Marker>
@@ -155,20 +208,14 @@ export function PickupMapPicker({ visible, initialCoords, onConfirm, onClose }: 
             )}
           </MapView>
 
-          {/* Fixed pin at center of map view — pointerEvents none so map pans beneath */}
+          {/* Fixed pin — tip rests at the map center */}
           <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-              {/* translateY: -30 shifts pin up so its tip (bottom of stem) rests at center */}
               <View style={{ alignItems: 'center', transform: [{ translateY: -30 }] }}>
-                <View style={{
-                  backgroundColor: C.green,
-                  borderRadius: 22, padding: 9,
-                  ...SHADOW.md,
-                }}>
+                <View style={{ backgroundColor: pinColor, borderRadius: 22, padding: 9, ...SHADOW.md }}>
                   <Ionicons name="location-sharp" size={22} color="#FFFFFF" />
                 </View>
-                <View style={{ width: 3, height: 16, backgroundColor: C.green, borderRadius: 2 }} />
-                {/* Ground shadow dot */}
+                <View style={{ width: 3, height: 16, backgroundColor: pinColor, borderRadius: 2 }} />
                 <View style={{ width: 14, height: 5, borderRadius: 7, backgroundColor: 'rgba(0,0,0,0.13)', marginTop: 1 }} />
               </View>
             </View>
@@ -201,7 +248,7 @@ export function PickupMapPicker({ visible, initialCoords, onConfirm, onClose }: 
             ...SHADOW.sm,
           }}>
             <Text style={{ fontSize: 12, fontWeight: '800', color: C.text, letterSpacing: 0.5 }}>
-              SET PICKUP POINT
+              {isDrop ? 'SET DROP POINT' : 'SET PICKUP POINT'}
             </Text>
           </View>
         </View>
@@ -215,19 +262,20 @@ export function PickupMapPicker({ visible, initialCoords, onConfirm, onClose }: 
           paddingBottom: Math.max((bottom || 0), 12) + SP.lg,
           ...SHADOW.lg,
         }}>
-          {/* Address row */}
+
+          {/* Address label + text */}
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
             <View style={{
               width: 34, height: 34, borderRadius: 17,
-              backgroundColor: C.greenGlass,
+              backgroundColor: iconBg,
               alignItems: 'center', justifyContent: 'center',
               marginTop: 2, flexShrink: 0,
             }}>
-              <Ionicons name="location-sharp" size={16} color={C.green} />
+              <Ionicons name="location-sharp" size={16} color={iconColor} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 10, fontWeight: '800', color: C.textMuted, letterSpacing: 1, marginBottom: 5 }}>
-                PICKUP POINT
+                {isDrop ? 'DROP POINT' : 'PICKUP POINT'}
               </Text>
               {geocoding ? (
                 <View style={{ gap: 8 }}>
@@ -244,59 +292,61 @@ export function PickupMapPicker({ visible, initialCoords, onConfirm, onClose }: 
 
           <View style={{ height: 1, backgroundColor: C.glassBorder, marginBottom: 14 }} />
 
-          {/* Walk hint — shown when pickup differs from GPS origin */}
-          {showWalkLine && (
+          {/* Distance / time hint — shown when line is visible */}
+          {showLine && (
             <View style={{
               flexDirection: 'row', alignItems: 'center', gap: 10,
-              backgroundColor: 'rgba(59,130,246,0.07)',
+              backgroundColor: hintBg,
               borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10,
-              borderWidth: 1, borderColor: 'rgba(96,165,250,0.35)',
+              borderWidth: 1, borderColor: hintBorder,
               marginBottom: 14,
             }}>
-              <Text style={{ fontSize: 20 }}>🚶</Text>
+              <Text style={{ fontSize: 20 }}>{isDrop ? '🚗' : '🚶'}</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 12, fontWeight: '800', color: '#1D4ED8', marginBottom: 1 }}>
-                  Walk to your pickup point
+                <Text style={{ fontSize: 12, fontWeight: '800', color: hintTitle, marginBottom: 1 }}>
+                  {isDrop ? 'Drive from pickup' : 'Walk to your pickup point'}
                 </Text>
-                <Text style={{ fontSize: 11, color: '#3B82F6', fontWeight: '600' }}>
-                  {walkDistLabel} away · about {walkMins} min on foot
+                <Text style={{ fontSize: 11, color: hintSub, fontWeight: '600' }}>
+                  {lineDistLabel} away · about {lineMins} min {isDrop ? 'by car' : 'on foot'}
                 </Text>
               </View>
             </View>
           )}
 
-          {/* Save as: Home / Work chips */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 18 }}>
-            <Text style={{ fontSize: 12, color: C.textMuted, fontWeight: '600', marginRight: 2 }}>
-              Save as:
-            </Text>
-            {(['Home', 'Work'] as const).map(lbl => {
-              const active = saveLabel === lbl;
-              return (
-                <TouchableOpacity
-                  key={lbl}
-                  onPress={() => setSaveLabel(active ? null : lbl)}
-                  style={{
-                    flexDirection: 'row', alignItems: 'center', gap: 5,
-                    paddingHorizontal: 13, paddingVertical: 7,
-                    borderRadius: R.full,
-                    backgroundColor: active ? C.greenGlass : C.glassMid,
-                    borderWidth: 1.5,
-                    borderColor: active ? C.greenBorder : C.glassBorder,
-                  }}
-                >
-                  <Ionicons
-                    name={lbl === 'Home' ? 'home-outline' : 'business-outline'}
-                    size={12}
-                    color={active ? C.green : C.textMuted}
-                  />
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: active ? C.green : C.textMuted }}>
-                    {lbl}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          {/* Save as chips — pickup mode only */}
+          {!isDrop && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 18 }}>
+              <Text style={{ fontSize: 12, color: C.textMuted, fontWeight: '600', marginRight: 2 }}>
+                Save as:
+              </Text>
+              {(['Home', 'Work'] as const).map(lbl => {
+                const active = saveLabel === lbl;
+                return (
+                  <TouchableOpacity
+                    key={lbl}
+                    onPress={() => setSaveLabel(active ? null : lbl)}
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', gap: 5,
+                      paddingHorizontal: 13, paddingVertical: 7,
+                      borderRadius: R.full,
+                      backgroundColor: active ? C.greenGlass : C.glassMid,
+                      borderWidth: 1.5,
+                      borderColor: active ? C.greenBorder : C.glassBorder,
+                    }}
+                  >
+                    <Ionicons
+                      name={lbl === 'Home' ? 'home-outline' : 'business-outline'}
+                      size={12}
+                      color={active ? C.green : C.textMuted}
+                    />
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: active ? C.green : C.textMuted }}>
+                      {lbl}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
 
           {/* Confirm button */}
           <TouchableOpacity
@@ -304,7 +354,7 @@ export function PickupMapPicker({ visible, initialCoords, onConfirm, onClose }: 
             onPress={handleConfirm}
             activeOpacity={0.85}
             style={{
-              backgroundColor: geocoding || !address ? '#94A3B8' : C.green,
+              backgroundColor: geocoding || !address ? '#94A3B8' : pinColor,
               borderRadius: R.md,
               paddingVertical: 16,
               flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9,
@@ -316,11 +366,11 @@ export function PickupMapPicker({ visible, initialCoords, onConfirm, onClose }: 
               : <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
             }
             <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '800' }}>
-              Confirm Pickup
+              {isDrop ? 'Confirm Drop' : 'Confirm Pickup'}
             </Text>
           </TouchableOpacity>
-        </View>
 
+        </View>
       </View>
     </Modal>
   );
