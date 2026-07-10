@@ -1086,6 +1086,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setRideData((p: any) => p ? { ...p, ...(data.new_fare ? { fare: data.new_fare } : {}), ...(data.new_vehicle_type ? { vehicle_type: data.new_vehicle_type } : {}) } : p);
         useRideStore.setState({ rideStatus: 'requested' });
       }
+      if (st === 'pre_assigned') {
+        // A busy-but-nearby driver has been offered this ride — customer waits while they finish current trip.
+        // pre_accepted: true means the driver explicitly confirmed; otherwise the offer is still pending.
+        setRideData((p: any) => ({
+          ...(p || {}),
+          ...(data.driver ? { driver: data.driver } : {}),
+          pre_assigned_eta_min: data.eta_min ?? null,
+          pre_accepted: data.pre_accepted ?? (p?.pre_accepted ?? false),
+          status: 'pre_assigned',
+        }));
+        useRideStore.setState({ rideStatus: 'pre_assigned' });
+        setAltSuggest(null); setServerSurgeOffer(null); setNoDriverFinal(null);
+        setScreen('matching');
+      }
       if (st === 'started') { setScreen('inride'); useRideStore.setState({ rideStatus: 'started', startOtp: '' }); }
       if (st === 'completed' && rideDataRef.current?.ride_id) {
         if (data.rideId && String(data.rideId) !== String(activeRideIdRef.current)) return;

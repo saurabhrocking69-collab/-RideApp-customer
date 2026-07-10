@@ -207,6 +207,123 @@ function ScanLines({ active }: { active: boolean }) {
   );
 }
 
+// ── Pre-assigned waiting card — shown when a busy driver is offered this ride ─
+function PreAssignedCard({ rideData, onCancel }: { rideData: any; onCancel: () => void }) {
+  const driver    = rideData?.driver;
+  const etaMin    = rideData?.pre_assigned_eta_min ?? null;
+  const confirmed = rideData?.pre_accepted === true;
+
+  // Pulsing glow ring for the purple card
+  const glow = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(glow, { toValue: 1, duration: 1800, useNativeDriver: true }),
+      Animated.timing(glow, { toValue: 0, duration: 1800, useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, []);
+
+  // After 5 minutes with no explicit confirmation, show "feel free to cancel" banner
+  const [longWait, setLongWait] = useState(false);
+  useEffect(() => {
+    if (confirmed) { setLongWait(false); return; }
+    const t = setTimeout(() => setLongWait(true), 5 * 60 * 1000);
+    return () => clearTimeout(t);
+  }, [confirmed]);
+
+  return (
+    <View style={{ marginHorizontal: 12, marginTop: 10 }}>
+
+      {/* Purple hero card */}
+      <Animated.View style={{
+        backgroundColor: '#1A0A2E', borderRadius: 20, overflow: 'hidden',
+        borderWidth: 1.5, borderColor: '#7C3AED',
+        shadowColor: '#7C3AED', shadowOpacity: glow.interpolate({ inputRange: [0, 1], outputRange: [0.3, 0.7] }), shadowRadius: 20, elevation: 12,
+      }}>
+
+        {/* Header */}
+        <View style={{ backgroundColor: '#7C3AED', paddingVertical: 12, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Text style={{ fontSize: 18 }}>🏍️</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 13, fontWeight: '900', color: '#fff', letterSpacing: 0.3 }}>Driver Found!</Text>
+            <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: '500', marginTop: 1 }}>
+              {confirmed ? 'Completing current trip, then heading to you' : 'Driver reviewing your request…'}
+            </Text>
+          </View>
+          {confirmed && (
+            <View style={{ backgroundColor: '#4ADE80', borderRadius: 100, paddingHorizontal: 9, paddingVertical: 4 }}>
+              <Text style={{ fontSize: 10, fontWeight: '900', color: '#022C22' }}>✓ CONFIRMED</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Driver info */}
+        {driver && (
+          <View style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: '#2D1B4E', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#7C3AED' }}>
+              <Text style={{ fontSize: 22, fontWeight: '900', color: '#A78BFA' }}>
+                {(driver.name || 'D')[0].toUpperCase()}
+              </Text>
+            </View>
+            <View style={{ flex: 1, gap: 3 }}>
+              <Text style={{ fontSize: 16, fontWeight: '900', color: '#F1F5F9' }}>{driver.name || 'Driver'}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={{ fontSize: 11, color: '#C4B5FD', fontWeight: '700' }}>
+                  ⭐ {driver.rating ? parseFloat(driver.rating).toFixed(1) : '5.0'}
+                </Text>
+                {driver.vehicle_brand ? (
+                  <Text style={{ fontSize: 11, color: '#94A3B8' }}>· {[driver.vehicle_brand, driver.vehicle_model].filter(Boolean).join(' ')}</Text>
+                ) : null}
+              </View>
+              {driver.vehicle_no ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                  <View style={{ backgroundColor: '#2D1B4E', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: '#7C3AED' }}>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#C4B5FD', letterSpacing: 0.5 }}>
+                      {driver.vehicle_no}
+                    </Text>
+                  </View>
+                  <View style={{ backgroundColor: '#1E3A1E', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: '#4ADE80' }}>
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#4ADE80' }}>Completing trip…</Text>
+                  </View>
+                </View>
+              ) : null}
+            </View>
+          </View>
+        )}
+
+        {/* ETA */}
+        {etaMin != null && (
+          <View style={{ marginHorizontal: 16, marginBottom: 16, backgroundColor: '#0D0520', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#4C1D95', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Text style={{ fontSize: 22 }}>⏱️</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#E9D5FF' }}>~{etaMin} min estimated arrival</Text>
+              <Text style={{ fontSize: 11, color: '#7C3AED', fontWeight: '600', marginTop: 2 }}>After dropping off current passenger</Text>
+            </View>
+          </View>
+        )}
+      </Animated.View>
+
+      {/* Long wait banner */}
+      {longWait && !confirmed && (
+        <View style={{ marginTop: 10, backgroundColor: '#1C1400', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#78350F', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Text style={{ fontSize: 16 }}>⏳</Text>
+          <Text style={{ flex: 1, fontSize: 12, color: '#FCD34D', fontWeight: '600', lineHeight: 17 }}>
+            Taking a bit longer — driver hasn't confirmed yet. You can cancel anytime for free.
+          </Text>
+        </View>
+      )}
+
+      {/* Free cancel note */}
+      <TouchableOpacity onPress={onCancel} style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10 }}>
+        <Ionicons name="close-circle-outline" size={16} color={C.textMuted} />
+        <Text style={{ fontSize: 13, color: C.textMuted, fontWeight: '600' }}>Cancel anytime · always free in this state</Text>
+      </TouchableOpacity>
+
+    </View>
+  );
+}
+
 // ── Surge price step slider — shown when backend emits surge_offer ──────────
 const SURGE_STEPS = [10, 20, 30, 40, 50, 80, 100, 150];
 
@@ -719,8 +836,10 @@ export function MatchingScreen() {
           contentContainerStyle={{ paddingBottom: 20 }}
         >
 
-          {/* ═══════════════ DRIVER ASSIGNED STATE ═══════════════ */}
-          {rideData?.driver ? (
+          {/* ═══════════════ PRE-ASSIGNED STATE ═══════════════ */}
+          {rideData?.status === 'pre_assigned' ? (
+            <PreAssignedCard rideData={rideData} onCancel={() => setShowCancelModal(true)} />
+          ) : rideData?.driver ? (
             <>
               {!driverArrived && <BuddyMessages visible />}
 
