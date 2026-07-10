@@ -73,6 +73,7 @@ interface AppContextType {
   fareLoading: boolean;
   eta: string; setEta: (e: string) => void;
   userCoords: any; setUserCoords: (c: any) => void;
+  locationLoading: boolean;
   showPromoInput: boolean; setShowPromoInput: (v: boolean) => void;
   instantApplied: boolean; setInstantApplied: (v: boolean) => void;
   lastFetchKey: React.MutableRefObject<string>;
@@ -372,6 +373,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [fareLoading, setFareLoading] = useState(false);
   const [eta, setEta] = useState('');
   const [userCoords, setUserCoords] = useState<any>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
   const [showPromoInput, setShowPromoInput] = useState(false);
   const [instantApplied, setInstantApplied] = useState(false);
   const lastFetchKey = useRef('');
@@ -1274,50 +1276,63 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // ── Location + ETA ───────────────────────────────────────────────────────
   const useMyLocation = async () => {
+    setLocationLoading(true);
     setResult('📍 Getting your location...');
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') { setResult('❌ Location permission denied'); return; }
+      if (status !== 'granted') { setResult('❌ Location permission denied'); setLocationLoading(false); return; }
 
-      // Fast path: use OS-cached position (instant, no satellite wait)
+      // Fast path: OS-cached position (instant)
       const last = await Location.getLastKnownPositionAsync({ maxAge: 120000, requiredAccuracy: 200 });
       if (last) {
         const lt = last.coords.latitude; const lg = last.coords.longitude;
         setUserCoords({ latitude: lt, longitude: lg }); setPickupCoords({ lat: lt, lng: lg });
-        geocodePickup(lt, lg);
+        await geocodePickup(lt, lg);
+        return; // cached position is good enough — skip the slower precise fix
       }
 
-      // Precise fix in background (Balanced = network-assisted, ~2-5s on Android)
+      // Fallback: network-assisted fix (~2–5s on Android)
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       const lat = loc.coords.latitude; const lng = loc.coords.longitude;
       setUserCoords({ latitude: lat, longitude: lng }); setPickupCoords({ lat, lng });
-      geocodePickup(lat, lng);
+      await geocodePickup(lat, lng);
     } catch (_e) { setResult('❌ Location error'); }
+    setLocationLoading(false);
   };
 
   const geocodePickup = async (lat: number, lng: number) => {
+    // Try Google Geocode API first
     try {
       const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${MAPS_KEY}&language=en`);
       const data = await res.json();
       if (data.results?.[0]) {
         setPickup(data.results[0].formatted_address); setResult('✅ Location found!');
         if (drop) {
-          const etaRes = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${lat},${lng}&destinations=${encodeURIComponent(drop)}&key=${MAPS_KEY}&mode=driving&departure_time=now`);
-          const etaData = await etaRes.json();
-          const el = etaData.rows?.[0]?.elements?.[0];
-          if (el?.status === 'OK') { const km = el.distance.value / 1000; setEta(`🕐 ${el.duration_in_traffic?.text || el.duration.text} · 📍 ${el.distance.text}`); loadFareEstimates(km); }
+          try {
+            const etaRes = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${lat},${lng}&destinations=${encodeURIComponent(drop)}&key=${MAPS_KEY}&mode=driving&departure_time=now`);
+            const etaData = await etaRes.json();
+            const el = etaData.rows?.[0]?.elements?.[0];
+            if (el?.status === 'OK') { const km = el.distance.value / 1000; setEta(`🕐 ${el.duration_in_traffic?.text || el.duration.text} · 📍 ${el.distance.text}`); loadFareEstimates(km); }
+          } catch (_e) {}
         }
-      } else {
-        const geo = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
-        if (geo[0]) { const a = geo[0]; setPickup([a.streetNumber, a.street, a.district, a.city].filter(Boolean).join(', ')); setResult('✅ Location found!'); }
+        return;
       }
-    } catch (_e) {
-      try {
-        const geo = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
-        if (geo[0]) { const a = geo[0]; setPickup([a.streetNumber, a.street, a.city].filter(Boolean).join(', ')); }
+    } catch (_e) {}
+
+    // Fallback: expo-location reverse geocode (offline-capable)
+    try {
+      const geo = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
+      if (geo[0]) {
+        const a = geo[0];
+        setPickup([a.streetNumber, a.street, a.district, a.city].filter(Boolean).join(', '));
         setResult('✅ Location found!');
-      } catch (_e2) {}
-    }
+        return;
+      }
+    } catch (_e) {}
+
+    // Last resort: show coordinates so pickup is never left blank
+    setPickup(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+    setResult('✅ Location found!');
   };
 
   const searchPlaces = (text: string, type: 'pickup' | 'drop') => {
@@ -1751,7 +1766,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     pickup, setPickup, drop, setDrop, pickupCoords, setPickupCoords, dropCoords, setDropCoords,
     rideType, setRideType, pickupSugg, setPickupSugg, dropSugg, setDropSugg, dropHistory,
     appConfig,
-    fareEstimates, setFareEstimates, fareLoading, eta, setEta, userCoords, setUserCoords,
+    fareEstimates, setFareEstimates, fareLoading, eta, setEta, userCoords, setUserCoords, locationLoading,
     showPromoInput, setShowPromoInput, instantApplied, setInstantApplied, lastFetchKey,
     promoCode, setPromoCode, promoDiscount, setPromoDiscount,
     promoScreenCode, setPromoScreenCode, promoScreenMsg, setPromoScreenMsg,

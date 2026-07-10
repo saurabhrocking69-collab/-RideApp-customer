@@ -42,6 +42,7 @@ export function BookingScreen() {
     searchPlaces, geocodePlace, useMyLocation, swapLocations, applyPromo, bookRide,
     dropHistory,
     userCoords,
+    locationLoading,
     phone,
     availablePromos, setAvailablePromos,
   } = useApp();
@@ -706,8 +707,8 @@ export function BookingScreen() {
                   <View style={{ width: 13, height: 13, borderRadius: 6.5, backgroundColor: C.green, borderWidth: 2.5, borderColor: 'rgba(5,150,105,0.3)' }} />
                   <TextInput
                     style={{ flex: 1, fontSize: 14, color: C.text, fontWeight: '600', paddingVertical: 9 }}
-                    placeholder="Pickup location..."
-                    placeholderTextColor={C.textDim}
+                    placeholder={locationLoading && !pickup ? 'Getting your location…' : 'Pickup location...'}
+                    placeholderTextColor={locationLoading && !pickup ? C.pink : C.textDim}
                     value={pickup}
                     onFocus={() => setInputFocused(true)}
                     onBlur={() => setInputFocused(false)}
@@ -718,7 +719,7 @@ export function BookingScreen() {
                     }}
                     returnKeyType="next"
                   />
-                  {pickerLoading ? (
+                  {pickerLoading || (locationLoading && !pickup) ? (
                     <View style={{ padding: 7 }}>
                       <ActivityIndicator size="small" color={C.pink} />
                     </View>
