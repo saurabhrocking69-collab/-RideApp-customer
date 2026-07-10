@@ -1,11 +1,13 @@
-import { Animated, Dimensions, KeyboardAvoidingView, Modal, PanResponder, Platform, ScrollView, StatusBar, TextInput, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Dimensions, KeyboardAvoidingView, Modal, PanResponder, Platform, ScrollView, StatusBar, TextInput, Text, TouchableOpacity, View } from 'react-native';
 import { useState, useRef, useEffect } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { Storage as AsyncStorage } from '../storage';
 import { useApp } from '../context/AppContext';
 import { GlassPanel, RideVehicleIcon, DotBG, SkeletonBox } from '../components/ui';
 import { LiveMap } from '../components/LiveMap';
+import { PickupMapPicker } from '../components/PickupMapPicker';
 import { s, C, T, R, SP, SHADOW } from '../styles';
 import { RIDES, MAPS_KEY } from '../constants';
 import { apiGet, apiPost, externalGet } from '../../api';
@@ -297,6 +299,38 @@ export function BookingScreen() {
     setPickup(addr);
     setPickupCoords(coords);
     setFareEstimates({}); setEta(''); lastFetchKey.current = '';
+  };
+
+  // ── Pickup map picker ─────────────────────────────────────────────────────────
+  const [pickerCoords, setPickerCoords]   = useState<{ lat: number; lng: number } | null>(null);
+  const [pickerLoading, setPickerLoading] = useState(false);
+
+  const handleUseMyLocation = async () => {
+    setPickerLoading(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') { setPickerLoading(false); return; }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      setPickerCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+    } catch (_e) {}
+    setPickerLoading(false);
+  };
+
+  const handlePickerConfirm = (
+    address: string,
+    coords: { lat: number; lng: number },
+    saveAs: 'Home' | 'Work' | null,
+  ) => {
+    setPickup(address);
+    setPickupCoords(coords);
+    setPickerCoords(null);
+    if (saveAs) {
+      const target = { text: address, coords };
+      const updated = { ...savedPlaces };
+      if (saveAs === 'Home')   updated.home   = target;
+      else                     updated.office = target;
+      persistSavedPlaces(updated);
+    }
   };
 
   // ── Route ETA (from LiveMap directions API callback) ─────────────────────────
@@ -664,8 +698,12 @@ export function BookingScreen() {
                     <TouchableOpacity onPress={() => { setPickup(''); setPickupCoords(null); setPickupSugg([]); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; }} style={{ padding: 4 }}>
                       <Ionicons name="close-circle" size={19} color={C.textDim} />
                     </TouchableOpacity>
+                  ) : pickerLoading ? (
+                    <View style={{ padding: 7 }}>
+                      <ActivityIndicator size="small" color={C.pink} />
+                    </View>
                   ) : (
-                    <TouchableOpacity onPress={useMyLocation} style={{ padding: 7, borderRadius: 20, backgroundColor: C.pinkGlass, borderWidth: 1.5, borderColor: C.pinkBorder }}>
+                    <TouchableOpacity onPress={handleUseMyLocation} style={{ padding: 7, borderRadius: 20, backgroundColor: C.pinkGlass, borderWidth: 1.5, borderColor: C.pinkBorder }}>
                       <Ionicons name="navigate" size={16} color={C.pink} />
                     </TouchableOpacity>
                   )}
@@ -1745,6 +1783,14 @@ export function BookingScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* ─── Pickup map picker modal ─── */}
+      <PickupMapPicker
+        visible={!!pickerCoords}
+        initialCoords={pickerCoords || { lat: 26.8467, lng: 80.9462 }}
+        onConfirm={handlePickerConfirm}
+        onClose={() => setPickerCoords(null)}
+      />
 
     </KeyboardAvoidingView>
   );
