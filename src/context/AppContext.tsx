@@ -775,13 +775,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     ]).start();
   }, [screen]);
 
-  // Silent background GPS — sets userCoords only (for walk line / nearby drivers), never touches pickup
+  // Silent background GPS — sets userCoords only (for walk line / nearby drivers), never touches pickup.
+  // Accepts any cached position (no maxAge limit) for instant result; falls back to a live low-accuracy fix.
   useEffect(() => {
     if (screen !== 'home' && screen !== 'booking') return;
     Location.requestForegroundPermissionsAsync().then(({ status }) => {
       if (status !== 'granted') return;
-      Location.getLastKnownPositionAsync({ maxAge: 300000 }).then(last => {
+      // No maxAge restriction — any cached position is fine for walk-line purposes
+      Location.getLastKnownPositionAsync({}).then(last => {
         if (last) { setUserCoords({ latitude: last.coords.latitude, longitude: last.coords.longitude }); return; }
+        // No cache at all (fresh install / permissions just granted) — do a quick network fix
         Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low }).then(loc => {
           setUserCoords({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
         }).catch(() => {});

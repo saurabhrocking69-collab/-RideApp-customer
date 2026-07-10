@@ -336,11 +336,25 @@ export function BookingScreen() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') { setPickerLoading(false); return; }
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+
+      // Warm up userCoords immediately with any cached position — walk line shows right away
+      const cached = await Location.getLastKnownPositionAsync({}).catch(() => null);
+      if (cached) {
+        setUserCoords({ latitude: cached.coords.latitude, longitude: cached.coords.longitude });
+      }
+
+      // Balanced = network + GPS, resolves in ~1–3s on any device (High can hang 30s+ indoors)
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       setUserCoords({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
-      const coords = { lat: loc.coords.latitude, lng: loc.coords.longitude };
-      setPickerCoords(coords);
-    } catch (_e) {}
+      setPickerCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+    } catch (_e) {
+      // If live fix fails, open picker at cached position so user isn't stuck
+      const cached = await Location.getLastKnownPositionAsync({}).catch(() => null);
+      if (cached) {
+        setUserCoords({ latitude: cached.coords.latitude, longitude: cached.coords.longitude });
+        setPickerCoords({ lat: cached.coords.latitude, lng: cached.coords.longitude });
+      }
+    }
     setPickerLoading(false);
   };
 
