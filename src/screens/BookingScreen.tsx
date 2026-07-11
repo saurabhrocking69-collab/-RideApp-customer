@@ -1352,10 +1352,6 @@ export function BookingScreen() {
               {/* Line items */}
               <View style={{ paddingHorizontal: 16, paddingVertical: 12, gap: 8 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text style={{ fontSize: 13, color: C.textMuted }}>Base fare</Text>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: C.text }}>₹{estBase}</Text>
-                </View>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                   <Text style={{ fontSize: 13, color: C.textMuted }}>Distance fare</Text>
                   <Text style={{ fontSize: 13, fontWeight: '600', color: C.text }}>₹{estDistFare > 0 ? estDistFare : '—'}</Text>
                 </View>
