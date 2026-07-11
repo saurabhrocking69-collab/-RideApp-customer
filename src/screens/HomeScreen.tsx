@@ -317,16 +317,6 @@ function BuddyBookModal() {
 const SCREEN_W = Dimensions.get('window').width;
 const BANNER_CARDS = [
   {
-    id: 'schedule',
-    bg: ['#1a237e', '#283593'],
-    badge: '⏰ NEW',
-    title: 'Schedule a Ride',
-    sub: 'Airport, office, doctor — book in advance',
-    cta: '📅 Book Now →',
-    emoji: '📅',
-    screen: 'scheduled' as const,
-  },
-  {
     id: 'referral',
     bg: [C.pink, '#c2185b'],
     badge: '🎁 REFER & EARN',
@@ -450,12 +440,6 @@ function HomeTab() {
     userCoords,
     setRideType,
   } = useApp();
-
-  const [scheduledRides, setScheduledRides] = useState<any[]>([]);
-  useEffect(() => {
-    if (!phone) return;
-    apiGet(`/api/rides/scheduled/${phone}`).then(d => { if (!d._error) setScheduledRides(d.rides || []); }).catch(() => {});
-  }, [phone]);
 
   const nearbyAnim = useRef(new Animated.Value(1)).current;
   const userLat = (userCoords as any)?.latitude || (userCoords as any)?.lat;
@@ -703,22 +687,9 @@ function HomeTab() {
         {/* ── Content area ── */}
         <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
 
-          {/* 5. ── Service cards 2×2 ── */}
+          {/* 5. ── Service cards ── */}
           <SlideUp delay={0}>
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
-              <Bouncy onPress={() => setScreen('scheduled')}
-                style={{ flex: 1, backgroundColor: C.bgCard, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: C.glassBorder, ...SHADOW.sm }}>
-                <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: C.plumGlass, alignItems: 'center', justifyContent: 'center', marginBottom: 10, borderWidth: 1, borderColor: C.plumBorder }}>
-                  <Ionicons name="calendar-outline" size={21} color={C.plum} />
-                </View>
-                <Text style={{ fontSize: 13, fontWeight: '900', color: C.text }}>Schedule</Text>
-                <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 3, lineHeight: 14 }}>Book a ride in advance</Text>
-                {scheduledRides.filter(r => new Date(r.scheduled_at) > new Date() && r.status === 'pending').length > 0 && (
-                  <View style={{ backgroundColor: C.plum, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2, marginTop: 8, alignSelf: 'flex-start' }}>
-                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900' }}>{scheduledRides.filter(r => new Date(r.scheduled_at) > new Date() && r.status === 'pending').length} upcoming</Text>
-                  </View>
-                )}
-              </Bouncy>
               <Bouncy onPress={() => {
                 setHourlyStep('book'); setHPickup(''); setHDrop(''); setHPickupCoords(null); setHDropCoords(null);
                 setHPickupSugg([]); setHDropSugg([]); setHRoundTrip(false); setHStayHours(1);

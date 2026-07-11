@@ -19,7 +19,6 @@ import { SafetyScreen } from './screens/SafetyScreen';
 import { SupportScreen } from './screens/SupportScreen';
 import { ReferralScreen, PolicyScreen, SavedPlacesScreen, ChatScreen } from './screens/SimpleScreens';
 import { RewardsScreen } from './screens/RewardsScreen';
-import { ScheduledRideScreen } from './screens/ScheduledRideScreen';
 import { BudgetScreen } from './screens/BudgetScreen';
 import { SurgePricingScreen } from './screens/SurgePricingScreen';
 
@@ -49,7 +48,6 @@ function ActiveScreen() {
   if (screen === 'saved')            return <SavedPlacesScreen />;
   if (screen === 'chat')             return <ChatScreen />;
   if (screen === 'rewards')          return <RewardsScreen />;
-  if (screen === 'scheduled')        return <ScheduledRideScreen />;
   if (screen === 'budget')           return <BudgetScreen />;
   if (screen === 'surge')            return <SurgePricingScreen />;
   return <HomeScreen />;

@@ -676,9 +676,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       else if (data.type === 'ride_cancelled')                     { setScreen('home'); setDriverCancelPopup(true); }
       else if (data.type === 'no_driver_found')                    setScreen('home');
       else if (data.type === 'extension_accepted')                 setScreen('matching');
-      // Scheduled rides
-      else if (data.type === 'scheduled_ride_dispatched')          setScreen('matching');
-      else if (data.type === 'scheduled_ride_reminder')            setScreen('scheduled');
       // Wallet / payments
       else if (['cashback_earned', 'refund', 'wallet_topup'].includes(data.type)) setScreen('home');
       // Account / complaints
