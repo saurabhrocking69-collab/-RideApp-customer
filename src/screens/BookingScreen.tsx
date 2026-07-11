@@ -1112,70 +1112,84 @@ export function BookingScreen() {
                       setVehicleBrowsing(false);
                       RIDES.forEach((ride: any) => {
                         Animated.spring(cardAnims[ride.id], {
-                          toValue: ride.id === r.id ? 1.015 : 1,
+                          toValue: ride.id === r.id ? 1.02 : 1,
                           friction: 5, tension: 180, useNativeDriver: true,
                         }).start();
                       });
                     }}
                     activeOpacity={0.82}
                     style={{
-                      width: 110,
+                      width: 126,
                       alignItems: 'center',
-                      paddingHorizontal: 8,
-                      paddingTop: 10,
-                      paddingBottom: 10,
-                      backgroundColor: isSel ? C.pinkGlass : notAvail ? C.glassMid : C.bgCard,
+                      paddingHorizontal: 10,
+                      paddingTop: 14,
+                      paddingBottom: 12,
+                      backgroundColor: isSel
+                        ? (isLux ? 'rgba(124,58,237,0.09)' : C.pinkGlass)
+                        : notAvail ? C.glassMid : C.bgCard,
                       borderRadius: R.md,
                       borderWidth: isSel ? 2 : 1,
-                      borderColor: isSel ? C.pink : isLux ? C.purpleBorder : C.glassBorder,
-                      opacity: notAvail ? 0.55 : 1,
+                      borderColor: isSel
+                        ? (isLux ? C.purple : C.pink)
+                        : isLux ? C.purpleBorder : C.glassBorder,
+                      opacity: notAvail ? 0.5 : 1,
                       overflow: 'hidden',
-                      ...(isSel ? SHADOW.pink : SHADOW.sm),
+                      ...(isSel ? (isLux ? SHADOW.sm : SHADOW.pink) : SHADOW.sm),
                     }}>
 
-                    {/* Tag row — fixed 18px height so all icon circles align */}
-                    <View style={{ height: 18, marginBottom: 8, alignItems: 'center', justifyContent: 'center' }}>
+                    {/* Selected bottom accent bar */}
+                    {isSel && (
+                      <View style={{
+                        position: 'absolute', bottom: 0, left: 0, right: 0, height: 3,
+                        backgroundColor: isLux ? C.purple : C.pink,
+                      }} />
+                    )}
+
+                    {/* Tag row — fixed height keeps all icon circles aligned */}
+                    <View style={{ height: 16, marginBottom: 10, alignItems: 'center', justifyContent: 'center' }}>
                       {r.tag ? (
-                        <View style={{ backgroundColor: isLux ? C.purple : r.tagColor, borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2 }}>
-                          <Text style={{ color: '#fff', fontSize: 7, fontWeight: '900', letterSpacing: 0.5 }}>{r.tag}</Text>
+                        <View style={{ backgroundColor: isLux ? C.purple : r.tagColor, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
+                          <Text style={{ color: '#fff', fontSize: 8, fontWeight: '900', letterSpacing: 0.4 }}>{r.tag}</Text>
                         </View>
                       ) : null}
                     </View>
 
                     {/* Icon circle */}
                     <View style={{
-                      width: 44, height: 44, borderRadius: 22,
-                      backgroundColor: isSel ? C.pinkGlass : isLux ? C.purpleGlass : C.glassMid,
+                      width: 50, height: 50, borderRadius: 25,
+                      backgroundColor: isSel
+                        ? (isLux ? 'rgba(124,58,237,0.12)' : 'rgba(255,45,120,0.12)')
+                        : isLux ? C.purpleGlass : C.glassMid,
                       alignItems: 'center', justifyContent: 'center',
                       borderWidth: isSel ? 2 : 1.5,
-                      borderColor: isSel ? C.pink : isLux ? C.purpleBorder : C.glassBorder,
-                      marginBottom: 8,
+                      borderColor: isSel ? (isLux ? C.purple : C.pink) : isLux ? C.purpleBorder : C.glassBorder,
+                      marginBottom: 10,
                     }}>
-                      <RideVehicleIcon id={r.id} size={22} color={isSel ? C.pink : isLux ? C.purple : C.textMuted} />
+                      <RideVehicleIcon id={r.id} size={26} color={isSel ? (isLux ? C.purple : C.pink) : isLux ? C.purple : C.textMuted} />
                     </View>
 
                     {/* Vehicle name */}
-                    <Text style={{ fontSize: 11, fontWeight: '800', color: isSel ? C.text : notAvail ? C.textMuted : C.textDim, textAlign: 'center', marginBottom: 3 }} numberOfLines={1}>{r.label}</Text>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: isSel ? C.text : notAvail ? C.textMuted : C.textDim, textAlign: 'center', marginBottom: 2 }} numberOfLines={1}>{r.label}</Text>
 
                     {/* Fare */}
                     {fareLoading ? (
-                      <SkeletonBox width={52} height={16} radius={6} style={{ marginBottom: 6, alignSelf: 'center' }} />
+                      <SkeletonBox width={56} height={18} radius={6} style={{ marginBottom: 6, alignSelf: 'center' }} />
                     ) : (
-                      <Text style={{ fontSize: 15, fontWeight: '900', color: isSel ? C.pink : isLux ? C.purple : C.text, textAlign: 'center', marginBottom: 6 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '900', color: isSel ? (isLux ? C.purple : C.pink) : C.text, textAlign: 'center', marginBottom: 6, letterSpacing: -0.3 }}>
                         {fareText}
                       </Text>
                     )}
 
-                    {/* ETA status row — fixed 14px height */}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, height: 14 }}>
+                    {/* ETA status row */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 16 }}>
                       {!etaLoaded ? (
-                        <Text style={{ fontSize: 8, color: C.textDim }}>{r.eta}</Text>
+                        <Text style={{ fontSize: 9, color: C.textDim }}>{r.eta}</Text>
                       ) : notAvail ? (
-                        <Text style={{ fontSize: 8, color: C.textMuted, fontWeight: '600' }}>No driver</Text>
+                        <Text style={{ fontSize: 9, color: C.textMuted, fontWeight: '700' }}>No driver</Text>
                       ) : info ? (
                         <>
-                          <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: isFar ? C.yellow : C.green }} />
-                          <Text style={{ fontSize: 8, color: isFar ? C.yellow : C.green, fontWeight: '800' }}>
+                          <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: isFar ? C.yellow : C.green }} />
+                          <Text style={{ fontSize: 9, color: isFar ? C.yellow : C.green, fontWeight: '800' }}>
                             {info.eta_min !== null ? `~${info.eta_min} min` : 'Locating'}
                           </Text>
                         </>
@@ -1184,8 +1198,8 @@ export function BookingScreen() {
 
                     {/* Selected checkmark badge */}
                     {isSel && (
-                      <View style={{ position: 'absolute', top: 8, right: 8, width: 16, height: 16, borderRadius: 8, backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center' }}>
-                        <Ionicons name="checkmark" size={10} color="#fff" />
+                      <View style={{ position: 'absolute', top: 9, right: 9, width: 18, height: 18, borderRadius: 9, backgroundColor: isLux ? C.purple : C.pink, alignItems: 'center', justifyContent: 'center' }}>
+                        <Ionicons name="checkmark" size={11} color="#fff" />
                       </View>
                     )}
                   </TouchableOpacity>
