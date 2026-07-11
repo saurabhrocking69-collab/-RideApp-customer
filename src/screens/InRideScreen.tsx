@@ -266,16 +266,10 @@ export function InRideScreen() {
               {(driverDist || rideData?.distance) ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
                   <View style={{ backgroundColor: 'rgba(0,200,83,0.12)', borderRadius: R.xs, paddingHorizontal: 6, paddingVertical: 2 }}>
-                    {/* driverDist = remaining distance (haversine, live); fallback = total trip distance */}
                     <Text style={{ ...T.caption, color: C.green }}>
                       {driverDist ? `📍 ${driverDist} bacha` : `📏 ${rideData?.distance}`}
                     </Text>
                   </View>
-                  {fareNum > 0 ? (
-                    <View style={{ backgroundColor: C.pinkGlass, borderRadius: R.xs, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: C.pinkBorder }}>
-                      <Text style={{ ...T.caption, color: C.pink }}>₹{fareNum}</Text>
-                    </View>
-                  ) : null}
                 </View>
               ) : null}
             </View>
@@ -287,44 +281,20 @@ export function InRideScreen() {
             ) : null}
           </View>
 
-          {/* Fare Breakdown */}
-          {fareNum > 0 && (
-            <View style={{
-              backgroundColor: C.glass, borderRadius: R.md, padding: SP.md,
-              marginBottom: 10, borderWidth: 1, borderColor: C.glassBorder,
-            }}>
-              <Text style={{ ...T.label, color: C.textMuted, marginBottom: 10 }}>FARE BREAKDOWN</Text>
-              {discountAmt > 0 && (
-                <>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <Text style={{ fontSize: 13, color: C.textMuted }}>Trip Fare</Text>
-                    <Text style={{ fontSize: 13, color: C.text, fontVariant: ['tabular-nums'] }}>₹{rawFareNum}</Text>
-                  </View>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-                    <Text style={{ fontSize: 13, color: C.green }}>Coupon Discount</Text>
-                    <Text style={{ fontSize: 13, color: C.green, fontVariant: ['tabular-nums'] }}>−₹{discountAmt}</Text>
-                  </View>
-                </>
-              )}
-              {discountAmt === 0 && (
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <Text style={{ fontSize: 13, color: C.textMuted }}>Trip Fare</Text>
-                  <Text style={{ fontSize: 13, color: C.text, fontVariant: ['tabular-nums'] }}>₹{tripSubtotal}</Text>
-                </View>
-              )}
-              {platFeeAmt > 0 && (
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <Text style={{ fontSize: 13, color: C.textMuted }}>Platform Fee</Text>
-                  <Text style={{ fontSize: 13, color: C.text, fontVariant: ['tabular-nums'] }}>₹{platFeeAmt}</Text>
-                </View>
-              )}
-              <View style={{ height: 1, backgroundColor: C.glassBorder, marginBottom: 10 }} />
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ fontSize: 15, color: C.text, fontWeight: '800' }}>You Pay</Text>
-                <Text style={{ fontSize: 22, color: C.pink, fontWeight: '900', fontVariant: ['tabular-nums'] }}>₹{fareNum}</Text>
-              </View>
+          {/* Fare calculating notice */}
+          <View style={{
+            backgroundColor: C.yellowGlass, borderRadius: R.md, padding: SP.md,
+            marginBottom: 10, borderWidth: 1, borderColor: C.yellowBorder,
+            flexDirection: 'row', alignItems: 'center', gap: 12,
+          }}>
+            <Text style={{ fontSize: 22 }}>🧮</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, color: C.yellow, fontWeight: '800' }}>Fare calculating...</Text>
+              <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 3, lineHeight: 16 }}>
+                Final amount will be based on actual trip distance, time, and any applied coupon. Shown at payment.
+              </Text>
             </View>
-          )}
+          </View>
 
           {/* Pickup → Drop */}
           <View style={{

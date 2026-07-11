@@ -235,28 +235,41 @@ export function PaymentScreen() {
             ₹{fareNum}
           </Text>
 
-          {/* Fare breakdown */}
-          {fareNum > 0 && (
-            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 6, flexWrap: 'wrap' }}>
-              {discountAmt > 0 ? (
-                <>
-                  <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, fontWeight: '700' }}>Trip ₹{rawFareNum}</Text>
-                  <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.35)' }} />
-                  <Text style={{ color: '#4ADE80', fontSize: 12, fontWeight: '900' }}>Coupon −₹{discountAmt}</Text>
-                </>
-              ) : (
-                <>
-                  <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, fontWeight: '700' }}>Trip ₹{tripSubtotal}</Text>
-                  {platFeeAmt > 0 && (
-                    <>
-                      <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.35)' }} />
-                      <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, fontWeight: '700' }}>Platform ₹{platFeeAmt}</Text>
-                    </>
-                  )}
-                </>
-              )}
-            </View>
-          )}
+          {/* Final fare breakdown card */}
+          {fareNum > 0 && (() => {
+            // Reverse-calculate actual trip fare from net fare
+            const actualGross   = fareNum + discountAmt;           // gross (before coupon, after recalc)
+            const actualTrip    = Math.max(0, actualGross - platFeeAmt); // trip fare excl. platform fee
+            return (
+              <View style={{ backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 18, padding: 16, marginTop: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}>
+                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: '900', letterSpacing: 1.5, marginBottom: 10 }}>FARE DETAILS</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 7 }}>
+                  <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>Trip Fare</Text>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] }}>₹{actualTrip}</Text>
+                </View>
+                {platFeeAmt > 0 && (
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 7 }}>
+                    <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>Platform Fee</Text>
+                    <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] }}>₹{platFeeAmt}</Text>
+                  </View>
+                )}
+                {discountAmt > 0 && (
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 7 }}>
+                    <Text style={{ color: '#4ADE80', fontSize: 13, fontWeight: '700' }}>Coupon Discount</Text>
+                    <Text style={{ color: '#4ADE80', fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] }}>−₹{discountAmt}</Text>
+                  </View>
+                )}
+                <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.2)', marginVertical: 8 }} />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ color: '#fff', fontSize: 15, fontWeight: '900' }}>Total</Text>
+                  <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900', fontVariant: ['tabular-nums'] }}>₹{fareNum}</Text>
+                </View>
+                <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, marginTop: 8, textAlign: 'center' }}>
+                  Final fare based on actual trip distance &amp; time
+                </Text>
+              </View>
+            );
+          })()}
 
           {/* Route pill */}
           <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 16, padding: 12, marginTop: 16, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}>
