@@ -791,7 +791,7 @@ export function MatchingScreen() {
           flexDirection: 'row', alignItems: 'center', gap: 10,
         }}>
           <TouchableOpacity
-            onPress={() => setShowCancelModal(true)}
+            onPress={() => noDriverFinal ? setScreen('home') : setShowCancelModal(true)}
             style={{
               width: 38, height: 38, borderRadius: 19,
               backgroundColor: 'rgba(0,0,0,0.54)',

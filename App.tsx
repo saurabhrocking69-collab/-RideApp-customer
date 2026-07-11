@@ -42,7 +42,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { crashed: boolea
 }
 
 function BackHandlerWrapper() {
-  const { screen, setScreen, tab, setTab, rideData, hourlyStep } = useApp();
+  const { screen, setScreen, tab, setTab, rideData, hourlyStep, noDriverFinal } = useApp();
   const lastBackRef = useRef(0);
 
   useEffect(() => {
@@ -52,7 +52,11 @@ function BackHandlerWrapper() {
       if (screen === 'otp') { setScreen('login'); return true; }
 
       // During active standard ride — block accidental back
-      if (['matching', 'inride', 'payment', 'postride'].includes(screen)) return true;
+      // Exception: no-driver-found screen — let user navigate back to home
+      if (['matching', 'inride', 'payment', 'postride'].includes(screen)) {
+        if (screen === 'matching' && noDriverFinal) { setScreen('home'); return true; }
+        return true;
+      }
 
       if (screen === 'chat') {
         setScreen(rideData?.status === 'started' ? 'inride' : 'matching');
@@ -91,7 +95,7 @@ function BackHandlerWrapper() {
       return true;
     });
     return () => handler.remove();
-  }, [screen, tab, rideData?.status, hourlyStep]);
+  }, [screen, tab, rideData?.status, hourlyStep, noDriverFinal]);
 
   return <Router />;
 }

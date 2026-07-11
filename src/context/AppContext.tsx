@@ -558,17 +558,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           phoneRef.current = savedPhone;
           if (savedName) setUserName(savedName);
 
+          // Show home immediately — eliminates white screen gap between splash and home
+          setScreen('home');
+
+          // Start background tasks without waiting for ride check
+          fetchAppConfig();
+          loadHistory(savedPhone); loadWallet(savedPhone);
+          loadOffers(); loadHourlyPackages();
+          connectSocket(savedPhone); registerFCM(savedPhone);
+
+          // Check for active ride in background, redirect only if one is found
           const activeRideId = await AsyncStorage.getItem('activeStdRideId').catch(() => null);
           if (activeRideId) {
             try {
-              // /api/rides/status/:id is the correct endpoint (/:id doesn't exist)
               const r    = await fetch(`${API}/api/rides/status/${activeRideId}`);
               const d    = await r.json();
               const ride = d.ride;
               const st   = ride?.status;
 
               if (st === 'searching' || st === 'matched' || st === 'arrived' || st === 'started') {
-                // Reconstruct nested driver object from flat DB columns returned by status endpoint
                 const driver = ride.driver_name ? {
                   name:          ride.driver_name,
                   vehicle_no:    ride.vehicle_no,
@@ -582,12 +590,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
                 setRideData({
                   ...ride,
-                  ride_id:  ride.ride_id ?? ride.id,   // status endpoint uses 'id'; app uses 'ride_id'
-                  startOtp: st === 'started' ? '' : (ride.start_otp || ''),  // snake_case → camelCase
+                  ride_id:  ride.ride_id ?? ride.id,
+                  startOtp: st === 'started' ? '' : (ride.start_otp || ''),
                   driver,
                 });
 
-                // Restore pickup/drop strings + map coords
                 if (ride.pickup)        setPickup(ride.pickup);
                 if (ride.drop_location) setDrop(ride.drop_location);
                 if (ride.pickup_lat && ride.pickup_lng)
@@ -595,17 +602,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 if (ride.drop_lat && ride.drop_lng)
                   setDropCoords({ lat: parseFloat(ride.drop_lat), lng: parseFloat(ride.drop_lng) });
 
-                // CRITICAL: set before connectSocket so 'connect' handler emits joinRide
                 activeRideIdRef.current = activeRideId;
-
                 setScreen(st === 'started' ? 'inride' : 'matching');
               } else if (st === 'completed' || st === 'payment') {
                 setScreen('payment');
               } else {
-                AsyncStorage.removeItem('activeStdRideId').catch(() => {}); // stale — clean up
-                setScreen('home');
+                AsyncStorage.removeItem('activeStdRideId').catch(() => {});
               }
-            } catch { setScreen('home'); }
+            } catch { /* already on home */ }
           } else {
             // No active standard ride — check for active hourly booking
             try {
@@ -618,15 +622,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                   : hd.booking.status === 'matched' ? 'matched' : 'pending';
                 setHourlyStep(step);
                 setScreen('hourly');
-              } else {
-                setScreen('home');
               }
-            } catch { setScreen('home'); }
+            } catch { /* already on home */ }
           }
-          fetchAppConfig();
-          loadHistory(savedPhone); loadWallet(savedPhone);
-          loadOffers(); loadHourlyPackages();
-          connectSocket(savedPhone); registerFCM(savedPhone);
         } else {
           setScreen('login');
         }

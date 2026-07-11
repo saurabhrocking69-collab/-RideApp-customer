@@ -308,6 +308,10 @@ export function ScheduledRideScreen() {
 
   const vEmoji: any = { bike:'🏍️', auto:'🛺', eriksha:'🛵', car:'🚕', green_bike:'⚡', electric_auto:'🌿' };
 
+  const now = new Date();
+  const upcomingRides = scheduled.filter(r => new Date(r.scheduled_at) > now && r.status === 'pending');
+  const pastRides     = scheduled.filter(r => new Date(r.scheduled_at) <= now || r.status !== 'pending');
+
   return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <DotBG />
@@ -362,7 +366,10 @@ export function ScheduledRideScreen() {
               </SlideUp>
             ) : (
               <>
-                {scheduled.map((r, i) => (
+                {upcomingRides.length > 0 && (
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: C.plum, letterSpacing: 1.2, marginBottom: 10, marginTop: 2 }}>UPCOMING</Text>
+                )}
+                {upcomingRides.map((r, i) => (
                   <SlideUp key={r.id} delay={i * 60}>
                     <View style={{ backgroundColor: C.bgCard, borderRadius: 18, padding: 16, marginBottom: 12, elevation: 5, borderWidth: 1.5, borderColor: C.glassBorder, shadowColor: C.pink, shadowOpacity: 0.08, shadowRadius: 10 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
@@ -424,6 +431,46 @@ export function ScheduledRideScreen() {
                     </View>
                   </SlideUp>
                 ))}
+                {pastRides.length > 0 && (
+                  <>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: C.textMuted, letterSpacing: 1.2, marginBottom: 10, marginTop: upcomingRides.length > 0 ? 16 : 2 }}>PAST RIDES</Text>
+                    {pastRides.map((r, i) => (
+                      <SlideUp key={r.id} delay={i * 60}>
+                        <View style={{ backgroundColor: C.bgCard, borderRadius: 18, padding: 16, marginBottom: 12, elevation: 5, borderWidth: 1.5, borderColor: C.glassBorder, opacity: 0.7 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                            <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: C.glass, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1.5, borderColor: C.glassBorder }}>
+                              <Text style={{ fontSize: 22 }}>{vEmoji[r.vehicle_type] || '🚗'}</Text>
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 13, fontWeight: '900', color: C.textMuted }}>{fmt(r.scheduled_at)}</Text>
+                              <Text style={{ fontSize: 11, color: C.textDim, marginTop: 1 }}>
+                                {(r.vehicle_type || '').replace('_', ' ').toUpperCase()}
+                                {r.fare_estimate > 0 ? ` · ~₹${r.fare_estimate}` : ''}
+                              </Text>
+                            </View>
+                            {(() => {
+                              const BADGE: Record<string, { bg: string; border: string; color: string; label: string }> = {
+                                failed:    { bg: C.redGlass,  border: C.redBorder,  color: C.red,       label: 'FAILED'    },
+                                cancelled: { bg: C.redGlass,  border: C.redBorder,  color: C.red,       label: 'CANCELLED' },
+                                pending:   { bg: C.glass,     border: C.glassBorder, color: C.textMuted, label: 'EXPIRED'   },
+                              };
+                              const badge = BADGE[r.status] || { bg: C.glass, border: C.glassBorder, color: C.textMuted, label: (r.status || '').toUpperCase() };
+                              return (
+                                <View style={{ backgroundColor: badge.bg, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: badge.border }}>
+                                  <Text style={{ fontSize: 10, fontWeight: '800', color: badge.color }}>{badge.label}</Text>
+                                </View>
+                              );
+                            })()}
+                          </View>
+                          <View style={{ backgroundColor: C.glass, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: C.glassBorder }}>
+                            <Text style={{ color: C.textMuted, fontSize: 12 }} numberOfLines={1}>📍 {r.pickup}</Text>
+                            <Text style={{ color: C.textDim, fontSize: 12, marginTop: 4 }} numberOfLines={1}>🎯 {r.drop_location}</Text>
+                          </View>
+                        </View>
+                      </SlideUp>
+                    ))}
+                  </>
+                )}
                 <TouchableOpacity onPress={() => setStep('form')}
                   style={{ backgroundColor: C.pink, borderRadius: 16, padding: 16, alignItems: 'center', marginTop: 8, elevation: 6, shadowColor: C.pink, shadowOpacity: 0.35, shadowRadius: 10 }}>
                   <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>➕ Schedule a New Ride</Text>

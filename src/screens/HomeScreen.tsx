@@ -713,9 +713,9 @@ function HomeTab() {
                 </View>
                 <Text style={{ fontSize: 13, fontWeight: '900', color: C.text }}>Schedule</Text>
                 <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 3, lineHeight: 14 }}>Book a ride in advance</Text>
-                {scheduledRides.length > 0 && (
+                {scheduledRides.filter(r => new Date(r.scheduled_at) > new Date() && r.status === 'pending').length > 0 && (
                   <View style={{ backgroundColor: C.plum, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2, marginTop: 8, alignSelf: 'flex-start' }}>
-                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900' }}>{scheduledRides.length} upcoming</Text>
+                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900' }}>{scheduledRides.filter(r => new Date(r.scheduled_at) > new Date() && r.status === 'pending').length} upcoming</Text>
                   </View>
                 )}
               </Bouncy>
