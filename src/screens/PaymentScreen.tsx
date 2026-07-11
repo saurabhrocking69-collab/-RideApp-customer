@@ -31,11 +31,11 @@ export function PaymentScreen() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   const driverUpiId = rideData?.driver?.upi_id || '';
-  const fareNum = Math.round(
-    parseFloat(String(rideData?.fare ?? '').replace(/[^0-9.]/g, '') || '0') || fareCount
-  );
-  const fareGst  = fareNum > 0 ? Math.round((fareNum * 5 / 105) * 100) / 100 : 0;
-  const fareBase = fareNum > 0 ? Math.round((fareNum - fareGst) * 100) / 100 : 0;
+  const rawFareNum  = Math.round(parseFloat(String(rideData?.fare ?? '').replace(/[^0-9.]/g, '') || '0') || 0);
+  const discountAmt = Math.round(parseFloat(String(rideData?.discount    ?? '0')) || 0);
+  const platFeeAmt  = Math.round(parseFloat(String(rideData?.platform_fee ?? '2')) || 2);
+  const fareNum     = (rideData?.net_fare != null ? Math.round(rideData.net_fare) : Math.max(0, rawFareNum - discountAmt)) || fareCount;
+  const tripSubtotal = Math.max(0, fareNum - platFeeAmt);
   const upiLink = driverUpiId
     ? `upi://pay?pa=${encodeURIComponent(driverUpiId)}&pn=${encodeURIComponent(rideData?.driver?.name || 'Driver')}&am=${fareNum}&cu=INR&tn=Sppero%20Trip`
     : '';
@@ -237,10 +237,24 @@ export function PaymentScreen() {
 
           {/* Fare breakdown */}
           {fareNum > 0 && (
-            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 6 }}>
-              <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, fontWeight: '700' }}>Base ₹{fareBase.toFixed(0)}</Text>
-              <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.35)' }} />
-              <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, fontWeight: '700' }}>GST 5% ₹{fareGst.toFixed(0)}</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 6, flexWrap: 'wrap' }}>
+              {discountAmt > 0 ? (
+                <>
+                  <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, fontWeight: '700' }}>Trip ₹{rawFareNum}</Text>
+                  <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.35)' }} />
+                  <Text style={{ color: '#4ADE80', fontSize: 12, fontWeight: '900' }}>Coupon −₹{discountAmt}</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, fontWeight: '700' }}>Trip ₹{tripSubtotal}</Text>
+                  {platFeeAmt > 0 && (
+                    <>
+                      <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.35)' }} />
+                      <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, fontWeight: '700' }}>Platform ₹{platFeeAmt}</Text>
+                    </>
+                  )}
+                </>
+              )}
             </View>
           )}
 

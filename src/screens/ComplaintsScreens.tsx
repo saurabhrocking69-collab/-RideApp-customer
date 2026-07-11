@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -474,6 +474,9 @@ export function ComplaintDetailScreen() {
   // hooks must be at the top — before any early returns
   const [uploading, setUploading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [appealModal, setAppealModal] = useState(false);
+  const [appealText, setAppealText] = useState('');
+  const [submittingAppeal, setSubmittingAppeal] = useState(false);
 
   // auto-refresh on mount to get latest status & messages from server
   useEffect(() => {
@@ -706,17 +709,51 @@ export function ComplaintDetailScreen() {
 
         {/* Appeal */}
         {c.status === 'resolved' && (
-          <TouchableOpacity onPress={() => Alert.prompt('Appeal', 'Why do you disagree? (20+ characters)', async (reason) => {
-            if (!reason || reason.length < 20) { Alert.alert('Too short', 'Please write a reason with 20+ characters'); return; }
-            try {
-              await apiPost(`/api/complaints/${c.id}/appeal`, { phone, reason });
-              const r = await apiGet(`/api/complaints/${c.id}?phone=${encodeURIComponent(phone)}`);
-              setCmpDetail(r);
-              Alert.alert('Appeal Submitted', 'Your appeal will be reviewed');
-            } catch {}
-          })} style={{ backgroundColor: C.yellowGlass, borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: C.yellowBorder, alignItems: 'center' }}>
-            <Text style={{ color: C.yellow, fontWeight: '800' }}>⚖️ Disagree with Resolution? Appeal</Text>
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity onPress={() => { setAppealText(''); setAppealModal(true); }}
+              style={{ backgroundColor: C.yellowGlass, borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: C.yellowBorder, alignItems: 'center' }}>
+              <Text style={{ color: C.yellow, fontWeight: '800' }}>⚖️ Disagree with Resolution? Appeal</Text>
+            </TouchableOpacity>
+            <Modal visible={appealModal} transparent animationType="slide" onRequestClose={() => setAppealModal(false)}>
+              <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' }}>
+                <View style={{ backgroundColor: C.bgCard, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 36 }}>
+                  <Text style={{ fontSize: 16, fontWeight: '900', color: C.text, marginBottom: 6 }}>⚖️ Appeal Resolution</Text>
+                  <Text style={{ fontSize: 13, color: C.textMuted, marginBottom: 16, lineHeight: 18 }}>Explain why you disagree with the resolution (min 20 characters)</Text>
+                  <TextInput
+                    style={{ backgroundColor: C.glass, borderRadius: 12, borderWidth: 1.5, borderColor: appealText.length >= 20 ? C.green : C.glassBorder, color: C.text, fontSize: 14, padding: 14, minHeight: 100, textAlignVertical: 'top', marginBottom: 8 }}
+                    placeholder="Describe your reason for appealing..."
+                    placeholderTextColor={C.textDim}
+                    multiline
+                    value={appealText}
+                    onChangeText={setAppealText}
+                  />
+                  <Text style={{ fontSize: 11, color: appealText.length >= 20 ? C.green : C.textDim, marginBottom: 16, textAlign: 'right' }}>{appealText.length}/20 min</Text>
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <TouchableOpacity onPress={() => setAppealModal(false)}
+                      style={{ flex: 1, backgroundColor: C.glass, borderRadius: 12, paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: C.glassBorder }}>
+                      <Text style={{ color: C.textMuted, fontWeight: '700' }}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      disabled={appealText.length < 20 || submittingAppeal}
+                      onPress={async () => {
+                        setSubmittingAppeal(true);
+                        try {
+                          await apiPost(`/api/complaints/${c.id}/appeal`, { phone, reason: appealText });
+                          const r = await apiGet(`/api/complaints/${c.id}?phone=${encodeURIComponent(phone)}`);
+                          setCmpDetail(r);
+                          setAppealModal(false);
+                          Alert.alert('Appeal Submitted', 'Your appeal will be reviewed by our team');
+                        } catch { Alert.alert('Error', 'Could not submit appeal — try again'); }
+                        finally { setSubmittingAppeal(false); }
+                      }}
+                      style={{ flex: 2, backgroundColor: appealText.length >= 20 ? C.yellow : C.glassMid, borderRadius: 12, paddingVertical: 14, alignItems: 'center', opacity: (appealText.length < 20 || submittingAppeal) ? 0.5 : 1 }}>
+                      <Text style={{ color: '#fff', fontWeight: '900' }}>{submittingAppeal ? 'Submitting...' : 'Submit Appeal'}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </Modal>
+          </>
         )}
 
         {/* Withdraw */}
@@ -728,6 +765,7 @@ export function ComplaintDetailScreen() {
                 await apiPost(`/api/complaints/${c.id}/withdraw`, { phone });
                 const listRes = await apiGet(`/api/complaints?phone=${encodeURIComponent(phone)}`);
                 setComplaints(listRes.complaints || []);
+                setCmpDetail(null);
                 setScreen('complaints');
               } catch {}
             }},

@@ -487,6 +487,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [hourlyBooking, setHourlyBooking] = useState<any>(null);
   const activeHourlyIdRef = useRef<string|number|null>(null);
   const activeRideIdRef   = useRef<string|number|null>(null);
+  const lastFareKmRef     = useRef<number | null>(null);
+  const lastFareDurRef    = useRef<number | null>(null); // estimated trip duration (min) for fare re-fetch on admin update
   const [hPackageHours, setHPackageHours] = useState(4);
   const [hVehicle, setHVehicle] = useState('auto');
   const [hPickup, setHPickup] = useState('');
@@ -676,6 +678,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       else if (data.type === 'ride_cancelled')                     { setScreen('home'); setDriverCancelPopup(true); }
       else if (data.type === 'no_driver_found')                    setScreen('home');
       else if (data.type === 'extension_accepted')                 setScreen('matching');
+      // Scheduled rides
+      else if (data.type === 'scheduled_ride_dispatched')          setScreen('matching');
+      else if (data.type === 'scheduled_ride_reminder')            setScreen('scheduled');
       // Wallet / payments
       else if (['cashback_earned', 'refund', 'wallet_topup'].includes(data.type)) setScreen('home');
       // Account / complaints
@@ -843,7 +848,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Fare counter animation on payment screen
   useEffect(() => {
     if (screen !== 'payment' || !rideData?.fare) return;
-    const target = Math.round(parseFloat(String(rideData.fare).replace(/[^0-9.]/g, '')) || 0);
+    const rawFare = Math.round(parseFloat(String(rideData.fare).replace(/[^0-9.]/g, '')) || 0);
+    const disc = Math.round(parseFloat(String(rideData.discount ?? '0')) || 0);
+    const target = rideData.net_fare != null ? Math.round(rideData.net_fare) : Math.max(0, rawFare - disc);
     let cur = 0; const step = Math.ceil(target / 30);
     const t = setInterval(() => { cur = Math.min(cur + step, target); setFareCount(cur); if (cur >= target) clearInterval(t); }, 40);
     return () => clearInterval(t);
@@ -1048,7 +1055,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
         }
         if (data.driver) {
-          setRideData((p: any) => p ? { ...p, startOtp: data.start_otp || p?.startOtp, driver: data.driver } : p);
+          setRideData((p: any) => p ? { ...p, status: st, startOtp: data.start_otp || p?.startOtp, driver: data.driver } : p);
           useRideStore.setState({ rideStatus: st, startOtp: data.start_otp || '' });
         } else {
           // Driver info not in socket payload — fetch from API immediately
@@ -1061,8 +1068,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 if (d.ride?.driver_name || d.ride?.driver_phone) {
                   setRideData((p: any) => p ? {
                     ...p,
+                    status: st,
                     startOtp: d.ride.start_otp || p?.startOtp,
                     fare: d.ride.fare || p?.fare,
+                    discount: d.ride.discount ?? p?.discount ?? 0,
+                    net_fare: d.ride.net_fare ?? p?.net_fare,
                     distance: d.ride.distance || p?.distance,
                     driver: {
                       name: d.ride.driver_name,
@@ -1083,7 +1093,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }
       if (st === 'searching') {
-        setRideData((p: any) => p ? { ...p, ...(data.new_fare ? { fare: data.new_fare } : {}), ...(data.new_vehicle_type ? { vehicle_type: data.new_vehicle_type } : {}) } : p);
+        setRideData((p: any) => p ? { ...p, status: 'requested', ...(data.new_fare ? { fare: data.new_fare } : {}), ...(data.new_vehicle_type ? { vehicle_type: data.new_vehicle_type } : {}) } : p);
         useRideStore.setState({ rideStatus: 'requested' });
       }
       if (st === 'pre_assigned') {
@@ -1105,6 +1115,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (data.rideId && String(data.rideId) !== String(activeRideIdRef.current)) return;
         AsyncStorage.removeItem('activeStdRideId').catch(() => {});
         useRideStore.setState({ rideStatus: 'completed' });
+        // Update rideData with net fare from server (already discount-applied)
+        if (data.fare != null) {
+          setRideData((p: any) => p ? { ...p, status: 'completed', net_fare: data.fare, discount: data.discount ?? p?.discount ?? 0 } : p);
+        }
         setScreen((cur: Screen) => (cur === 'payment' || cur === 'postride') ? cur : 'payment');
         loadWallet(phoneRef.current || userPhone);
       }
@@ -1120,6 +1134,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setScreen('home'); setResult('❌ Ride cancelled');
       }
       if (st === 'surge_offer') {
+        // Reset status so surge slider is visible (not hidden behind PreAssignedCard)
+        setRideData((p: any) => p ? { ...p, status: 'requested', driver: null } : p);
         setServerSurgeOffer({
           amt: data.suggested_surge_amt || 25,
           label: data.surge_label || `+₹${data.suggested_surge_amt || 25}`,
@@ -1129,6 +1145,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       if (st === 'no_driver_final') {
         // Both base fare and surge round failed — show alternatives + retry
+        // Reset status so no-driver UI is visible (not hidden behind PreAssignedCard)
+        setRideData((p: any) => p ? { ...p, status: 'requested', driver: null } : p);
         setServerSurgeOffer(null);
         setNoDriverFinal({
           alternatives: data.alternatives || [],
@@ -1171,6 +1189,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
     s.on('suggestAlternative', (data: any) => {
       if (data.alternatives?.length > 0) setAltSuggest({ alternatives: data.alternatives, current_type: data.current_type });
+    });
+    s.on('fareSettingsUpdated', () => {
+      fetchAppConfig();
+      if (lastFareKmRef.current !== null) {
+        loadFareEstimates(lastFareKmRef.current, lastFareDurRef.current ?? undefined);
+      } else {
+        setFareEstimates({});
+      }
     });
     socketRef.current = s;
   };
@@ -1343,7 +1369,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             const etaRes = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${lat},${lng}&destinations=${encodeURIComponent(drop)}&key=${MAPS_KEY}&mode=driving&departure_time=now`);
             const etaData = await etaRes.json();
             const el = etaData.rows?.[0]?.elements?.[0];
-            if (el?.status === 'OK') { const km = el.distance.value / 1000; setEta(`🕐 ${el.duration_in_traffic?.text || el.duration.text} · 📍 ${el.distance.text}`); loadFareEstimates(km); }
+            if (el?.status === 'OK') { const km = el.distance.value / 1000; const durMin = (el.duration_in_traffic?.value ?? el.duration?.value ?? 0) / 60; setEta(`🕐 ${el.duration_in_traffic?.text || el.duration.text} · 📍 ${el.distance.text}`); loadFareEstimates(km, durMin); }
           } catch (_e) {}
         }
         return;
@@ -1403,19 +1429,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${pc.lat},${pc.lng}&destinations=${dc.lat},${dc.lng}&key=${MAPS_KEY}&mode=driving&departure_time=now`, { cache: 'no-store' } as any);
       const data = await res.json();
       const el = data.rows?.[0]?.elements?.[0];
-      if (el?.status === 'OK') { const km = el.distance.value / 1000; setEta(`🕐 ${el.duration_in_traffic?.text || el.duration.text} · 📍 ${el.distance.text}`); loadFareEstimates(km); }
-      else setEta('');
+      if (el?.status === 'OK') {
+        const km = el.distance.value / 1000;
+        const durMin = ((el.duration_in_traffic?.value ?? el.duration?.value ?? 0) / 60);
+        setEta(`🕐 ${el.duration_in_traffic?.text || el.duration.text} · 📍 ${el.distance.text}`);
+        loadFareEstimates(km, durMin);
+      } else setEta('');
     } catch { setEta(''); }
   };
 
-  const loadFareEstimates = async (km: number) => {
+  const loadFareEstimates = async (km: number, durationMin?: number) => {
+    lastFareKmRef.current = km;
+    if (durationMin != null) lastFareDurRef.current = durationMin;
     setFareLoading(true);
     const est: any = {};
+    const durMin = durationMin ?? lastFareDurRef.current ?? (km / 20) * 60;
     await Promise.all(RIDES.map(async (r) => {
       try {
-        const res = await fetch(`${API}/api/fare-estimate`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' }, body: JSON.stringify({ ride_type: r.id, distance: km }) });
+        const res = await fetch(`${API}/api/fare-estimate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
+          body: JSON.stringify({ ride_type: r.id, distance: km, duration_min: durMin }),
+        });
         const d = await res.json();
-        if (!d.error && d.fare != null) est[r.id] = { fare: d.fare, base_fare: d.base_fare, per_km_rate: d.per_km_rate };
+        if (!d.error && d.fare != null) {
+          est[r.id] = {
+            fare:         d.fare,
+            base_fare:    d.base_fare,
+            dist_fare:    d.dist_fare,
+            time_fare:    d.time_fare,
+            platform_fee: d.platform_fee,
+            min_fare:     d.min_fare,
+            per_km_rate:  d.per_km_rate,
+            is_night:     d.is_night,
+            is_min_applied: d.is_min_applied,
+          };
+        }
       } catch (_e) {}
     }));
     setFareEstimates(est); setFareLoading(false);
@@ -1448,6 +1497,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const ddata = await externalGet(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(pickup)}&destinations=${encodeURIComponent(drop)}&key=${MAPS_KEY}&mode=driving&departure_time=now`);
       const el = ddata._error ? null : ddata.rows?.[0]?.elements?.[0];
       const distanceKm = el?.status === 'OK' ? el.distance.value / 1000 : 5;
+      const durationMin = el?.status === 'OK' ? (el.duration_in_traffic?.value ?? el.duration?.value ?? 0) / 60 : (distanceKm / 20) * 60;
       // Resolve drop coords inline — can't read state immediately after setDropCoords
       let dropLat = dropCoords?.lat;
       let dropLng = dropCoords?.lng;
@@ -1461,6 +1511,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       const data = await apiPost('/api/rides/book', {
         passenger_phone: phone || '9999999999', pickup, drop_location: drop, ride_type: rideType, distance: distanceKm,
+        duration_min: durationMin,
         pickup_lat: pickupCoords?.lat, pickup_lng: pickupCoords?.lng, drop_lat: dropLat, drop_lng: dropLng,
         discount: promoDiscount, promo_code: promoDiscount > 0 ? promoCode : null
       });
@@ -1468,7 +1519,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (promoDiscount > 0 && data.ride_id) {
         try { await apiPost('/api/promo/apply', { code: promoCode, phone, ride_id: data.ride_id, discount: promoDiscount }); } catch (_e) {}
       }
-      setRideData(data); setScreen('matching'); setResult(''); setAltSuggest(null);
+      setRideData({ ...data, discount: data.discount ?? promoDiscount ?? 0, platform_fee: data.platform_fee ?? 2 }); setScreen('matching'); setResult(''); setAltSuggest(null);
       AsyncStorage.setItem('activeStdRideId', String(data.ride_id)).catch(() => {});
       // Save fare to route history (for "last time ₹XX" display on BookingScreen)
       try {
@@ -1538,10 +1589,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // ── Payment ──────────────────────────────────────────────────────────────
+  const _netFare = () => {
+    const rawF = Math.round(parseFloat(String(rideData?.fare ?? '').replace(/[^0-9.]/g, '')) || 0);
+    const disc  = Math.round(parseFloat(String(rideData?.discount ?? '0')) || 0);
+    return (rideData?.net_fare != null ? Math.round(rideData.net_fare) : Math.max(0, rawF - disc)) || fareCount;
+  };
+
   const handlePayment = async () => {
     if (!RazorpayCheckout) { Alert.alert('Payment Error', 'Payment module failed to load. Please restart the app.'); return; }
     try {
-      const fareNum = Math.round(parseFloat(String(rideData?.fare ?? '').replace(/[^0-9.]/g, '')) || 0) || fareCount;
+      const fareNum = _netFare();
       const order = await apiPost('/api/payment/create-order', { amount: fareNum, ride_id: rideData.ride_id });
       if (!order.success) { setResult('❌ ' + (order.error || 'Could not create order')); return; }
       RazorpayCheckout.open({ description: 'Sppero Trip', currency: 'INR', key: order.key_id, amount: order.amount, order_id: order.order_id, name: 'Sppero', prefill: { contact: phone, name: userName || 'User' }, theme: { color: C.pink } })
@@ -1560,7 +1617,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const payWithWallet = async () => {
     if (payingRef.current) return; // Prevent double-tap during async call
     payingRef.current = true;
-    const fareNum = Math.round(parseFloat(String(rideData?.fare ?? '').replace(/[^0-9.]/g, '')) || 0) || fareCount;
+    const fareNum = _netFare();
     if (walletBalance < fareNum) {
       setResult(`❌ Balance kam hai! ₹${walletBalance} hai`);
       payingRef.current = false; return;

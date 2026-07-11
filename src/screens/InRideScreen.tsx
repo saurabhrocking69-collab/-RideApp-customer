@@ -154,9 +154,11 @@ export function InRideScreen() {
   const vType  = (rideData?.vehicle_type || rideData?.ride_type || rideType || 'auto').toLowerCase();
   const vEmoji = VEHICLE_EMOJI[vType] || '🚗';
 
-  const fareNum  = Math.round(parseFloat(String(rideData?.fare ?? '').replace(/[^0-9.]/g, '')) || 0);
-  const fareGst  = fareNum > 0 ? Math.round((fareNum * 5 / 105) * 100) / 100 : 0;
-  const fareBase = fareNum > 0 ? Math.round((fareNum - fareGst) * 100) / 100 : 0;
+  const rawFareNum  = Math.round(parseFloat(String(rideData?.fare ?? '').replace(/[^0-9.]/g, '')) || 0);
+  const discountAmt = Math.round(parseFloat(String(rideData?.discount   ?? '0')) || 0);
+  const platFeeAmt  = Math.round(parseFloat(String(rideData?.platform_fee ?? '2')) || 2);
+  const fareNum     = rideData?.net_fare != null ? Math.round(rideData.net_fare) : Math.max(0, rawFareNum - discountAmt);
+  const tripSubtotal = Math.max(0, fareNum - platFeeAmt); // fare excluding platform fee, for breakdown display
 
   return (
     <View style={s.screen}>
@@ -269,9 +271,9 @@ export function InRideScreen() {
                       {driverDist ? `📍 ${driverDist} bacha` : `📏 ${rideData?.distance}`}
                     </Text>
                   </View>
-                  {rideData?.fare ? (
+                  {fareNum > 0 ? (
                     <View style={{ backgroundColor: C.pinkGlass, borderRadius: R.xs, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: C.pinkBorder }}>
-                      <Text style={{ ...T.caption, color: C.pink }}>₹ {String(rideData.fare).replace('₹', '')}</Text>
+                      <Text style={{ ...T.caption, color: C.pink }}>₹{fareNum}</Text>
                     </View>
                   ) : null}
                 </View>
@@ -292,17 +294,33 @@ export function InRideScreen() {
               marginBottom: 10, borderWidth: 1, borderColor: C.glassBorder,
             }}>
               <Text style={{ ...T.label, color: C.textMuted, marginBottom: 10 }}>FARE BREAKDOWN</Text>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                <Text style={{ fontSize: 13, color: C.textMuted }}>Base Fare</Text>
-                <Text style={{ fontSize: 13, color: C.text, fontVariant: ['tabular-nums'] }}>₹{fareBase.toFixed(0)}</Text>
-              </View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-                <Text style={{ fontSize: 13, color: C.textMuted }}>GST (5%)</Text>
-                <Text style={{ fontSize: 13, color: C.text, fontVariant: ['tabular-nums'] }}>₹{fareGst.toFixed(0)}</Text>
-              </View>
+              {discountAmt > 0 && (
+                <>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <Text style={{ fontSize: 13, color: C.textMuted }}>Trip Fare</Text>
+                    <Text style={{ fontSize: 13, color: C.text, fontVariant: ['tabular-nums'] }}>₹{rawFareNum}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <Text style={{ fontSize: 13, color: C.green }}>Coupon Discount</Text>
+                    <Text style={{ fontSize: 13, color: C.green, fontVariant: ['tabular-nums'] }}>−₹{discountAmt}</Text>
+                  </View>
+                </>
+              )}
+              {discountAmt === 0 && (
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <Text style={{ fontSize: 13, color: C.textMuted }}>Trip Fare</Text>
+                  <Text style={{ fontSize: 13, color: C.text, fontVariant: ['tabular-nums'] }}>₹{tripSubtotal}</Text>
+                </View>
+              )}
+              {platFeeAmt > 0 && (
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <Text style={{ fontSize: 13, color: C.textMuted }}>Platform Fee</Text>
+                  <Text style={{ fontSize: 13, color: C.text, fontVariant: ['tabular-nums'] }}>₹{platFeeAmt}</Text>
+                </View>
+              )}
               <View style={{ height: 1, backgroundColor: C.glassBorder, marginBottom: 10 }} />
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ fontSize: 15, color: C.text, fontWeight: '800' }}>Total</Text>
+                <Text style={{ fontSize: 15, color: C.text, fontWeight: '800' }}>You Pay</Text>
                 <Text style={{ fontSize: 22, color: C.pink, fontWeight: '900', fontVariant: ['tabular-nums'] }}>₹{fareNum}</Text>
               </View>
             </View>

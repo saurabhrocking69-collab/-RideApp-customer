@@ -55,7 +55,7 @@ export function HourlyScreen() {
         if (d.booking?.status === 'active') {
           setHourlyBooking((p: any) => ({ ...p, status: 'active', started_at: d.booking.started_at, driver_phone: d.booking.driver_phone }));
           setHourlyStep('active');
-        } else if (d.booking?.status === 'matched') {
+        } else if (d.booking?.status === 'matched' || d.booking?.status === 'arrived') {
           setHourlyBooking((p: any) => ({ ...p, ...d.booking, driver: d.driver }));
           setHourlyStep('active');
         }
@@ -316,14 +316,16 @@ export function HourlyScreen() {
           );
         })()}
 
-        {hourlyBooking?.status === 'matched' && (() => {
+        {(hourlyBooking?.status === 'matched' || hourlyBooking?.status === 'arrived') && (() => {
           const farAway = hourlyBooking?.scheduled_at &&
             (new Date(hourlyBooking.scheduled_at).getTime() - Date.now() > 20 * 60 * 1000);
           if (farAway) return null;
+          const driverArrived = hourlyBooking?.status === 'arrived' || hourlyBooking?.driver_arrived;
           return (
-            <View style={{ backgroundColor: C.yellowGlass, borderRadius: 14, padding: 16, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor: C.yellowBorder }}>
-              <Text style={{ color: C.textMuted, fontSize: 12, marginBottom: 6 }}>Share this OTP with driver — trip will start</Text>
-              <Text style={{ fontSize: 38, fontWeight: '900', color: C.yellow, letterSpacing: 8, textShadowColor: C.yellow, textShadowRadius: 8 }}>{hourlyBooking?.otp}</Text>
+            <View style={{ backgroundColor: driverArrived ? C.greenGlass : C.yellowGlass, borderRadius: 14, padding: 16, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor: driverArrived ? C.greenBorder : C.yellowBorder }}>
+              {driverArrived && <Text style={{ fontSize: 13, fontWeight: '800', color: C.green, marginBottom: 6 }}>📍 Driver pahunch gaya! OTP share karo</Text>}
+              <Text style={{ color: C.textMuted, fontSize: 12, marginBottom: 6 }}>{driverArrived ? 'Trip shuru karne ke liye driver ko batao' : 'Share this OTP with driver — trip will start'}</Text>
+              <Text style={{ fontSize: 38, fontWeight: '900', color: driverArrived ? C.green : C.yellow, letterSpacing: 8 }}>{hourlyBooking?.otp}</Text>
             </View>
           );
         })()}

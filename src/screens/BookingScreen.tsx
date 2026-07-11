@@ -1,4 +1,4 @@
-import { ActivityIndicator, Animated, Dimensions, KeyboardAvoidingView, Modal, PanResponder, Platform, ScrollView, StatusBar, TextInput, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Dimensions, Easing, KeyboardAvoidingView, Modal, PanResponder, Platform, ScrollView, StatusBar, StyleSheet, TextInput, Text, TouchableOpacity, View } from 'react-native';
 import { useState, useRef, useEffect } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -54,12 +54,18 @@ export function BookingScreen() {
     Object.fromEntries(RIDES.map((r: any) => [r.id, { ty: new Animated.Value(38), op: new Animated.Value(0) }]))
   ).current;
   const bookPulseAnim = useRef(new Animated.Value(1)).current;
-  const _est      = fareEstimates[rideType];
-  const rawFare   = (_est?.fare ?? _est) || 0;
-  const estBase   = _est?.base_fare ?? appConfig?.fares?.[rideType]?.base_fare ?? selRide?.base ?? 0;
-  const discount  = promoDiscount;
-  const finalFare = Math.max(0, rawFare - discount);
-  const hasFare   = rawFare > 0 && !fareLoading;
+  const _est        = fareEstimates[rideType];
+  const rawFare     = (_est?.fare ?? _est) || 0;
+  const estBase     = _est?.base_fare ?? appConfig?.fares?.[rideType]?.base_fare ?? selRide?.base ?? 0;
+  const estDistFare = Math.round(_est?.dist_fare ?? 0);
+  const estTimeFare = Math.round(_est?.time_fare ?? 0);
+  const estPlatFee  = Math.round(parseFloat(String(_est?.platform_fee ?? 2)) || 2);
+  const isNightFare  = _est?.is_night ?? false;
+  const isMinApplied = _est?.is_min_applied ?? false;
+  const discount    = promoDiscount;
+  const finalFare   = Math.max(0, rawFare - discount);
+  const tripSubtotal = Math.max(0, finalFare - estPlatFee);
+  const hasFare     = rawFare > 0 && !fareLoading;
 
   // ── Saved places (Home / Office / Other) ────────────────────────────────────
   type SavedPlace = { text: string; coords: { lat: number; lng: number } };
@@ -321,6 +327,27 @@ export function BookingScreen() {
   // ── Pickup map picker ─────────────────────────────────────────────────────────
   const [pickerCoords, setPickerCoords]     = useState<{ lat: number; lng: number } | null>(null);
   const [pickerLoading, setPickerLoading]   = useState(false);
+
+  // Pulsing shimmer when GPS is being fetched
+  const pickupLocAnim = useRef(new Animated.Value(0.4)).current;
+  useEffect(() => {
+    if (!pickerLoading) { pickupLocAnim.setValue(0.4); return; }
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pickupLocAnim, { toValue: 1,   duration: 540, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+      Animated.timing(pickupLocAnim, { toValue: 0.4, duration: 540, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pickerLoading]);
+
+  // Seed userCoords from cache on mount so walk line appears without user tapping GPS
+  useEffect(() => {
+    Location.getLastKnownPositionAsync({}).then(loc => {
+      if (loc && !userCoords) {
+        setUserCoords({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+      }
+    }).catch(() => {});
+  }, []);
 
   // ── Drop map picker ───────────────────────────────────────────────────────────
   const [dropPickerOpen, setDropPickerOpen]     = useState(false);
@@ -747,25 +774,41 @@ export function BookingScreen() {
               }}>
                 {/* Pickup row */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ width: 13, height: 13, borderRadius: 6.5, backgroundColor: C.green, borderWidth: 2.5, borderColor: 'rgba(5,150,105,0.3)' }} />
-                  <TextInput
-                    style={{ flex: 1, fontSize: 14, color: C.text, fontWeight: '600', paddingVertical: 9 }}
-                    placeholder="Pickup location..."
-                    placeholderTextColor={C.textDim}
-                    value={pickup}
-                    onFocus={() => setInputFocused(true)}
-                    onBlur={() => setInputFocused(false)}
-                    onChangeText={(t) => {
-                      setPickup(t);
-                      searchPlaces(t, 'pickup');
-                      if (pickupCoords || !t) { setPickupCoords(null); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; }
-                    }}
-                    returnKeyType="next"
-                  />
+                  {/* Pulsing green tint overlay while GPS locating */}
+                  {pickerLoading && (
+                    <Animated.View style={[
+                      StyleSheet.absoluteFillObject,
+                      { borderRadius: 10, backgroundColor: C.greenGlass, opacity: pickupLocAnim },
+                    ]} pointerEvents="none" />
+                  )}
+                  <Animated.View style={[
+                    { width: 13, height: 13, borderRadius: 6.5, backgroundColor: C.green, borderWidth: 2.5, borderColor: 'rgba(5,150,105,0.3)' },
+                    pickerLoading && { transform: [{ scale: pickupLocAnim.interpolate({ inputRange: [0.4, 1], outputRange: [0.85, 1.25] }) }] },
+                  ]} />
                   {pickerLoading ? (
-                    <View style={{ padding: 7 }}>
-                      <ActivityIndicator size="small" color={C.pink} />
-                    </View>
+                    <Animated.Text style={{ flex: 1, fontSize: 13, color: C.green, fontWeight: '700', paddingVertical: 9, opacity: pickupLocAnim }}>
+                      Finding your location…
+                    </Animated.Text>
+                  ) : (
+                    <TextInput
+                      style={{ flex: 1, fontSize: 14, color: C.text, fontWeight: '600', paddingVertical: 9 }}
+                      placeholder="Pickup location..."
+                      placeholderTextColor={C.textDim}
+                      value={pickup}
+                      onFocus={() => setInputFocused(true)}
+                      onBlur={() => setInputFocused(false)}
+                      onChangeText={(t) => {
+                        setPickup(t);
+                        searchPlaces(t, 'pickup');
+                        if (pickupCoords || !t) { setPickupCoords(null); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; }
+                      }}
+                      returnKeyType="next"
+                    />
+                  )}
+                  {pickerLoading ? (
+                    <Animated.View style={{ padding: 7, opacity: pickupLocAnim }}>
+                      <ActivityIndicator size="small" color={C.green} />
+                    </Animated.View>
                   ) : pickup ? (
                     <TouchableOpacity onPress={() => { setPickup(''); setPickupCoords(null); setPickupSugg([]); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; }} style={{ padding: 4 }}>
                       <Ionicons name="close-circle" size={19} color={C.textDim} />
@@ -1313,8 +1356,30 @@ export function BookingScreen() {
                   <Text style={{ fontSize: 13, fontWeight: '600', color: C.text }}>₹{estBase}</Text>
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text style={{ fontSize: 13, color: C.textMuted }}>Distance charge</Text>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: C.text }}>₹{rawFare - estBase > 0 ? rawFare - estBase : '—'}</Text>
+                  <Text style={{ fontSize: 13, color: C.textMuted }}>Distance fare</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: C.text }}>₹{estDistFare > 0 ? estDistFare : '—'}</Text>
+                </View>
+                {estTimeFare > 0 && (
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ fontSize: 13, color: C.textMuted }}>Time fare</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: C.text }}>₹{estTimeFare}</Text>
+                  </View>
+                )}
+                {isNightFare && (
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ fontSize: 13, color: '#7c6ef5', fontWeight: '700' }}>🌙 Night multiplier</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#7c6ef5' }}>Applied</Text>
+                  </View>
+                )}
+                {isMinApplied && (
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ fontSize: 13, color: C.textMuted, fontStyle: 'italic' }}>Min fare applied</Text>
+                    <Text style={{ fontSize: 13, color: C.textMuted, fontStyle: 'italic' }}>₹{_est?.min_fare ?? 0}</Text>
+                  </View>
+                )}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ fontSize: 13, color: C.textMuted }}>Platform fee</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: C.text }}>₹{estPlatFee}</Text>
                 </View>
                 {surgeLabel && (
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -1330,7 +1395,12 @@ export function BookingScreen() {
                 )}
                 <View style={{ height: 1, backgroundColor: C.glassBorder, marginVertical: 2 }} />
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>Total</Text>
+                  <View>
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>Total</Text>
+                    {discount > 0 && (
+                      <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 1 }}>Trip ₹{tripSubtotal} + Platform ₹{estPlatFee}</Text>
+                    )}
+                  </View>
                   <Text style={{ fontSize: 22, fontWeight: '900', color: C.yellow }}>₹{finalFare}</Text>
                 </View>
               </View>

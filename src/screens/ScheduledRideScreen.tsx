@@ -240,11 +240,29 @@ export function ScheduledRideScreen() {
     if (schedTime <= new Date(Date.now() + 29 * 60 * 1000)) { setMsg('⚠️ Please schedule at least 30 min ahead'); return; }
     setLoading(true); setMsg('');
     try {
+      // Auto-geocode if user typed addresses manually without selecting from suggestions
+      let pCoords = pickupCoords;
+      let dCoords = dropCoords;
+      if (!pCoords) {
+        setMsg('📍 Resolving pickup location...');
+        const gRes = await externalGet(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(pickup)}&key=${MAPS_KEY}`).catch(() => null);
+        const loc = gRes?.results?.[0]?.geometry?.location;
+        if (loc) { pCoords = { lat: loc.lat, lng: loc.lng }; setPickupCoords(pCoords); }
+      }
+      if (!dCoords) {
+        setMsg('📍 Resolving drop location...');
+        const gRes = await externalGet(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(drop)}&key=${MAPS_KEY}`).catch(() => null);
+        const loc = gRes?.results?.[0]?.geometry?.location;
+        if (loc) { dCoords = { lat: loc.lat, lng: loc.lng }; setDropCoords(dCoords); }
+      }
+      if (!pCoords) { setMsg('❌ Could not find pickup location on map — select from suggestions'); setLoading(false); return; }
+      if (!dCoords) { setMsg('❌ Could not find drop location on map — select from suggestions'); setLoading(false); return; }
+      setMsg('');
       const d = await apiPost('/api/rides/schedule', {
         customer_phone: phone,
         pickup, drop_location: drop,
-        pickup_lat: pickupCoords?.lat, pickup_lng: pickupCoords?.lng,
-        drop_lat: dropCoords?.lat, drop_lng: dropCoords?.lng,
+        pickup_lat: pCoords.lat, pickup_lng: pCoords.lng,
+        drop_lat: dCoords.lat, drop_lng: dCoords.lng,
         vehicle_type: vehicle,
         scheduled_at: schedTime.toISOString(),
         fare_estimate: fareEst || 0,
@@ -358,9 +376,21 @@ export function ScheduledRideScreen() {
                             {r.fare_estimate > 0 ? ` · ~₹${r.fare_estimate}` : ''}
                           </Text>
                         </View>
-                        <View style={{ backgroundColor: C.greenGlass, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: C.greenBorder }}>
-                          <Text style={{ fontSize: 10, fontWeight: '800', color: C.green }}>SCHEDULED</Text>
-                        </View>
+                        {(() => {
+                          const BADGE: Record<string, { bg: string; border: string; color: string; label: string }> = {
+                            pending:     { bg: C.greenGlass,  border: C.greenBorder,  color: C.green,  label: 'PENDING'     },
+                            dispatching: { bg: C.yellowGlass, border: C.yellowBorder, color: C.yellow, label: 'DISPATCHING' },
+                            dispatched:  { bg: C.pinkGlass,   border: C.pinkBorder,   color: C.pink,   label: 'FINDING DRIVER' },
+                            failed:      { bg: C.redGlass,    border: C.redBorder,    color: C.red,    label: 'FAILED'      },
+                            cancelled:   { bg: C.redGlass,    border: C.redBorder,    color: C.red,    label: 'CANCELLED'   },
+                          };
+                          const badge = BADGE[r.status] || { bg: C.glass, border: C.glassBorder, color: C.textMuted, label: (r.status || 'unknown').toUpperCase() };
+                          return (
+                            <View style={{ backgroundColor: badge.bg, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: badge.border }}>
+                              <Text style={{ fontSize: 10, fontWeight: '800', color: badge.color }}>{badge.label}</Text>
+                            </View>
+                          );
+                        })()}
                       </View>
                       <View style={{ backgroundColor: C.glass, borderRadius: 12, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: C.glassBorder }}>
                         <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 }}>
@@ -375,10 +405,22 @@ export function ScheduledRideScreen() {
                       {r.notes ? (
                         <Text style={{ fontSize: 11, color: C.textDim, marginBottom: 10, fontStyle: 'italic' }}>📝 {r.notes}</Text>
                       ) : null}
-                      <TouchableOpacity onPress={() => cancelScheduled(r.id)}
-                        style={{ backgroundColor: C.redGlass, borderRadius: 12, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: C.redBorder }}>
-                        <Text style={{ color: C.red, fontWeight: '700', fontSize: 13 }}>✕ Cancel This Ride</Text>
-                      </TouchableOpacity>
+                      {r.status === 'failed' && (
+                        <View style={{ backgroundColor: C.redGlass, borderRadius: 10, padding: 10, marginBottom: 10, borderWidth: 1, borderColor: C.redBorder }}>
+                          <Text style={{ fontSize: 12, color: C.red, fontWeight: '700' }}>⚠️ No driver found for this slot. Please book again or contact support.</Text>
+                        </View>
+                      )}
+                      {r.status === 'dispatched' && (
+                        <View style={{ backgroundColor: C.pinkGlass, borderRadius: 10, padding: 10, marginBottom: 10, borderWidth: 1, borderColor: C.pinkBorder }}>
+                          <Text style={{ fontSize: 12, color: C.pink, fontWeight: '700' }}>🔍 Driver search in progress — check your ride screen</Text>
+                        </View>
+                      )}
+                      {r.status === 'pending' && (
+                        <TouchableOpacity onPress={() => cancelScheduled(r.id)}
+                          style={{ backgroundColor: C.redGlass, borderRadius: 12, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: C.redBorder }}>
+                          <Text style={{ color: C.red, fontWeight: '700', fontSize: 13 }}>✕ Cancel This Ride</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   </SlideUp>
                 ))}

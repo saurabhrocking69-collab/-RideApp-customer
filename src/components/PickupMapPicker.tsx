@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Dimensions,
+  Easing,
   Modal,
   Platform,
   StatusBar,
@@ -58,6 +60,19 @@ export function PickupMapPicker({
 
   const isDrop = mode === 'drop';
 
+  // ── Map skeleton ──────────────────────────────────────────────────────────
+  const [mapReady, setMapReady] = useState(false);
+  const skeletonOpacity = useRef(new Animated.Value(1)).current;
+  const skeletonScale   = useRef(new Animated.Value(1)).current;
+
+  const onMapReadyCb = useCallback(() => {
+    setMapReady(true);
+    Animated.parallel([
+      Animated.timing(skeletonOpacity, { toValue: 0, duration: 420, useNativeDriver: true, easing: Easing.out(Easing.ease) }),
+      Animated.timing(skeletonScale,   { toValue: 1.04, duration: 420, useNativeDriver: true, easing: Easing.out(Easing.ease) }),
+    ]).start();
+  }, []);
+
   const doGeocode = async (lat: number, lng: number) => {
     setGeocoding(true);
     try {
@@ -73,7 +88,13 @@ export function PickupMapPicker({
   };
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible) {
+      // Reset skeleton so next open starts with loading state
+      setMapReady(false);
+      skeletonOpacity.setValue(1);
+      skeletonScale.setValue(1);
+      return;
+    }
     currentCoords.current = initialCoords;
     setMapCenter(initialCoords);
     setAddress('');
@@ -144,6 +165,7 @@ export function PickupMapPicker({
               longitudeDelta: isDrop ? 0.012 : 0.003,
             }}
             onRegionChangeComplete={onRegionChangeComplete}
+            onMapReady={onMapReadyCb}
             showsUserLocation
             showsMyLocationButton={false}
             rotateEnabled={false}
@@ -207,6 +229,39 @@ export function PickupMapPicker({
               </>
             )}
           </MapView>
+
+          {/* ─── Map skeleton — fades out when map tiles finish loading ─── */}
+          <Animated.View
+            style={[
+              StyleSheet.absoluteFillObject,
+              { opacity: skeletonOpacity, transform: [{ scale: skeletonScale }], zIndex: 20, backgroundColor: '#f0ebe0' },
+            ]}
+            pointerEvents={mapReady ? 'none' : 'box-only'}
+          >
+            {/* Road-like skeleton bars */}
+            <View style={{ position: 'absolute', top: '28%', left: 0, right: 0, height: 16, backgroundColor: '#fde68a' }} />
+            <View style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 12, backgroundColor: '#fde68a' }} />
+            <View style={{ position: 'absolute', top: '70%', left: 0, right: 0, height: 10, backgroundColor: '#fde68a' }} />
+            <View style={{ position: 'absolute', top: 0, bottom: 0, left: '38%', width: 16, backgroundColor: '#fde68a' }} />
+            <View style={{ position: 'absolute', top: 0, bottom: 0, left: '62%', width: 22, backgroundColor: '#fbbf24' }} />
+            {/* Center loading pin */}
+            <View style={{ ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', marginBottom: 60 }}>
+              <View style={{
+                backgroundColor: pinColor, borderRadius: 24, padding: 11,
+                elevation: 8, shadowColor: pinColor, shadowOpacity: 0.45, shadowRadius: 12,
+                borderWidth: 2.5, borderColor: '#fff',
+              }}>
+                <Ionicons name="location-sharp" size={24} color="#fff" />
+              </View>
+              <View style={{ width: 3, height: 14, backgroundColor: pinColor, borderRadius: 2 }} />
+              <View style={{ marginTop: 14, backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 8, elevation: 4 }}>
+                <ActivityIndicator size="small" color={pinColor} />
+                <Text style={{ fontSize: 12, fontWeight: '700', color: isDrop ? '#7E22CE' : '#1D4ED8' }}>
+                  Loading map…
+                </Text>
+              </View>
+            </View>
+          </Animated.View>
 
           {/* Fixed pin — tip rests at the map center */}
           <View style={StyleSheet.absoluteFillObject} pointerEvents="none">

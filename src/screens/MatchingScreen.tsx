@@ -693,6 +693,11 @@ export function MatchingScreen() {
   const waitSecRem     = driverWaitSec % 60;
   const origFare       = cancelInfo?.wait_fare_orig ?? 0;
   const newFare        = cancelInfo?.wait_fare_new_total ?? origFare;
+  const baseRideFare   = (() => {
+    const rawF = Math.round(parseFloat(String(rideData?.fare ?? '').replace(/[^0-9.]/g, '')) || 0);
+    const disc  = Math.round(parseFloat(String(rideData?.discount ?? '0')) || 0);
+    return rideData?.net_fare != null ? Math.round(rideData.net_fare) : Math.max(0, rawF - disc);
+  })();
 
   const etaMins        = etaRemaining > 0 ? Math.ceil(etaRemaining / 60) : 0;
   const etaDisplay     = !etaRemaining ? (driverEta || '...') : etaMins <= 1 ? '< 1 min' : `${etaMins} min`;
@@ -982,7 +987,7 @@ export function MatchingScreen() {
                   <Ionicons name="map" size={13} color={C.textMuted} />
                   <Text style={{ fontSize: 10, fontWeight: '900', color: C.textMuted, letterSpacing: 1.3, flex: 1 }}>TRIP DETAILS</Text>
                   <Text style={{ fontSize: 18, fontWeight: '900', color: C.yellow }}>
-                    {waitFareAdd > 0 ? `₹${newFare}` : (surgeFare || rideData.fare)}
+                    {waitFareAdd > 0 ? `₹${newFare}` : (surgeFare || `₹${baseRideFare}`)}
                   </Text>
                 </View>
 

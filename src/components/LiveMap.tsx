@@ -631,9 +631,11 @@ export const LiveMap = memo(function LiveMap({
         {/* ── Walk-to-pickup dotted line (user GPS → pickup point) ─────────── */}
         {walkOrigin && pickupCoords && (() => {
           const distM = haversineM(walkOrigin.lat, walkOrigin.lng, pickupCoords.lat, pickupCoords.lng);
-          if (distM < 100) return null;
+          if (distM < 25) return null;
           const midLat = (walkOrigin.lat + pickupCoords.lat) / 2;
           const midLng = (walkOrigin.lng + pickupCoords.lng) / 2;
+          // key forces Marker remount when midpoint shifts ~50m so chip re-renders on Android
+          const chipKey = `wc-${Math.round(midLat * 2000)}-${Math.round(midLng * 2000)}`;
           return (
             <>
               <Polyline
@@ -647,6 +649,7 @@ export const LiveMap = memo(function LiveMap({
                 lineCap="butt"
               />
               <Marker
+                key={chipKey}
                 coordinate={{ latitude: midLat, longitude: midLng }}
                 anchor={{ x: 0.5, y: 1 }}
                 tracksViewChanges={false}
@@ -789,7 +792,7 @@ export const LiveMap = memo(function LiveMap({
       {/* Walk-to-pickup hint pill */}
       {walkOrigin && pickupCoords && mode !== 'inride' && (() => {
         const distM = haversineM(walkOrigin.lat, walkOrigin.lng, pickupCoords.lat, pickupCoords.lng);
-        if (distM < 100) return null;
+        if (distM < 25) return null;
         const dist = distM < 1000 ? `${Math.round(distM)}m` : `${(distM / 1000).toFixed(1)}km`;
         const mins = Math.max(1, Math.ceil(distM / 83));
         return (
