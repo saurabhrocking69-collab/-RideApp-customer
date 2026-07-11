@@ -824,23 +824,23 @@ export const LiveMap = memo(function LiveMap({
 
 // ── Sppero brand map style — clean light, minimal clutter ────────────────────
 const MAP_STYLE = [
-  { elementType: 'geometry',                              stylers: [{ color: '#f8f6ee' }] },
-  { elementType: 'labels.text.stroke',                    stylers: [{ color: '#f8f6ee' }, { weight: 3 }] },
+  { elementType: 'geometry',                              stylers: [{ color: '#F7F8FA' }] },
+  { elementType: 'labels.text.stroke',                    stylers: [{ color: '#F7F8FA' }, { weight: 3 }] },
   { elementType: 'labels.text.fill',                      stylers: [{ color: '#374151' }] },
 
-  // Roads — vibrant yellow
-  { featureType: 'road',          elementType: 'geometry',        stylers: [{ color: '#fde68a' }] },
-  { featureType: 'road',          elementType: 'geometry.stroke',  stylers: [{ color: '#f59e0b' }, { weight: 0.8 }] },
-  { featureType: 'road.highway',  elementType: 'geometry',        stylers: [{ color: '#fbbf24' }] },
-  { featureType: 'road.highway',  elementType: 'geometry.stroke',  stylers: [{ color: '#d97706' }, { weight: 1.2 }] },
+  // Roads — clean white/light grey
+  { featureType: 'road',          elementType: 'geometry',        stylers: [{ color: '#FFFFFF' }] },
+  { featureType: 'road',          elementType: 'geometry.stroke',  stylers: [{ color: '#DDE1EA' }, { weight: 0.8 }] },
+  { featureType: 'road.highway',  elementType: 'geometry',        stylers: [{ color: '#EFF3FB' }] },
+  { featureType: 'road.highway',  elementType: 'geometry.stroke',  stylers: [{ color: '#C8D3E8' }, { weight: 1.2 }] },
   { featureType: 'road',          elementType: 'labels.icon',     stylers: [{ visibility: 'off' }] },
 
-  // Water
-  { featureType: 'water',         elementType: 'geometry',        stylers: [{ color: '#bfdbfe' }] },
-  { featureType: 'water',         elementType: 'labels.text.fill', stylers: [{ color: '#60a5fa' }] },
+  // Water — soft blue
+  { featureType: 'water',         elementType: 'geometry',        stylers: [{ color: '#CAE0F5' }] },
+  { featureType: 'water',         elementType: 'labels.text.fill', stylers: [{ color: '#5A9FD4' }] },
 
-  // Landscape base
-  { featureType: 'landscape',     elementType: 'geometry',        stylers: [{ color: '#f0ebe0' }] },
+  // Landscape base — very light cool grey
+  { featureType: 'landscape',     elementType: 'geometry',        stylers: [{ color: '#EDEEF2' }] },
 
   // Parks & green spaces — visible and green
   { featureType: 'poi.park',      elementType: 'geometry',        stylers: [{ color: '#bbf7d0' }] },

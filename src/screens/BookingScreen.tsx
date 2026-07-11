@@ -1,4 +1,4 @@
-import { ActivityIndicator, Animated, Dimensions, Easing, KeyboardAvoidingView, Modal, PanResponder, Platform, ScrollView, StatusBar, StyleSheet, TextInput, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Dimensions, Easing, KeyboardAvoidingView, Modal, Platform, ScrollView, StatusBar, StyleSheet, TextInput, Text, TouchableOpacity, View } from 'react-native';
 import { useState, useRef, useEffect } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,11 +16,7 @@ import { useNearbyDrivers } from '../offline';
 const SCREEN_H   = Dimensions.get('window').height;
 const DRAWER_COMPACT = Math.round(SCREEN_H * 0.40); // route confirmed — 60% map visible
 const DRAWER_INPUT   = Math.round(SCREEN_H * 0.56); // searching / editing
-const DRAWER_BROWSE  = Math.round(SCREEN_H * 0.58); // expanded to browse vehicles
-
-const SWIPE_H     = 58;  // swipe-to-book track height
-const SWIPE_THUMB = 46;  // draggable thumb diameter
-const SWIPE_PAD   = 6;   // thumb inset from track edge
+const DRAWER_BROWSE  = Math.round(SCREEN_H * 0.68); // expanded on tap — 10% more than before
 
 export function BookingScreen() {
   const { bottom: bottomInset } = useSafeAreaInsets();
@@ -53,10 +49,9 @@ export function BookingScreen() {
   const cardEntryAnims = useRef<Record<string, { ty: Animated.Value; op: Animated.Value }>>(
     Object.fromEntries(RIDES.map((r: any) => [r.id, { ty: new Animated.Value(38), op: new Animated.Value(0) }]))
   ).current;
-  const bookPulseAnim = useRef(new Animated.Value(1)).current;
+  const bookPulseAnim = useRef(new Animated.Value(1)).current; // kept for layout compat
   const _est        = fareEstimates[rideType];
   const rawFare     = (_est?.fare ?? _est) || 0;
-  const estBase     = _est?.base_fare ?? appConfig?.fares?.[rideType]?.base_fare ?? selRide?.base ?? 0;
   const estDistFare = Math.round(_est?.dist_fare ?? 0);
   const estTimeFare = Math.round(_est?.time_fare ?? 0);
   const estPlatFee  = Math.round(parseFloat(String(_est?.platform_fee ?? 2)) || 2);
@@ -171,22 +166,6 @@ export function BookingScreen() {
     )).start();
   }, []);
 
-  // Breathing pulse on book button when ready
-  useEffect(() => {
-    if (hasFare && !loading) {
-      const pulse = Animated.loop(
-        Animated.sequence([
-          Animated.delay(1400),
-          Animated.spring(bookPulseAnim, { toValue: 1.035, friction: 3, tension: 280, useNativeDriver: true }),
-          Animated.spring(bookPulseAnim, { toValue: 1, friction: 3, tension: 280, useNativeDriver: true }),
-        ])
-      );
-      pulse.start();
-      return () => pulse.stop();
-    } else {
-      bookPulseAnim.setValue(1);
-    }
-  }, [hasFare, loading]);
 
   useEffect(() => {
     if (!userCoords?.latitude || pickup) { setNearbyPlaces([]); return; }
@@ -231,46 +210,10 @@ export function BookingScreen() {
     bookRide();
   };
 
-  // ── Swipe-to-book gesture ────────────────────────────────────────────────────
-  const swipeX        = useRef(new Animated.Value(0)).current;
-  const trackWidthRef = useRef(0);
-  // Keep fresh refs readable inside PanResponder (created once, avoids stale closures)
-  const hasFareRef    = useRef(hasFare);
-  hasFareRef.current  = hasFare;
-  const loadingRef    = useRef(loading);
-  loadingRef.current  = loading;
-  const handleBookRef = useRef<() => void>(handleBook);
-  handleBookRef.current = handleBook;
-
-  const swipePan = useRef(PanResponder.create({
-    onStartShouldSetPanResponder: () => hasFareRef.current && !loadingRef.current,
-    onMoveShouldSetPanResponder:  (_, gs) => Math.abs(gs.dx) > 4 && hasFareRef.current && !loadingRef.current,
-    onPanResponderGrant: () => swipeX.stopAnimation(),
-    onPanResponderMove: (_, gs) => {
-      if (!hasFareRef.current || loadingRef.current) return;
-      const max = trackWidthRef.current - SWIPE_THUMB - SWIPE_PAD * 2;
-      swipeX.setValue(Math.max(0, Math.min(gs.dx, max)));
-    },
-    onPanResponderRelease: (_, gs) => {
-      const max = trackWidthRef.current - SWIPE_THUMB - SWIPE_PAD * 2;
-      if (gs.dx >= max * 0.72 && hasFareRef.current) {
-        Animated.spring(swipeX, { toValue: max, useNativeDriver: false, tension: 220, friction: 7 }).start(() => {
-          handleBookRef.current();
-          setTimeout(() => Animated.spring(swipeX, { toValue: 0, useNativeDriver: false, tension: 160, friction: 9 }).start(), 650);
-        });
-      } else {
-        Animated.spring(swipeX, { toValue: 0, useNativeDriver: false, tension: 180, friction: 8 }).start();
-      }
-    },
-    onPanResponderTerminate: () => {
-      Animated.spring(swipeX, { toValue: 0, useNativeDriver: false }).start();
-    },
-  })).current;
-
-  // Reset swipe thumb when loading state changes
-  useEffect(() => {
-    if (loading) Animated.spring(swipeX, { toValue: 0, useNativeDriver: false }).start();
-  }, [loading]);
+  // Book button press animation
+  const bookBtnScale = useRef(new Animated.Value(1)).current;
+  const onBookPressIn  = () => Animated.spring(bookBtnScale, { toValue: 0.97, useNativeDriver: true, friction: 5, tension: 300 }).start();
+  const onBookPressOut = () => Animated.spring(bookBtnScale, { toValue: 1,    useNativeDriver: true, friction: 5, tension: 300 }).start();
 
   // Forward geocode an address string → lat/lng (used before opening picker)
   const geocodeForPicker = async (address: string): Promise<{ lat: number; lng: number } | null> => {
@@ -1155,8 +1098,7 @@ export function BookingScreen() {
             {RIDES.map((r: any) => {
               const isSel = rideType === r.id;
               const isLux = r.id === 'luxury';
-              const cfgBase = appConfig?.fares?.[r.id]?.base_fare ?? r.base;
-              const fareText = fareLoading ? '...' : fareEstimates[r.id] ? `₹${fareEstimates[r.id].fare ?? fareEstimates[r.id]}` : `₹${cfgBase}+`;
+              const fareText = fareLoading ? '...' : fareEstimates[r.id] ? `₹${fareEstimates[r.id].fare ?? fareEstimates[r.id]}` : `₹${r.base}+`;
               const anim = cardAnims[r.id];
               const entry = cardEntryAnims[r.id];
               const info = driverEta[r.id];
@@ -1337,7 +1279,7 @@ export function BookingScreen() {
                   <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 1 }}>{selRide.desc}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={{ color: C.yellow, fontWeight: '900', fontSize: 22 }}>₹{finalFare}</Text>
+                  <Text style={{ color: C.plum, fontWeight: '900', fontSize: 22 }}>₹{finalFare}</Text>
                   {discount > 0 && <Text style={{ color: C.textDim, fontSize: 11, textDecorationLine: 'line-through' }}>₹{rawFare}</Text>}
                   {fareHistoryEntry && (
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, backgroundColor: C.greenGlass, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: C.greenBorder }}>
@@ -1397,7 +1339,7 @@ export function BookingScreen() {
                       <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 1 }}>Trip ₹{tripSubtotal} + Platform ₹{estPlatFee}</Text>
                     )}
                   </View>
-                  <Text style={{ fontSize: 22, fontWeight: '900', color: C.yellow }}>₹{finalFare}</Text>
+                  <Text style={{ fontSize: 22, fontWeight: '900', color: C.plum }}>₹{finalFare}</Text>
                 </View>
               </View>
 
@@ -1835,112 +1777,86 @@ export function BookingScreen() {
         </View>
       </Modal>
 
-      {/* ─── Fixed book button — pinned above device nav bar ─── */}
+      {/* ─── Fixed book bar — pinned above device nav bar ─── */}
       <View style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
         zIndex: 20,
         backgroundColor: C.bg,
         paddingHorizontal: 14,
-        paddingTop: 10,
-        paddingBottom: Math.max(bottomInset, 8),
+        paddingTop: 12,
+        paddingBottom: Math.max(bottomInset, 12),
         borderTopWidth: 1,
-        borderTopColor: C.pinkBorder,
+        borderTopColor: C.glassBorder,
         elevation: 16,
-        shadowColor: C.pink,
-        shadowOpacity: 0.10,
-        shadowRadius: 14,
+        shadowColor: '#000',
+        shadowOpacity: 0.06,
+        shadowRadius: 16,
       }}>
-        {/* Compact summary: vehicle · cash · discount — single tight row */}
+
+        {/* Info row: vehicle · payment · saved */}
         {hasFare && !loading && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-            <RideVehicleIcon id={rideType} size={12} color={C.plum} />
-            <Text style={{ fontSize: 11, fontWeight: '700', color: C.textMuted }}>{selRide?.label}</Text>
-            <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: C.textDim }} />
-            <Ionicons name="cash-outline" size={10} color={C.textMuted} />
-            <Text style={{ fontSize: 11, fontWeight: '700', color: C.textMuted }}>Cash</Text>
-            {discount > 0 && (
-              <>
-                <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: C.textDim }} />
-                <View style={{ backgroundColor: C.greenGlass, borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1, borderWidth: 1, borderColor: C.greenBorder }}>
-                  <Text style={{ fontSize: 9, color: C.green, fontWeight: '800' }}>−₹{discount} saved</Text>
-                </View>
-              </>
-            )}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1 }}>
+              <RideVehicleIcon id={rideType} size={13} color={C.plum} />
+              <Text style={{ fontSize: 12, fontWeight: '700', color: C.text }}>{selRide?.label}</Text>
+              <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: C.glassBorder }} />
+              <Ionicons name="cash-outline" size={12} color={C.textMuted} />
+              <Text style={{ fontSize: 12, fontWeight: '600', color: C.textMuted }}>Cash</Text>
+            </View>
+            {discount > 0 ? (
+              <View style={{ backgroundColor: C.greenGlass, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: C.greenBorder }}>
+                <Text style={{ fontSize: 10, color: C.green, fontWeight: '800' }}>₹{discount} saved</Text>
+              </View>
+            ) : null}
           </View>
         )}
 
-        {/* Swipe-to-book track */}
-        <Animated.View style={{ transform: [{ scale: bookPulseAnim }] }}>
-          <View
-            onLayout={e => { trackWidthRef.current = e.nativeEvent.layout.width; }}
+        {/* Main book button */}
+        <Animated.View style={{ transform: [{ scale: bookBtnScale }] }}>
+          <TouchableOpacity
+            activeOpacity={hasFare && !loading ? 0.88 : 1}
+            onPress={hasFare && !loading ? handleBook : undefined}
+            onPressIn={hasFare && !loading ? onBookPressIn : undefined}
+            onPressOut={hasFare && !loading ? onBookPressOut : undefined}
             style={{
-              height: SWIPE_H,
-              borderRadius: SWIPE_H / 2,
-              backgroundColor: hasFare ? C.bgDeep : C.glassMid,
-              overflow: 'hidden',
-              borderWidth: 1.5,
-              borderColor: hasFare ? C.pinkBorder : C.glassBorder,
-              elevation: hasFare && !loading ? 10 : 2,
-              shadowColor: C.pink,
-              shadowOpacity: hasFare && !loading ? 0.32 : 0,
-              shadowRadius: 14,
+              borderRadius: 18,
+              backgroundColor: loading ? C.glassMid : hasFare ? C.plum : C.glassMid,
+              paddingVertical: 17,
+              paddingHorizontal: 20,
+              flexDirection: 'row',
+              alignItems: 'center',
+              elevation: hasFare && !loading ? 12 : 2,
+              shadowColor: C.plum,
+              shadowOpacity: hasFare && !loading ? 0.28 : 0,
+              shadowRadius: 16,
             }}>
 
-            {/* Fill — expands as thumb slides right, fades pink → yellow */}
-            {hasFare && !loading && (
-              <Animated.View style={{
-                position: 'absolute', left: 0, top: 0, bottom: 0,
-                width: swipeX.interpolate({ inputRange: [0, 500], outputRange: [SWIPE_THUMB + SWIPE_PAD, SWIPE_THUMB + SWIPE_PAD + 500], extrapolate: 'extend' }),
-                backgroundColor: swipeX.interpolate({ inputRange: [0, 280], outputRange: [C.pink, C.yellow], extrapolate: 'clamp' }),
-                borderRadius: SWIPE_H / 2,
-              }} />
-            )}
-
-            {/* Center label — fades as thumb moves right */}
-            <Animated.View style={{
-              position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
-              alignItems: 'center', justifyContent: 'center',
-              opacity: swipeX.interpolate({ inputRange: [0, 70], outputRange: [1, 0], extrapolate: 'clamp' }),
-            }}>
-              <Text style={{ fontSize: 13, fontWeight: '800', color: hasFare ? C.plum : C.textMuted, letterSpacing: 0.2 }} numberOfLines={1}>
-                {loading
-                  ? 'Finding driver…'
-                  : hasFare
-                    ? `${selRide?.label || 'Ride'} · ₹${finalFare}${discount > 0 ? ` · saved ₹${discount}` : ''}`
-                    : 'Set a route to see fare'}
+            {/* Left: label + subtitle */}
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 17, fontWeight: '900', color: hasFare && !loading ? '#fff' : C.textMuted, letterSpacing: -0.2 }}>
+                {loading ? 'Finding driver…' : hasFare ? 'Book Ride' : 'Set pickup & drop'}
               </Text>
-            </Animated.View>
+              {hasFare && !loading && (
+                <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', marginTop: 2, fontWeight: '600' }}>
+                  Tap to confirm · {selRide?.desc || selRide?.label}
+                </Text>
+              )}
+            </View>
 
-            {/* Right chevron — fades when thumb moves */}
-            <Animated.View style={{
-              position: 'absolute', right: 20, top: 0, bottom: 0,
-              alignItems: 'center', justifyContent: 'center',
-              opacity: swipeX.interpolate({ inputRange: [0, 50], outputRange: [0.4, 0], extrapolate: 'clamp' }),
-            }}>
-              <Ionicons name="chevron-forward" size={20} color={C.plum} />
-            </Animated.View>
-
-            {/* Draggable thumb */}
-            <Animated.View
-              {...(hasFare && !loading ? swipePan.panHandlers : {})}
-              style={{
-                position: 'absolute',
-                top: SWIPE_PAD, left: SWIPE_PAD,
-                width: SWIPE_THUMB, height: SWIPE_THUMB,
-                borderRadius: SWIPE_THUMB / 2,
-                backgroundColor: loading ? C.glassMid : hasFare ? C.plum : C.glassHigh,
-                alignItems: 'center', justifyContent: 'center',
-                elevation: 6,
-                shadowColor: C.plum, shadowOpacity: 0.28, shadowRadius: 8,
-                transform: [{ translateX: swipeX }],
-              }}>
-              {loading
-                ? <Ionicons name="ellipsis-horizontal" size={18} color={C.textMuted} />
-                : <RideVehicleIcon id={rideType} size={22} color={hasFare ? '#fff' : C.textDim} />
-              }
-            </Animated.View>
-
-          </View>
+            {/* Right: fare or icon */}
+            {loading ? (
+              <ActivityIndicator size="small" color={C.textMuted} />
+            ) : hasFare ? (
+              <View style={{ alignItems: 'flex-end', gap: 2 }}>
+                <Text style={{ fontSize: 24, fontWeight: '900', color: '#fff', letterSpacing: -0.5 }}>₹{finalFare}</Text>
+                {discount > 0 && (
+                  <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', textDecorationLine: 'line-through' }}>₹{rawFare}</Text>
+                )}
+              </View>
+            ) : (
+              <Ionicons name="arrow-forward" size={20} color={C.textMuted} />
+            )}
+          </TouchableOpacity>
         </Animated.View>
       </View>
 
