@@ -1,0 +1,804 @@
+import React, { useRef, useEffect } from 'react';
+import Svg, {
+  G, Circle, Ellipse, Path, Rect, Line,
+  Defs, LinearGradient, RadialGradient, Stop,
+  Text as SvgText,
+} from 'react-native-svg';
+import { View, Text, Animated, Easing } from 'react-native';
+
+const AnimatedG = Animated.createAnimatedComponent(G);
+
+const PINK   = '#FF2D78';
+const PLUM   = '#2E1461';
+const GREEN  = '#059669';
+const HAIR   = '#14080C';
+const SKIN_L = '#DFA070';
+const SKIN_M = '#B87840';
+const SKIN_D = '#9B5530';
+const SHIRT  = '#5BA8FF';
+const SHIRTD = '#1A52CC';
+const JEANS  = '#3B60D8';
+const JEANSD = '#1B2F7E';
+const KURTA  = '#F472B6';
+const KURTAD = '#9D1755';
+
+/* ═══════════════════════════════════════════════════════════════
+   IlluNoDriver  — 220×190
+   Smart Indian man searching for a driver, phone raised
+   Used in MatchingScreen noDriverFinal block
+═══════════════════════════════════════════════════════════════ */
+export function IlluNoDriver({ width = 220, height = 190 }: { width?: number; height?: number }) {
+  // Character: head at (80,28) r=20, feet at y=160
+  return (
+    <Svg width={width} height={height} viewBox="0 0 220 190">
+      <Defs>
+        <RadialGradient id="nd_sk" cx="38%" cy="30%" r="65%">
+          <Stop offset="0%"   stopColor={SKIN_L} />
+          <Stop offset="100%" stopColor={SKIN_D} />
+        </RadialGradient>
+        <LinearGradient id="nd_sh" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0%"   stopColor={SHIRT} />
+          <Stop offset="100%" stopColor={SHIRTD} />
+        </LinearGradient>
+        <LinearGradient id="nd_jn" x1="0" y1="0" x2="1" y2="0">
+          <Stop offset="0%"   stopColor={JEANS} />
+          <Stop offset="100%" stopColor={JEANSD} />
+        </LinearGradient>
+        <RadialGradient id="nd_bg" cx="50%" cy="50%" r="50%">
+          <Stop offset="0%"   stopColor="rgba(255,45,120,0.05)" />
+          <Stop offset="100%" stopColor="rgba(255,45,120,0)" />
+        </RadialGradient>
+      </Defs>
+
+      {/* Ambient glow */}
+      <Circle cx="110" cy="95" r="85" fill="url(#nd_bg)" />
+
+      {/* ── Road / ground ── */}
+      <Path d="M0,162 Q110,154 220,162 L220,190 L0,190 Z" fill="#ECEEF5" />
+      <Path d="M0,164 Q110,156 220,164" stroke="white" strokeWidth="2.5"
+        strokeDasharray="14,10" fill="none" strokeOpacity="0.8" />
+
+      {/* Person shadow */}
+      <Ellipse cx="75" cy="163" rx="20" ry="4" fill="rgba(46,20,97,0.10)" />
+
+      {/* ── Shoes ── */}
+      <Ellipse cx="67" cy="159" rx="12"  ry="5"   fill="#110608" />
+      <Ellipse cx="80" cy="159.5" rx="11" ry="4.5" fill="#0E0406" />
+
+      {/* ── Jeans ── */}
+      <Path d="M63,155 L62,108 L73,108 L72,155 Z" fill={JEANS} />
+      <Path d="M73,155 L74,108 L84,108 L83,155 Z" fill={JEANSD} />
+      {/* subtle crease */}
+      <Line x1="67" y1="108" x2="66" y2="140" stroke="rgba(255,255,255,0.14)" strokeWidth="1.2" />
+      <Line x1="79" y1="108" x2="80" y2="140" stroke="rgba(0,0,0,0.10)" strokeWidth="1" />
+
+      {/* ── Belt ── */}
+      <Rect x="62" y="102" width="33" height="7"  rx="2"   fill="#1A0802" />
+      <Rect x="74" y="100" width="9"  height="11" rx="1.5" fill="#8A6A18" />
+
+      {/* ── Shirt body ── */}
+      <Path d="M62,102 Q59,82 70,73 L77,70 L80,65 L83,70 L90,73 Q101,82 98,102 Z"
+        fill="url(#nd_sh)" />
+      {/* Collar */}
+      <Path d="M77,70 L80,78 L83,70" fill="#7ABEFF" stroke={SHIRTD} strokeWidth="0.6" />
+      {/* Shirt pocket detail */}
+      <Rect x="84" y="82" width="9" height="7" rx="2" fill="rgba(0,0,0,0.10)" />
+
+      {/* ── Left arm relaxed ── */}
+      <Path d="M62,84 Q51,98 53,114" stroke={SHIRTD} strokeWidth="14" fill="none" strokeLinecap="round" />
+      <Path d="M53,114 Q51,124 55,134" stroke={SKIN_M} strokeWidth="12" fill="none" strokeLinecap="round" />
+      {/* Relaxed fist */}
+      <Circle cx="57" cy="137" r="6" fill={SKIN_M} />
+
+      {/* ── Right arm raised — holding phone ── */}
+      <Path d="M98,84 Q109,70 110,52" stroke={SHIRTD} strokeWidth="14" fill="none" strokeLinecap="round" />
+      <Path d="M110,52 Q112,36 110,22" stroke={SKIN_M} strokeWidth="12" fill="none" strokeLinecap="round" />
+
+      {/* ── Phone ── */}
+      <Rect x="103" y="8" width="17" height="28" rx="4" fill="#0D0620" />
+      <Rect x="105.5" y="11" width="12" height="22" rx="2.5" fill="#EAE4FF" />
+      {/* Search indicator on screen */}
+      <Circle cx="111.5" cy="16" r="3.5" fill="none" stroke={PLUM} strokeWidth="1.3" />
+      <Line x1="114" y1="18.5" x2="116.5" y2="21" stroke={PLUM} strokeWidth="1.5" strokeLinecap="round" />
+      {/* Loading dots */}
+      <Circle cx="107.5" cy="27" r="1.8" fill={PINK} />
+      <Circle cx="111.5" cy="27" r="1.8" fill={PINK} fillOpacity="0.5" />
+      <Circle cx="115.5" cy="27" r="1.8" fill={PINK} fillOpacity="0.2" />
+
+      {/* ── Neck ── */}
+      <Rect x="74" y="48" width="12" height="14" rx="5" fill={SKIN_D} />
+
+      {/* ── Short male hair (above head) ── */}
+      <Path d="M60,18 Q60,6 80,4 Q100,6 100,18 Q97,8 80,7 Q63,8 60,18 Z" fill={HAIR} />
+      {/* Sideburns */}
+      <Line x1="60" y1="18" x2="60" y2="27" stroke={HAIR} strokeWidth="3" strokeLinecap="round" />
+      <Line x1="100" y1="18" x2="100" y2="27" stroke={HAIR} strokeWidth="3" strokeLinecap="round" />
+
+      {/* ── Face ── */}
+      <Circle cx="80" cy="28" r="20" fill="url(#nd_sk)" />
+
+      {/* Ears */}
+      <Ellipse cx="60" cy="28" rx="4"   ry="7.5" fill={SKIN_D} />
+      <Ellipse cx="100" cy="28" rx="4"  ry="7.5" fill={SKIN_D} />
+
+      {/* ── Eyebrows — raised/worried ── */}
+      <Path d="M68,19 Q75,14 80,19" stroke={HAIR} strokeWidth="2.2" fill="none" strokeLinecap="round" />
+      <Path d="M80,19 Q85,14 92,19" stroke={HAIR} strokeWidth="2.2" fill="none" strokeLinecap="round" />
+
+      {/* ── Left eye ── */}
+      <Ellipse cx="69" cy="24" rx="6"  ry="5.5" fill="white" />
+      <Circle  cx="69.5" cy="24" r="3.5" fill="#241008" />
+      <Circle  cx="69.5" cy="24" r="2"   fill="#060204" />
+      <Circle  cx="70.8" cy="22.4" r="1.1" fill="white" />
+      {/* Eyelid */}
+      <Path d="M63,25.5 Q69,19.5 75,25.5" stroke={HAIR} strokeWidth="1.5" fill="none" />
+
+      {/* ── Right eye ── */}
+      <Ellipse cx="91" cy="24" rx="6"  ry="5.5" fill="white" />
+      <Circle  cx="90.5" cy="24" r="3.5" fill="#241008" />
+      <Circle  cx="90.5" cy="24" r="2"   fill="#060204" />
+      <Circle  cx="91.8" cy="22.4" r="1.1" fill="white" />
+      {/* Eyelid */}
+      <Path d="M85,25.5 Q91,19.5 97,25.5" stroke={HAIR} strokeWidth="1.5" fill="none" />
+
+      {/* ── Nose ── */}
+      <Path d="M79,33 Q76,37 76,39" stroke={SKIN_D} strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      <Path d="M79,33 Q83,37 83,39" stroke={SKIN_D} strokeWidth="1.5" fill="none" strokeLinecap="round" />
+
+      {/* ── Worried mouth ── */}
+      <Path d="M73,42 Q80,38 87,42" stroke="#8B4020" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+
+      {/* ── Sweat drop ── */}
+      <Path d="M95,21 Q97.5,26 95,30 Q92.5,26 95,21 Z" fill="#78C8F8" fillOpacity="0.8" />
+
+      {/* ── Question marks floating (right side, varies size) ── */}
+      <SvgText x="142" y="68"  fontSize="26" fontWeight="bold" fill={PINK}   fillOpacity="0.72">?</SvgText>
+      <SvgText x="28"  y="82"  fontSize="18" fontWeight="bold" fill="#7C3AED" fillOpacity="0.38">?</SvgText>
+      <SvgText x="162" y="114" fontSize="13" fontWeight="bold" fill={PINK}   fillOpacity="0.28">?</SvgText>
+
+      {/* ── Radar / search rings (right side) ── */}
+      <Circle cx="152" cy="86" r="30" fill="none" stroke={PINK} strokeWidth="1.2" strokeOpacity="0.14" />
+      <Circle cx="152" cy="86" r="20" fill="none" stroke={PINK} strokeWidth="1.2" strokeOpacity="0.22" />
+      <Circle cx="152" cy="86" r="11" fill="none" stroke={PINK} strokeWidth="1.5" strokeOpacity="0.36" />
+      <Circle cx="152" cy="86" r="4"  fill={PINK} fillOpacity="0.28" />
+
+      {/* ── Street lamp (left side) ── */}
+      <Rect x="15" y="94" width="4.5" height="68" rx="2" fill="#B4BAC8" />
+      <Path d="M19.5,94 Q30,88 30,97" stroke="#B4BAC8" strokeWidth="4.5" fill="none" />
+      <Ellipse cx="30" cy="100" rx="5.5" ry="3" fill="#FFE07A" fillOpacity="0.45" />
+    </Svg>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   IlluCancel  — 200×128
+   Auto driving away, sad woman waving goodbye, broken heart
+   Used in CancelModal header
+═══════════════════════════════════════════════════════════════ */
+export function IlluCancel({ width = 200, height = 128 }: { width?: number; height?: number }) {
+  return (
+    <Svg width={width} height={height} viewBox="0 0 200 128">
+      <Defs>
+        <RadialGradient id="ic_sk" cx="38%" cy="30%" r="65%">
+          <Stop offset="0%"   stopColor={SKIN_L} />
+          <Stop offset="100%" stopColor={SKIN_D} />
+        </RadialGradient>
+        <LinearGradient id="ic_ab" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0%"   stopColor="#FF8A20" />
+          <Stop offset="100%" stopColor="#C84800" />
+        </LinearGradient>
+        <LinearGradient id="ic_rf" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0%"   stopColor="#FF6500" />
+          <Stop offset="100%" stopColor="#A03200" />
+        </LinearGradient>
+        <LinearGradient id="ic_kt" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0%"   stopColor={KURTA} />
+          <Stop offset="100%" stopColor={KURTAD} />
+        </LinearGradient>
+      </Defs>
+
+      {/* Road */}
+      <Path d="M0,106 Q100,100 200,106 L200,128 L0,128 Z" fill="#ECEEF5" />
+      <Path d="M0,108 Q100,102 200,108" stroke="white" strokeWidth="2"
+        strokeDasharray="12,9" fill="none" strokeOpacity="0.75" />
+
+      {/* ── Auto (right side, driving away) ── */}
+      {/* Shadow */}
+      <Ellipse cx="158" cy="104" rx="34" ry="5" fill="rgba(0,0,0,0.08)" />
+      {/* Body */}
+      <Path d="M118,90 L118,60 Q118,52 126,52 L190,52 Q196,52 196,60 L196,90 Z" fill="url(#ic_ab)" />
+      {/* Roof */}
+      <Path d="M120,62 L120,52 Q120,44 128,44 L188,44 Q194,44 194,52 L194,62 Z" fill="url(#ic_rf)" />
+      {/* Rear windshield glass */}
+      <Path d="M124,61 L124,53 L190,53 L190,61 Z" fill="#AADEFF" fillOpacity="0.55" />
+      {/* Glass glare */}
+      <Rect x="126" y="53" width="14" height="2.5" rx="1" fill="white" fillOpacity="0.5" />
+      {/* Vertical window bars */}
+      <Line x1="136" y1="52" x2="136" y2="90" stroke="rgba(0,0,0,0.16)" strokeWidth="1.5" />
+      <Line x1="150" y1="52" x2="150" y2="90" stroke="rgba(0,0,0,0.16)" strokeWidth="1.5" />
+      <Line x1="163" y1="52" x2="163" y2="90" stroke="rgba(0,0,0,0.16)" strokeWidth="1.5" />
+      <Line x1="176" y1="52" x2="176" y2="90" stroke="rgba(0,0,0,0.16)" strokeWidth="1.5" />
+      {/* Tail lights */}
+      <Rect x="120" y="70" width="6.5" height="8" rx="2" fill="#FF3030" />
+      <Rect x="187" y="70" width="6.5" height="8" rx="2" fill="#FF3030" />
+      {/* SPPERO strip */}
+      <Rect x="124" y="86" width="64" height="5" rx="2" fill={PINK} fillOpacity="0.88" />
+      {/* Wheels */}
+      <Circle cx="133" cy="94" r="12" fill="#1C1C3A" />
+      <Circle cx="133" cy="94" r="8"  fill="#2E2E50" />
+      <Circle cx="133" cy="94" r="3.5" fill="#7878A0" />
+      <Circle cx="180" cy="94" r="12" fill="#1C1C3A" />
+      <Circle cx="180" cy="94" r="8"  fill="#2E2E50" />
+      <Circle cx="180" cy="94" r="3.5" fill="#7878A0" />
+      {/* Speed lines going left */}
+      <Line x1="104" y1="62" x2="116" y2="62" stroke="#FF8A20" strokeWidth="2.5" strokeOpacity="0.55" strokeLinecap="round" />
+      <Line x1="98"  y1="70" x2="116" y2="70" stroke="#FF8A20" strokeWidth="2"   strokeOpacity="0.38" strokeLinecap="round" />
+      <Line x1="102" y1="78" x2="116" y2="78" stroke="#FF8A20" strokeWidth="1.5" strokeOpacity="0.25" strokeLinecap="round" />
+
+      {/* ── Sad woman waving goodbye (left side) ── */}
+      {/* Person at x=42, feet at y=108 */}
+      {/* Shadow */}
+      <Ellipse cx="42" cy="110" rx="16" ry="3.5" fill="rgba(46,20,97,0.09)" />
+      {/* Shoes */}
+      <Ellipse cx="34" cy="108" rx="9"  ry="4"   fill="#110608" />
+      <Ellipse cx="46" cy="108.5" rx="8" ry="3.5" fill="#0E0406" />
+      {/* Kurta / dress */}
+      <Path d="M28,107 L26,68 Q26,60 36,58 L48,58 Q58,60 58,68 L56,107 Z" fill="url(#ic_kt)" />
+      {/* Dupatta drape */}
+      <Path d="M26,68 Q23,76 17,82 Q21,72 28,68 Z" fill="rgba(244,114,182,0.45)" />
+      {/* Left arm sad/limp */}
+      <Path d="M28,68 Q20,80 22,96" stroke={KURTAD} strokeWidth="13" fill="none" strokeLinecap="round" />
+      <Path d="M22,96 Q21,102 24,108" stroke={SKIN_M} strokeWidth="11" fill="none" strokeLinecap="round" />
+      {/* Right arm waving */}
+      <Path d="M57,68 Q66,56 68,46" stroke={KURTAD} strokeWidth="13" fill="none" strokeLinecap="round" />
+      <Path d="M68,46 Q70,36 68,28" stroke={SKIN_M} strokeWidth="11" fill="none" strokeLinecap="round" />
+      {/* Waving hand */}
+      <Circle cx="67" cy="25" r="6.5" fill={SKIN_M} />
+      {/* Neck */}
+      <Rect x="36" y="50" width="11" height="12" rx="5" fill={SKIN_D} />
+      {/* Long hair with bun */}
+      <Path d="M26,36 Q25,18 42,14 Q59,18 58,36 Q56,24 42,22 Q28,24 26,36 Z" fill={HAIR} />
+      <Circle cx="42" cy="14" r="8"   fill={HAIR} />
+      <Circle cx="42" cy="6"  r="5.5" fill={HAIR} />
+      {/* Face */}
+      <Circle cx="42" cy="36" r="19" fill="url(#ic_sk)" />
+      {/* Ears */}
+      <Ellipse cx="23" cy="36" rx="3.5" ry="6.5" fill={SKIN_D} />
+      <Ellipse cx="61" cy="36" rx="3.5" ry="6.5" fill={SKIN_D} />
+      {/* Earring */}
+      <Circle cx="23" cy="40" r="2.8" fill="none" stroke="#FFD700" strokeWidth="1.5" />
+      {/* Eyebrows — sad, inner corners raised */}
+      <Path d="M31,27 Q37,23 42,27" stroke={HAIR} strokeWidth="2"   fill="none" strokeLinecap="round" />
+      <Path d="M42,27 Q47,23 53,27" stroke={HAIR} strokeWidth="2"   fill="none" strokeLinecap="round" />
+      {/* Left eye with tear */}
+      <Ellipse cx="34.5" cy="33" rx="5.5" ry="5"   fill="white" />
+      <Circle  cx="35"   cy="33" r="3.2"            fill="#241008" />
+      <Circle  cx="35"   cy="33" r="1.9"            fill="#060204" />
+      <Circle  cx="36.2" cy="31.4" r="1"            fill="white" />
+      <Path d="M29,34.5 Q34.5,29 40,34.5" stroke={HAIR} strokeWidth="1.4" fill="none" />
+      {/* Teardrop */}
+      <Path d="M30,36 Q32,42 30,46 Q28,42 30,36 Z" fill="#78C8F8" fillOpacity="0.82" />
+      {/* Right eye */}
+      <Ellipse cx="49.5" cy="33" rx="5.5" ry="5"   fill="white" />
+      <Circle  cx="49"   cy="33" r="3.2"            fill="#241008" />
+      <Circle  cx="49"   cy="33" r="1.9"            fill="#060204" />
+      <Circle  cx="50.2" cy="31.4" r="1"            fill="white" />
+      <Path d="M44,34.5 Q49.5,29 55,34.5" stroke={HAIR} strokeWidth="1.4" fill="none" />
+      {/* Bindi */}
+      <Circle cx="42" cy="25.5" r="1.8" fill={PINK} />
+      {/* Nose */}
+      <Path d="M41,40 Q39,43 39,45" stroke={SKIN_D} strokeWidth="1.4" fill="none" strokeLinecap="round" />
+      <Path d="M41,40 Q44,43 44,45" stroke={SKIN_D} strokeWidth="1.4" fill="none" strokeLinecap="round" />
+      {/* Sad mouth */}
+      <Path d="M35,47 Q42,43 49,47" stroke="#8B4020" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+
+      {/* ── Broken heart (center) ── */}
+      <Path d="M91,37 Q80,25 71,33 Q67,40 91,58 Q115,40 111,33 Q102,25 91,37 Z"
+        fill={PINK} fillOpacity="0.88" />
+      {/* Crack line */}
+      <Path d="M91,37 L88,43 L94,47 L89,54 L91,58" stroke="white" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   FeatureIllustrationBanner  — HomeScreen feature section
+   Wide hero card + two feature cards below
+═══════════════════════════════════════════════════════════════ */
+export function FeatureIllustrationBanner() {
+  const floatY = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatY, { toValue: -7, duration: 1300, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(floatY, { toValue: 0,  duration: 1300, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
+  return (
+    <View style={{ gap: 10, marginBottom: 14 }}>
+
+      {/* ── Hero card: "Get a ride in 3 min" ── */}
+      <View style={{
+        borderRadius: 22,
+        backgroundColor: PLUM,
+        overflow: 'hidden',
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingLeft: 18,
+        paddingRight: 8,
+        paddingVertical: 16,
+        minHeight: 100,
+      }}>
+        {/* Left: text */}
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+            <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: GREEN }} />
+            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>
+              LIVE DRIVERS NEARBY
+            </Text>
+          </View>
+          <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900', lineHeight: 26 }}>
+            Get a ride{'\n'}in 3 minutes
+          </Text>
+          <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, marginTop: 6 }}>
+            Auto · Bike · Car · E-Rickshaw
+          </Text>
+        </View>
+        {/* Right: floating mini auto */}
+        <Animated.View style={{ transform: [{ translateY: floatY }] }}>
+          <MiniAutoSvg />
+        </Animated.View>
+      </View>
+
+      {/* ── Two feature cards ── */}
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        {/* Safety card */}
+        <View style={{
+          flex: 1, borderRadius: 20, padding: 16,
+          backgroundColor: GREEN, minHeight: 128, overflow: 'hidden',
+        }}>
+          <View style={{ position: 'absolute', top: -18, right: -18, width: 70, height: 70,
+            borderRadius: 35, backgroundColor: 'rgba(255,255,255,0.10)' }} />
+          {/* Family illustration bottom-right */}
+          <View style={{ position: 'absolute', bottom: -2, right: -8, opacity: 0.88 }}>
+            <IlluFamily3 width={80} height={50} />
+          </View>
+          <View style={{ position: 'absolute', top: 10, right: 10,
+            backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 20,
+            paddingHorizontal: 7, paddingVertical: 3 }}>
+            <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>INSURED</Text>
+          </View>
+          <Text style={{ fontSize: 24, marginBottom: 6 }}>🛡️</Text>
+          <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900', lineHeight: 17 }}>
+            Safety First
+          </Text>
+          <Text style={{ color: 'rgba(255,255,255,0.78)', fontSize: 10, marginTop: 4, lineHeight: 14 }}>
+            Live tracking &{'\n'}family alerts
+          </Text>
+        </View>
+
+        {/* Buddy card */}
+        <View style={{
+          flex: 1, borderRadius: 20, padding: 16,
+          backgroundColor: PINK, minHeight: 110, overflow: 'hidden',
+        }}>
+          <View style={{ position: 'absolute', top: -18, right: -18, width: 70, height: 70,
+            borderRadius: 35, backgroundColor: 'rgba(255,255,255,0.10)' }} />
+          <Text style={{ fontSize: 28, marginBottom: 8 }}>⭐</Text>
+          <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900', lineHeight: 17 }}>
+            Sppero Buddy
+          </Text>
+          <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 10, marginTop: 4, lineHeight: 14 }}>
+            Your personal trusted driver, always available
+          </Text>
+          <View style={{ position: 'absolute', top: 10, right: 10,
+            backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 20,
+            paddingHorizontal: 7, paddingVertical: 3 }}>
+            <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>POPULAR</Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   IlluFamily3  — 88×56  (fits inside home screen cards)
+   Mom (bindi, kurta) · Child (center, short) · Dad (shirt)
+   Used in Auto card + Safety feature card
+═══════════════════════════════════════════════════════════════ */
+export function IlluFamily3({ width = 88, height = 56 }: { width?: number; height?: number }) {
+  return (
+    <Svg width={width} height={height} viewBox="0 0 88 56">
+      <Defs>
+        <RadialGradient id="f3_sk1" cx="40%" cy="30%" r="65%">
+          <Stop offset="0%"   stopColor="#DFA070" />
+          <Stop offset="100%" stopColor="#9B5530" />
+        </RadialGradient>
+        <RadialGradient id="f3_sk2" cx="40%" cy="30%" r="65%">
+          <Stop offset="0%"   stopColor="#E8B87A" />
+          <Stop offset="100%" stopColor="#A06030" />
+        </RadialGradient>
+        <RadialGradient id="f3_sk3" cx="40%" cy="30%" r="65%">
+          <Stop offset="0%"   stopColor="#C88050" />
+          <Stop offset="100%" stopColor="#8B4820" />
+        </RadialGradient>
+      </Defs>
+
+      {/* Shadow */}
+      <Ellipse cx="44" cy="54" rx="36" ry="2.5" fill="rgba(0,0,0,0.08)" />
+
+      {/* ── MOM (left, height ~48px) ── */}
+      {/* Hair bun */}
+      <Circle cx="18" cy="8"  r="5"   fill={HAIR} />
+      <Circle cx="18" cy="3.5" r="3.5" fill={HAIR} />
+      {/* Face */}
+      <Circle cx="18" cy="15" r="6.5" fill="url(#f3_sk1)" />
+      {/* Ears */}
+      <Ellipse cx="11.5" cy="15" rx="2" ry="3.5" fill="#9B5530" />
+      <Ellipse cx="24.5" cy="15" rx="2" ry="3.5" fill="#9B5530" />
+      {/* Earring */}
+      <Circle cx="11.5" cy="17" r="1.8" fill="none" stroke="#FFD700" strokeWidth="1.2" />
+      {/* Bindi */}
+      <Circle cx="18" cy="9.5" r="1.2" fill={PINK} />
+      {/* Eyes */}
+      <Ellipse cx="15.2" cy="14" rx="2.2" ry="2" fill="white" />
+      <Circle  cx="15.4" cy="14" r="1.3"          fill="#241008" />
+      <Circle  cx="15.9" cy="13.2" r="0.6"         fill="white" />
+      <Ellipse cx="20.8" cy="14" rx="2.2" ry="2"  fill="white" />
+      <Circle  cx="20.6" cy="14" r="1.3"          fill="#241008" />
+      <Circle  cx="21.1" cy="13.2" r="0.6"         fill="white" />
+      {/* Nose */}
+      <Path d="M17.5,17 Q16.5,19 16.5,20" stroke="#9B5530" strokeWidth="1" fill="none" strokeLinecap="round" />
+      <Path d="M17.5,17 Q19,19 19,20" stroke="#9B5530" strokeWidth="1" fill="none" strokeLinecap="round" />
+      {/* Smile */}
+      <Path d="M14.5,22 Q18,25 21.5,22" stroke="#8B4020" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+      {/* Kurta (pink) */}
+      <Path d="M10,22 Q10,21 18,21 Q26,21 26,22 L28,50 L8,50 Z" fill={KURTA} />
+      {/* Dupatta hint */}
+      <Path d="M10,22 Q7,26 5,32 Q8,27 10,24 Z" fill="rgba(244,114,182,0.5)" />
+
+      {/* ── CHILD (center, shortest, ~38px) ── */}
+      {/* Short hair */}
+      <Path d="M37,18 Q37,12 44,11 Q51,12 51,18 Q49,13 44,13 Q39,13 37,18 Z" fill={HAIR} />
+      {/* Face */}
+      <Circle cx="44" cy="20" r="5.5" fill="url(#f3_sk2)" />
+      {/* Eyes */}
+      <Ellipse cx="41.8" cy="19.2" rx="1.9" ry="1.7" fill="white" />
+      <Circle  cx="42"   cy="19.2" r="1.1"           fill="#241008" />
+      <Circle  cx="42.4" cy="18.6" r="0.5"           fill="white" />
+      <Ellipse cx="46.2" cy="19.2" rx="1.9" ry="1.7" fill="white" />
+      <Circle  cx="46"   cy="19.2" r="1.1"           fill="#241008" />
+      <Circle  cx="46.4" cy="18.6" r="0.5"           fill="white" />
+      {/* Big happy smile */}
+      <Path d="M41,23 Q44,26 47,23" stroke="#8B4020" strokeWidth="1.4" fill="rgba(255,100,80,0.10)" strokeLinecap="round" />
+      {/* Colorful top (teal) */}
+      <Path d="M37.5,26 Q37.5,24.5 44,24.5 Q50.5,24.5 50.5,26 L52,50 L36,50 Z" fill="#34D399" />
+
+      {/* ── DAD (right, tallest, ~51px) ── */}
+      {/* Short hair */}
+      <Path d="M62,8 Q62,2 70,1 Q78,2 78,8 Q76,3 70,3 Q64,3 62,8 Z" fill={HAIR} />
+      {/* Sideburn */}
+      <Line x1="62" y1="8" x2="62" y2="14" stroke={HAIR} strokeWidth="2.5" strokeLinecap="round" />
+      <Line x1="78" y1="8" x2="78" y2="14" stroke={HAIR} strokeWidth="2.5" strokeLinecap="round" />
+      {/* Face */}
+      <Circle cx="70" cy="12" r="6.5" fill="url(#f3_sk3)" />
+      {/* Ears */}
+      <Ellipse cx="63.5" cy="12" rx="2" ry="3.5" fill="#8B4820" />
+      <Ellipse cx="76.5" cy="12" rx="2" ry="3.5" fill="#8B4820" />
+      {/* Eyes */}
+      <Ellipse cx="67.5" cy="11" rx="2.2" ry="2" fill="white" />
+      <Circle  cx="67.7" cy="11" r="1.3"          fill="#241008" />
+      <Circle  cx="68.2" cy="10.2" r="0.6"         fill="white" />
+      <Ellipse cx="72.5" cy="11" rx="2.2" ry="2"  fill="white" />
+      <Circle  cx="72.3" cy="11" r="1.3"          fill="#241008" />
+      <Circle  cx="72.8" cy="10.2" r="0.6"         fill="white" />
+      {/* Nose */}
+      <Path d="M69.5,14 Q68.5,16.5 68.5,17.5" stroke="#8B4820" strokeWidth="1" fill="none" strokeLinecap="round" />
+      <Path d="M69.5,14 Q71,16.5 71,17.5" stroke="#8B4820" strokeWidth="1" fill="none" strokeLinecap="round" />
+      {/* Smile */}
+      <Path d="M67,20 Q70,23 73,20" stroke="#8B4020" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+      {/* Shirt (blue) */}
+      <Path d="M62,20 Q62,18 70,18 Q78,18 78,20 L80,50 L60,50 Z" fill={SHIRT} />
+      {/* Collar */}
+      <Path d="M68,18 L70,22 L72,18" fill="#7ABEFF" stroke={SHIRTD} strokeWidth="0.5" />
+    </Svg>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BikeScene  — animated SVG motorcycle
+   Spinning wheels · body bounce · speed lines · rider
+   Used in HomeScreen bike card
+═══════════════════════════════════════════════════════════════ */
+export function BikeScene({ width = 148, height = 88 }: { width?: number; height?: number }) {
+  const wheelRot = useRef(new Animated.Value(0)).current;
+  const bodyY    = useRef(new Animated.Value(0)).current;
+  const spdX     = useRef(new Animated.Value(0)).current;
+  const spdOp    = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    // Wheel spin — JS driver (SVG prop animation)
+    Animated.loop(
+      Animated.timing(wheelRot, {
+        toValue: 360, duration: 420,
+        easing: Easing.linear, useNativeDriver: false,
+      })
+    ).start();
+
+    // Bike body bounce
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(bodyY, { toValue: -1.8, duration: 270, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
+        Animated.timing(bodyY, { toValue: 0.9,  duration: 270, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
+      ])
+    ).start();
+
+    // Speed lines sweep — recursive loop with instant reset
+    let alive = true;
+    const runSpd = () => {
+      if (!alive) return;
+      spdX.setValue(0); spdOp.setValue(1);
+      Animated.parallel([
+        Animated.timing(spdX,  { toValue: -46, duration: 480, easing: Easing.linear, useNativeDriver: false }),
+        Animated.sequence([
+          Animated.delay(150),
+          Animated.timing(spdOp, { toValue: 0, duration: 330, useNativeDriver: false }),
+        ]),
+      ]).start(({ finished }) => { if (finished && alive) runSpd(); });
+    };
+    runSpd();
+    return () => { alive = false; };
+  }, []);
+
+  // Wheel geometry constants
+  const RCX = 30, FCX = 118, WCY = 74, WR = 12, WD = 8.5;
+
+  return (
+    <Svg width={width} height={height} viewBox="0 0 148 88">
+      {/* Ground */}
+      <Rect x="0" y="82" width="148" height="6" fill="#061A0E" />
+      {/* Road centre dashes (static — motion is implied by wheel rotation) */}
+      <Line x1="-8" y1="85" x2="158" y2="85"
+        stroke="rgba(52,211,153,0.35)" strokeWidth="1.2"
+        strokeDasharray="11,8" strokeLinecap="round" />
+
+      {/* Speed lines */}
+      <AnimatedG translateX={spdX} opacity={spdOp}>
+        <Line x1="8"  y1="50" x2="40" y2="50" stroke="rgba(255,255,255,0.45)" strokeWidth="2.2" strokeLinecap="round" />
+        <Line x1="4"  y1="59" x2="28" y2="59" stroke="rgba(255,255,255,0.30)" strokeWidth="1.6" strokeLinecap="round" />
+        <Line x1="10" y1="67" x2="36" y2="67" stroke="rgba(255,255,255,0.38)" strokeWidth="1.8" strokeLinecap="round" />
+      </AnimatedG>
+
+      {/* Exhaust puffs (static soft circles) */}
+      <Circle cx="18" cy="74" r="4"   fill="rgba(255,255,255,0.07)" />
+      <Circle cx="10" cy="71" r="2.5" fill="rgba(255,255,255,0.04)" />
+
+      {/* Everything that bounces */}
+      <AnimatedG translateY={bodyY}>
+
+        {/* ── Frame ── */}
+        <Path d="M30,70 L44,63" stroke="#22C55E" strokeWidth="2.8" strokeLinecap="round" />
+        <Path d="M44,63 L64,43 L88,39 L108,46" stroke="#16A34A" strokeWidth="3.8" strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M64,43 L82,42 L88,39" stroke="#16A34A" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M64,43 L56,59 L44,63" stroke="#15803D" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        <Rect x="50" y="53" width="20" height="13" rx="3" fill="#166534" stroke="#22C55E" strokeWidth="0.8" />
+        {/* Fork */}
+        <Path d="M108,46 L114,63 L118,74" stroke="#16A34A" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M108,46 L122,61 L118,74" stroke="#15803D" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
+        {/* Fuel tank */}
+        <Ellipse cx="84" cy="40" rx="10" ry="5" fill="#15803D" stroke="#22C55E" strokeWidth="0.8" />
+        {/* Seat */}
+        <Path d="M62,42 Q73,37 84,40 Q84,44 73,45 Q62,44 62,42Z" fill="#064E3B" />
+        {/* Headlight */}
+        <Ellipse cx="124" cy="52" rx="6" ry="5" fill="#ECFDF5" stroke="#22C55E" strokeWidth="0.8" />
+        <Ellipse cx="125" cy="52" rx="3.5" ry="3" fill="#FEF9C3" fillOpacity="0.7" />
+        {/* Exhaust pipe */}
+        <Path d="M58,63 L42,67 L28,69" stroke="#4ADE80" strokeWidth="1.8" strokeLinecap="round" opacity={0.6} />
+
+        {/* ── Rider ── */}
+        <Path d="M78,62 L58,63 L50,64" stroke="#1E40AF" strokeWidth="4"   strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M78,62 L70,62 L76,64" stroke="#1E40AF" strokeWidth="4"   strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M78,62 L82,47 L96,43" stroke="#1E40AF" strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M84,49 L108,46"       stroke="#1E40AF" strokeWidth="3.8" strokeLinecap="round" />
+        <Line x1="82" y1="43" x2="82" y2="37" stroke="#C88050" strokeWidth="3.2" strokeLinecap="round" />
+        {/* Helmet */}
+        <Ellipse cx="82" cy="29" rx="10" ry="9" fill="#FF2D78" />
+        <Ellipse cx="82" cy="29" rx="10" ry="9" fill="none" stroke="#D91462" strokeWidth="0.8" />
+        <Path d="M73,30 Q82,35 91,30 Q89,26 82,24 Q75,26 73,30Z" fill="#0A1628" fillOpacity="0.88" />
+        <Line x1="74" y1="27" x2="90" y2="27" stroke="rgba(255,255,255,0.20)" strokeWidth="1" />
+        <Circle cx="108" cy="46" r="3" fill="#0A1628" />
+
+        {/* ── Rear wheel ── */}
+        <AnimatedG rotation={wheelRot} originX={RCX} originY={WCY}>
+          <Circle cx={RCX} cy={WCY} r={WR}     fill="#0A2818" stroke="#22C55E" strokeWidth="1.4" />
+          <Circle cx={RCX} cy={WCY} r={WR - 3} fill="none"   stroke="#166534" strokeWidth="1.2" />
+          <Circle cx={RCX} cy={WCY} r="3"       fill="#166534" />
+          <Line x1={RCX}      y1={WCY - WR} x2={RCX}      y2={WCY - 3} stroke="#22C55E" strokeWidth="1.2" />
+          <Line x1={RCX}      y1={WCY + WR} x2={RCX}      y2={WCY + 3} stroke="#22C55E" strokeWidth="1.2" />
+          <Line x1={RCX - WR} y1={WCY}      x2={RCX - 3}  y2={WCY}     stroke="#22C55E" strokeWidth="1.2" />
+          <Line x1={RCX + WR} y1={WCY}      x2={RCX + 3}  y2={WCY}     stroke="#22C55E" strokeWidth="1.2" />
+          <Line x1={RCX - WD} y1={WCY - WD} x2={RCX - 2}  y2={WCY - 2} stroke="#22C55E" strokeWidth="1" />
+          <Line x1={RCX + WD} y1={WCY + WD} x2={RCX + 2}  y2={WCY + 2} stroke="#22C55E" strokeWidth="1" />
+          <Line x1={RCX + WD} y1={WCY - WD} x2={RCX + 2}  y2={WCY - 2} stroke="#22C55E" strokeWidth="1" />
+          <Line x1={RCX - WD} y1={WCY + WD} x2={RCX - 2}  y2={WCY + 2} stroke="#22C55E" strokeWidth="1" />
+        </AnimatedG>
+
+        {/* ── Front wheel ── */}
+        <AnimatedG rotation={wheelRot} originX={FCX} originY={WCY}>
+          <Circle cx={FCX} cy={WCY} r={WR}     fill="#0A2818" stroke="#22C55E" strokeWidth="1.4" />
+          <Circle cx={FCX} cy={WCY} r={WR - 3} fill="none"   stroke="#166534" strokeWidth="1.2" />
+          <Circle cx={FCX} cy={WCY} r="3"       fill="#166534" />
+          <Line x1={FCX}      y1={WCY - WR} x2={FCX}      y2={WCY - 3} stroke="#22C55E" strokeWidth="1.2" />
+          <Line x1={FCX}      y1={WCY + WR} x2={FCX}      y2={WCY + 3} stroke="#22C55E" strokeWidth="1.2" />
+          <Line x1={FCX - WR} y1={WCY}      x2={FCX - 3}  y2={WCY}     stroke="#22C55E" strokeWidth="1.2" />
+          <Line x1={FCX + WR} y1={WCY}      x2={FCX + 3}  y2={WCY}     stroke="#22C55E" strokeWidth="1.2" />
+          <Line x1={FCX - WD} y1={WCY - WD} x2={FCX - 2}  y2={WCY - 2} stroke="#22C55E" strokeWidth="1" />
+          <Line x1={FCX + WD} y1={WCY + WD} x2={FCX + 2}  y2={WCY + 2} stroke="#22C55E" strokeWidth="1" />
+          <Line x1={FCX + WD} y1={WCY - WD} x2={FCX + 2}  y2={WCY - 2} stroke="#22C55E" strokeWidth="1" />
+          <Line x1={FCX - WD} y1={WCY + WD} x2={FCX - 2}  y2={WCY + 2} stroke="#22C55E" strokeWidth="1" />
+        </AnimatedG>
+
+      </AnimatedG>
+    </Svg>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   IlluRideComplete  — 220×150
+   Happy person arms raised, green checkmark, confetti stars
+   Used in PostRideScreen between TripSteps and stats
+═══════════════════════════════════════════════════════════════ */
+export function IlluRideComplete({ width = 220, height = 150 }: { width?: number; height?: number }) {
+  return (
+    <Svg width={width} height={height} viewBox="0 0 220 150">
+      <Defs>
+        <RadialGradient id="rc_sk" cx="38%" cy="30%" r="65%">
+          <Stop offset="0%"   stopColor={SKIN_L} />
+          <Stop offset="100%" stopColor={SKIN_D} />
+        </RadialGradient>
+        <LinearGradient id="rc_kt" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0%"   stopColor="#F472B6" />
+          <Stop offset="100%" stopColor="#9D1755" />
+        </LinearGradient>
+        <RadialGradient id="rc_ck" cx="50%" cy="50%" r="50%">
+          <Stop offset="0%"   stopColor="rgba(5,150,105,0.18)" />
+          <Stop offset="100%" stopColor="rgba(5,150,105,0)" />
+        </RadialGradient>
+        <LinearGradient id="rc_ck2" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0%"   stopColor="#34D399" />
+          <Stop offset="100%" stopColor="#059669" />
+        </LinearGradient>
+      </Defs>
+
+      {/* Green glow behind checkmark */}
+      <Circle cx="160" cy="72" r="52" fill="url(#rc_ck)" />
+
+      {/* ── Big checkmark circle (right side) ── */}
+      <Circle cx="160" cy="72" r="38" fill="none" stroke="rgba(5,150,105,0.18)" strokeWidth="8" />
+      <Circle cx="160" cy="72" r="30" fill="url(#rc_ck2)" />
+      {/* Check tick */}
+      <Path d="M146,72 L156,82 L176,60" stroke="white" strokeWidth="5.5"
+        fill="none" strokeLinecap="round" strokeLinejoin="round" />
+
+      {/* ── Stars / sparkles ── */}
+      <SvgText x="188" y="36" fontSize="14" fill="#FFD700" fillOpacity="0.88">★</SvgText>
+      <SvgText x="196" y="60" fontSize="9"  fill="#FFD700" fillOpacity="0.6">★</SvgText>
+      <SvgText x="125" y="28" fontSize="11" fill="#FFD700" fillOpacity="0.7">★</SvgText>
+      <SvgText x="18"  y="38" fontSize="13" fill={PINK}   fillOpacity="0.55">✦</SvgText>
+      <SvgText x="8"   y="70" fontSize="9"  fill="#FFD700" fillOpacity="0.5">✦</SvgText>
+      <SvgText x="186" y="108" fontSize="10" fill={PINK}  fillOpacity="0.45">✦</SvgText>
+
+      {/* Confetti dots */}
+      <Circle cx="30"  cy="24" r="3.5" fill={PINK}  fillOpacity="0.7" />
+      <Circle cx="46"  cy="16" r="2.5" fill="#FFD700" fillOpacity="0.8" />
+      <Circle cx="62"  cy="22" r="2"   fill={GREEN} fillOpacity="0.7" />
+      <Circle cx="185" cy="44" r="3"   fill={PINK}  fillOpacity="0.55" />
+      <Circle cx="200" cy="80" r="2"   fill="#FFD700" fillOpacity="0.65" />
+      {/* Confetti rectangles */}
+      <Rect x="22" y="50" width="6" height="3" rx="1" fill={GREEN}  fillOpacity="0.6" transform="rotate(-25 22 50)" />
+      <Rect x="54" y="14" width="5" height="2.5" rx="1" fill={PINK} fillOpacity="0.6" transform="rotate(15 54 14)" />
+      <Rect x="192" y="92" width="6" height="3" rx="1" fill="#FFD700" fillOpacity="0.7" transform="rotate(-40 192 92)" />
+
+      {/* ── Happy woman arms raised (left side) ── */}
+      {/* Person at x=76, feet at y=148 */}
+      {/* Shadow */}
+      <Ellipse cx="76" cy="148" rx="18" ry="4" fill="rgba(46,20,97,0.10)" />
+      {/* Feet / shoes */}
+      <Ellipse cx="67" cy="146" rx="10" ry="4.5" fill="#110608" />
+      <Ellipse cx="80" cy="146.5" rx="9" ry="4"  fill="#0E0406" />
+      {/* Kurta */}
+      <Path d="M60,145 L59,100 Q59,92 68,90 L84,90 Q93,92 93,100 L91,145 Z" fill="url(#rc_kt)" />
+      {/* Left arm raised and bent (celebration) */}
+      <Path d="M60,102 Q48,88 40,72" stroke={KURTAD} strokeWidth="13" fill="none" strokeLinecap="round" />
+      <Path d="M40,72 Q32,56 36,44" stroke={SKIN_M} strokeWidth="11" fill="none" strokeLinecap="round" />
+      <Circle cx="38" cy="40" r="7" fill={SKIN_M} />
+      {/* Right arm raised (other side) */}
+      <Path d="M92,102 Q105,88 113,72" stroke={KURTAD} strokeWidth="13" fill="none" strokeLinecap="round" />
+      <Path d="M113,72 Q120,56 116,44" stroke={SKIN_M} strokeWidth="11" fill="none" strokeLinecap="round" />
+      <Circle cx="114" cy="40" r="7" fill={SKIN_M} />
+      {/* Neck */}
+      <Rect x="70" y="82" width="11" height="12" rx="5" fill={SKIN_D} />
+      {/* Long hair with bun */}
+      <Path d="M58,68 Q57,50 76,46 Q95,50 94,68 Q92,56 76,54 Q60,56 58,68 Z" fill={HAIR} />
+      <Circle cx="76" cy="46" r="8.5" fill={HAIR} />
+      <Circle cx="76" cy="37"  r="6"   fill={HAIR} />
+      {/* Face */}
+      <Circle cx="76" cy="66" r="20" fill="url(#rc_sk)" />
+      {/* Ears */}
+      <Ellipse cx="56" cy="66" rx="4"  ry="7.5" fill={SKIN_D} />
+      <Ellipse cx="96" cy="66" rx="4"  ry="7.5" fill={SKIN_D} />
+      {/* Earring */}
+      <Circle cx="56" cy="70" r="3"   fill="none" stroke="#FFD700" strokeWidth="1.5" />
+      {/* Eyebrows happy (relaxed arcs) */}
+      <Path d="M64,57 Q71,53 76,57" stroke={HAIR} strokeWidth="2"   fill="none" strokeLinecap="round" />
+      <Path d="M76,57 Q81,53 88,57" stroke={HAIR} strokeWidth="2"   fill="none" strokeLinecap="round" />
+      {/* Left eye (happy crescent) */}
+      <Ellipse cx="68.5" cy="63" rx="6"  ry="5.5" fill="white" />
+      <Circle  cx="69"   cy="63" r="3.5"           fill="#241008" />
+      <Circle  cx="69"   cy="63" r="2"              fill="#060204" />
+      <Circle  cx="70.3" cy="61.4" r="1.1"          fill="white" />
+      <Path d="M62.5,64.5 Q68.5,59 74.5,64.5" stroke={HAIR} strokeWidth="1.5" fill="none" />
+      {/* Right eye */}
+      <Ellipse cx="83.5" cy="63" rx="6"  ry="5.5" fill="white" />
+      <Circle  cx="83"   cy="63" r="3.5"           fill="#241008" />
+      <Circle  cx="83"   cy="63" r="2"              fill="#060204" />
+      <Circle  cx="84.3" cy="61.4" r="1.1"          fill="white" />
+      <Path d="M77.5,64.5 Q83.5,59 89.5,64.5" stroke={HAIR} strokeWidth="1.5" fill="none" />
+      {/* Bindi */}
+      <Circle cx="76" cy="55.5" r="1.9" fill={PINK} />
+      {/* Nose */}
+      <Path d="M75,70 Q73,73 73,75" stroke={SKIN_D} strokeWidth="1.4" fill="none" strokeLinecap="round" />
+      <Path d="M75,70 Q78,73 78,75" stroke={SKIN_D} strokeWidth="1.4" fill="none" strokeLinecap="round" />
+      {/* Big happy smile */}
+      <Path d="M67,79 Q76,87 85,79" stroke="#8B4020" strokeWidth="2.5"
+        fill="rgba(255,100,80,0.12)" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+function MiniAutoSvg() {
+  return (
+    <Svg width="106" height="86" viewBox="0 0 106 86">
+      <Defs>
+        <LinearGradient id="ma_bd" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0%"   stopColor="#FF9030" />
+          <Stop offset="100%" stopColor="#D45000" />
+        </LinearGradient>
+        <LinearGradient id="ma_rf" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0%"   stopColor="#FF6A00" />
+          <Stop offset="100%" stopColor="#A83800" />
+        </LinearGradient>
+      </Defs>
+      {/* Shadow */}
+      <Ellipse cx="53" cy="78" rx="42" ry="6" fill="rgba(0,0,0,0.14)" />
+      {/* Body */}
+      <Path d="M10,70 L10,37 Q10,29 18,29 L90,29 Q96,29 96,37 L96,70 Z" fill="url(#ma_bd)" />
+      {/* Roof */}
+      <Path d="M12,39 L12,29 Q12,21 20,21 L84,21 Q90,21 90,29 L90,39 Z" fill="url(#ma_rf)" />
+      {/* Windshield glass */}
+      <Path d="M16,38 L16,25 L86,25 L86,38 Z" fill="#AADEFF" fillOpacity="0.62" />
+      {/* Glare stripe */}
+      <Rect x="18" y="25" width="16" height="2.5" rx="1" fill="white" fillOpacity="0.55" />
+      {/* Headlight */}
+      <Ellipse cx="96" cy="48" rx="5.5" ry="7"  fill="#FFE060" />
+      <Ellipse cx="96" cy="48" rx="3.5" ry="4.5" fill="#FFF4A0" />
+      {/* Driver visible */}
+      <Circle cx="60" cy="33" r="5"   fill={SKIN_M} />
+      <Circle cx="60" cy="28.5" r="4.2" fill={HAIR} />
+      {/* Wheels */}
+      <Circle cx="26" cy="73" r="12"  fill="#1C1C3A" />
+      <Circle cx="26" cy="73" r="8"   fill="#2A2A4A" />
+      <Circle cx="26" cy="73" r="3.2" fill="#8080A8" />
+      <Circle cx="78" cy="73" r="12"  fill="#1C1C3A" />
+      <Circle cx="78" cy="73" r="8"   fill="#2A2A4A" />
+      <Circle cx="78" cy="73" r="3.2" fill="#8080A8" />
+      {/* Speed lines */}
+      <Line x1="1"  y1="42" x2="8"  y2="42" stroke="#FF9030" strokeWidth="2.5" strokeOpacity="0.6"  strokeLinecap="round" />
+      <Line x1="0"  y1="50" x2="8"  y2="50" stroke="#FF9030" strokeWidth="2"   strokeOpacity="0.42" strokeLinecap="round" />
+      <Line x1="2"  y1="58" x2="8"  y2="58" stroke="#FF9030" strokeWidth="1.5" strokeOpacity="0.28" strokeLinecap="round" />
+    </Svg>
+  );
+}

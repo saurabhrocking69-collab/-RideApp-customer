@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { useApp } from '../context/AppContext';
 import { Bouncy, Confetti, CountUp, DotBG, FadeIn, ScreenIn, TripSteps } from '../components/ui';
+import { IlluRideComplete } from '../components/Illustrations';
 import { s, C, T, SP, R, SHADOW } from '../styles';
 import { apiGet } from '../../api';
 
@@ -161,6 +162,11 @@ _GST is included in the fare — not charged separately._
         <View style={{ paddingHorizontal: 14, paddingTop: 16 }}>
           <TripSteps step={3} />
         </View>
+
+        {/* Ride complete illustration */}
+        <FadeIn style={{ alignItems: 'center', marginTop: 4, marginBottom: -6 }}>
+          <IlluRideComplete width={220} height={150} />
+        </FadeIn>
 
         {/* Trip stats card — visible without opening modal */}
         <View style={{ marginHorizontal: 14, marginTop: 4, backgroundColor: C.bgCard, borderRadius: 18, padding: 14, borderWidth: 1.5, borderColor: C.glassBorder, elevation: 4, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 10 }}>

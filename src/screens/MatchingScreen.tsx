@@ -11,6 +11,7 @@ import { s, C, T, SP, R, SHADOW } from '../styles';
 import { apiPost } from '../../api';
 import { API } from '../constants';
 import { ARDriverFinder } from '../components/ARDriverFinder';
+import { IlluNoDriver, IlluCancel } from '../components/Illustrations';
 
 // ── Parse Google Maps duration text → seconds ──────────────────────────────
 function parseEtaSec(text: string): number {
@@ -1173,6 +1174,9 @@ export function MatchingScreen() {
               {noDriverFinal && (
                 <SlideUp>
                   <View style={{ paddingHorizontal: 20, paddingBottom: 14 }}>
+                    <View style={{ alignItems: 'center', marginBottom: 4 }}>
+                      <IlluNoDriver width={220} height={190} />
+                    </View>
                     <View style={{ backgroundColor: C.redGlass, borderRadius: 16, padding: 18, borderWidth: 1.5, borderColor: C.redBorder, alignItems: 'center' }}>
                       <Text style={{ color: C.red, fontSize: 14, fontWeight: '900', textAlign: 'center', marginBottom: 4 }}>
                         No driver found in this area
@@ -1284,13 +1288,11 @@ function CancelModal() {
           {/* Handle */}
           <View style={{ width: 40, height: 4, backgroundColor: C.glassBorder, borderRadius: 2, alignSelf: 'center', marginTop: 12 }} />
 
-          {/* Icon header */}
-          <View style={{ alignItems: 'center', paddingTop: 18, paddingBottom: 16 }}>
-            <View style={{ width: 62, height: 62, borderRadius: 20, backgroundColor: C.redGlass, borderWidth: 2, borderColor: C.redBorder, alignItems: 'center', justifyContent: 'center', marginBottom: 12, elevation: 2, shadowColor: C.red, shadowOpacity: 0.18, shadowRadius: 8 }}>
-              <Ionicons name="close-circle" size={30} color={C.red} />
-            </View>
-            <Text style={{ fontSize: 20, fontWeight: '900', color: C.text, letterSpacing: -0.4 }}>Cancel Ride?</Text>
-            <Text style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>Select a reason to proceed</Text>
+          {/* Illustration header */}
+          <View style={{ alignItems: 'center', paddingTop: 14, paddingBottom: 8 }}>
+            <IlluCancel width={200} height={128} />
+            <Text style={{ fontSize: 20, fontWeight: '900', color: C.text, letterSpacing: -0.4, marginTop: 6 }}>Cancel Ride?</Text>
+            <Text style={{ fontSize: 12, color: C.textDim, marginTop: 3 }}>Select a reason to proceed</Text>
           </View>
 
           <View style={{ paddingHorizontal: 18 }}>

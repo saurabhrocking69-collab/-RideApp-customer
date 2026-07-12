@@ -12,6 +12,7 @@ import { s, C, T, SP, R, SHADOW } from '../styles';
 import { MAPS_KEY, API } from '../constants';
 import { useNearbyDrivers } from '../offline';
 import { NotifBell, NotificationCenter, getUnreadCount } from '../components/NotificationCenter';
+import { FeatureIllustrationBanner, IlluFamily3, BikeScene } from '../components/Illustrations';
 
 
 function NavBar() {
@@ -419,6 +420,74 @@ function PromoBanner({ setScreen, loadReferral }: { setScreen: (s: any) => void;
   );
 }
 
+/* Live pulse dot — double expanding ring, native driver */
+function PulseDot() {
+  const r1 = useRef(new Animated.Value(1)).current;
+  const o1 = useRef(new Animated.Value(0.85)).current;
+  const r2 = useRef(new Animated.Value(1)).current;
+  const o2 = useRef(new Animated.Value(0.65)).current;
+  useEffect(() => {
+    const pulse = (scale: Animated.Value, opacity: Animated.Value, delay: number) => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.parallel([
+            Animated.timing(scale,   { toValue: 2.4, duration: 1100, useNativeDriver: true }),
+            Animated.timing(opacity, { toValue: 0,   duration: 1100, useNativeDriver: true }),
+          ]),
+          Animated.parallel([
+            Animated.timing(scale,   { toValue: 1,    duration: 0, useNativeDriver: true }),
+            Animated.timing(opacity, { toValue: 0.85, duration: 0, useNativeDriver: true }),
+          ]),
+        ])
+      ).start();
+    };
+    pulse(r1, o1, 0);
+    pulse(r2, o2, 550);
+  }, []);
+  return (
+    <View style={{ width: 10, height: 10, alignItems: 'center', justifyContent: 'center' }}>
+      <Animated.View style={{ position: 'absolute', width: 10, height: 10, borderRadius: 5,
+        borderWidth: 1.5, borderColor: C.green, transform: [{ scale: r1 }], opacity: o1 }} />
+      <Animated.View style={{ position: 'absolute', width: 10, height: 10, borderRadius: 5,
+        borderWidth: 1, borderColor: C.green, transform: [{ scale: r2 }], opacity: o2 }} />
+      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.green }} />
+    </View>
+  );
+}
+
+/* Animated speed lines for bike card — native driver */
+function SpeedLines() {
+  const off = useRef(new Animated.Value(0)).current;
+  const op  = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    let alive = true;
+    const run = () => {
+      if (!alive) return;
+      off.setValue(0); op.setValue(1);
+      Animated.parallel([
+        Animated.timing(off, { toValue: -38, duration: 460, easing: Easing.linear, useNativeDriver: true }),
+        Animated.sequence([
+          Animated.delay(160),
+          Animated.timing(op, { toValue: 0, duration: 300, useNativeDriver: true }),
+        ]),
+      ]).start(({ finished }) => { if (finished && alive) run(); });
+    };
+    run();
+    return () => { alive = false; };
+  }, []);
+  return (
+    <Animated.View pointerEvents="none" style={{
+      position: 'absolute', left: 8, top: 44,
+      transform: [{ translateX: off }], opacity: op,
+    }}>
+      <View style={{ width: 30, height: 2,   borderRadius: 1, backgroundColor: 'rgba(255,255,255,0.42)', marginBottom: 7 }} />
+      <View style={{ width: 22, height: 1.5, borderRadius: 1, backgroundColor: 'rgba(255,255,255,0.28)', marginBottom: 7 }} />
+      <View style={{ width: 26, height: 2,   borderRadius: 1, backgroundColor: 'rgba(255,255,255,0.36)' }} />
+    </Animated.View>
+  );
+}
+
 function HomeTab() {
   const {
     userName, phone,
@@ -480,6 +549,7 @@ function HomeTab() {
   const scrollY    = useRef(new Animated.Value(0)).current;
   const tickerAnim = useRef(new Animated.Value(0)).current;
   const TICKER_W   = 1400;
+  const shimmerX   = useRef(new Animated.Value(-90)).current;
 
   useEffect(() => {
     Animated.loop(
@@ -490,6 +560,21 @@ function HomeTab() {
         easing: Easing.linear,
       })
     ).start();
+  }, []);
+
+  // Header shimmer sweep — repeats every ~3.5 s
+  useEffect(() => {
+    let alive = true;
+    const run = () => {
+      if (!alive) return;
+      shimmerX.setValue(-90);
+      Animated.sequence([
+        Animated.delay(2600),
+        Animated.timing(shimmerX, { toValue: 440, duration: 720, easing: Easing.ease, useNativeDriver: true }),
+      ]).start(({ finished }) => { if (finished && alive) run(); });
+    };
+    run();
+    return () => { alive = false; };
   }, []);
 
   const FULL_H = Platform.OS === 'android' ? 130 : 146;
@@ -517,15 +602,21 @@ function HomeTab() {
   }, []);
 
   return (
-    <View style={[s.screen, { backgroundColor: C.bg }]}>
+    <View style={[s.screen, { backgroundColor: '#FFFFFF' }]}>
       {/* ── Green header ── */}
-      <Animated.View style={{ height: headerH, overflow: 'hidden', backgroundColor: '#16A34A' }}>
+      <Animated.View style={{ height: headerH, overflow: 'hidden', backgroundColor: '#FF2D78' }}>
         {/* Subtle diagonal stripe texture */}
         <View style={{ ...StyleSheet.absoluteFillObject, opacity: 0.08 }}>
           {[0,1,2,3,4,5,6,7].map(i => (
             <View key={i} style={{ position: 'absolute', top: -20, left: i * 48 - 20, width: 18, height: 300, backgroundColor: '#fff', transform: [{ rotate: '20deg' }] }} />
           ))}
         </View>
+        {/* Shimmer sweep */}
+        <Animated.View pointerEvents="none" style={{
+          position: 'absolute', top: 0, bottom: 0, width: 64,
+          backgroundColor: 'rgba(255,255,255,0.18)',
+          transform: [{ translateX: shimmerX }, { skewX: '-18deg' }],
+        }} />
 
         {/* Full header */}
         <Animated.View style={{ paddingTop: Platform.OS === 'android' ? 38 : 50, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', opacity: fullAlpha }}>
@@ -669,7 +760,7 @@ function HomeTab() {
             style={{ marginHorizontal: 16, marginTop: 10 }}>
             <View style={{ backgroundColor: 'rgba(5,150,105,0.15)', borderWidth: 1.5, borderColor: 'rgba(5,150,105,0.35)', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(5,150,105,0.20)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(5,150,105,0.4)' }}>
-                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.green }} />
+                <PulseDot />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: C.green, fontSize: 13, fontWeight: '900' }}>
@@ -687,41 +778,140 @@ function HomeTab() {
         {/* ── Content area ── */}
         <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
 
-          {/* 5. ── Service cards ── */}
+          {/* 5. ── Book Your Ride — illustrated vehicle grid ── */}
           <SlideUp delay={0}>
+            <Text style={{ fontSize: 10, fontWeight: '900', color: C.textDim, letterSpacing: 1.4, marginBottom: 10 }}>BOOK YOUR RIDE</Text>
+
+            {/* Row 1 — Auto + Bike */}
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
-              <Bouncy onPress={() => {
+
+              {/* Auto card */}
+              <Bouncy onPress={() => { setRideType('auto'); setScreen('booking'); }} style={{ flex: 1 }}>
+                <View style={{ borderRadius: 22, backgroundColor: '#2E1461', minHeight: 155, overflow: 'hidden', ...SHADOW.md }}>
+                  <View style={{ position: 'absolute', top: -22, right: -22, width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.06)' }} />
+                  {/* Family peeping from bottom-left */}
+                  <View style={{ position: 'absolute', bottom: 38, left: -4, opacity: 0.92 }}>
+                    <IlluFamily3 width={88} height={56} />
+                  </View>
+                  <View style={{ alignItems: 'flex-end', paddingRight: 6, paddingTop: 10 }}>
+                    <Text style={{ fontSize: 50, lineHeight: 60 }}>🛺</Text>
+                  </View>
+                  <View style={{ padding: 13, paddingTop: 40 }}>
+                    <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900', letterSpacing: -0.4 }}>Auto</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, marginTop: 2 }}>₹30+ · ~3 min ETA</Text>
+                    <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#34D399' }} />
+                      <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 9, fontWeight: '700' }}>Drivers available</Text>
+                    </View>
+                  </View>
+                </View>
+              </Bouncy>
+
+              {/* Bike card — animated */}
+              <Bouncy onPress={() => { setRideType('bike'); setScreen('booking'); }} style={{ flex: 1 }}>
+                <View style={{ borderRadius: 22, backgroundColor: '#14532D', overflow: 'hidden', ...SHADOW.md }}>
+                  <View style={{ position: 'absolute', top: -22, right: -22, width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.06)' }} />
+                  {/* FASTEST badge */}
+                  <View style={{ alignItems: 'flex-end', padding: 9 }}>
+                    <View style={{ backgroundColor: 'rgba(255,255,255,0.16)', borderRadius: 7, paddingHorizontal: 7, paddingVertical: 3 }}>
+                      <Text style={{ color: 'rgba(255,255,255,0.82)', fontSize: 9, fontWeight: '800' }}>FASTEST</Text>
+                    </View>
+                  </View>
+                  {/* Animated speed lines */}
+                  <SpeedLines />
+                  {/* Animated bike SVG */}
+                  <View style={{ alignItems: 'center', marginTop: -6, marginBottom: 2 }}>
+                    <BikeScene width={148} height={88} />
+                  </View>
+                  {/* Text */}
+                  <View style={{ paddingHorizontal: 13, paddingBottom: 13 }}>
+                    <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900', letterSpacing: -0.4 }}>Bike</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, marginTop: 2 }}>₹20+ · Beat traffic</Text>
+                    <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#6EE7B7' }} />
+                      <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 9, fontWeight: '700' }}>Fastest option</Text>
+                    </View>
+                  </View>
+                </View>
+              </Bouncy>
+            </View>
+
+            {/* Row 2 — Car + By Hour */}
+            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
+
+              {/* Car card */}
+              <Bouncy onPress={() => { setRideType('car'); setScreen('booking'); }} style={{ flex: 1 }}>
+                <View style={{ borderRadius: 22, backgroundColor: '#1C3460', minHeight: 148, overflow: 'hidden', ...SHADOW.md }}>
+                  <View style={{ position: 'absolute', top: -22, right: -22, width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.06)' }} />
+                  <View style={{ position: 'absolute', bottom: -14, left: -14, width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(147,197,253,0.10)' }} />
+                  <View style={{ alignItems: 'flex-end', paddingRight: 6, paddingTop: 10 }}>
+                    <Text style={{ fontSize: 50, lineHeight: 60 }}>🚗</Text>
+                  </View>
+                  <View style={{ padding: 13, paddingTop: 2 }}>
+                    <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900', letterSpacing: -0.4 }}>Car</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, marginTop: 2 }}>₹80+ · AC comfort</Text>
+                    <View style={{ marginTop: 9, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#93C5FD' }} />
+                      <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 9, fontWeight: '700' }}>4.8★ avg driver</Text>
+                    </View>
+                  </View>
+                </View>
+              </Bouncy>
+
+              {/* By Hour card */}
+              <Bouncy style={{ flex: 1 }} onPress={() => {
                 setHourlyStep('book'); setHPickup(''); setHDrop(''); setHPickupCoords(null); setHDropCoords(null);
                 setHPickupSugg([]); setHDropSugg([]); setHRoundTrip(false); setHStayHours(1);
                 setHourlyBooking(null); setScreen('hourly');
-              }} style={{ flex: 1, backgroundColor: C.bgCard, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: C.glassBorder, ...SHADOW.sm }}>
-                <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: C.purpleGlass, alignItems: 'center', justifyContent: 'center', marginBottom: 10, borderWidth: 1, borderColor: C.purpleBorder }}>
-                  <Ionicons name="time-outline" size={21} color={C.purple} />
+              }}>
+                <View style={{ borderRadius: 22, backgroundColor: '#78350F', minHeight: 148, overflow: 'hidden', ...SHADOW.md }}>
+                  <View style={{ position: 'absolute', top: -22, right: -22, width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.06)' }} />
+                  <View style={{ position: 'absolute', bottom: -14, left: -14, width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(251,191,36,0.14)' }} />
+                  <View style={{ alignItems: 'flex-end', paddingRight: 8, paddingTop: 10 }}>
+                    <Text style={{ fontSize: 50, lineHeight: 60 }}>⏱️</Text>
+                  </View>
+                  <View style={{ padding: 13, paddingTop: 2 }}>
+                    <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900', letterSpacing: -0.4 }}>By Hour</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, marginTop: 2 }}>₹120+ · 2h–Full Day</Text>
+                    <View style={{ marginTop: 9, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#FDE68A' }} />
+                      <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 9, fontWeight: '700' }}>Unlimited km plans</Text>
+                    </View>
+                  </View>
                 </View>
-                <Text style={{ fontSize: 13, fontWeight: '900', color: C.text }}>By Hour</Text>
-                <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 3, lineHeight: 14 }}>2h · 4h · Full Day</Text>
               </Bouncy>
             </View>
+
+            {/* Service strip — Buddy + Refer */}
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
               <Bouncy onPress={() => setTab('history')}
-                style={{ flex: 1, backgroundColor: C.bgCard, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: C.glassBorder, ...SHADOW.sm }}>
-                <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', marginBottom: 10, borderWidth: 1, borderColor: C.pinkBorder }}>
-                  <Ionicons name="person-circle-outline" size={21} color={C.pink} />
+                style={{ flex: 1, backgroundColor: C.bgCard, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: C.glassBorder, flexDirection: 'row', alignItems: 'center', gap: 12, ...SHADOW.sm }}>
+                <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.pinkBorder }}>
+                  <Ionicons name="person-circle-outline" size={22} color={C.pink} />
                 </View>
-                <Text style={{ fontSize: 13, fontWeight: '900', color: C.text }}>Sppero Buddy</Text>
-                <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 3, lineHeight: 14 }}>
-                  {favouriteBuddy ? `${favouriteBuddy.driver_name} · ${favouriteBuddy.is_online ? 'Online' : 'Offline'}` : 'Your trusted driver'}
-                </Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '900', color: C.text }}>Sppero Buddy</Text>
+                  <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }} numberOfLines={1}>
+                    {favouriteBuddy ? `${favouriteBuddy.driver_name} · ${favouriteBuddy.is_online ? '🟢 Online' : '⚫ Offline'}` : 'Your trusted driver'}
+                  </Text>
+                </View>
               </Bouncy>
               <Bouncy onPress={() => { loadReferral(); setScreen('referral'); }}
-                style={{ flex: 1, backgroundColor: C.bgCard, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: C.glassBorder, ...SHADOW.sm }}>
-                <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', marginBottom: 10, borderWidth: 1, borderColor: C.pinkBorder }}>
-                  <Ionicons name="gift-outline" size={21} color={C.pink} />
+                style={{ flex: 1, backgroundColor: C.bgCard, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: C.glassBorder, flexDirection: 'row', alignItems: 'center', gap: 12, ...SHADOW.sm }}>
+                <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.pinkBorder }}>
+                  <Ionicons name="gift-outline" size={22} color={C.pink} />
                 </View>
-                <Text style={{ fontSize: 13, fontWeight: '900', color: C.text }}>Refer & Earn</Text>
-                <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 3, lineHeight: 14 }}>₹50 for you + friend</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '900', color: C.text }}>Refer & Earn</Text>
+                  <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>₹50 for you + friend</Text>
+                </View>
               </Bouncy>
             </View>
+          </SlideUp>
+
+          {/* 5b. ── Feature illustration banner ── */}
+          <SlideUp delay={20}>
+            <FeatureIllustrationBanner />
           </SlideUp>
 
           {/* 6. ── Sppero Buddy card (if has buddy) ── */}
