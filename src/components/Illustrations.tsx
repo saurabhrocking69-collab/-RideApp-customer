@@ -574,18 +574,20 @@ export function BikeScene({ width = 148, height = 88 }: { width?: number; height
   // Road dash tile x-positions: cover -24 to 192 so scroll loop is seamless
   const DASH_XS = [-24, 0, 24, 48, 72, 96, 120, 144, 168, 192];
 
-  const Spokes = ({ cx, cy }: { cx: number; cy: number }) => (
+  // SpokesAtOrigin draws the wheel internals centered at (0,0).
+  // Used inside a G translate so rotation happens around the true wheel centre.
+  const SpokesAtOrigin = () => (
     <>
-      <Circle cx={cx} cy={cy} r={WR - 4} fill="none" stroke="rgba(255,255,255,0.32)" strokeWidth="1.1" />
-      <Circle cx={cx} cy={cy} r="3.5" fill="rgba(255,255,255,0.88)" />
-      <Line x1={cx}          y1={cy - WR + 2} x2={cx}          y2={cy - 4}      stroke="rgba(255,255,255,0.78)" strokeWidth="1.2" />
-      <Line x1={cx}          y1={cy + WR - 2} x2={cx}          y2={cy + 4}      stroke="rgba(255,255,255,0.78)" strokeWidth="1.2" />
-      <Line x1={cx - WR + 2} y1={cy}          x2={cx - 4}      y2={cy}          stroke="rgba(255,255,255,0.78)" strokeWidth="1.2" />
-      <Line x1={cx + WR - 2} y1={cy}          x2={cx + 4}      y2={cy}          stroke="rgba(255,255,255,0.78)" strokeWidth="1.2" />
-      <Line x1={cx - WD} y1={cy - WD} x2={cx - 2.8} y2={cy - 2.8} stroke="rgba(255,255,255,0.55)" strokeWidth="1" />
-      <Line x1={cx + WD} y1={cy + WD} x2={cx + 2.8} y2={cy + 2.8} stroke="rgba(255,255,255,0.55)" strokeWidth="1" />
-      <Line x1={cx + WD} y1={cy - WD} x2={cx + 2.8} y2={cy - 2.8} stroke="rgba(255,255,255,0.55)" strokeWidth="1" />
-      <Line x1={cx - WD} y1={cy + WD} x2={cx - 2.8} y2={cy + 2.8} stroke="rgba(255,255,255,0.55)" strokeWidth="1" />
+      <Circle cx={0} cy={0} r={WR - 4} fill="none" stroke="rgba(255,255,255,0.32)" strokeWidth="1.1" />
+      <Circle cx={0} cy={0} r={3.5} fill="rgba(255,255,255,0.88)" />
+      <Line x1={0}        y1={-(WR - 2)} x2={0}        y2={-4}     stroke="rgba(255,255,255,0.78)" strokeWidth="1.2" />
+      <Line x1={0}        y1={WR - 2}    x2={0}        y2={4}      stroke="rgba(255,255,255,0.78)" strokeWidth="1.2" />
+      <Line x1={-(WR-2)}  y1={0}         x2={-4}       y2={0}      stroke="rgba(255,255,255,0.78)" strokeWidth="1.2" />
+      <Line x1={WR - 2}   y1={0}         x2={4}        y2={0}      stroke="rgba(255,255,255,0.78)" strokeWidth="1.2" />
+      <Line x1={-WD} y1={-WD} x2={-2.8} y2={-2.8} stroke="rgba(255,255,255,0.55)" strokeWidth="1" />
+      <Line x1={WD}  y1={WD}  x2={2.8}  y2={2.8}  stroke="rgba(255,255,255,0.55)" strokeWidth="1" />
+      <Line x1={WD}  y1={-WD} x2={2.8}  y2={-2.8} stroke="rgba(255,255,255,0.55)" strokeWidth="1" />
+      <Line x1={-WD} y1={WD}  x2={-2.8} y2={2.8}  stroke="rgba(255,255,255,0.55)" strokeWidth="1" />
     </>
   );
 
@@ -611,17 +613,22 @@ export function BikeScene({ width = 148, height = 88 }: { width?: number; height
       </AnimatedG>
 
       {/* ── TYRES — static, always pinned to road ── */}
+      {/* G translate shifts origin to wheel centre so AnimatedG rotates around (0,0) = exact axle */}
       <Circle cx={RCX} cy={WCY} r={WR} fill="#0D1117" />
       <Circle cx={RCX} cy={WCY} r={WR} fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="2.2" />
-      <AnimatedG rotation={wheelRot} originX={RCX} originY={WCY}>
-        <Spokes cx={RCX} cy={WCY} />
-      </AnimatedG>
+      <G transform={`translate(${RCX} ${WCY})`}>
+        <AnimatedG rotation={wheelRot}>
+          <SpokesAtOrigin />
+        </AnimatedG>
+      </G>
 
       <Circle cx={FCX} cy={WCY} r={WR} fill="#0D1117" />
       <Circle cx={FCX} cy={WCY} r={WR} fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="2.2" />
-      <AnimatedG rotation={wheelRot} originX={FCX} originY={WCY}>
-        <Spokes cx={FCX} cy={WCY} />
-      </AnimatedG>
+      <G transform={`translate(${FCX} ${WCY})`}>
+        <AnimatedG rotation={wheelRot}>
+          <SpokesAtOrigin />
+        </AnimatedG>
+      </G>
 
       {/* ── BODY — micro-bounce only ±0.5 px
           Swing arm & fork endpoints at y=74 (2px inside tyre ring) so
