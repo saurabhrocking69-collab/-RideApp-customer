@@ -135,8 +135,8 @@ export const Bouncy = ({ children, onPress, style, disabled }: any) => {
   const pressIn  = () => Animated.spring(scale, { toValue: 0.95, friction: 10, tension: 200, useNativeDriver: true }).start();
   const pressOut = () => Animated.spring(scale, { toValue: 1,    friction: 5,  tension: 120, useNativeDriver: true }).start();
   return (
-    <Animated.View style={{ transform: [{ scale }] }}>
-      <TouchableOpacity onPress={onPress} onPressIn={pressIn} onPressOut={pressOut} style={style} disabled={disabled} activeOpacity={1}>
+    <Animated.View style={[style, { transform: [{ scale }] }]}>
+      <TouchableOpacity onPress={onPress} onPressIn={pressIn} onPressOut={pressOut} style={{ flex: 1 }} disabled={disabled} activeOpacity={1}>
         {children}
       </TouchableOpacity>
     </Animated.View>
