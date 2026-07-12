@@ -722,8 +722,8 @@ function HomeTab() {
         <View style={{
           marginHorizontal: 16, marginTop: 10,
           height: 30, borderRadius: 10, overflow: 'hidden',
-          backgroundColor: 'rgba(255,255,255,0.04)',
-          borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
+          backgroundColor: 'rgba(46,20,97,0.05)',
+          borderWidth: 1, borderColor: 'rgba(46,20,97,0.10)',
           justifyContent: 'center',
         }}>
           <Animated.View style={{ flexDirection: 'row', alignItems: 'center', transform: [{ translateX: tickerAnim }] }}>
@@ -789,14 +789,16 @@ function HomeTab() {
               <Bouncy onPress={() => { setRideType('auto'); setScreen('booking'); }} style={{ flex: 1 }}>
                 <View style={{ borderRadius: 22, backgroundColor: '#2E1461', minHeight: 155, overflow: 'hidden', ...SHADOW.md }}>
                   <View style={{ position: 'absolute', top: -22, right: -22, width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.06)' }} />
-                  {/* Family peeping from bottom-left */}
-                  <View style={{ position: 'absolute', bottom: 38, left: -4, opacity: 0.92 }}>
-                    <IlluFamily3 width={88} height={56} />
+                  {/* Family standing bottom-right of illustration area */}
+                  <View style={{ position: 'absolute', bottom: 36, right: -6, opacity: 0.90 }}>
+                    <IlluFamily3 width={90} height={58} />
                   </View>
-                  <View style={{ alignItems: 'flex-end', paddingRight: 6, paddingTop: 10 }}>
-                    <Text style={{ fontSize: 50, lineHeight: 60 }}>🛺</Text>
+                  {/* 🛺 emoji top-right */}
+                  <View style={{ alignItems: 'flex-end', paddingRight: 8, paddingTop: 10 }}>
+                    <Text style={{ fontSize: 48, lineHeight: 56 }}>🛺</Text>
                   </View>
-                  <View style={{ padding: 13, paddingTop: 40 }}>
+                  {/* Text bottom-left */}
+                  <View style={{ padding: 13, paddingTop: 8 }}>
                     <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900', letterSpacing: -0.4 }}>Auto</Text>
                     <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, marginTop: 2 }}>₹30+ · ~3 min ETA</Text>
                     <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
@@ -820,8 +822,8 @@ function HomeTab() {
                   {/* Animated speed lines */}
                   <SpeedLines />
                   {/* Animated bike SVG */}
-                  <View style={{ alignItems: 'center', marginTop: -6, marginBottom: 2 }}>
-                    <BikeScene width={148} height={88} />
+                  <View style={{ alignItems: 'center', marginTop: 2, marginBottom: 2 }}>
+                    <BikeScene width={Math.min(148, Math.floor((SCREEN_W - 42) / 2) - 4)} height={88} />
                   </View>
                   {/* Text */}
                   <View style={{ paddingHorizontal: 13, paddingBottom: 13 }}>
