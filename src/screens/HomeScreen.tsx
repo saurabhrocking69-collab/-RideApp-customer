@@ -787,18 +787,20 @@ function HomeTab() {
 
               {/* Auto card */}
               <Bouncy onPress={() => { setRideType('auto'); setScreen('booking'); }} style={{ flex: 1 }}>
-                <View style={{ borderRadius: 22, backgroundColor: '#2E1461', minHeight: 155, overflow: 'hidden', ...SHADOW.md }}>
+                <View style={{ borderRadius: 22, backgroundColor: '#2E1461', overflow: 'hidden', ...SHADOW.md }}>
+                  {/* Decorative glow circle */}
                   <View style={{ position: 'absolute', top: -22, right: -22, width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.06)' }} />
-                  {/* Family standing bottom-right of illustration area */}
-                  <View style={{ position: 'absolute', bottom: 36, right: -6, opacity: 0.90 }}>
-                    <IlluFamily3 width={90} height={58} />
+                  {/* Row 1: emoji badge */}
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', paddingTop: 9, paddingHorizontal: 9 }}>
+                    <View style={{ flex: 1 }} />
+                    <Text style={{ fontSize: 46, lineHeight: 52 }}>🛺</Text>
                   </View>
-                  {/* 🛺 emoji top-right */}
-                  <View style={{ alignItems: 'flex-end', paddingRight: 8, paddingTop: 10 }}>
-                    <Text style={{ fontSize: 48, lineHeight: 56 }}>🛺</Text>
+                  {/* Row 2: family illustration — inline, no overlap */}
+                  <View style={{ alignItems: 'center', marginTop: 4, marginBottom: 0 }}>
+                    <IlluFamily3 width={100} height={62} />
                   </View>
-                  {/* Text bottom-left */}
-                  <View style={{ padding: 13, paddingTop: 8 }}>
+                  {/* Row 3: text */}
+                  <View style={{ paddingHorizontal: 13, paddingTop: 6, paddingBottom: 13 }}>
                     <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900', letterSpacing: -0.4 }}>Auto</Text>
                     <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, marginTop: 2 }}>₹30+ · ~3 min ETA</Text>
                     <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
@@ -843,19 +845,22 @@ function HomeTab() {
 
               {/* Car card */}
               <Bouncy onPress={() => { setRideType('car'); setScreen('booking'); }} style={{ flex: 1 }}>
-                <View style={{ borderRadius: 22, backgroundColor: '#1C3460', minHeight: 148, overflow: 'hidden', ...SHADOW.md }}>
+                <View style={{ borderRadius: 22, backgroundColor: '#1C3460', overflow: 'hidden', ...SHADOW.md }}>
                   <View style={{ position: 'absolute', top: -22, right: -22, width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.06)' }} />
                   <View style={{ position: 'absolute', bottom: -14, left: -14, width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(147,197,253,0.10)' }} />
                   <View style={{ alignItems: 'flex-end', paddingRight: 6, paddingTop: 10 }}>
                     <Text style={{ fontSize: 50, lineHeight: 60 }}>🚗</Text>
                   </View>
-                  <View style={{ padding: 13, paddingTop: 2 }}>
+                  {/* Spacer to push text down — gives car card visual height similar to auto/bike */}
+                  <View style={{ height: 44 }} />
+                  <View style={{ padding: 13, paddingTop: 0 }}>
                     <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900', letterSpacing: -0.4 }}>Car</Text>
                     <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, marginTop: 2 }}>₹80+ · AC comfort</Text>
                     <View style={{ marginTop: 9, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                       <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#93C5FD' }} />
                       <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 9, fontWeight: '700' }}>4.8★ avg driver</Text>
                     </View>
+                    <View style={{ height: 13 }} />
                   </View>
                 </View>
               </Bouncy>
@@ -866,19 +871,21 @@ function HomeTab() {
                 setHPickupSugg([]); setHDropSugg([]); setHRoundTrip(false); setHStayHours(1);
                 setHourlyBooking(null); setScreen('hourly');
               }}>
-                <View style={{ borderRadius: 22, backgroundColor: '#78350F', minHeight: 148, overflow: 'hidden', ...SHADOW.md }}>
+                <View style={{ borderRadius: 22, backgroundColor: '#78350F', overflow: 'hidden', ...SHADOW.md }}>
                   <View style={{ position: 'absolute', top: -22, right: -22, width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.06)' }} />
                   <View style={{ position: 'absolute', bottom: -14, left: -14, width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(251,191,36,0.14)' }} />
                   <View style={{ alignItems: 'flex-end', paddingRight: 8, paddingTop: 10 }}>
                     <Text style={{ fontSize: 50, lineHeight: 60 }}>⏱️</Text>
                   </View>
-                  <View style={{ padding: 13, paddingTop: 2 }}>
+                  <View style={{ height: 44 }} />
+                  <View style={{ padding: 13, paddingTop: 0 }}>
                     <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900', letterSpacing: -0.4 }}>By Hour</Text>
                     <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, marginTop: 2 }}>₹120+ · 2h–Full Day</Text>
                     <View style={{ marginTop: 9, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                       <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#FDE68A' }} />
                       <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 9, fontWeight: '700' }}>Unlimited km plans</Text>
                     </View>
+                    <View style={{ height: 13 }} />
                   </View>
                 </View>
               </Bouncy>
