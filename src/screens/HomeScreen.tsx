@@ -488,6 +488,35 @@ function SpeedLines() {
   );
 }
 
+// ── Full-screen skeleton for the vehicle grid + service strip ──────────────
+function HomeSkeletonLoader() {
+  const HALF_W = Math.floor((SCREEN_W - 26) / 2); // matches card formula (padding 8×2 + gap 10)
+  const CARD_H = 185;
+  return (
+    <View style={{ paddingHorizontal: 8, paddingTop: 14 }}>
+      {/* Label placeholder */}
+      <SkeletonBox width={100} height={10} radius={4} style={{ marginBottom: 12 }} />
+      {/* Row 1 */}
+      <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
+        <SkeletonBox width={HALF_W} height={CARD_H} radius={22} />
+        <SkeletonBox width={HALF_W} height={CARD_H} radius={22} />
+      </View>
+      {/* Row 2 */}
+      <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
+        <SkeletonBox width={HALF_W} height={CARD_H} radius={22} />
+        <SkeletonBox width={HALF_W} height={CARD_H} radius={22} />
+      </View>
+      {/* Service strip */}
+      <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
+        <SkeletonBox width={HALF_W} height={72} radius={18} />
+        <SkeletonBox width={HALF_W} height={72} radius={18} />
+      </View>
+      {/* Feature banner */}
+      <SkeletonBox width={SCREEN_W - 16} height={120} radius={20} />
+    </View>
+  );
+}
+
 function HomeTab() {
   const {
     userName, phone,
@@ -509,6 +538,13 @@ function HomeTab() {
     userCoords,
     setRideType,
   } = useApp();
+
+  // Show skeleton for first 550ms so grid loads-in cleanly
+  const [homeReady, setHomeReady] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setHomeReady(true), 550);
+    return () => clearTimeout(t);
+  }, []);
 
   const nearbyAnim = useRef(new Animated.Value(1)).current;
   const userLat = (userCoords as any)?.latitude || (userCoords as any)?.lat;
@@ -776,6 +812,7 @@ function HomeTab() {
         )}
 
         {/* ── Content area ── */}
+        {!homeReady ? <HomeSkeletonLoader /> : (
         <View style={{ paddingHorizontal: 8, paddingTop: 14 }}>
 
           {/* 5. ── Book Your Ride — illustrated vehicle grid ── */}
@@ -891,36 +928,37 @@ function HomeTab() {
               </Bouncy>
             </View>
 
-            {/* Service strip — Buddy + Refer */}
+            {/* Service strip — Buddy + Refer (plain TouchableOpacity so flex:1 works in the row) */}
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
-              {/* Buddy card */}
-              <Bouncy onPress={() => favouriteBuddy ? setShowBuddyBook(true) : setTab('history')}
-                style={{ flex: 1 }}>
-                <View style={{ backgroundColor: '#2E1461', borderRadius: 18, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, ...SHADOW.md }}>
-                  <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.22)' }}>
-                    <Ionicons name="person-circle-outline" size={24} color="#fff" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 12, fontWeight: '900', color: '#fff' }}>Sppero Buddy</Text>
-                    <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.62)', marginTop: 2 }} numberOfLines={1}>
-                      {favouriteBuddy ? `${favouriteBuddy.driver_name} · ${favouriteBuddy.is_online ? '🟢 Online' : '⚫ Offline'}` : 'Your trusted driver'}
-                    </Text>
-                  </View>
+              <TouchableOpacity
+                activeOpacity={0.82}
+                onPress={() => favouriteBuddy ? setShowBuddyBook(true) : setTab('history')}
+                style={{ flex: 1, backgroundColor: '#2E1461', borderRadius: 18, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, ...SHADOW.md }}>
+                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.22)' }}>
+                  <Ionicons name="person-circle-outline" size={24} color="#fff" />
                 </View>
-              </Bouncy>
-              {/* Refer card */}
-              <Bouncy onPress={() => { loadReferral(); setScreen('referral'); }}
-                style={{ flex: 1 }}>
-                <View style={{ backgroundColor: '#FF2D78', borderRadius: 18, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, ...SHADOW.md }}>
-                  <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.28)' }}>
-                    <Ionicons name="gift-outline" size={24} color="#fff" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 12, fontWeight: '900', color: '#fff' }}>Refer & Earn</Text>
-                    <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.72)', marginTop: 2 }}>₹50 for you + friend</Text>
-                  </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '900', color: '#fff' }}>Sppero Buddy</Text>
+                  <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.62)', marginTop: 2 }} numberOfLines={1}>
+                    {favouriteBuddy ? `${favouriteBuddy.driver_name} · ${favouriteBuddy.is_online ? '🟢 Online' : '⚫ Offline'}` : 'Your trusted driver'}
+                  </Text>
                 </View>
-              </Bouncy>
+                <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.35)" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.82}
+                onPress={() => { loadReferral(); setScreen('referral'); }}
+                style={{ flex: 1, backgroundColor: '#FF2D78', borderRadius: 18, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, ...SHADOW.md }}>
+                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.28)' }}>
+                  <Ionicons name="gift-outline" size={24} color="#fff" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '900', color: '#fff' }}>Refer & Earn</Text>
+                  <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.72)', marginTop: 2 }}>₹50 for you + friend</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.35)" />
+              </TouchableOpacity>
             </View>
           </SlideUp>
 
@@ -1130,6 +1168,7 @@ function HomeTab() {
             <Text style={{ color: C.textDim, fontSize: 10, letterSpacing: 0.8 }}>Sppero Inc. · India</Text>
           </View>
         </View>
+        )}
       </Animated.ScrollView>
       <View style={s.navFloat}><NavBar /></View>
       <BuddyBookModal />
