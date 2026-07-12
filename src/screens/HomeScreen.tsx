@@ -776,7 +776,7 @@ function HomeTab() {
         )}
 
         {/* ── Content area ── */}
-        <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
+        <View style={{ paddingHorizontal: 8, paddingTop: 14 }}>
 
           {/* 5. ── Book Your Ride — illustrated vehicle grid ── */}
           <SlideUp delay={0}>
@@ -825,7 +825,7 @@ function HomeTab() {
                   <SpeedLines />
                   {/* Animated bike SVG */}
                   <View style={{ alignItems: 'center', marginTop: 2, marginBottom: 2 }}>
-                    <BikeScene width={Math.min(148, Math.floor((SCREEN_W - 42) / 2) - 4)} height={88} />
+                    <BikeScene width={Math.min(160, Math.floor((SCREEN_W - 26) / 2) - 4)} height={88} />
                   </View>
                   {/* Text */}
                   <View style={{ paddingHorizontal: 13, paddingBottom: 13 }}>
@@ -893,26 +893,32 @@ function HomeTab() {
 
             {/* Service strip — Buddy + Refer */}
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
-              <Bouncy onPress={() => setTab('history')}
-                style={{ flex: 1, backgroundColor: C.bgCard, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: C.glassBorder, flexDirection: 'row', alignItems: 'center', gap: 12, ...SHADOW.sm }}>
-                <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.pinkBorder }}>
-                  <Ionicons name="person-circle-outline" size={22} color={C.pink} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '900', color: C.text }}>Sppero Buddy</Text>
-                  <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }} numberOfLines={1}>
-                    {favouriteBuddy ? `${favouriteBuddy.driver_name} · ${favouriteBuddy.is_online ? '🟢 Online' : '⚫ Offline'}` : 'Your trusted driver'}
-                  </Text>
+              {/* Buddy card */}
+              <Bouncy onPress={() => favouriteBuddy ? setShowBuddyBook(true) : setTab('history')}
+                style={{ flex: 1 }}>
+                <View style={{ backgroundColor: '#2E1461', borderRadius: 18, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, ...SHADOW.md }}>
+                  <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.22)' }}>
+                    <Ionicons name="person-circle-outline" size={24} color="#fff" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '900', color: '#fff' }}>Sppero Buddy</Text>
+                    <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.62)', marginTop: 2 }} numberOfLines={1}>
+                      {favouriteBuddy ? `${favouriteBuddy.driver_name} · ${favouriteBuddy.is_online ? '🟢 Online' : '⚫ Offline'}` : 'Your trusted driver'}
+                    </Text>
+                  </View>
                 </View>
               </Bouncy>
+              {/* Refer card */}
               <Bouncy onPress={() => { loadReferral(); setScreen('referral'); }}
-                style={{ flex: 1, backgroundColor: C.bgCard, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: C.glassBorder, flexDirection: 'row', alignItems: 'center', gap: 12, ...SHADOW.sm }}>
-                <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.pinkBorder }}>
-                  <Ionicons name="gift-outline" size={22} color={C.pink} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '900', color: C.text }}>Refer & Earn</Text>
-                  <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>₹50 for you + friend</Text>
+                style={{ flex: 1 }}>
+                <View style={{ backgroundColor: '#FF2D78', borderRadius: 18, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, ...SHADOW.md }}>
+                  <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.28)' }}>
+                    <Ionicons name="gift-outline" size={24} color="#fff" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '900', color: '#fff' }}>Refer & Earn</Text>
+                    <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.72)', marginTop: 2 }}>₹50 for you + friend</Text>
+                  </View>
                 </View>
               </Bouncy>
             </View>
