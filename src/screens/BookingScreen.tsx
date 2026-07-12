@@ -823,12 +823,16 @@ export function BookingScreen() {
                   </View>
                 )}
 
-                {/* Divider with swap */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 6, paddingLeft: 5 }}>
-                  <View style={{ width: 2, height: 18, backgroundColor: C.glassBorder }} />
+                {/* Yellow dotted separator + swap */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 5, paddingLeft: 5 }}>
+                  <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
+                    {Array.from({ length: 40 }).map((_, i) => (
+                      <View key={i} style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#F59E0B', opacity: 0.7 }} />
+                    ))}
+                  </View>
                   <TouchableOpacity
                     onPress={swapLocations}
-                    style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: C.glassMid, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.glassBorder, marginLeft: 'auto', marginRight: 2 }}>
+                    style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: C.glassMid, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#F59E0B', marginLeft: 8, marginRight: 2 }}>
                     <Ionicons name="swap-vertical" size={14} color={C.pink} />
                   </TouchableOpacity>
                 </View>
