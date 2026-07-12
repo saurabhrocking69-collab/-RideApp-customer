@@ -515,56 +515,73 @@ export function IlluFamily3({ width = 88, height = 56 }: { width?: number; heigh
 ═══════════════════════════════════════════════════════════════ */
 export function BikeScene({ width = 148, height = 88 }: { width?: number; height?: number }) {
   const wheelRot = useRef(new Animated.Value(0)).current;
-  const bodyY    = useRef(new Animated.Value(0)).current;
+  const roadX    = useRef(new Animated.Value(0)).current;   // road dash scroll
+  const bodyY    = useRef(new Animated.Value(0)).current;   // micro suspension
   const spdX     = useRef(new Animated.Value(0)).current;
-  const spdOp    = useRef(new Animated.Value(1)).current;
+  const spdOp    = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Wheel spin — JS driver (SVG prop animation)
-    Animated.loop(
-      Animated.timing(wheelRot, {
-        toValue: 360, duration: 420,
-        easing: Easing.linear, useNativeDriver: false,
-      })
-    ).start();
+    let alive = true;
 
-    // Bike body bounce
+    // 1. Wheel spin — recursive so value resets cleanly each revolution
+    const spinWheel = () => {
+      if (!alive) return;
+      wheelRot.setValue(0);
+      Animated.timing(wheelRot, { toValue: 360, duration: 420, easing: Easing.linear, useNativeDriver: false })
+        .start(({ finished }) => { if (finished && alive) spinWheel(); });
+    };
+    spinWheel();
+
+    // 2. Road dashes scroll left — speed-matched to wheel
+    //    Wheel circumference ≈ 75.4px, one rev = 420ms → road speed ≈ 179px/s
+    //    Dash cycle = 14+10 = 24px → 24/179 ≈ 134ms per cycle
+    const scrollRoad = () => {
+      if (!alive) return;
+      roadX.setValue(0);
+      Animated.timing(roadX, { toValue: -24, duration: 134, easing: Easing.linear, useNativeDriver: false })
+        .start(({ finished }) => { if (finished && alive) scrollRoad(); });
+    };
+    scrollRoad();
+
+    // 3. Micro suspension bounce — very subtle so axle gap stays invisible
     Animated.loop(
       Animated.sequence([
-        Animated.timing(bodyY, { toValue: -1.8, duration: 270, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
-        Animated.timing(bodyY, { toValue: 0.9,  duration: 270, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
+        Animated.timing(bodyY, { toValue: -0.5, duration: 200, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
+        Animated.timing(bodyY, { toValue:  0.3, duration: 200, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
       ])
     ).start();
 
-    // Speed lines sweep — recursive loop with instant reset
-    let alive = true;
+    // 4. Speed lines — fade in at start, sweep left, fade out, repeat
     const runSpd = () => {
       if (!alive) return;
-      spdX.setValue(0); spdOp.setValue(1);
+      spdX.setValue(0); spdOp.setValue(0.85);
       Animated.parallel([
-        Animated.timing(spdX,  { toValue: -46, duration: 480, easing: Easing.linear, useNativeDriver: false }),
+        Animated.timing(spdX,  { toValue: -52, duration: 420, easing: Easing.linear, useNativeDriver: false }),
         Animated.sequence([
-          Animated.delay(150),
+          Animated.delay(90),
           Animated.timing(spdOp, { toValue: 0, duration: 330, useNativeDriver: false }),
         ]),
       ]).start(({ finished }) => { if (finished && alive) runSpd(); });
     };
     runSpd();
+
     return () => { alive = false; };
   }, []);
 
-  // WCY=72, WR=12 → tyre bottom at y=84 sits exactly on road surface
+  // Geometry: WCY=72, WR=12 → tyre bottom at y=84 sits on road surface (y=76–88)
   const RCX = 30, FCX = 116, WCY = 72, WR = 12, WD = 8.5;
 
-  // Shared spoke pattern for one wheel
+  // Road dash tile x-positions: cover -24 to 192 so scroll loop is seamless
+  const DASH_XS = [-24, 0, 24, 48, 72, 96, 120, 144, 168, 192];
+
   const Spokes = ({ cx, cy }: { cx: number; cy: number }) => (
     <>
       <Circle cx={cx} cy={cy} r={WR - 4} fill="none" stroke="rgba(255,255,255,0.32)" strokeWidth="1.1" />
       <Circle cx={cx} cy={cy} r="3.5" fill="rgba(255,255,255,0.88)" />
-      <Line x1={cx}      y1={cy - WR + 2} x2={cx}      y2={cy - 4} stroke="rgba(255,255,255,0.78)" strokeWidth="1.2" />
-      <Line x1={cx}      y1={cy + WR - 2} x2={cx}      y2={cy + 4} stroke="rgba(255,255,255,0.78)" strokeWidth="1.2" />
-      <Line x1={cx - WR + 2} y1={cy} x2={cx - 4} y2={cy}          stroke="rgba(255,255,255,0.78)" strokeWidth="1.2" />
-      <Line x1={cx + WR - 2} y1={cy} x2={cx + 4} y2={cy}          stroke="rgba(255,255,255,0.78)" strokeWidth="1.2" />
+      <Line x1={cx}          y1={cy - WR + 2} x2={cx}          y2={cy - 4}      stroke="rgba(255,255,255,0.78)" strokeWidth="1.2" />
+      <Line x1={cx}          y1={cy + WR - 2} x2={cx}          y2={cy + 4}      stroke="rgba(255,255,255,0.78)" strokeWidth="1.2" />
+      <Line x1={cx - WR + 2} y1={cy}          x2={cx - 4}      y2={cy}          stroke="rgba(255,255,255,0.78)" strokeWidth="1.2" />
+      <Line x1={cx + WR - 2} y1={cy}          x2={cx + 4}      y2={cy}          stroke="rgba(255,255,255,0.78)" strokeWidth="1.2" />
       <Line x1={cx - WD} y1={cy - WD} x2={cx - 2.8} y2={cy - 2.8} stroke="rgba(255,255,255,0.55)" strokeWidth="1" />
       <Line x1={cx + WD} y1={cy + WD} x2={cx + 2.8} y2={cy + 2.8} stroke="rgba(255,255,255,0.55)" strokeWidth="1" />
       <Line x1={cx + WD} y1={cy - WD} x2={cx + 2.8} y2={cy - 2.8} stroke="rgba(255,255,255,0.55)" strokeWidth="1" />
@@ -575,72 +592,61 @@ export function BikeScene({ width = 148, height = 88 }: { width?: number; height
   return (
     <Svg width={width} height={height} viewBox="0 0 148 88">
 
-      {/* ── ROAD — proper asphalt, tyre contact at y=84 ── */}
+      {/* ── ROAD ── */}
       <Rect x="0" y="76" width="148" height="12" fill="#111814" />
-      {/* Road edge (shoulder line) */}
+      {/* Shoulder line */}
       <Line x1="0" y1="77.5" x2="148" y2="77.5" stroke="rgba(255,255,255,0.22)" strokeWidth="1" />
-      {/* Centre dashes — white, standard road marking */}
-      <Line x1="0" y1="84" x2="148" y2="84"
-        stroke="rgba(255,255,255,0.50)" strokeWidth="1.6"
-        strokeDasharray="14,10" strokeLinecap="round" />
-
-      {/* Speed lines */}
-      <AnimatedG translateX={spdX} opacity={spdOp}>
-        <Line x1="4"  y1="50" x2="38" y2="50" stroke="rgba(255,255,255,0.52)" strokeWidth="2.2" strokeLinecap="round" />
-        <Line x1="0"  y1="59" x2="26" y2="59" stroke="rgba(255,255,255,0.36)" strokeWidth="1.6" strokeLinecap="round" />
-        <Line x1="6"  y1="67" x2="32" y2="67" stroke="rgba(255,255,255,0.44)" strokeWidth="1.8" strokeLinecap="round" />
+      {/* Animated centre dashes — tile scrolls left, gives road-moving illusion */}
+      <AnimatedG translateX={roadX}>
+        {DASH_XS.map((x) => (
+          <Rect key={x} x={x} y={80} width={14} height={2} rx={1} fill="rgba(255,255,255,0.58)" />
+        ))}
       </AnimatedG>
 
-      {/* Exhaust puffs (static) */}
-      <Circle cx="14" cy="72" r="4.5" fill="rgba(255,255,255,0.06)" />
-      <Circle cx="6"  cy="69" r="2.8" fill="rgba(255,255,255,0.04)" />
+      {/* ── SPEED LINES (behind bike, left zone) ── */}
+      <AnimatedG translateX={spdX} opacity={spdOp}>
+        <Line x1="8"  y1="44" x2="52" y2="44" stroke="rgba(255,255,255,0.62)" strokeWidth="2.4" strokeLinecap="round" />
+        <Line x1="2"  y1="54" x2="38" y2="54" stroke="rgba(255,255,255,0.44)" strokeWidth="1.6" strokeLinecap="round" />
+        <Line x1="10" y1="63" x2="42" y2="63" stroke="rgba(255,255,255,0.52)" strokeWidth="1.8" strokeLinecap="round" />
+      </AnimatedG>
 
-      {/* ══════════════════════════════════════════════════════════
-          TYRES — OUTSIDE bounce group: always on road, never float
-      ══════════════════════════════════════════════════════════ */}
-
-      {/* Rear tyre rubber ring (static) */}
-      <Circle cx={RCX} cy={WCY} r={WR}   fill="#0D1117" />
-      <Circle cx={RCX} cy={WCY} r={WR}   fill="none" stroke="rgba(255,255,255,0.82)" strokeWidth="2" />
-      {/* Rear hub + spokes rotate */}
+      {/* ── TYRES — static, always pinned to road ── */}
+      <Circle cx={RCX} cy={WCY} r={WR} fill="#0D1117" />
+      <Circle cx={RCX} cy={WCY} r={WR} fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="2.2" />
       <AnimatedG rotation={wheelRot} originX={RCX} originY={WCY}>
         <Spokes cx={RCX} cy={WCY} />
       </AnimatedG>
 
-      {/* Front tyre rubber ring (static) */}
-      <Circle cx={FCX} cy={WCY} r={WR}   fill="#0D1117" />
-      <Circle cx={FCX} cy={WCY} r={WR}   fill="none" stroke="rgba(255,255,255,0.82)" strokeWidth="2" />
-      {/* Front hub + spokes rotate */}
+      <Circle cx={FCX} cy={WCY} r={WR} fill="#0D1117" />
+      <Circle cx={FCX} cy={WCY} r={WR} fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="2.2" />
       <AnimatedG rotation={wheelRot} originX={FCX} originY={WCY}>
         <Spokes cx={FCX} cy={WCY} />
       </AnimatedG>
 
-      {/* ══════════════════════════════════════════════════════════
-          BODY — bounces independently of tyres
-          Swing-arm endpoints reference (RCX,WCY)/(FCX,WCY): with a
-          max 1.5 px bodyY movement the axle gap is sub-pixel visually
-      ══════════════════════════════════════════════════════════ */}
+      {/* ── BODY — micro-bounce only ±0.5 px
+          Swing arm & fork endpoints at y=74 (2px inside tyre ring) so
+          even at max upward bounce the join never creates a visible gap ── */}
       <AnimatedG translateY={bodyY}>
 
         {/* Exhaust pipe */}
-        <Path d="M50,65 L36,69 L24,71" stroke="rgba(255,255,255,0.34)" strokeWidth="2" strokeLinecap="round" />
+        <Path d="M50,65 L36,69 L24,73" stroke="rgba(255,255,255,0.34)" strokeWidth="2" strokeLinecap="round" />
 
-        {/* Swing arm (rear axle → frame pivot) */}
-        <Path d="M30,72 L56,60" stroke="rgba(255,255,255,0.90)" strokeWidth="3" strokeLinecap="round" />
-        <Path d="M30,72 L52,66" stroke="rgba(255,255,255,0.38)" strokeWidth="1.6" strokeLinecap="round" />
+        {/* Swing arm — origin 2px below axle centre */}
+        <Path d="M30,74 L56,60" stroke="rgba(255,255,255,0.92)" strokeWidth="3" strokeLinecap="round" />
+        <Path d="M30,74 L52,67" stroke="rgba(255,255,255,0.38)" strokeWidth="1.6" strokeLinecap="round" />
 
         {/* Main backbone */}
-        <Path d="M56,60 L80,44 L106,42" stroke="rgba(255,255,255,0.92)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M56,60 L80,44 L106,42" stroke="rgba(255,255,255,0.94)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
         {/* Down tube */}
         <Path d="M56,60 L76,57 L106,52" stroke="rgba(255,255,255,0.52)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
         {/* Seat tube */}
         <Path d="M76,44 L70,60" stroke="rgba(255,255,255,0.78)" strokeWidth="2.8" strokeLinecap="round" />
 
-        {/* Front fork */}
-        <Path d="M106,42 L111,58 L116,72" stroke="rgba(255,255,255,0.90)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-        <Path d="M106,52 L118,66 L116,72" stroke="rgba(255,255,255,0.52)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+        {/* Front fork — endpoint 2px below axle centre */}
+        <Path d="M106,42 L111,58 L116,74" stroke="rgba(255,255,255,0.92)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M106,52 L118,67 L116,74" stroke="rgba(255,255,255,0.52)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
 
-        {/* Fuel tank — cream with pink stripe */}
+        {/* Fuel tank */}
         <Path d="M76,41 Q92,36 104,40 Q104,50 90,52 Q76,50 76,41 Z" fill="rgba(255,255,255,0.86)" />
         <Path d="M76,44 Q91,40 104,43" stroke="#FF2D78" strokeWidth="2.2" fill="none" strokeLinecap="round" />
 
@@ -652,12 +658,12 @@ export function BikeScene({ width = 148, height = 88 }: { width?: number; height
         <Ellipse cx="123" cy="50" rx="4" ry="3.2" fill="#FFFBCC" />
         <Ellipse cx="122" cy="50" rx="7" ry="5.5" fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="1" />
 
-        {/* Rider — legs */}
+        {/* Rider legs */}
         <Path d="M72,53 L54,57 L48,63" stroke="#1E293B" strokeWidth="5"   fill="none" strokeLinecap="round" strokeLinejoin="round" />
         <Path d="M72,53 L66,59 L70,64" stroke="#1E293B" strokeWidth="4.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-        {/* Rider — torso (crouched forward) */}
+        {/* Rider torso */}
         <Path d="M72,53 L76,38 L88,34" stroke="#0F172A" strokeWidth="6"   fill="none" strokeLinecap="round" strokeLinejoin="round" />
-        {/* Arms to bars */}
+        {/* Arms to handlebars */}
         <Path d="M82,40 L106,42" stroke="#1E293B" strokeWidth="3.8" fill="none" strokeLinecap="round" />
         {/* Neck */}
         <Line x1="76" y1="38" x2="76" y2="31" stroke="#B87840" strokeWidth="3.5" strokeLinecap="round" />
