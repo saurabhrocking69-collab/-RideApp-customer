@@ -554,91 +554,111 @@ export function BikeScene({ width = 148, height = 88 }: { width?: number; height
   }, []);
 
   // Wheel geometry constants
-  const RCX = 30, FCX = 118, WCY = 74, WR = 12, WD = 8.5;
+  const RCX = 30, FCX = 118, WCY = 72, WR = 12, WD = 8.5;
 
   return (
     <Svg width={width} height={height} viewBox="0 0 148 88">
       {/* Ground */}
-      <Rect x="0" y="82" width="148" height="6" fill="#061A0E" />
-      {/* Road centre dashes (static — motion is implied by wheel rotation) */}
-      <Line x1="-8" y1="85" x2="158" y2="85"
-        stroke="rgba(52,211,153,0.35)" strokeWidth="1.2"
-        strokeDasharray="11,8" strokeLinecap="round" />
+      <Rect x="0" y="80" width="148" height="8" fill="rgba(0,0,0,0.32)" />
+      <Line x1="0" y1="84" x2="148" y2="84"
+        stroke="rgba(110,231,183,0.32)" strokeWidth="1.4"
+        strokeDasharray="12,8" strokeLinecap="round" />
 
-      {/* Speed lines */}
+      {/* Speed lines (white for visibility on dark green) */}
       <AnimatedG translateX={spdX} opacity={spdOp}>
-        <Line x1="8"  y1="50" x2="40" y2="50" stroke="rgba(255,255,255,0.45)" strokeWidth="2.2" strokeLinecap="round" />
-        <Line x1="4"  y1="59" x2="28" y2="59" stroke="rgba(255,255,255,0.30)" strokeWidth="1.6" strokeLinecap="round" />
-        <Line x1="10" y1="67" x2="36" y2="67" stroke="rgba(255,255,255,0.38)" strokeWidth="1.8" strokeLinecap="round" />
+        <Line x1="4"  y1="50" x2="38" y2="50" stroke="rgba(255,255,255,0.52)" strokeWidth="2.2" strokeLinecap="round" />
+        <Line x1="0"  y1="59" x2="28" y2="59" stroke="rgba(255,255,255,0.36)" strokeWidth="1.6" strokeLinecap="round" />
+        <Line x1="6"  y1="68" x2="34" y2="68" stroke="rgba(255,255,255,0.44)" strokeWidth="1.8" strokeLinecap="round" />
       </AnimatedG>
 
-      {/* Exhaust puffs (static soft circles) */}
-      <Circle cx="18" cy="74" r="4"   fill="rgba(255,255,255,0.07)" />
-      <Circle cx="10" cy="71" r="2.5" fill="rgba(255,255,255,0.04)" />
+      {/* Exhaust puffs */}
+      <Circle cx="16" cy="74" r="4.5" fill="rgba(255,255,255,0.06)" />
+      <Circle cx="8"  cy="71" r="2.8" fill="rgba(255,255,255,0.04)" />
 
       {/* Everything that bounces */}
       <AnimatedG translateY={bodyY}>
 
-        {/* ── Frame ── */}
-        <Path d="M30,70 L44,63" stroke="#22C55E" strokeWidth="2.8" strokeLinecap="round" />
-        <Path d="M44,63 L64,43 L88,39 L108,46" stroke="#16A34A" strokeWidth="3.8" strokeLinecap="round" strokeLinejoin="round" />
-        <Path d="M64,43 L82,42 L88,39" stroke="#16A34A" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-        <Path d="M64,43 L56,59 L44,63" stroke="#15803D" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-        <Rect x="50" y="53" width="20" height="13" rx="3" fill="#166534" stroke="#22C55E" strokeWidth="0.8" />
-        {/* Fork */}
-        <Path d="M108,46 L114,63 L118,74" stroke="#16A34A" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
-        <Path d="M108,46 L122,61 L118,74" stroke="#15803D" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
-        {/* Fuel tank */}
-        <Ellipse cx="84" cy="40" rx="10" ry="5" fill="#15803D" stroke="#22C55E" strokeWidth="0.8" />
-        {/* Seat */}
-        <Path d="M62,42 Q73,37 84,40 Q84,44 73,45 Q62,44 62,42Z" fill="#064E3B" />
-        {/* Headlight */}
-        <Ellipse cx="124" cy="52" rx="6" ry="5" fill="#ECFDF5" stroke="#22C55E" strokeWidth="0.8" />
-        <Ellipse cx="125" cy="52" rx="3.5" ry="3" fill="#FEF9C3" fillOpacity="0.7" />
         {/* Exhaust pipe */}
-        <Path d="M58,63 L42,67 L28,69" stroke="#4ADE80" strokeWidth="1.8" strokeLinecap="round" opacity={0.6} />
+        <Path d="M55,64 L40,68 L26,70" stroke="rgba(255,255,255,0.38)" strokeWidth="2" strokeLinecap="round" />
 
-        {/* ── Rider ── */}
-        <Path d="M78,62 L58,63 L50,64" stroke="#1E40AF" strokeWidth="4"   strokeLinecap="round" strokeLinejoin="round" />
-        <Path d="M78,62 L70,62 L76,64" stroke="#1E40AF" strokeWidth="4"   strokeLinecap="round" strokeLinejoin="round" />
-        <Path d="M78,62 L82,47 L96,43" stroke="#1E40AF" strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round" />
-        <Path d="M84,49 L108,46"       stroke="#1E40AF" strokeWidth="3.8" strokeLinecap="round" />
-        <Line x1="82" y1="43" x2="82" y2="37" stroke="#C88050" strokeWidth="3.2" strokeLinecap="round" />
+        {/* ── FRAME — white/silver for contrast against dark green card ── */}
+        {/* Swing arm: rear axle → pivot */}
+        <Path d="M30,72 L58,60" stroke="rgba(255,255,255,0.90)" strokeWidth="3.2" strokeLinecap="round" />
+        {/* Chain stay (parallel lower) */}
+        <Path d="M30,72 L54,66" stroke="rgba(255,255,255,0.42)" strokeWidth="1.8" strokeLinecap="round" />
+        {/* Main backbone: pivot → head tube */}
+        <Path d="M58,60 L82,44 L108,42" stroke="rgba(255,255,255,0.92)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+        {/* Down tube */}
+        <Path d="M58,60 L78,58 L108,54" stroke="rgba(255,255,255,0.58)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+        {/* Seat tube */}
+        <Path d="M78,44 L72,60" stroke="rgba(255,255,255,0.80)" strokeWidth="2.8" strokeLinecap="round" />
+        {/* Front fork */}
+        <Path d="M108,42 L113,58 L118,72" stroke="rgba(255,255,255,0.90)" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M108,54 L120,66 L118,72" stroke="rgba(255,255,255,0.58)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+
+        {/* Fuel tank — white/cream with pink brand stripe */}
+        <Path d="M78,41 Q93,36 106,40 Q106,50 92,52 Q78,50 78,41 Z" fill="rgba(255,255,255,0.88)" />
+        <Path d="M78,44 Q93,41 106,43" stroke="#FF2D78" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+
+        {/* Seat */}
+        <Path d="M64,41 Q74,36 82,40 L82,47 Q74,49 64,45 Z" fill="#0F172A" />
+
+        {/* Headlight */}
+        <Ellipse cx="124" cy="50" rx="7" ry="6" fill="#FEF9C3" />
+        <Ellipse cx="125" cy="50" rx="4" ry="3.5" fill="#FFFBCC" />
+        <Ellipse cx="124" cy="50" rx="7" ry="6" fill="none" stroke="rgba(255,255,255,0.65)" strokeWidth="1" />
+
+        {/* ── RIDER ── */}
+        {/* Legs / lower */}
+        <Path d="M74,54 L56,58 L50,64" stroke="#1E293B" strokeWidth="5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M74,54 L68,60 L74,64" stroke="#1E293B" strokeWidth="4.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        {/* Torso — dark jacket */}
+        <Path d="M74,54 L78,39 L90,35" stroke="#0F172A" strokeWidth="6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        {/* Arms forward to bars */}
+        <Path d="M84,41 L108,42" stroke="#1E293B" strokeWidth="3.8" fill="none" strokeLinecap="round" />
+        {/* Neck */}
+        <Line x1="78" y1="39" x2="78" y2="32" stroke="#B87840" strokeWidth="3.5" strokeLinecap="round" />
         {/* Helmet */}
-        <Ellipse cx="82" cy="29" rx="10" ry="9" fill="#FF2D78" />
-        <Ellipse cx="82" cy="29" rx="10" ry="9" fill="none" stroke="#D91462" strokeWidth="0.8" />
-        <Path d="M73,30 Q82,35 91,30 Q89,26 82,24 Q75,26 73,30Z" fill="#0A1628" fillOpacity="0.88" />
-        <Line x1="74" y1="27" x2="90" y2="27" stroke="rgba(255,255,255,0.20)" strokeWidth="1" />
-        <Circle cx="108" cy="46" r="3" fill="#0A1628" />
+        <Ellipse cx="78" cy="25" rx="11" ry="10" fill="#FF2D78" />
+        <Ellipse cx="78" cy="25" rx="11" ry="10" fill="none" stroke="#C01060" strokeWidth="1" />
+        {/* Visor */}
+        <Path d="M68,27 Q78,34 88,27 Q85,22 78,20 Q71,22 68,27 Z" fill="#080E1A" fillOpacity="0.92" />
+        <Line x1="70" y1="25" x2="86" y2="25" stroke="rgba(255,255,255,0.22)" strokeWidth="1.2" />
+        {/* Helmet highlight */}
+        <Path d="M68,20 Q78,16 88,20" stroke="rgba(255,255,255,0.38)" strokeWidth="1.5" fill="none" />
+        {/* Handlebar grip */}
+        <Circle cx="108" cy="42" r="4" fill="#1E293B" />
 
-        {/* ── Rear wheel ── */}
+        {/* ── REAR WHEEL ── */}
         <AnimatedG rotation={wheelRot} originX={RCX} originY={WCY}>
-          <Circle cx={RCX} cy={WCY} r={WR}     fill="#0A2818" stroke="#22C55E" strokeWidth="1.4" />
-          <Circle cx={RCX} cy={WCY} r={WR - 3} fill="none"   stroke="#166534" strokeWidth="1.2" />
-          <Circle cx={RCX} cy={WCY} r="3"       fill="#166534" />
-          <Line x1={RCX}      y1={WCY - WR} x2={RCX}      y2={WCY - 3} stroke="#22C55E" strokeWidth="1.2" />
-          <Line x1={RCX}      y1={WCY + WR} x2={RCX}      y2={WCY + 3} stroke="#22C55E" strokeWidth="1.2" />
-          <Line x1={RCX - WR} y1={WCY}      x2={RCX - 3}  y2={WCY}     stroke="#22C55E" strokeWidth="1.2" />
-          <Line x1={RCX + WR} y1={WCY}      x2={RCX + 3}  y2={WCY}     stroke="#22C55E" strokeWidth="1.2" />
-          <Line x1={RCX - WD} y1={WCY - WD} x2={RCX - 2}  y2={WCY - 2} stroke="#22C55E" strokeWidth="1" />
-          <Line x1={RCX + WD} y1={WCY + WD} x2={RCX + 2}  y2={WCY + 2} stroke="#22C55E" strokeWidth="1" />
-          <Line x1={RCX + WD} y1={WCY - WD} x2={RCX + 2}  y2={WCY - 2} stroke="#22C55E" strokeWidth="1" />
-          <Line x1={RCX - WD} y1={WCY + WD} x2={RCX - 2}  y2={WCY + 2} stroke="#22C55E" strokeWidth="1" />
+          <Circle cx={RCX} cy={WCY} r={WR}     fill="#0D1117" />
+          <Circle cx={RCX} cy={WCY} r={WR}     fill="none" stroke="rgba(255,255,255,0.82)" strokeWidth="2" />
+          <Circle cx={RCX} cy={WCY} r={WR - 4} fill="none" stroke="rgba(255,255,255,0.38)" strokeWidth="1.2" />
+          <Circle cx={RCX} cy={WCY} r="4"       fill="rgba(255,255,255,0.92)" />
+          <Line x1={RCX}        y1={WCY - WR + 2} x2={RCX}        y2={WCY - 5} stroke="rgba(255,255,255,0.80)" strokeWidth="1.3" />
+          <Line x1={RCX}        y1={WCY + WR - 2} x2={RCX}        y2={WCY + 5} stroke="rgba(255,255,255,0.80)" strokeWidth="1.3" />
+          <Line x1={RCX - WR + 2} y1={WCY}        x2={RCX - 5}    y2={WCY}     stroke="rgba(255,255,255,0.80)" strokeWidth="1.3" />
+          <Line x1={RCX + WR - 2} y1={WCY}        x2={RCX + 5}    y2={WCY}     stroke="rgba(255,255,255,0.80)" strokeWidth="1.3" />
+          <Line x1={RCX - WD} y1={WCY - WD} x2={RCX - 3} y2={WCY - 3} stroke="rgba(255,255,255,0.60)" strokeWidth="1.1" />
+          <Line x1={RCX + WD} y1={WCY + WD} x2={RCX + 3} y2={WCY + 3} stroke="rgba(255,255,255,0.60)" strokeWidth="1.1" />
+          <Line x1={RCX + WD} y1={WCY - WD} x2={RCX + 3} y2={WCY - 3} stroke="rgba(255,255,255,0.60)" strokeWidth="1.1" />
+          <Line x1={RCX - WD} y1={WCY + WD} x2={RCX - 3} y2={WCY + 3} stroke="rgba(255,255,255,0.60)" strokeWidth="1.1" />
         </AnimatedG>
 
-        {/* ── Front wheel ── */}
+        {/* ── FRONT WHEEL ── */}
         <AnimatedG rotation={wheelRot} originX={FCX} originY={WCY}>
-          <Circle cx={FCX} cy={WCY} r={WR}     fill="#0A2818" stroke="#22C55E" strokeWidth="1.4" />
-          <Circle cx={FCX} cy={WCY} r={WR - 3} fill="none"   stroke="#166534" strokeWidth="1.2" />
-          <Circle cx={FCX} cy={WCY} r="3"       fill="#166534" />
-          <Line x1={FCX}      y1={WCY - WR} x2={FCX}      y2={WCY - 3} stroke="#22C55E" strokeWidth="1.2" />
-          <Line x1={FCX}      y1={WCY + WR} x2={FCX}      y2={WCY + 3} stroke="#22C55E" strokeWidth="1.2" />
-          <Line x1={FCX - WR} y1={WCY}      x2={FCX - 3}  y2={WCY}     stroke="#22C55E" strokeWidth="1.2" />
-          <Line x1={FCX + WR} y1={WCY}      x2={FCX + 3}  y2={WCY}     stroke="#22C55E" strokeWidth="1.2" />
-          <Line x1={FCX - WD} y1={WCY - WD} x2={FCX - 2}  y2={WCY - 2} stroke="#22C55E" strokeWidth="1" />
-          <Line x1={FCX + WD} y1={WCY + WD} x2={FCX + 2}  y2={WCY + 2} stroke="#22C55E" strokeWidth="1" />
-          <Line x1={FCX + WD} y1={WCY - WD} x2={FCX + 2}  y2={WCY - 2} stroke="#22C55E" strokeWidth="1" />
-          <Line x1={FCX - WD} y1={WCY + WD} x2={FCX - 2}  y2={WCY + 2} stroke="#22C55E" strokeWidth="1" />
+          <Circle cx={FCX} cy={WCY} r={WR}     fill="#0D1117" />
+          <Circle cx={FCX} cy={WCY} r={WR}     fill="none" stroke="rgba(255,255,255,0.82)" strokeWidth="2" />
+          <Circle cx={FCX} cy={WCY} r={WR - 4} fill="none" stroke="rgba(255,255,255,0.38)" strokeWidth="1.2" />
+          <Circle cx={FCX} cy={WCY} r="4"       fill="rgba(255,255,255,0.92)" />
+          <Line x1={FCX}        y1={WCY - WR + 2} x2={FCX}        y2={WCY - 5} stroke="rgba(255,255,255,0.80)" strokeWidth="1.3" />
+          <Line x1={FCX}        y1={WCY + WR - 2} x2={FCX}        y2={WCY + 5} stroke="rgba(255,255,255,0.80)" strokeWidth="1.3" />
+          <Line x1={FCX - WR + 2} y1={WCY}        x2={FCX - 5}    y2={WCY}     stroke="rgba(255,255,255,0.80)" strokeWidth="1.3" />
+          <Line x1={FCX + WR - 2} y1={WCY}        x2={FCX + 5}    y2={WCY}     stroke="rgba(255,255,255,0.80)" strokeWidth="1.3" />
+          <Line x1={FCX - WD} y1={WCY - WD} x2={FCX - 3} y2={WCY - 3} stroke="rgba(255,255,255,0.60)" strokeWidth="1.1" />
+          <Line x1={FCX + WD} y1={WCY + WD} x2={FCX + 3} y2={WCY + 3} stroke="rgba(255,255,255,0.60)" strokeWidth="1.1" />
+          <Line x1={FCX + WD} y1={WCY - WD} x2={FCX + 3} y2={WCY - 3} stroke="rgba(255,255,255,0.60)" strokeWidth="1.1" />
+          <Line x1={FCX - WD} y1={WCY + WD} x2={FCX - 3} y2={WCY + 3} stroke="rgba(255,255,255,0.60)" strokeWidth="1.1" />
         </AnimatedG>
 
       </AnimatedG>
@@ -761,44 +781,98 @@ export function IlluRideComplete({ width = 220, height = 150 }: { width?: number
 
 function MiniAutoSvg() {
   return (
-    <Svg width="106" height="86" viewBox="0 0 106 86">
+    <Svg width="120" height="96" viewBox="0 0 120 96">
       <Defs>
         <LinearGradient id="ma_bd" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0%"   stopColor="#FF9030" />
-          <Stop offset="100%" stopColor="#D45000" />
+          <Stop offset="0%"   stopColor="#FFAB36" />
+          <Stop offset="100%" stopColor="#D85A00" />
         </LinearGradient>
         <LinearGradient id="ma_rf" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0%"   stopColor="#FF6A00" />
-          <Stop offset="100%" stopColor="#A83800" />
+          <Stop offset="0%"   stopColor="#FF7A00" />
+          <Stop offset="100%" stopColor="#B34500" />
+        </LinearGradient>
+        <LinearGradient id="ma_gl" x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0%"   stopColor="#C6E8FF" stopOpacity="0.95" />
+          <Stop offset="100%" stopColor="#A8D8F8" stopOpacity="0.75" />
         </LinearGradient>
       </Defs>
+
       {/* Shadow */}
-      <Ellipse cx="53" cy="78" rx="42" ry="6" fill="rgba(0,0,0,0.14)" />
-      {/* Body */}
-      <Path d="M10,70 L10,37 Q10,29 18,29 L90,29 Q96,29 96,37 L96,70 Z" fill="url(#ma_bd)" />
-      {/* Roof */}
-      <Path d="M12,39 L12,29 Q12,21 20,21 L84,21 Q90,21 90,29 L90,39 Z" fill="url(#ma_rf)" />
-      {/* Windshield glass */}
-      <Path d="M16,38 L16,25 L86,25 L86,38 Z" fill="#AADEFF" fillOpacity="0.62" />
-      {/* Glare stripe */}
-      <Rect x="18" y="25" width="16" height="2.5" rx="1" fill="white" fillOpacity="0.55" />
-      {/* Headlight */}
-      <Ellipse cx="96" cy="48" rx="5.5" ry="7"  fill="#FFE060" />
-      <Ellipse cx="96" cy="48" rx="3.5" ry="4.5" fill="#FFF4A0" />
-      {/* Driver visible */}
-      <Circle cx="60" cy="33" r="5"   fill={SKIN_M} />
-      <Circle cx="60" cy="28.5" r="4.2" fill={HAIR} />
-      {/* Wheels */}
-      <Circle cx="26" cy="73" r="12"  fill="#1C1C3A" />
-      <Circle cx="26" cy="73" r="8"   fill="#2A2A4A" />
-      <Circle cx="26" cy="73" r="3.2" fill="#8080A8" />
-      <Circle cx="78" cy="73" r="12"  fill="#1C1C3A" />
-      <Circle cx="78" cy="73" r="8"   fill="#2A2A4A" />
-      <Circle cx="78" cy="73" r="3.2" fill="#8080A8" />
-      {/* Speed lines */}
-      <Line x1="1"  y1="42" x2="8"  y2="42" stroke="#FF9030" strokeWidth="2.5" strokeOpacity="0.6"  strokeLinecap="round" />
-      <Line x1="0"  y1="50" x2="8"  y2="50" stroke="#FF9030" strokeWidth="2"   strokeOpacity="0.42" strokeLinecap="round" />
-      <Line x1="2"  y1="58" x2="8"  y2="58" stroke="#FF9030" strokeWidth="1.5" strokeOpacity="0.28" strokeLinecap="round" />
+      <Ellipse cx="60" cy="88" rx="50" ry="7" fill="rgba(0,0,0,0.20)" />
+
+      {/* ── Rear chassis / lower body ── */}
+      <Path d="M8,80 L8,50 Q8,42 16,42 L38,42 L38,80 Z" fill="url(#ma_bd)" />
+      {/* Main passenger cabin body */}
+      <Path d="M38,42 L38,80 L94,80 L94,56 Q94,48 86,48 L38,48 Z" fill="url(#ma_bd)" />
+      {/* Front nose/fairing */}
+      <Path d="M94,48 Q108,44 112,54 L112,72 Q112,80 104,80 L94,80 L94,48 Z" fill="url(#ma_bd)" />
+
+      {/* ── Roof canopy — the signature auto-rickshaw rounded top ── */}
+      <Path d="M8,24 Q10,14 38,12 Q68,10 94,12 Q110,14 112,24 L108,28 Q92,22 38,22 Q16,24 10,28 Z" fill="url(#ma_rf)" />
+      {/* Roof ridge highlight */}
+      <Path d="M14,22 Q54,16 94,18 Q104,19 108,22" stroke="rgba(255,200,100,0.45)" strokeWidth="2" fill="none" />
+      {/* Roof front overhang curve */}
+      <Path d="M108,24 Q114,28 114,38" stroke="url(#ma_rf)" strokeWidth="6" fill="none" strokeLinecap="round" />
+
+      {/* ── Rear upright post ── */}
+      <Rect x="10" y="22" width="5" height="22" rx="2.5" fill="rgba(0,0,0,0.28)" />
+
+      {/* ── A-pillar (driver/front divider) ── */}
+      <Rect x="90" y="22" width="5" height="26" rx="2.5" fill="rgba(0,0,0,0.32)" />
+
+      {/* ── Windshield glass (entire cabin face) ── */}
+      <Path d="M15,22 L15,42 L90,42 L90,22 Z" fill="url(#ma_gl)" />
+      {/* Windshield top glare */}
+      <Rect x="17" y="23" width="22" height="3" rx="1.5" fill="rgba(255,255,255,0.55)" />
+      {/* Windshield frame */}
+      <Path d="M15,22 L15,42 L90,42 L90,22 Z" fill="none" stroke="rgba(255,140,0,0.4)" strokeWidth="1.2" />
+
+      {/* ── Driver ── */}
+      <Circle cx="24" cy="34" r="6" fill={SKIN_M} />
+      {/* Driver hair */}
+      <Path d="M18,30 Q18,24 24,24 Q30,24 30,30 Q28,26 24,26 Q20,26 18,30 Z" fill={HAIR} />
+      {/* Driver shirt */}
+      <Path d="M16,40 Q16,36 24,34 Q32,36 32,40 Z" fill="#2563EB" />
+
+      {/* ── Passenger ── */}
+      <Circle cx="60" cy="34" r="5.5" fill={SKIN_L} />
+      <Path d="M54.5,30 Q54.5,25 60,25 Q65.5,25 65.5,30 Q63,27 60,27 Q57,27 54.5,30 Z" fill={HAIR} />
+      {/* Saree/kurta hint */}
+      <Path d="M53,40 Q53,37 60,35 Q67,37 67,40 Z" fill={KURTA} />
+
+      {/* ── Sppero brand strip ── */}
+      <Rect x="8" y="74" width="86" height="5" rx="2.5" fill="#FF2D78" fillOpacity="0.90" />
+
+      {/* ── Front headlight ── */}
+      <Ellipse cx="114" cy="58" rx="5.5" ry="7.5" fill="#FFE87A" />
+      <Ellipse cx="114" cy="58" rx="3.5" ry="5"   fill="#FFFBB0" />
+      <Ellipse cx="114" cy="58" rx="5.5" ry="7.5" fill="none" stroke="rgba(255,220,50,0.6)" strokeWidth="1" />
+
+      {/* ── Front grille/bumper ── */}
+      <Path d="M110,72 L114,72 L114,78 Q112,80 108,80 Z" fill="rgba(0,0,0,0.55)" />
+
+      {/* ── Rear wheel (left) ── */}
+      <Circle cx="26" cy="82" r="13"  fill="#1A1A30" />
+      <Circle cx="26" cy="82" r="9"   fill="#26264A" />
+      <Circle cx="26" cy="82" r="3.5" fill="#7080A8" />
+      <Line x1="26" y1="69" x2="26" y2="75" stroke="rgba(255,255,255,0.45)" strokeWidth="1.3" />
+      <Line x1="26" y1="89" x2="26" y2="95" stroke="rgba(255,255,255,0.45)" strokeWidth="1.3" />
+      <Line x1="13" y1="82" x2="19" y2="82" stroke="rgba(255,255,255,0.45)" strokeWidth="1.3" />
+      <Line x1="33" y1="82" x2="39" y2="82" stroke="rgba(255,255,255,0.45)" strokeWidth="1.3" />
+
+      {/* ── Front wheel (right) ── */}
+      <Circle cx="92" cy="82" r="12"  fill="#1A1A30" />
+      <Circle cx="92" cy="82" r="8"   fill="#26264A" />
+      <Circle cx="92" cy="82" r="3"   fill="#7080A8" />
+      <Line x1="92" y1="70" x2="92" y2="76" stroke="rgba(255,255,255,0.45)" strokeWidth="1.3" />
+      <Line x1="92" y1="88" x2="92" y2="94" stroke="rgba(255,255,255,0.45)" strokeWidth="1.3" />
+      <Line x1="80" y1="82" x2="86" y2="82" stroke="rgba(255,255,255,0.45)" strokeWidth="1.3" />
+      <Line x1="98" y1="82" x2="104" y2="82" stroke="rgba(255,255,255,0.45)" strokeWidth="1.3" />
+
+      {/* Speed lines (trailing from rear) */}
+      <Line x1="0" y1="46" x2="7"  y2="46" stroke="#FFAB36" strokeWidth="2.5" strokeOpacity="0.70" strokeLinecap="round" />
+      <Line x1="0" y1="55" x2="7"  y2="55" stroke="#FFAB36" strokeWidth="2"   strokeOpacity="0.48" strokeLinecap="round" />
+      <Line x1="0" y1="63" x2="7"  y2="63" stroke="#FFAB36" strokeWidth="1.5" strokeOpacity="0.32" strokeLinecap="round" />
     </Svg>
   );
 }
