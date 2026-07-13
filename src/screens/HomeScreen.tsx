@@ -1946,121 +1946,155 @@ function ProfileTab() {
   const rideCount = customerRating?.count || 0;
   const tierCfg = tierData ? (TIER_COLORS[tierData.tier] || TIER_COLORS.starter) : null;
 
+  const menuSection = (items: { label: string; sub: string; icon: string; color: string; bg: string; border: string; onPress: () => void }[]) => (
+    <View style={{ backgroundColor: C.bgCard, borderRadius: 16, borderWidth: 1, borderColor: C.glassBorder, overflow: 'hidden', marginBottom: 20, ...SHADOW.sm }}>
+      {items.map((item, i) => (
+        <View key={i}>
+          <Bouncy onPress={item.onPress}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 13 }}>
+              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: item.bg, alignItems: 'center', justifyContent: 'center', marginRight: 14, borderWidth: 1, borderColor: item.border }}>
+                <Ionicons name={item.icon as any} size={18} color={item.color} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: C.text }}>{item.label}</Text>
+                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>{item.sub}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={C.textDim} />
+            </View>
+          </Bouncy>
+          {i < items.length - 1 && <View style={{ height: 1, backgroundColor: C.glassBorder, marginLeft: 64 }} />}
+        </View>
+      ))}
+    </View>
+  );
+
   return (
     <View style={s.screen}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
 
-        {/* ── Profile hero ──────────────────────────────────────── */}
-        <View style={{ backgroundColor: '#FF2D78', paddingTop: Platform.OS === 'android' ? 46 : 56, paddingBottom: 52, paddingHorizontal: SP.lg }}>
-          <Text style={{ ...T.title, color: 'rgba(255,255,255,0.75)', letterSpacing: 1.5, marginBottom: SP.lg }}>PROFILE</Text>
-          <View style={{ alignItems: 'center' }}>
-            <View style={{ width: 90, height: 90, borderRadius: 45, backgroundColor: 'rgba(255,255,255,0.20)', borderWidth: 3, borderColor: 'rgba(255,255,255,0.55)', alignItems: 'center', justifyContent: 'center', elevation: 10, shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 18 }}>
-              <Text style={{ color: '#fff', fontSize: 38, fontWeight: '900' }}>{(userName||'R')[0].toUpperCase()}</Text>
+        {/* ── Compact header ────────────────────────────────────────────── */}
+        <View style={{ backgroundColor: C.bg, paddingTop: Platform.OS === 'android' ? 46 : 56, paddingHorizontal: SP.md, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: C.glassBorder }}>
+          <Text style={{ fontSize: 11, fontWeight: '800', color: C.textDim, letterSpacing: 1.4, marginBottom: 16 }}>PROFILE</Text>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {/* Avatar */}
+            <View style={{ width: 62, height: 62, borderRadius: 31, backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center', ...SHADOW.pink }}>
+              <Text style={{ color: '#fff', fontSize: 26, fontWeight: '900' }}>{(userName || 'R')[0].toUpperCase()}</Text>
             </View>
-          </View>
-        </View>
 
-        {/* ── Name card — overlaps hero ──────────────────────────── */}
-        <View style={{ backgroundColor: C.bgCard, borderRadius: R.xl, paddingHorizontal: SP.lg, paddingTop: SP.xl, paddingBottom: SP.md, marginHorizontal: SP.md, marginTop: -36, alignItems: 'center', borderWidth: 1.5, borderColor: C.glassBorder, ...SHADOW.md, marginBottom: SP.md }}>
-          <Text style={{ ...T.headline, color: C.text }}>{userName || 'Rider'}</Text>
-          <Text style={{ ...T.caption, color: C.textMuted, marginTop: 4 }}>+91 {phone}</Text>
-          <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-            <View style={{ backgroundColor: C.yellowGlass, borderRadius: R.sm, paddingVertical: 6, paddingHorizontal: 14, borderWidth: 1.5, borderColor: C.yellowBorder, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-              <Text style={{ fontSize: 13 }}>⭐</Text>
-              <Text style={{ ...T.caption, color: C.yellow }}>{ratingVal} Rating</Text>
-            </View>
-            {rideCount > 0 && (
-              <View style={{ backgroundColor: C.pinkGlass, borderRadius: R.sm, paddingVertical: 6, paddingHorizontal: 14, borderWidth: 1.5, borderColor: C.pinkBorder, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                <Text style={{ fontSize: 13 }}>🛺</Text>
-                <Text style={{ ...T.caption, color: C.pink }}>{rideCount} rides</Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* ── Tier Card ── */}
-        {tierData && tierCfg && (
-          <TouchableOpacity onPress={() => setScreen('tier')} activeOpacity={0.85}
-            style={{ marginHorizontal: SP.md, marginBottom: SP.md, backgroundColor: tierCfg.bg, borderRadius: R.lg, borderWidth: 1.5, borderColor: tierCfg.border, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, ...SHADOW.sm }}>
-            <Text style={{ fontSize: 32 }}>{tierData.emoji}</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 1 }}>RIDER TIER</Text>
-              <Text style={{ fontSize: 17, fontWeight: '900', color: tierCfg.color }}>{tierData.label}</Text>
-              {tierData.next_tier ? (
-                <>
-                  <View style={{ height: 4, backgroundColor: 'rgba(148,163,184,0.20)', borderRadius: 2, marginTop: 5, overflow: 'hidden' }}>
-                    <View style={{ height: '100%', width: `${tierData.progress_pct}%`, backgroundColor: tierCfg.color, borderRadius: 2 }} />
+            {/* Name + phone + stats */}
+            <View style={{ flex: 1, marginLeft: 14 }}>
+              <Text style={{ fontSize: 18, fontWeight: '900', color: C.text, letterSpacing: -0.3 }}>{userName || 'Rider'}</Text>
+              <Text style={{ fontSize: 13, color: C.textMuted, marginTop: 2 }}>+91 {phone}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                  <Text style={{ fontSize: 13 }}>⭐</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: C.text }}>{ratingVal}</Text>
+                  <Text style={{ fontSize: 11, color: C.textMuted }}>rating</Text>
+                </View>
+                {rideCount > 0 && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                    <Text style={{ fontSize: 13 }}>🛺</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: C.text }}>{rideCount}</Text>
+                    <Text style={{ fontSize: 11, color: C.textMuted }}>rides</Text>
                   </View>
-                  <Text style={{ fontSize: 10, color: '#94A3B8', marginTop: 3 }}>{tierData.rides_to_next} rides → {tierData.next_tier.label} {tierData.next_tier.emoji}</Text>
-                </>
-              ) : (
-                <Text style={{ fontSize: 11, fontWeight: '700', color: tierCfg.color, marginTop: 4 }}>Maximum tier reached! 🏆</Text>
-              )}
+                )}
+                {tierData && tierCfg && (
+                  <TouchableOpacity onPress={() => setScreen('tier')} activeOpacity={0.75}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: tierCfg.bg, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: tierCfg.border }}>
+                    <Text style={{ fontSize: 12 }}>{tierData.emoji}</Text>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: tierCfg.color }}>{tierData.label}</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
-            <Text style={{ fontSize: 18, color: tierCfg.color }}>›</Text>
-          </TouchableOpacity>
-        )}
+          </View>
 
-        <View style={{ paddingHorizontal: SP.md }}>
-        <ShineCard style={[s.walletCard, { marginBottom: 14 }]}>
-          <TouchableOpacity onPress={() => { loadWalletDetail(phone); loadLoyalty(phone); setScreen('wallet'); }} activeOpacity={0.85}>
-            <View style={s.row}>
+          {/* Tier progress strip */}
+          {tierData?.next_tier && tierCfg && (
+            <TouchableOpacity onPress={() => setScreen('tier')} activeOpacity={0.8}
+              style={{ marginTop: 14, backgroundColor: C.bgCard, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, borderWidth: 1, borderColor: C.glassBorder, ...SHADOW.sm, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13 }}>💰 Wallet Balance</Text>
-                <CountUp to={walletBalance} prefix="₹" style={{ color: '#fff', fontSize: 30, fontWeight: '800', marginTop: 2 }} />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: tierCfg.color }}>
+                    {tierData.rides_to_next} more ride{tierData.rides_to_next !== 1 ? 's' : ''} to {tierData.next_tier.label} {tierData.next_tier.emoji}
+                  </Text>
+                  <Text style={{ fontSize: 11, color: C.textMuted }}>{tierData.progress_pct}%</Text>
+                </View>
+                <View style={{ height: 4, backgroundColor: C.glassBorder, borderRadius: 2, overflow: 'hidden' }}>
+                  <View style={{ height: '100%', width: `${tierData.progress_pct}%`, backgroundColor: tierCfg.color, borderRadius: 2 }} />
+                </View>
               </View>
-              <View style={{ backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.40)' }}>
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Manage ›</Text>
+              <Ionicons name="chevron-forward" size={14} color={C.textDim} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <View style={{ paddingHorizontal: SP.md, paddingTop: 16 }}>
+
+          {/* ── Wallet ───────────────────────────────────────────────────── */}
+          <ShineCard style={[s.walletCard, { marginBottom: 20 }]}>
+            <TouchableOpacity onPress={() => { loadWalletDetail(phone); loadLoyalty(phone); setScreen('wallet'); }} activeOpacity={0.85}>
+              <View style={s.row}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13 }}>💰 Wallet Balance</Text>
+                  <CountUp to={walletBalance} prefix="₹" style={{ color: '#fff', fontSize: 30, fontWeight: '800', marginTop: 2 }} />
+                </View>
+                <View style={{ backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.40)' }}>
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Manage ›</Text>
+                </View>
               </View>
-            </View>
-            <View style={{ flexDirection: 'row', marginTop: 14, gap: 8 }}>
-              {[100, 200, 500].map(amt => (
-                <TouchableOpacity key={amt} onPress={(e) => { e.stopPropagation?.(); openRazorpayTopup(amt); }}
-                  style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.20)', borderRadius: 10, paddingVertical: 8, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.30)' }}>
-                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>+₹{amt}</Text>
+              <View style={{ flexDirection: 'row', marginTop: 14, gap: 8 }}>
+                {[100, 200, 500].map(amt => (
+                  <TouchableOpacity key={amt} onPress={(e) => { e.stopPropagation?.(); openRazorpayTopup(amt); }}
+                    style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.20)', borderRadius: 10, paddingVertical: 8, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.30)' }}>
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>+₹{amt}</Text>
+                  </TouchableOpacity>
+                ))}
+                <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); openRazorpayTopup(1000); }}
+                  style={{ flex: 1, backgroundColor: C.pink, borderRadius: 10, paddingVertical: 8, alignItems: 'center', elevation: 4, shadowColor: C.pink, shadowOpacity: 0.4, shadowRadius: 6 }}>
+                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>+₹1000</Text>
                 </TouchableOpacity>
-              ))}
-              <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); openRazorpayTopup(1000); }}
-                style={{ flex: 1, backgroundColor: C.pink, borderRadius: 10, paddingVertical: 8, alignItems: 'center', elevation: 4, shadowColor: C.pink, shadowOpacity: 0.4, shadowRadius: 6 }}>
-                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>+₹1000</Text>
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        </ShineCard>
+              </View>
+            </TouchableOpacity>
+          </ShineCard>
 
-        {[
-          { label: 'Refer & Earn',       sub: 'Invite friends, earn ₹50 each',    icon: 'gift',          onPress: () => { loadReferral(); setScreen('referral'); }, iconColor: C.pink },
-          { label: 'Cashback Rewards',   sub: 'Earn cashback on every ride',      icon: 'cash',          onPress: () => setScreen('rewards'),                     iconColor: C.green, iconBg: C.greenGlass, iconBorder: C.greenBorder },
-          { label: 'Ride Budget',        sub: 'Track your monthly spend',         icon: 'bar-chart',     onPress: () => setScreen('budget'),                       iconColor: C.purple, iconBg: C.purpleGlass, iconBorder: C.purpleBorder },
-          { label: 'Ride Insights',      sub: 'Stats, charts & spending trends',  icon: 'analytics',     onPress: () => setScreen('insights'),                     iconColor: C.pink,   iconBg: C.pinkGlass,   iconBorder: C.pinkBorder   },
-          { label: 'Rider Tier',         sub: 'Your loyalty rank & perks',        icon: 'trophy',        onPress: () => setScreen('tier'),                         iconColor: C.yellow, iconBg: C.yellowGlass, iconBorder: C.yellowBorder },
-          { label: 'Saved Places',       sub: 'Save Home, Office & more',         icon: 'bookmark',      onPress: () => { loadSaved(); setScreen('saved'); },      iconColor: C.yellow },
-          { label: 'Cancellation Policy',sub: 'Cancel rules and fees',            icon: 'receipt',       onPress: () => setScreen('policy'),                       iconColor: C.pink },
-          { label: 'Promo Codes',        sub: 'Apply discount codes',             icon: 'pricetag',      onPress: () => { setPromoScreenCode(''); setPromoScreenMsg(''); setScreen('promo'); }, iconColor: C.yellow },
-          { label: 'Notifications',      sub: 'Alerts — Enabled ✓',              icon: 'notifications', onPress: () => Alert.alert('🔔 Notifications', 'All ride notifications, wallet alerts and offers are automatically enabled.'), iconColor: C.pink },
-          { label: 'Safety',             sub: 'Emergency contacts & SOS',         icon: 'shield',        onPress: () => setScreen('safety'),                       iconColor: C.red },
-          { label: 'My Complaints',      sub: 'File & track ride complaints',     icon: 'alert-circle',  onPress: async () => { setCmpLoading(true); try { const r = await apiGet(`/api/complaints?phone=${encodeURIComponent(phone)}`); setComplaints(r.complaints||[]); } catch {} setCmpLoading(false); setScreen('complaints'); }, iconColor: C.red, iconBg: C.redGlass, iconBorder: C.redBorder },
-          { label: 'Support',            sub: '24/7 help',                        icon: 'call',          onPress: () => setScreen('support'),                      iconColor: C.green },
-        ].map((item, i) => (
-          <Bouncy key={i} style={s.menuItem} onPress={item.onPress}>
-            <View style={[s.menuIconBox, item.iconBg ? { backgroundColor: item.iconBg, borderColor: item.iconBorder } : {}]}>
-              <Ionicons name={item.icon as any} size={18} color={item.iconColor} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 14, color: C.text, fontWeight: '700' }}>{item.label}</Text>
-              <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>{item.sub}</Text>
-            </View>
-            <Text style={{ fontSize: 18, color: C.textDim }}>›</Text>
+          {/* ── Offers & Rewards ─────────────────────────────────────────── */}
+          <Text style={{ fontSize: 11, fontWeight: '800', color: C.textDim, letterSpacing: 1.2, marginBottom: 8, paddingHorizontal: 2 }}>OFFERS & REWARDS</Text>
+          {menuSection([
+            { label: 'Refer & Earn',     sub: 'Invite friends, earn ₹50 each', icon: 'gift-outline',     color: C.pink,   bg: C.pinkGlass,   border: C.pinkBorder,   onPress: () => { loadReferral(); setScreen('referral'); } },
+            { label: 'Cashback Rewards', sub: 'Earn cashback on every ride',   icon: 'cash-outline',     color: C.green,  bg: C.greenGlass,  border: C.greenBorder,  onPress: () => setScreen('rewards') },
+            { label: 'Promo Codes',      sub: 'Apply discount codes',          icon: 'pricetag-outline', color: '#F59E0B', bg: C.yellowGlass, border: C.yellowBorder, onPress: () => { setPromoScreenCode(''); setPromoScreenMsg(''); setScreen('promo'); } },
+          ])}
+
+          {/* ── Account ──────────────────────────────────────────────────── */}
+          <Text style={{ fontSize: 11, fontWeight: '800', color: C.textDim, letterSpacing: 1.2, marginBottom: 8, paddingHorizontal: 2 }}>ACCOUNT</Text>
+          {menuSection([
+            { label: 'Ride Insights', sub: 'Stats, charts & spending trends', icon: 'analytics-outline',  color: C.pink,   bg: C.pinkGlass,   border: C.pinkBorder,   onPress: () => setScreen('insights') },
+            { label: 'Ride Budget',   sub: 'Track your monthly spend',        icon: 'bar-chart-outline',  color: C.purple, bg: C.purpleGlass, border: C.purpleBorder, onPress: () => setScreen('budget') },
+            { label: 'Rider Tier',    sub: 'Your loyalty rank & perks',       icon: 'trophy-outline',     color: '#F59E0B', bg: C.yellowGlass, border: C.yellowBorder, onPress: () => setScreen('tier') },
+            { label: 'Saved Places',  sub: 'Save Home, Office & more',        icon: 'bookmark-outline',   color: C.purple, bg: C.purpleGlass, border: C.purpleBorder, onPress: () => { loadSaved(); setScreen('saved'); } },
+          ])}
+
+          {/* ── Help & Safety ────────────────────────────────────────────── */}
+          <Text style={{ fontSize: 11, fontWeight: '800', color: C.textDim, letterSpacing: 1.2, marginBottom: 8, paddingHorizontal: 2 }}>HELP & SAFETY</Text>
+          {menuSection([
+            { label: 'Safety',              sub: 'Emergency contacts & SOS',    icon: 'shield-checkmark-outline', color: C.red,      bg: C.redGlass,    border: C.redBorder,    onPress: () => setScreen('safety') },
+            { label: 'Support',             sub: '24/7 help',                   icon: 'call-outline',             color: C.green,    bg: C.greenGlass,  border: C.greenBorder,  onPress: () => setScreen('support') },
+            { label: 'My Complaints',       sub: 'File & track ride complaints', icon: 'alert-circle-outline',    color: C.red,      bg: C.redGlass,    border: C.redBorder,    onPress: async () => { setCmpLoading(true); try { const r = await apiGet(`/api/complaints?phone=${encodeURIComponent(phone)}`); setComplaints(r.complaints||[]); } catch {} setCmpLoading(false); setScreen('complaints'); } },
+            { label: 'Notifications',       sub: 'All ride alerts enabled',     icon: 'notifications-outline',   color: C.pink,     bg: C.pinkGlass,   border: C.pinkBorder,   onPress: () => Alert.alert('🔔 Notifications', 'All ride notifications, wallet alerts and offers are automatically enabled.') },
+            { label: 'Cancellation Policy', sub: 'Cancel rules and fees',       icon: 'receipt-outline',          color: C.textMuted, bg: C.glassMid,  border: C.glassBorder,  onPress: () => setScreen('policy') },
+          ])}
+
+          {/* ── Log out ──────────────────────────────────────────────────── */}
+          <Bouncy style={s.logoutBtn} onPress={async () => {
+            await AsyncStorage.removeItem('userPhone'); await AsyncStorage.removeItem('userName');
+            setScreen('login'); setTab('home'); setPhone(''); setOtp(''); setOtpDigits(['','','','','','']);
+            setUserName(''); setGender(''); setWalletBalance(0);
+          }}>
+            <Text style={{ color: C.red, fontWeight: '800', fontSize: 14 }}>Log Out</Text>
           </Bouncy>
-        ))}
 
-        <Bouncy style={s.logoutBtn} onPress={async () => {
-          await AsyncStorage.removeItem('userPhone'); await AsyncStorage.removeItem('userName');
-          setScreen('login'); setTab('home'); setPhone(''); setOtp(''); setOtpDigits(['','','','','','']);
-          setUserName(''); setGender(''); setWalletBalance(0);
-        }}>
-          <Text style={{ color: C.pink, fontWeight: '800', fontSize: 14 }}>🚪 Logout</Text>
-        </Bouncy>
         </View>
       </ScrollView>
       <View style={s.navFloat}><NavBar /></View>
