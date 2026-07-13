@@ -1882,6 +1882,13 @@ _GST is included in the fare._
   );
 }
 
+const TIER_COLORS: Record<string, { color: string; bg: string; border: string }> = {
+  starter: { color: '#059669', bg: 'rgba(5,150,105,0.10)',  border: 'rgba(5,150,105,0.28)' },
+  regular: { color: '#1D4ED8', bg: 'rgba(29,78,216,0.10)',  border: 'rgba(29,78,216,0.28)' },
+  expert:  { color: '#FF7A00', bg: 'rgba(255,122,0,0.10)',  border: 'rgba(255,122,0,0.28)'  },
+  elite:   { color: '#F59E0B', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.35)' },
+};
+
 function ProfileTab() {
   const {
     userName, phone,
@@ -1894,8 +1901,17 @@ function ProfileTab() {
     setComplaints, setCmpLoading,
   } = useApp();
 
+  const [tierData, setTierData] = useState<any>(null);
+  useEffect(() => {
+    if (!phone) return;
+    apiGet(`/api/customer/tier?phone=${encodeURIComponent(phone)}`)
+      .then(r => { if (r && !r._error && r.tier) setTierData(r); })
+      .catch(() => {});
+  }, [phone]);
+
   const ratingVal = customerRating?.rating ? parseFloat(customerRating.rating).toFixed(1) : '5.0';
   const rideCount = customerRating?.count || 0;
+  const tierCfg = tierData ? (TIER_COLORS[tierData.tier] || TIER_COLORS.starter) : null;
 
   return (
     <View style={s.screen}>
@@ -1929,6 +1945,29 @@ function ProfileTab() {
           </View>
         </View>
 
+        {/* ── Tier Card ── */}
+        {tierData && tierCfg && (
+          <TouchableOpacity onPress={() => setScreen('tier')} activeOpacity={0.85}
+            style={{ marginHorizontal: SP.md, marginBottom: SP.md, backgroundColor: tierCfg.bg, borderRadius: R.lg, borderWidth: 1.5, borderColor: tierCfg.border, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, ...SHADOW.sm }}>
+            <Text style={{ fontSize: 32 }}>{tierData.emoji}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: '#94A3B8', letterSpacing: 1 }}>RIDER TIER</Text>
+              <Text style={{ fontSize: 17, fontWeight: '900', color: tierCfg.color }}>{tierData.label}</Text>
+              {tierData.next_tier ? (
+                <>
+                  <View style={{ height: 4, backgroundColor: 'rgba(148,163,184,0.20)', borderRadius: 2, marginTop: 5, overflow: 'hidden' }}>
+                    <View style={{ height: '100%', width: `${tierData.progress_pct}%`, backgroundColor: tierCfg.color, borderRadius: 2 }} />
+                  </View>
+                  <Text style={{ fontSize: 10, color: '#94A3B8', marginTop: 3 }}>{tierData.rides_to_next} rides → {tierData.next_tier.label} {tierData.next_tier.emoji}</Text>
+                </>
+              ) : (
+                <Text style={{ fontSize: 11, fontWeight: '700', color: tierCfg.color, marginTop: 4 }}>Maximum tier reached! 🏆</Text>
+              )}
+            </View>
+            <Text style={{ fontSize: 18, color: tierCfg.color }}>›</Text>
+          </TouchableOpacity>
+        )}
+
         <View style={{ paddingHorizontal: SP.md }}>
         <ShineCard style={[s.walletCard, { marginBottom: 14 }]}>
           <TouchableOpacity onPress={() => { loadWalletDetail(phone); loadLoyalty(phone); setScreen('wallet'); }} activeOpacity={0.85}>
@@ -1961,6 +2000,7 @@ function ProfileTab() {
           { label: 'Cashback Rewards',   sub: 'Earn cashback on every ride',      icon: 'cash',          onPress: () => setScreen('rewards'),                     iconColor: C.green, iconBg: C.greenGlass, iconBorder: C.greenBorder },
           { label: 'Ride Budget',        sub: 'Track your monthly spend',         icon: 'bar-chart',     onPress: () => setScreen('budget'),                       iconColor: C.purple, iconBg: C.purpleGlass, iconBorder: C.purpleBorder },
           { label: 'Ride Insights',      sub: 'Stats, charts & spending trends',  icon: 'analytics',     onPress: () => setScreen('insights'),                     iconColor: C.pink,   iconBg: C.pinkGlass,   iconBorder: C.pinkBorder   },
+          { label: 'Rider Tier',         sub: 'Your loyalty rank & perks',        icon: 'trophy',        onPress: () => setScreen('tier'),                         iconColor: C.yellow, iconBg: C.yellowGlass, iconBorder: C.yellowBorder },
           { label: 'Saved Places',       sub: 'Save Home, Office & more',         icon: 'bookmark',      onPress: () => { loadSaved(); setScreen('saved'); },      iconColor: C.yellow },
           { label: 'Cancellation Policy',sub: 'Cancel rules and fees',            icon: 'receipt',       onPress: () => setScreen('policy'),                       iconColor: C.pink },
           { label: 'Promo Codes',        sub: 'Apply discount codes',             icon: 'pricetag',      onPress: () => { setPromoScreenCode(''); setPromoScreenMsg(''); setScreen('promo'); }, iconColor: C.yellow },

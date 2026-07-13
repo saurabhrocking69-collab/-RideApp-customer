@@ -22,6 +22,7 @@ import { RewardsScreen } from './screens/RewardsScreen';
 import { BudgetScreen } from './screens/BudgetScreen';
 import { SurgePricingScreen } from './screens/SurgePricingScreen';
 import { InsightsScreen } from './screens/InsightsScreen';
+import { TierScreen } from './screens/TierScreen';
 
 function ActiveScreen() {
   const { screen } = useApp();
@@ -52,6 +53,7 @@ function ActiveScreen() {
   if (screen === 'budget')           return <BudgetScreen />;
   if (screen === 'surge')            return <SurgePricingScreen />;
   if (screen === 'insights')         return <InsightsScreen />;
+  if (screen === 'tier')             return <TierScreen />;
   return <HomeScreen />;
 }
 
