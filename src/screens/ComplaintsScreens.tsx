@@ -82,26 +82,31 @@ const CATEGORIES = [
 
 // ─── ComplaintsScreen — list ──────────────────────────────────────────────────
 export function ComplaintsScreen() {
-  const { phone, setScreen, complaints, setComplaints, cmpLoading, setCmpLoading, setCmpDetail, setCmpType, setCmpDesc } = useApp();
+  const { phone, setScreen, complaints, setComplaints, setCmpDetail, setCmpType, setCmpDesc } = useApp();
+  const [listLoading, setListLoading] = useState(false);
   const [listRefreshing, setListRefreshing] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [tapping, setTapping] = useState<number | null>(null);
 
   const loadComplaints = useCallback(async (silent = false) => {
     if (!phone) return;
-    if (!silent) setCmpLoading(true); else setListRefreshing(true);
+    const hasData = complaints.length > 0;
+    if (!silent && !hasData) setListLoading(true);
+    else if (silent) setListRefreshing(true);
     setLoadError(false);
     try {
       const d = await apiGet(`/api/complaints?phone=${encodeURIComponent(phone)}`);
       if (!d._error && Array.isArray(d.complaints)) {
         setComplaints(d.complaints);
-      } else {
+      } else if (!hasData) {
         setLoadError(true);
       }
     } catch {
-      setLoadError(true);
+      if (!hasData) setLoadError(true);
     }
-    if (!silent) setCmpLoading(false); else setListRefreshing(false);
-  }, [phone]);
+    if (!silent && !hasData) setListLoading(false);
+    else if (silent) setListRefreshing(false);
+  }, [phone, complaints.length]);
 
   useEffect(() => { loadComplaints(); }, [phone]);
 
@@ -120,7 +125,7 @@ export function ComplaintsScreen() {
 
       <ScrollView style={{ flex: 1, padding: 14 }} contentContainerStyle={{ paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={listRefreshing} onRefresh={() => loadComplaints(true)} colors={[C.pink]} tintColor={C.pink} />}>
-        {loadError && !cmpLoading && (
+        {loadError && !listLoading && (
           <TouchableOpacity onPress={() => loadComplaints(true)}
             style={{ backgroundColor: C.redGlass, borderRadius: 14, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: C.redBorder }}>
             <Text style={{ fontSize: 18 }}>⚠️</Text>
@@ -132,14 +137,14 @@ export function ComplaintsScreen() {
           </TouchableOpacity>
         )}
 
-        {cmpLoading && (
+        {listLoading && (
           <View style={{ alignItems: 'center', paddingTop: 60 }}>
             <ActivityIndicator size="large" color={C.pink} />
             <Text style={{ fontSize: 13, color: C.textMuted, marginTop: 14 }}>Loading complaints...</Text>
           </View>
         )}
 
-        {!cmpLoading && !loadError && complaints.length === 0 && (
+        {!listLoading && !loadError && complaints.length === 0 && (
           <View style={{ alignItems: 'center', paddingTop: 60 }}>
             <Text style={{ fontSize: 52 }}>📭</Text>
             <Text style={{ fontSize: 17, fontWeight: '900', color: C.text, marginTop: 14 }}>No complaints</Text>
@@ -156,18 +161,23 @@ export function ComplaintsScreen() {
           const isAuto = c.source === 'system_auto';
           return (
             <TouchableOpacity key={c.id} onPress={async () => {
-              setCmpLoading(true);
+              if (tapping !== null) return;
+              setTapping(c.id);
               try {
                 const r = await apiGet(`/api/complaints/${c.id}?phone=${encodeURIComponent(phone)}`);
                 if (r && !r._error && r.complaint) {
                   setCmpDetail(r); setScreen('complaint-detail');
                 } else {
-                  Alert.alert('Error', r?.error || 'Complaint load nahi hui — dobara try karo');
+                  const msg = r?._error
+                    ? 'Net slow hai — thoda ruko aur dobara try karo'
+                    : (r?.error || 'Complaint load nahi hui — dobara try karo');
+                  Alert.alert('Error', msg);
                 }
               } catch {
                 Alert.alert('Error', 'Network error — internet check karo');
+              } finally {
+                setTapping(null);
               }
-              setCmpLoading(false);
             }} style={{ backgroundColor: C.bgCard, borderRadius: 18, padding: 16, marginBottom: 12, elevation: 3, borderWidth: 1.5, borderColor: C.glassBorder, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8 }}>
 
               {/* Status bar at top */}
@@ -183,9 +193,10 @@ export function ComplaintsScreen() {
                     </View>
                   )}
                 </View>
-                {c.priority !== 'normal' && (
-                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: PRIORITY_COLOR[c.priority] }} />
-                )}
+                {tapping === c.id
+                  ? <ActivityIndicator size="small" color={C.pink} />
+                  : c.priority !== 'normal' && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: PRIORITY_COLOR[c.priority] }} />
+                }
               </View>
 
               <Text style={{ fontSize: 14, fontWeight: '800', color: C.text, marginBottom: 4 }} numberOfLines={2}>{c.title}</Text>
