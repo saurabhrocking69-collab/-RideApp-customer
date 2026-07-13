@@ -680,7 +680,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       else if (['cashback_earned', 'refund', 'wallet_topup'].includes(data.type)) setScreen('home');
       // Account / complaints
       else if (['account_restricted', 'payment_dispute', 'warning', 'suspended'].includes(data.type)) setScreen('home');
-      else if (['complaint_update', 'complaint_resolved'].includes(data.type)) setScreen('home');
+      else if (['complaint_update', 'complaint_resolved'].includes(data.type)) {
+        // Load the specific complaint if we have an ID, else fall back to list
+        const cmpId = data.complaint_id;
+        if (cmpId) {
+          apiGet(`/api/complaints/${cmpId}?phone=${encodeURIComponent(phoneRef.current || '')}`)
+            .then((r: any) => {
+              if (r?.complaint) { setCmpDetail(r); setScreen('complaint-detail'); }
+              else setScreen('complaints');
+            })
+            .catch(() => setScreen('complaints'));
+        } else {
+          setScreen('complaints');
+        }
+      }
     };
     const sub2 = Notifications.addNotificationResponseReceivedListener(handleNotifTap);
     Notifications.getLastNotificationResponseAsync().then(r => { if (r) handleNotifTap(r); });
