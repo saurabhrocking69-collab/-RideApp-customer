@@ -1,5 +1,6 @@
-import { View } from 'react-native';
+import { View, Animated, StyleSheet } from 'react-native';
 import { useApp } from './context/AppContext';
+import { C } from './styles';
 import { OfflineBanner } from './components/OfflineBanner';
 import { NotificationToast } from './components/NotificationToast';
 import { SplashScreen } from './screens/SplashScreen';
@@ -26,7 +27,7 @@ import { TierScreen } from './screens/TierScreen';
 
 function ActiveScreen() {
   const { screen } = useApp();
-  if (screen === 'splash')           return <SplashScreen />;
+  if (screen === 'splash')           return null;
   if (screen === 'onboarding')       return <OnboardingScreen />;
   if (screen === 'login')            return <LoginScreen />;
   if (screen === 'otp')              return <OtpScreen />;
@@ -59,7 +60,7 @@ function ActiveScreen() {
 
 // Global overlays rendered on top of all screens
 export function Router() {
-  const { notifToast, setNotifToast, screen, setScreen } = useApp();
+  const { notifToast, setNotifToast, screen, setScreen, splashFade, splashDone } = useApp();
 
   const handleNotifTap = (n: typeof notifToast) => {
     if (!n) return;
@@ -70,7 +71,7 @@ export function Router() {
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
       <ActiveScreen />
       <OfflineBanner />
       <NotificationToast
@@ -78,6 +79,12 @@ export function Router() {
         onDismiss={() => setNotifToast(null)}
         onTap={n => { setNotifToast(null); handleNotifTap(n); }}
       />
+      <Animated.View
+        style={[StyleSheet.absoluteFill, { opacity: splashFade }]}
+        pointerEvents={splashDone ? 'none' : 'auto'}
+      >
+        <SplashScreen />
+      </Animated.View>
     </View>
   );
 }

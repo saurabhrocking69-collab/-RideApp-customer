@@ -1,6 +1,5 @@
 import { useRef, useEffect } from 'react';
 import { View, Text, Animated, Dimensions, StyleSheet, Easing } from 'react-native';
-import { useApp } from '../context/AppContext';
 import { C } from '../styles';
 
 const { width: W, height: H } = Dimensions.get('window');
@@ -9,8 +8,6 @@ const DIAG   = Math.ceil(Math.sqrt(W * W + H * H));
 const CIRCLE = DIAG + 60; // diameter >= diagonal guarantees full coverage
 
 export function SplashScreen() {
-  const { splashFade } = useApp();
-
   // Sppero text entrance
   const textOpacity  = useRef(new Animated.Value(0)).current;
   const textScale    = useRef(new Animated.Value(0.68)).current;
@@ -41,7 +38,7 @@ export function SplashScreen() {
   }, []);
 
   return (
-    <Animated.View style={[StyleSheet.absoluteFill, styles.root, { opacity: splashFade }]}>
+    <View style={[StyleSheet.absoluteFill, styles.root]}>
 
       {/* Phase 2: Plum ripple — expands from center, covers pink */}
       <Animated.View style={[styles.circle, { transform: [{ scale: circleScale }] }]} />
@@ -54,7 +51,7 @@ export function SplashScreen() {
         <Text style={styles.brand}>Sppero</Text>
       </Animated.View>
 
-    </Animated.View>
+    </View>
   );
 }
 

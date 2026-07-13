@@ -56,6 +56,7 @@ interface AppContextType {
   // Splash anims
   splashLogo: Animated.Value; splashScale: Animated.Value;
   splashTag: Animated.Value; splashFade: Animated.Value;
+  splashDone: boolean;
   // Login anims
   onboardFade: Animated.Value; onboardSlide: Animated.Value;
   loginHeroAnim: Animated.Value; loginCardAnim: Animated.Value;
@@ -297,6 +298,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const splashScale = useRef(new Animated.Value(0.4)).current;
   const splashTag   = useRef(new Animated.Value(0)).current;
   const splashFade  = useRef(new Animated.Value(1)).current;
+  const [splashDone, setSplashDone] = useState(false);
   const onboardFade   = useRef(new Animated.Value(0)).current;
   const onboardSlide  = useRef(new Animated.Value(60)).current;
   const loginHeroAnim = useRef(new Animated.Value(0)).current;
@@ -552,15 +554,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const savedDropHist = await AsyncStorage.getItem('dropLocationHistory').catch(() => null);
       if (savedDropHist) { try { setDropHistory(JSON.parse(savedDropHist)); } catch (_) {} }
 
+      // Set the real screen BEFORE the fade so it renders under the still-opaque splash overlay
+      if (savedPhone) {
+        setPhone(savedPhone);
+        phoneRef.current = savedPhone;
+        if (savedName) setUserName(savedName);
+        setScreen('home');
+      } else {
+        setScreen('login');
+      }
+
       Animated.timing(splashFade, { toValue: 0, duration: 300, useNativeDriver: true }).start(async () => {
+        setSplashDone(true);
         if (savedPhone) {
-          setPhone(savedPhone);
-          phoneRef.current = savedPhone;
-          if (savedName) setUserName(savedName);
-
-          // Show home immediately — eliminates white screen gap between splash and home
-          setScreen('home');
-
           // Start background tasks without waiting for ride check
           fetchAppConfig();
           loadHistory(savedPhone); loadWallet(savedPhone);
@@ -625,8 +631,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               }
             } catch { /* already on home */ }
           }
-        } else {
-          setScreen('login');
         }
       });
     }, 3000); // 2s pink + ~0.7s plum flood + 0.3s fade
@@ -1857,7 +1861,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     phone, setPhone, otp, setOtp, otpSent, setOtpSent, otpDigits, setOtpDigits,
     resendTimer, setResendTimer, canResend, setCanResend, otpRefs, otpShakeAnim, otpSuccessAnim,
     userName, setUserName, gender, setGender,
-    splashLogo, splashScale, splashTag, splashFade,
+    splashLogo, splashScale, splashTag, splashFade, splashDone,
     onboardFade, onboardSlide, loginHeroAnim, loginCardAnim,
     pickup, setPickup, drop, setDrop, pickupCoords, setPickupCoords, dropCoords, setDropCoords,
     rideType, setRideType, pickupSugg, setPickupSugg, dropSugg, setDropSugg, dropHistory,

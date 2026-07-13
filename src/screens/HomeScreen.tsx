@@ -932,6 +932,39 @@ function HomeTab() {
               </Bouncy>
             </View>
 
+            {/* Live availability by vehicle type — tap pill to pre-select and open booking */}
+            {Array.isArray(nearbyDriversData) && nearbyDriversData.length > 0 && (() => {
+              const autoC = nearbyDriversData.filter((d: any) => ['auto','electric_auto','eriksha'].includes(d.vehicleType)).length;
+              const bikeC = nearbyDriversData.filter((d: any) => ['bike','green_bike'].includes(d.vehicleType)).length;
+              const carC  = nearbyDriversData.filter((d: any) => ['car','luxury'].includes(d.vehicleType)).length;
+              const pills = [
+                { key: 'auto', emoji: '🛺', label: 'Auto', count: autoC, color: '#5B21B6', bg: 'rgba(91,33,182,0.10)', border: 'rgba(91,33,182,0.28)' },
+                { key: 'bike', emoji: '🏍️', label: 'Bike', count: bikeC, color: '#15803D', bg: 'rgba(21,128,61,0.10)', border: 'rgba(21,128,61,0.28)' },
+                { key: 'car',  emoji: '🚗', label: 'Car',  count: carC,  color: '#1D4ED8', bg: 'rgba(29,78,216,0.10)', border: 'rgba(29,78,216,0.28)' },
+              ].filter(p => p.count > 0);
+              if (!pills.length) return null;
+              return (
+                <View style={{ marginBottom: 14 }}>
+                  <Text style={{ fontSize: 9, fontWeight: '900', color: C.textDim, letterSpacing: 1.2, marginBottom: 8 }}>LIVE AVAILABILITY</Text>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    {pills.map(p => (
+                      <TouchableOpacity key={p.key} activeOpacity={0.78}
+                        onPress={() => { setRideType(p.key); setScreen('booking'); }}
+                        style={{ flex: 1, backgroundColor: p.bg, borderWidth: 1.5, borderColor: p.border, borderRadius: 16, paddingVertical: 12, alignItems: 'center', gap: 2 }}>
+                        <Text style={{ fontSize: 22 }}>{p.emoji}</Text>
+                        <Text style={{ fontSize: 18, fontWeight: '900', color: p.color, lineHeight: 22 }}>{p.count}</Text>
+                        <Text style={{ fontSize: 9, fontWeight: '800', color: p.color, opacity: 0.75, letterSpacing: 0.8 }}>{p.label.toUpperCase()}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 1 }}>
+                          <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#22C55E' }} />
+                          <Text style={{ fontSize: 8, color: '#22C55E', fontWeight: '800' }}>LIVE</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              );
+            })()}
+
             {/* Service strip — Buddy + Refer (plain TouchableOpacity so flex:1 works in the row) */}
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
               <TouchableOpacity
