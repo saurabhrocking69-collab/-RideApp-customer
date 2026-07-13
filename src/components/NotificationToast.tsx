@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Image, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { C } from '../styles';
 
@@ -9,6 +9,7 @@ export interface ToastNotif {
   body: string;
   type?: string;
   ts: number;
+  imageUrl?: string;
 }
 
 interface Props {
@@ -65,7 +66,8 @@ export function NotificationToast({ notif, onDismiss, onTap }: Props) {
 
   if (!notif) return null;
 
-  const cfg = TYPE_ICON[notif.type || 'default'] || TYPE_ICON.default;
+  const cfg      = TYPE_ICON[notif.type || 'default'] || TYPE_ICON.default;
+  const hasImage = !!notif.imageUrl;
 
   return (
     <Animated.View style={{
@@ -79,30 +81,38 @@ export function NotificationToast({ notif, onDismiss, onTap }: Props) {
         onPress={() => { dismiss(); onTap(notif); }}
         style={{
           backgroundColor: C.bgDark,
-          borderRadius: 18, padding: 14,
-          flexDirection: 'row', alignItems: 'center', gap: 12,
+          borderRadius: 18,
+          overflow: 'hidden',
           borderWidth: 1.5, borderColor: cfg.color + '40',
           elevation: 20, shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 16,
         }}>
-        {/* Icon */}
-        <View style={{
-          width: 40, height: 40, borderRadius: 12,
-          backgroundColor: cfg.color + '20', alignItems: 'center', justifyContent: 'center',
-          borderWidth: 1, borderColor: cfg.color + '40',
-        }}>
-          <Ionicons name={cfg.icon as any} size={20} color={cfg.color} />
+
+        {/* Header row — always shown */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 }}>
+          <View style={{
+            width: 40, height: 40, borderRadius: 12,
+            backgroundColor: cfg.color + '20', alignItems: 'center', justifyContent: 'center',
+            borderWidth: 1, borderColor: cfg.color + '40',
+          }}>
+            <Ionicons name={cfg.icon as any} size={20} color={cfg.color} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }} numberOfLines={1}>{notif.title}</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, marginTop: 2 }} numberOfLines={hasImage ? 1 : 2}>{notif.body}</Text>
+          </View>
+          <TouchableOpacity onPress={dismiss} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Ionicons name="close" size={16} color="rgba(255,255,255,0.4)" />
+          </TouchableOpacity>
         </View>
 
-        {/* Text */}
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }} numberOfLines={1}>{notif.title}</Text>
-          <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, marginTop: 2 }} numberOfLines={2}>{notif.body}</Text>
-        </View>
-
-        {/* Dismiss */}
-        <TouchableOpacity onPress={dismiss} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Ionicons name="close" size={16} color="rgba(255,255,255,0.4)" />
-        </TouchableOpacity>
+        {/* Banner image — only for promo/broadcast notifications with image */}
+        {hasImage && (
+          <Image
+            source={{ uri: notif.imageUrl }}
+            style={{ width: '100%', height: 140 }}
+            resizeMode="cover"
+          />
+        )}
       </TouchableOpacity>
     </Animated.View>
   );

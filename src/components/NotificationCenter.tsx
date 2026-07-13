@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Modal, ScrollView, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { Animated, Image, Modal, ScrollView, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { C } from '../styles';
 import { Cache, KEY, TTL } from '../offline';
@@ -12,6 +12,7 @@ export interface InAppNotif {
   type?: string;
   ts: number;
   read: boolean;
+  imageUrl?: string;
 }
 
 const CACHE_KEY = 'notif:center';
@@ -133,6 +134,7 @@ export function NotificationCenter({ visible, onClose, phone }: CenterProps) {
             type: n.type || 'default',
             ts: new Date(n.created_at).getTime(),
             read: true,
+            imageUrl: n.image_url || undefined,
           }));
           setNotifs(prev => {
             const ids = new Set(prev.map(x => x.id));
@@ -196,23 +198,33 @@ export function NotificationCenter({ visible, onClose, phone }: CenterProps) {
                 const cfg = ICON_CFG[n.type || 'default'] || ICON_CFG.default;
                 return (
                   <View key={n.id} style={{
-                    flexDirection: 'row', alignItems: 'flex-start', gap: 12,
                     backgroundColor: n.read ? 'rgba(255,255,255,0.04)' : C.pinkGlass,
-                    borderRadius: 16, padding: 14, marginBottom: 8,
+                    borderRadius: 16, marginBottom: 8, overflow: 'hidden',
                     borderWidth: 1,
                     borderColor: n.read ? 'rgba(255,255,255,0.07)' : C.pinkBorder,
                   }}>
-                    <View style={{ width: 38, height: 38, borderRadius: 11, backgroundColor: cfg.bg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: cfg.color + '30' }}>
-                      <Ionicons name={cfg.icon as any} size={18} color={cfg.color} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Text style={{ flex: 1, color: '#fff', fontSize: 13, fontWeight: '800' }} numberOfLines={1}>{n.title}</Text>
-                        {!n.read && <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: C.pink }} />}
+                    {/* Row: icon + text */}
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 14 }}>
+                      <View style={{ width: 38, height: 38, borderRadius: 11, backgroundColor: cfg.bg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: cfg.color + '30' }}>
+                        <Ionicons name={cfg.icon as any} size={18} color={cfg.color} />
                       </View>
-                      <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 3, lineHeight: 17 }} numberOfLines={3}>{n.body}</Text>
-                      <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, marginTop: 5, fontWeight: '600' }}>{timeAgo(n.ts)}</Text>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Text style={{ flex: 1, color: '#fff', fontSize: 13, fontWeight: '800' }} numberOfLines={1}>{n.title}</Text>
+                          {!n.read && <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: C.pink }} />}
+                        </View>
+                        <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 3, lineHeight: 17 }} numberOfLines={n.imageUrl ? 2 : 3}>{n.body}</Text>
+                        <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, marginTop: 5, fontWeight: '600' }}>{timeAgo(n.ts)}</Text>
+                      </View>
                     </View>
+                    {/* Promo banner image */}
+                    {n.imageUrl && (
+                      <Image
+                        source={{ uri: n.imageUrl }}
+                        style={{ width: '100%', height: 160 }}
+                        resizeMode="cover"
+                      />
+                    )}
                   </View>
                 );
               })

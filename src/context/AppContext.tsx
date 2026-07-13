@@ -657,11 +657,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setDriverCancelPopup(true);
       }
       const toast: ToastNotif = {
-        id:    n.request.identifier,
-        title: content.title || 'Sppero',
-        body:  content.body  || '',
-        type:  data?.type,
-        ts:    Date.now(),
+        id:       n.request.identifier,
+        title:    content.title || 'Sppero',
+        body:     content.body  || '',
+        type:     data?.type,
+        ts:       Date.now(),
+        imageUrl: data?.image_url || undefined,
       };
       saveNotification({ ...toast, read: false });
       setNotifToast(toast);
