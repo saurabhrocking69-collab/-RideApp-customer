@@ -1960,6 +1960,7 @@ function ProfileTab() {
           { label: 'Refer & Earn',       sub: 'Invite friends, earn ₹50 each',    icon: 'gift',          onPress: () => { loadReferral(); setScreen('referral'); }, iconColor: C.pink },
           { label: 'Cashback Rewards',   sub: 'Earn cashback on every ride',      icon: 'cash',          onPress: () => setScreen('rewards'),                     iconColor: C.green, iconBg: C.greenGlass, iconBorder: C.greenBorder },
           { label: 'Ride Budget',        sub: 'Track your monthly spend',         icon: 'bar-chart',     onPress: () => setScreen('budget'),                       iconColor: C.purple, iconBg: C.purpleGlass, iconBorder: C.purpleBorder },
+          { label: 'Ride Insights',      sub: 'Stats, charts & spending trends',  icon: 'analytics',     onPress: () => setScreen('insights'),                     iconColor: C.pink,   iconBg: C.pinkGlass,   iconBorder: C.pinkBorder   },
           { label: 'Saved Places',       sub: 'Save Home, Office & more',         icon: 'bookmark',      onPress: () => { loadSaved(); setScreen('saved'); },      iconColor: C.yellow },
           { label: 'Cancellation Policy',sub: 'Cancel rules and fees',            icon: 'receipt',       onPress: () => setScreen('policy'),                       iconColor: C.pink },
           { label: 'Promo Codes',        sub: 'Apply discount codes',             icon: 'pricetag',      onPress: () => { setPromoScreenCode(''); setPromoScreenMsg(''); setScreen('promo'); }, iconColor: C.yellow },

@@ -21,6 +21,7 @@ import { ReferralScreen, PolicyScreen, SavedPlacesScreen, ChatScreen } from './s
 import { RewardsScreen } from './screens/RewardsScreen';
 import { BudgetScreen } from './screens/BudgetScreen';
 import { SurgePricingScreen } from './screens/SurgePricingScreen';
+import { InsightsScreen } from './screens/InsightsScreen';
 
 function ActiveScreen() {
   const { screen } = useApp();
@@ -50,6 +51,7 @@ function ActiveScreen() {
   if (screen === 'rewards')          return <RewardsScreen />;
   if (screen === 'budget')           return <BudgetScreen />;
   if (screen === 'surge')            return <SurgePricingScreen />;
+  if (screen === 'insights')         return <InsightsScreen />;
   return <HomeScreen />;
 }
 
