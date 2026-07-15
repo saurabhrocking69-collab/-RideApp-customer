@@ -18,7 +18,6 @@ export function PostRideScreen() {
     paymentDone, setPaymentDone,
     setShowRatingModal,
     result, setResult,
-    setCmpType, setCmpDesc,
     loadHistory, loadWallet,
     cashbackEarned,
   } = useApp();
@@ -212,12 +211,6 @@ _GST is included in the fare — not charged separately._
         )}
 
         <View style={{ marginHorizontal: 14, marginTop: 16, marginBottom: 10 }}>
-          <TouchableOpacity onPress={() => { setCmpType(''); setCmpDesc(''); setScreen('complaint-new'); }}
-            style={{ backgroundColor: C.redGlass, borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1.5, borderColor: C.redBorder }}>
-            <Text style={{ fontSize: 18 }}>⚠️</Text>
-            <Text style={{ color: C.red, fontWeight: '700', fontSize: 14 }}>Ride Issue? File a Complaint</Text>
-          </TouchableOpacity>
-
           {/* Auto-redirect countdown */}
           <View style={{ alignItems: 'center', marginTop: 20 }}>
             <Text style={{ fontSize: 13, color: C.textMuted }}>

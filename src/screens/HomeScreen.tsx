@@ -1912,13 +1912,6 @@ _GST is included in the fare._
                   <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>Share Receipt</Text>
                 </TouchableOpacity>
 
-                {/* Report issue */}
-                <TouchableOpacity onPress={() => { closeDetail(); setScreen('complaint-new'); }}
-                  style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: C.glassBorder }}>
-                  <Text style={{ fontSize: 16 }}>🚨</Text>
-                  <Text style={{ color: 'rgba(255,255,255,0.7)', fontWeight: '700', fontSize: 14 }}>Report an Issue</Text>
-                </TouchableOpacity>
-
                 <TouchableOpacity onPress={closeDetail} style={{ paddingVertical: 14, alignItems: 'center' }}>
                   <Text style={{ color: C.textMuted, fontSize: 14 }}>Dismiss</Text>
                 </TouchableOpacity>
@@ -1948,7 +1941,6 @@ function ProfileTab() {
     setPromoScreenCode, setPromoScreenMsg,
     loadWalletDetail, loadLoyalty, loadReferral, loadSaved,
     openRazorpayTopup,
-    setComplaints, setCmpLoading,
   } = useApp();
 
   const [tierData, setTierData] = useState<any>(null);
@@ -2098,7 +2090,6 @@ function ProfileTab() {
           {menuSection([
             { label: 'Safety',              sub: 'Emergency contacts & SOS',    icon: 'shield-checkmark-outline', color: C.red,      bg: C.redGlass,    border: C.redBorder,    onPress: () => setScreen('safety') },
             { label: 'Support',             sub: '24/7 help',                   icon: 'call-outline',             color: C.green,    bg: C.greenGlass,  border: C.greenBorder,  onPress: () => setScreen('support') },
-            { label: 'My Complaints',       sub: 'File & track ride complaints', icon: 'alert-circle-outline',    color: C.red,      bg: C.redGlass,    border: C.redBorder,    onPress: async () => { setCmpLoading(true); try { const r = await apiGet(`/api/complaints?phone=${encodeURIComponent(phone)}`); setComplaints(r.complaints||[]); } catch {} setCmpLoading(false); setScreen('complaints'); } },
             { label: 'Notifications',       sub: 'All ride alerts enabled',     icon: 'notifications-outline',   color: C.pink,     bg: C.pinkGlass,   border: C.pinkBorder,   onPress: () => Alert.alert('🔔 Notifications', 'All ride notifications, wallet alerts and offers are automatically enabled.') },
             { label: 'Cancellation Policy', sub: 'Cancel rules and fees',       icon: 'receipt-outline',          color: C.textMuted, bg: C.glassMid,  border: C.glassBorder,  onPress: () => setScreen('policy') },
           ])}
@@ -2136,7 +2127,7 @@ function RatingModal() {
     setUnreadChat, setCashbackEarned,
     setScratchCard, setScratched,
     favouriteBuddy, addFavouriteBuddy,
-    setCmpType, setCmpDesc, setScreen,
+    setScreen,
     phone, loadHistory, loadWallet,
   } = useApp();
   const { useRideStore } = require('../../store');
@@ -2266,13 +2257,6 @@ function RatingModal() {
                 </Bouncy>
               ))}
             </View>
-
-            {/* Complaint */}
-            <TouchableOpacity onPress={() => { dismiss(false); setCmpType(''); setCmpDesc(''); setScreen('complaint-new'); }}
-              style={{ backgroundColor: C.redGlass, borderRadius: 14, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1.5, borderColor: C.redBorder, marginBottom: 14 }}>
-              <Text style={{ fontSize: 16 }}>⚠️</Text>
-              <Text style={{ color: C.red, fontWeight: '700', fontSize: 13 }}>Ride Issue? File a Complaint</Text>
-            </TouchableOpacity>
 
             {/* Submit */}
             <Bouncy style={[s.btn, { marginBottom: 4 }]} onPress={() => dismiss(true)}>

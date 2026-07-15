@@ -25,7 +25,7 @@ const TIERS = [
     tier: 'expert', label: 'Expert', emoji: '🔥', min: 20, max: 49, color: '#FF7A00',
     bg: 'rgba(255,122,0,0.10)', border: 'rgba(255,122,0,0.28)',
     tagline: 'You know Sppero inside out',
-    perks: ['Everything in Regular', '2× cashback on wallet payments', '1 free cancellation per week', 'Express complaint resolution'],
+    perks: ['Everything in Regular', '2× cashback on wallet payments', '1 free cancellation per week'],
   },
   {
     tier: 'elite', label: 'Elite', emoji: '👑', min: 50, max: null, color: '#F59E0B',

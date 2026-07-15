@@ -201,17 +201,6 @@ interface AppContextType {
   hApproachLimit: any; setHApproachLimit: (l: any) => void;
   hourlyPackages: any; setHourlyPackages: (p: any) => void;
   hourlyTimerRef: React.MutableRefObject<any>;
-  // Complaints
-  complaints: any[]; setComplaints: (c: any[]) => void;
-  activeComplaint: any; setActiveComplaint: (c: any) => void;
-  cmpType: string; setCmpType: (t: string) => void;
-  cmpDesc: string; setCmpDesc: (d: string) => void;
-  cmpMsg: string; setCmpMsg: (m: string) => void;
-  cmpLoading: boolean; setCmpLoading: (v: boolean) => void;
-  cmpDetail: any; setCmpDetail: (d: any) => void;
-  cmpLinkedRide: any; setCmpLinkedRide: (r: any) => void;
-  cmpHistoryRides: any[]; setCmpHistoryRides: (r: any[]) => void;
-  cmpShowRidePicker: boolean; setCmpShowRidePicker: (v: boolean) => void;
   // UI
   result: string; setResult: (r: string) => void;
   loading: boolean; setLoading: (v: boolean) => void;
@@ -528,18 +517,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [hApproachLimit, setHApproachLimit] = useState<any>(null);
   const [hourlyPackages, setHourlyPackages] = useState<any>(DEFAULT_HOURLY_PACKAGES);
 
-  // ── Complaints ───────────────────────────────────────────────────────────
-  const [complaints, setComplaints] = useState<any[]>([]);
-  const [activeComplaint, setActiveComplaint] = useState<any>(null);
-  const [cmpType, setCmpType] = useState('');
-  const [cmpDesc, setCmpDesc] = useState('');
-  const [cmpMsg, setCmpMsg] = useState('');
-  const [cmpLoading, setCmpLoading] = useState(false);
-  const [cmpDetail, setCmpDetail] = useState<any>(null);
-  const [cmpLinkedRide, setCmpLinkedRide] = useState<any>(null);
-  const [cmpHistoryRides, setCmpHistoryRides] = useState<any[]>([]);
-  const [cmpShowRidePicker, setCmpShowRidePicker] = useState(false);
-
   // ── UI ───────────────────────────────────────────────────────────────────
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
@@ -713,22 +690,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       else if (data.type === 'extension_accepted')                 setScreen('matching');
       // Wallet / payments
       else if (['cashback_earned', 'refund', 'wallet_topup'].includes(data.type)) setScreen('home');
-      // Account / complaints
+      // Account
       else if (['account_restricted', 'payment_dispute', 'warning', 'suspended'].includes(data.type)) setScreen('home');
-      else if (['complaint_update', 'complaint_resolved'].includes(data.type)) {
-        // Load the specific complaint if we have an ID, else fall back to list
-        const cmpId = data.complaint_id;
-        if (cmpId) {
-          apiGet(`/api/complaints/${cmpId}?phone=${encodeURIComponent(phoneRef.current || '')}`)
-            .then((r: any) => {
-              if (r?.complaint) { setCmpDetail(r); setScreen('complaint-detail'); }
-              else setScreen('complaints');
-            })
-            .catch(() => setScreen('complaints'));
-        } else {
-          setScreen('complaints');
-        }
-      }
     };
     const sub2 = Notifications.addNotificationResponseReceivedListener(handleNotifTap);
     Notifications.getLastNotificationResponseAsync().then(r => { if (r) handleNotifTap(r); });
@@ -1920,10 +1883,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     hExtendPrevHoursRef, hExtendHours, setHExtendHours, hExtendMin, setHExtendMin,
     hExtendCost, setHExtendCost, hApproachLimit, setHApproachLimit,
     hourlyPackages, setHourlyPackages, hourlyTimerRef,
-    complaints, setComplaints, activeComplaint, setActiveComplaint,
-    cmpType, setCmpType, cmpDesc, setCmpDesc, cmpMsg, setCmpMsg,
-    cmpLoading, setCmpLoading, cmpDetail, setCmpDetail,
-    cmpLinkedRide, setCmpLinkedRide, cmpHistoryRides, setCmpHistoryRides, cmpShowRidePicker, setCmpShowRidePicker,
     result, setResult, loading, setLoading, storeStatus,
     socketRef, phoneRef, pickupDebounceRef, dropDebounceRef, hPickupDebounceRef, hDropDebounceRef, buddyPUDebRef, buddyDRDebRef,
     sendOtp, verifyOtp, completeOnboarding, handleOtpChange, handleOtpKeyPress,

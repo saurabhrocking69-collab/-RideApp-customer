@@ -1,25 +1,15 @@
 import { ScrollView, View, Text, TouchableOpacity, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { apiGet } from '../../api';
 import { useApp } from '../context/AppContext';
 import { DotBG, ScreenIn } from '../components/ui';
 import { s, C } from '../styles';
 
 export function SupportScreen() {
   const {
-    phone,
     setScreen, setTab,
-    setComplaints, setCmpLoading,
   } = useApp();
 
   const supportOptions = [
-    { icon: '📋', label: 'My Complaints', sub: 'File or track complaints', color: C.pink, bg: C.pinkGlass, border: C.pinkBorder,
-      action: async () => {
-        setCmpLoading(true);
-        try { const r = await apiGet(`/api/complaints?phone=${encodeURIComponent(phone)}`); setComplaints(r.complaints||[]); } catch {}
-        setCmpLoading(false); setScreen('complaints');
-      }
-    },
     { icon: '💬', label: 'WhatsApp', sub: 'Fastest response', color: '#25D366', bg: 'rgba(37,211,102,0.12)', border: 'rgba(37,211,102,0.35)', action: () => Linking.openURL('https://wa.me/919999999999?text=Hi%20Sppero%20Support') },
     { icon: '📞', label: 'Helpline Call', sub: '24/7 available', color: C.purple, bg: C.glassMid, border: C.glassBorder, action: () => Linking.openURL('tel:9999999999') },
     { icon: '📧', label: 'Email Support', sub: 'Response in 24 hrs', color: C.pink, bg: C.pinkGlass, border: C.pinkBorder, action: () => Linking.openURL('mailto:support@sppero.com') },
