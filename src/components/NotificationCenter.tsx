@@ -66,6 +66,8 @@ refund:             { icon: 'wallet',           color: C.green,     bg: C.greenG
   wallet_topup:       { icon: 'wallet',           color: C.green,     bg: C.greenGlass },
   warning:            { icon: 'warning',          color: C.yellow,    bg: C.yellowGlass },
   broadcast:          { icon: 'megaphone',        color: '#6366F1',   bg: '#6366F115' },
+  support_reply:      { icon: 'chatbubble-ellipses', color: '#3B82F6', bg: 'rgba(59,130,246,0.10)' },
+  support_resolved:   { icon: 'checkmark-done-circle', color: C.green, bg: C.greenGlass },
   default:            { icon: 'notifications',    color: C.pink,      bg: C.pinkGlass },
 };
 

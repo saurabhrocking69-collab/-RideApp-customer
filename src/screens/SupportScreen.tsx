@@ -10,6 +10,8 @@ export function SupportScreen() {
   } = useApp();
 
   const supportOptions = [
+    { icon: '🎫', label: 'Raise a Ticket', sub: 'Report an issue formally', color: C.pink, bg: C.pinkGlass, border: C.pinkBorder, action: () => setScreen('ticket-new') },
+    { icon: '📋', label: 'My Tickets', sub: 'Track existing issues', color: '#3B82F6', bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.25)', action: () => setScreen('tickets') },
     { icon: '💬', label: 'WhatsApp', sub: 'Fastest response', color: '#25D366', bg: 'rgba(37,211,102,0.12)', border: 'rgba(37,211,102,0.35)', action: () => Linking.openURL('https://wa.me/919999999999?text=Hi%20Sppero%20Support') },
     { icon: '📞', label: 'Helpline Call', sub: '24/7 available', color: C.purple, bg: C.glassMid, border: C.glassBorder, action: () => Linking.openURL('tel:9999999999') },
     { icon: '📧', label: 'Email Support', sub: 'Response in 24 hrs', color: C.pink, bg: C.pinkGlass, border: C.pinkBorder, action: () => Linking.openURL('mailto:support@sppero.com') },

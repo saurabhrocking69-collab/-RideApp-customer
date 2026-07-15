@@ -33,6 +33,8 @@ refund:             { icon: 'wallet',            color: C.green },
   wallet_topup:       { icon: 'wallet',            color: C.green },
   warning:            { icon: 'warning',           color: C.yellow },
   broadcast:          { icon: 'megaphone',         color: '#6366F1' },
+  support_reply:      { icon: 'chatbubble-ellipses', color: '#3B82F6' },
+  support_resolved:   { icon: 'checkmark-done-circle', color: C.green },
   default:            { icon: 'notifications',     color: C.pink },
 };
 

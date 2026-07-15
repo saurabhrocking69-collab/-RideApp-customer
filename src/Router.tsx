@@ -23,6 +23,7 @@ import { BudgetScreen } from './screens/BudgetScreen';
 import { SurgePricingScreen } from './screens/SurgePricingScreen';
 import { InsightsScreen } from './screens/InsightsScreen';
 import { TierScreen } from './screens/TierScreen';
+import { NewTicketScreen, TicketListScreen } from './screens/TicketScreens';
 
 function ActiveScreen() {
   const { screen } = useApp();
@@ -51,6 +52,8 @@ if (screen === 'referral')         return <ReferralScreen />;
   if (screen === 'surge')            return <SurgePricingScreen />;
   if (screen === 'insights')         return <InsightsScreen />;
   if (screen === 'tier')             return <TierScreen />;
+  if (screen === 'tickets')          return <TicketListScreen />;
+  if (screen === 'ticket-new')       return <NewTicketScreen />;
   return <HomeScreen />;
 }
 
@@ -63,6 +66,7 @@ export function Router() {
     if (['ride_matched', 'driver_arrived', 'extension_accepted'].includes(n.type || '')) setScreen('matching');
     else if (n.type === 'trip_started') setScreen('inride');
     else if (n.type === 'trip_completed') setScreen('payment');
+    else if (['support_reply', 'support_resolved'].includes(n.type || '')) setScreen('tickets');
     else setScreen('home');
   };
 

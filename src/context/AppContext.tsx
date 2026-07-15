@@ -692,6 +692,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       else if (['cashback_earned', 'refund', 'wallet_topup'].includes(data.type)) setScreen('home');
       // Account
       else if (['account_restricted', 'payment_dispute', 'warning', 'suspended'].includes(data.type)) setScreen('home');
+      // Support tickets
+      else if (['support_reply', 'support_resolved'].includes(data.type)) setScreen('tickets');
     };
     const sub2 = Notifications.addNotificationResponseReceivedListener(handleNotifTap);
     Notifications.getLastNotificationResponseAsync().then(r => { if (r) handleNotifTap(r); });

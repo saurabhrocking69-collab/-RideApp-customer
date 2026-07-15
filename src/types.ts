@@ -3,7 +3,8 @@ export type Screen =
   | 'booking' | 'matching' | 'inride' | 'payment' | 'postride'
   | 'chat' | 'referral' | 'saved' | 'policy' | 'hourly'
   | 'wallet' | 'hourly-info' | 'promo' | 'support' | 'safety'
-| 'rewards' | 'budget' | 'surge' | 'insights' | 'tier';
+  | 'rewards' | 'budget' | 'surge' | 'insights' | 'tier'
+  | 'tickets' | 'ticket-new';
 
 export type Tab = 'home' | 'live' | 'history' | 'profile';
 
