@@ -17,6 +17,15 @@ import { Screen, Tab, Coords, HourlyStep, ExtendStep, WalletTxnTab } from '../ty
 let RazorpayCheckout: any = null;
 try { const _m = require('react-native-razorpay'); RazorpayCheckout = _m?.default || _m || null; } catch (_e) {}
 
+function decodeJwtExp(token: string): number | null {
+  try {
+    const payload = token.split('.')[1];
+    const padded = payload + '==='.slice((payload.length + 3) % 4);
+    const json = JSON.parse(atob(padded.replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof json.exp === 'number' ? json.exp : null;
+  } catch { return null; }
+}
+
 function _haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -505,6 +514,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [hOtpInput, setHOtpInput] = useState('');
   const hourlyTimerRef = useRef<any>(null);
   const [hChatOpen, setHChatOpen] = useState(false);
+  const hChatOpenRef = useRef(false);
   const [hChatMsgs, setHChatMsgs] = useState<any[]>([]);
   const [hChatInput, setHChatInput] = useState('');
   const [hChatUnread, setHChatUnread] = useState(0);
@@ -549,10 +559,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     ]).start();
 
     setTimeout(async () => {
-      const savedPhone = await AsyncStorage.getItem('userPhone').catch(() => null);
+      let savedPhone = await AsyncStorage.getItem('userPhone').catch(() => null);
       const savedName  = await AsyncStorage.getItem('userName').catch(() => null);
       const savedDropHist = await AsyncStorage.getItem('dropLocationHistory').catch(() => null);
       if (savedDropHist) { try { setDropHistory(JSON.parse(savedDropHist)); } catch (_) {} }
+
+      // JWT expiry check — expired = force re-login; < 7 days left = silent background refresh
+      if (savedPhone) {
+        const savedToken = await AsyncStorage.getItem('userToken').catch(() => null);
+        if (savedToken) {
+          const exp = decodeJwtExp(savedToken);
+          const nowSec = Math.floor(Date.now() / 1000);
+          if (exp !== null && exp < nowSec) {
+            await AsyncStorage.removeItem('userPhone');
+            await AsyncStorage.removeItem('userName');
+            await AsyncStorage.removeItem('userToken');
+            savedPhone = null;
+          } else if (exp !== null && exp - nowSec < 7 * 86400) {
+            fetch(`${API}/api/auth/refresh`, { method: 'POST', headers: { Authorization: `Bearer ${savedToken}` } })
+              .then(r => r.json())
+              .then(d => { if (d.token) AsyncStorage.setItem('userToken', d.token).catch(() => {}); })
+              .catch(() => {});
+          }
+        }
+      }
 
       // Set the real screen BEFORE the fade so it renders under the still-opaque splash overlay
       if (savedPhone) {
@@ -917,44 +947,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .catch(() => {});
   }, [screen, rideData?.ride_id]);
 
-  // Hourly chat polling
+  // Keep ref in sync so socket listener can check open state without stale closure
+  useEffect(() => { hChatOpenRef.current = hChatOpen; }, [hChatOpen]);
+
+  // Hourly chat: load history once on open + reset unread; socket 'hourlyChatMessage' handles new messages
   useEffect(() => {
     if (screen !== 'hourly' || !hChatOpen || !hourlyBooking?.id) return;
-    const load = async () => {
-      try {
-        const d = await apiGet(`/api/chat/h_${hourlyBooking.id}`);
-        if (!d._error && Array.isArray(d.messages)) { setHChatMsgs(d.messages); setHChatUnread(0); }
-      } catch (_e) {}
-    };
-    load();
-    const iv = setInterval(load, 2500);
-    return () => clearInterval(iv);
+    apiGet(`/api/chat/h_${hourlyBooking.id}`)
+      .then((d: any) => { if (!d._error && Array.isArray(d.messages)) { setHChatMsgs(d.messages); setHChatUnread(0); } })
+      .catch(() => {});
   }, [screen, hChatOpen, hourlyBooking?.id]);
-
-  // Hourly chat badge + toast when panel closed
-  useEffect(() => {
-    if (screen !== 'hourly' || hChatOpen || !hourlyBooking?.id || hourlyStep === 'book') return;
-    let lastCount = hChatMsgs.length;
-    const iv = setInterval(async () => {
-      try {
-        const d = await apiGet(`/api/chat/h_${hourlyBooking.id}`);
-        if (d._error || !Array.isArray(d.messages)) return;
-        const msgs = d.messages;
-        if (msgs.length > lastCount) {
-          setHChatUnread(n => n + (msgs.length - lastCount));
-          lastCount = msgs.length;
-          setHChatMsgs(msgs);
-          const latest = msgs[msgs.length - 1];
-          if (latest?.sender === 'driver') {
-            setChatToast(latest.message);
-            if (chatToastTimer.current) clearTimeout(chatToastTimer.current);
-            chatToastTimer.current = setTimeout(() => setChatToast(null), 4500);
-          }
-        }
-      } catch (_e) {}
-    }, 5000);
-    return () => clearInterval(iv);
-  }, [screen, hChatOpen, hourlyStep, hourlyBooking?.id]);
 
   // Hourly trip timer
   useEffect(() => {
@@ -1036,7 +1038,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
     s.on('hourlyChatMessage', (msg: any) => {
       setHChatMsgs((prev: any[]) => [...prev, msg]);
-      setHChatUnread((prev: number) => prev + 1);
+      if (!hChatOpenRef.current) {
+        setHChatUnread((prev: number) => prev + 1);
+        if (msg.sender === 'driver') {
+          setChatToast(msg.message);
+          if (chatToastTimer.current) clearTimeout(chatToastTimer.current);
+          chatToastTimer.current = setTimeout(() => setChatToast(null), 4500);
+        }
+      }
     });
     s.on('chatMessage', (msg: any) => {
       setChatMsgs((prev: any[]) => [...prev, msg]);

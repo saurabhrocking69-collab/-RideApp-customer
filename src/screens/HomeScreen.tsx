@@ -548,6 +548,14 @@ function HomeTab() {
     return () => clearTimeout(t);
   }, []);
 
+  const [homeTierData, setHomeTierData] = useState<any>(null);
+  useEffect(() => {
+    if (!phone) return;
+    apiGet(`/api/customer/tier?phone=${encodeURIComponent(phone)}`)
+      .then(r => { if (r && !r._error && r.tier) setHomeTierData(r); })
+      .catch(() => {});
+  }, [phone]);
+
   const nearbyAnim = useRef(new Animated.Value(1)).current;
   const userLat = (userCoords as any)?.latitude || (userCoords as any)?.lat;
   const userLng = (userCoords as any)?.longitude || (userCoords as any)?.lng;
@@ -663,9 +671,18 @@ function HomeTab() {
               {GREETINGS[greetIdx]}
             </Animated.Text>
             <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900', letterSpacing: -0.5, marginTop: 3 }}>{userName || 'Rider'}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4, flexWrap: 'wrap' }}>
               <Ionicons name="location-outline" size={11} color="rgba(255,255,255,0.7)" />
               <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: '600' }}>India</Text>
+              {homeTierData && (
+                <TouchableOpacity
+                  onPress={() => setScreen('tier')}
+                  activeOpacity={0.8}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 7, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(255,255,255,0.28)' }}>
+                  <Text style={{ fontSize: 10 }}>{homeTierData.emoji}</Text>
+                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>{homeTierData.label}</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
