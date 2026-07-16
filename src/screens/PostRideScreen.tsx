@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
-import { Modal, Platform, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
+import { useState, useEffect, useRef } from 'react';
+import { Animated, KeyboardAvoidingView, Modal, Platform, ScrollView, Share, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { useApp } from '../context/AppContext';
 import { Bouncy, Confetti, CountUp, DotBG, FadeIn, ScreenIn, TripSteps } from '../components/ui';
 import { IlluRideComplete } from '../components/Illustrations';
 import { s, C, T, SP, R, SHADOW } from '../styles';
-import { apiGet } from '../../api';
+import { apiGet, apiPost } from '../../api';
 
 export function PostRideScreen() {
   const { bottom: bottomInset } = useSafeAreaInsets();
@@ -25,6 +25,45 @@ export function PostRideScreen() {
   const [showBill, setShowBill] = useState(false);
   const [billData, setBillData] = useState<any>(null);
   const [billLoading, setBillLoading] = useState(false);
+
+  // Buddy Fund nudge
+  const [buddyPhase, setBuddyPhase]     = useState<'idle' | 'loading' | 'done'>('idle');
+  const [buddyPaid, setBuddyPaid]       = useState(0);
+  const buddyHeartScale = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(buddyHeartScale, { toValue: 1.22, duration: 700, useNativeDriver: true }),
+        Animated.timing(buddyHeartScale, { toValue: 1,    duration: 700, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+  const doQuickDonate = async (amt: number) => {
+    setBuddyPhase('loading');
+    try {
+      let RazorpayCheckout: any = null;
+      try { const _m = require('react-native-razorpay'); RazorpayCheckout = _m?.default || _m || null; } catch (_e) {}
+      if (!RazorpayCheckout) { setBuddyPhase('idle'); return; }
+      const orderRes = await apiPost('/api/buddy-fund/create-order', { phone, amount: amt });
+      if (!orderRes.success) { setBuddyPhase('idle'); return; }
+      const payData: any = await new Promise((resolve, reject) =>
+        RazorpayCheckout.open({
+          key: orderRes.key_id, amount: orderRes.amount, currency: 'INR',
+          order_id: orderRes.order_id, name: 'Sppero Buddy Fund',
+          description: `Driver Bonus — ₹${amt}`,
+          prefill: { contact: phone }, theme: { color: '#F59E0B' },
+        }).then(resolve).catch(reject)
+      );
+      await apiPost('/api/buddy-fund/verify', {
+        phone,
+        razorpay_order_id:   payData.razorpay_order_id,
+        razorpay_payment_id: payData.razorpay_payment_id,
+        razorpay_signature:  payData.razorpay_signature,
+      });
+      setBuddyPaid(amt);
+      setBuddyPhase('done');
+    } catch (_e) { setBuddyPhase('idle'); }
+  };
 
   const fareNum = Math.round(parseFloat(String(rideData?.fare ?? billData?.fare ?? 0).replace(/[^0-9.]/g, '')) || 0);
   const gstAmt = Math.round((fareNum * 5 / 105) * 100) / 100;
@@ -209,6 +248,46 @@ _GST is included in the fare — not charged separately._
             </View>
           </FadeIn>
         )}
+
+        {/* ── Buddy Fund nudge ── */}
+        <FadeIn style={{ marginHorizontal: 14, marginTop: 14, marginBottom: 4 }}>
+          <View style={{ backgroundColor: '#1A0A00', borderRadius: 20, overflow: 'hidden', borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.35)', elevation: 6, shadowColor: '#F59E0B', shadowOpacity: 0.22, shadowRadius: 12 }}>
+            {buddyPhase !== 'done' ? (
+              <View style={{ padding: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <Animated.Text style={{ fontSize: 24, transform: [{ scale: buddyHeartScale }] }}>💛</Animated.Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#fff', fontSize: 14, fontWeight: '900' }}>Driver ko ek extra khushi do!</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, marginTop: 2 }}>Buddy Fund mein donate karo — seedha driver bonus milega</Text>
+                  </View>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  {buddyPhase === 'loading' ? (
+                    <View style={{ flex: 1, backgroundColor: 'rgba(245,158,11,0.15)', borderRadius: 12, paddingVertical: 12, alignItems: 'center' }}>
+                      <Text style={{ color: '#F59E0B', fontSize: 13, fontWeight: '800' }}>Processing…</Text>
+                    </View>
+                  ) : (
+                    [2, 11, 51].map(amt => (
+                      <TouchableOpacity key={amt} onPress={() => doQuickDonate(amt)}
+                        style={{ flex: 1, backgroundColor: 'rgba(245,158,11,0.12)', borderRadius: 12, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(245,158,11,0.28)' }}>
+                        <Text style={{ color: '#FCD34D', fontSize: 15, fontWeight: '900' }}>₹{amt}</Text>
+                        <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 9, marginTop: 2 }}>{amt === 2 ? 'Chai ☕' : amt === 11 ? 'Snack 🍱' : 'Bonus 🎁'}</Text>
+                      </TouchableOpacity>
+                    ))
+                  )}
+                </View>
+              </View>
+            ) : (
+              <View style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <Text style={{ fontSize: 28 }}>💛</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#FCD34D', fontSize: 14, fontWeight: '900' }}>Shukriya! Driver khush hoga 🙏</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, marginTop: 2 }}>₹{buddyPaid} Buddy Fund mein add ho gaya</Text>
+                </View>
+              </View>
+            )}
+          </View>
+        </FadeIn>
 
         <View style={{ marginHorizontal: 14, marginTop: 16, marginBottom: 10 }}>
           {/* Auto-redirect countdown */}

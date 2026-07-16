@@ -423,6 +423,355 @@ function PromoBanner({ setScreen, loadReferral }: { setScreen: (s: any) => void;
   );
 }
 
+/* ── Buddy Fund banner ───────────────────────────────────── */
+function BuddyFundBanner({ onPress, stats }: { onPress: () => void; stats: { total_raised: number; contributor_count: number } | null }) {
+  // Shimmer sweep
+  const shimmer = useRef(new Animated.Value(0)).current;
+  // 3 floating hearts
+  const h1 = useRef(new Animated.Value(0)).current;
+  const h2 = useRef(new Animated.Value(0)).current;
+  const h3 = useRef(new Animated.Value(0)).current;
+  // Pulse glow on the badge
+  const pulse = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    // Shimmer loop
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmer, { toValue: 1, duration: 1800, useNativeDriver: true }),
+        Animated.delay(2200),
+        Animated.timing(shimmer, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ])
+    ).start();
+
+    // Heart float loop — staggered starts
+    const floatHeart = (anim: Animated.Value, delay: number) => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.parallel([
+            Animated.timing(anim, { toValue: 1, duration: 1800, useNativeDriver: true }),
+          ]),
+          Animated.timing(anim, { toValue: 0, duration: 0, useNativeDriver: true }),
+          Animated.delay(1400),
+        ])
+      ).start();
+    };
+    floatHeart(h1, 0);
+    floatHeart(h2, 700);
+    floatHeart(h3, 1400);
+
+    // Badge pulse
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.12, duration: 820, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1,    duration: 820, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
+  const heartStyle = (anim: Animated.Value, left: number) => ({
+    position: 'absolute' as const,
+    left,
+    bottom: 12,
+    opacity: anim.interpolate({ inputRange: [0, 0.2, 0.8, 1], outputRange: [0, 0.85, 0.6, 0] }),
+    transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [0, -62] }) },
+                { scale:      anim.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0.6, 1, 0.9] }) }],
+  });
+
+  return (
+    <TouchableOpacity activeOpacity={0.88} onPress={onPress} style={{ marginBottom: 14 }}>
+      <View style={{ borderRadius: 22, overflow: 'hidden', elevation: 10, shadowColor: '#F59E0B', shadowOpacity: 0.32, shadowRadius: 16 }}>
+        {/* Card body */}
+        <View style={{ backgroundColor: '#1A0A00', minHeight: 118, padding: 18, paddingBottom: 14 }}>
+          {/* Decorative blobs */}
+          <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(245,158,11,0.08)', top: -70, right: -60 }} />
+          <View style={{ position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(251,191,36,0.06)', bottom: -40, left: -30 }} />
+
+          {/* Shimmer sweep */}
+          <Animated.View pointerEvents="none" style={{
+            position: 'absolute', top: 0, bottom: 0, width: 70,
+            backgroundColor: 'rgba(255,255,255,0.04)',
+            transform: [{ translateX: shimmer.interpolate({ inputRange: [0, 1], outputRange: [-70, 420] }) }],
+          }} />
+
+          {/* Floating hearts */}
+          <Animated.Text style={[heartStyle(h1, 42), { fontSize: 16 }]}>💛</Animated.Text>
+          <Animated.Text style={[heartStyle(h2, 90), { fontSize: 12 }]}>💛</Animated.Text>
+          <Animated.Text style={[heartStyle(h3, 62), { fontSize: 14 }]}>🧡</Animated.Text>
+
+          {/* Badge + content */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+            <Animated.View style={{ transform: [{ scale: pulse }], backgroundColor: '#F59E0B', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start', borderWidth: 1, borderColor: '#FBBF24' }}>
+              <Text style={{ color: '#1A0A00', fontSize: 9, fontWeight: '900', letterSpacing: 1.3 }}>💛 BUDDY FUND</Text>
+            </Animated.View>
+            <View style={{ flex: 1 }} />
+            <View style={{ backgroundColor: 'rgba(245,158,11,0.18)', borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(245,158,11,0.35)' }}>
+              <Text style={{ color: '#FCD34D', fontSize: 10, fontWeight: '800' }}>TAP →</Text>
+            </View>
+          </View>
+
+          <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900', letterSpacing: -0.2, marginBottom: 4 }}>
+            Driver ko khushi do! 🧡
+          </Text>
+          <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, lineHeight: 16 }}>
+            ₹2 · ₹11 · ₹51 — Choti si madad, badi khushi. Bonus seedha driver ko milta hai.
+          </Text>
+        </View>
+
+        {/* Stats footer */}
+        <View style={{ backgroundColor: '#2D1500', paddingVertical: 10, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 16, borderTopWidth: 1, borderTopColor: 'rgba(245,158,11,0.18)' }}>
+          {stats ? (
+            <>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Text style={{ color: '#F59E0B', fontSize: 13, fontWeight: '900' }}>₹{stats.total_raised.toLocaleString('en-IN')}</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10 }}>raised</Text>
+              </View>
+              <View style={{ width: 1, height: 14, backgroundColor: 'rgba(245,158,11,0.25)' }} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Text style={{ color: '#FCD34D', fontSize: 13, fontWeight: '900' }}>{stats.contributor_count.toLocaleString('en-IN')}</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10 }}>donors</Text>
+              </View>
+            </>
+          ) : (
+            <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11 }}>Loading fund stats…</Text>
+          )}
+          <View style={{ flex: 1, alignItems: 'flex-end' }}>
+            <Text style={{ color: '#F59E0B', fontSize: 11, fontWeight: '800' }}>Donate karo →</Text>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+/* ── Buddy Fund Modal (donation flow) ──────────────────────── */
+function BuddyFundModal({
+  visible, onClose, phone, onSuccess,
+}: { visible: boolean; onClose: () => void; phone: string; onSuccess: (stats: any) => void }) {
+  const PRESETS = [
+    { amount: 2,  emoji: '☕', label: 'Chai',      desc: 'Ek pyali chai ka kharchaa' },
+    { amount: 11, emoji: '🍱', label: 'Snack',     desc: 'Chhoti si bhookh mita dega' },
+    { amount: 51, emoji: '🎁', label: 'Bonus',     desc: 'Ek acha bonus driver ko' },
+  ];
+  const [selected, setSelected] = useState<number | null>(null);
+  const [custom, setCustom]     = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [phase, setPhase]       = useState<'pick' | 'success'>('pick');
+  const [paidAmt, setPaidAmt]   = useState(0);
+  const [newStats, setNewStats] = useState<any>(null);
+
+  // Scale anims for preset chips
+  const chipScales = useRef(PRESETS.map(() => new Animated.Value(1))).current;
+  // Heart burst anim on success
+  const successScale = useRef(new Animated.Value(0)).current;
+  const successOpacity = useRef(new Animated.Value(0)).current;
+  const [burstHearts] = useState(() => Array.from({ length: 7 }, () => ({
+    tx: useRef(new Animated.Value(0)).current,
+    ty: useRef(new Animated.Value(0)).current,
+    op: useRef(new Animated.Value(0)).current,
+    angle: Math.random() * 360,
+    dist:  60 + Math.random() * 60,
+  })));
+
+  const onSelectPreset = (idx: number, amt: number) => {
+    setSelected(amt); setCustom('');
+    chipScales.forEach((s, i) => {
+      Animated.spring(s, { toValue: i === idx ? 1.08 : 0.96, useNativeDriver: true, tension: 180, friction: 10 }).start();
+    });
+  };
+
+  const finalAmount = () => {
+    if (custom) return parseFloat(custom) || 0;
+    return selected || 0;
+  };
+
+  const doBurstAnimation = () => {
+    Animated.parallel([
+      Animated.spring(successScale, { toValue: 1, useNativeDriver: true, tension: 80, friction: 7 }),
+      Animated.timing(successOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+    ]).start();
+    burstHearts.forEach(h => {
+      const rad = (h.angle * Math.PI) / 180;
+      Animated.parallel([
+        Animated.timing(h.op, { toValue: 1, duration: 200, useNativeDriver: true }),
+        Animated.timing(h.tx, { toValue: Math.cos(rad) * h.dist, duration: 700, useNativeDriver: true }),
+        Animated.timing(h.ty, { toValue: Math.sin(rad) * h.dist - 20, duration: 700, useNativeDriver: true }),
+      ]).start(() => {
+        Animated.timing(h.op, { toValue: 0, duration: 400, useNativeDriver: true }).start();
+      });
+    });
+  };
+
+  const resetModal = () => {
+    setSelected(null); setCustom(''); setPhase('pick'); setLoading(false);
+    successScale.setValue(0); successOpacity.setValue(0);
+    burstHearts.forEach(h => { h.tx.setValue(0); h.ty.setValue(0); h.op.setValue(0); });
+    chipScales.forEach(s => s.setValue(1));
+  };
+
+  const handleDonate = async () => {
+    const amt = finalAmount();
+    if (!amt || amt < 1) return;
+    setLoading(true);
+    try {
+      let RazorpayCheckout: any = null;
+      try { const _m = require('react-native-razorpay'); RazorpayCheckout = _m?.default || _m || null; } catch (_e) {}
+      if (!RazorpayCheckout) { setLoading(false); return; }
+
+      const orderRes = await apiPost('/api/buddy-fund/create-order', { phone, amount: amt });
+      if (!orderRes.success) { setLoading(false); return; }
+
+      const payData: any = await new Promise((resolve, reject) =>
+        RazorpayCheckout.open({
+          key: orderRes.key_id, amount: orderRes.amount, currency: 'INR',
+          order_id: orderRes.order_id, name: 'Sppero Buddy Fund',
+          description: `Driver Bonus Fund — ₹${amt}`,
+          prefill: { contact: phone }, theme: { color: '#F59E0B' },
+        }).then(resolve).catch(reject)
+      );
+
+      const verRes = await apiPost('/api/buddy-fund/verify', {
+        phone,
+        razorpay_order_id:   payData.razorpay_order_id,
+        razorpay_payment_id: payData.razorpay_payment_id,
+        razorpay_signature:  payData.razorpay_signature,
+      });
+
+      if (verRes.success) {
+        setPaidAmt(amt);
+        setNewStats({ total_raised: verRes.total_raised, contributor_count: verRes.contributor_count });
+        setPhase('success');
+        doBurstAnimation();
+        onSuccess({ total_raised: verRes.total_raised, contributor_count: verRes.contributor_count });
+      }
+    } catch (e: any) {
+      if (e?.code !== 'PAYMENT_CANCELLED' && e?.code !== 'USER_CANCELLED') {
+        // silent — user tapped back
+      }
+    }
+    setLoading(false);
+  };
+
+  const handleClose = () => { resetModal(); onClose(); };
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'flex-end' }}>
+        <View style={{ backgroundColor: 'rgba(0,0,0,0.6)', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
+        <TouchableOpacity activeOpacity={1} onPress={handleClose} style={{ flex: 1 }} />
+        <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: 36, paddingTop: 6 }}>
+          {/* Handle */}
+          <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0', alignSelf: 'center', marginBottom: 16, marginTop: 6 }} />
+
+          {phase === 'pick' ? (
+            <View style={{ paddingHorizontal: 20 }}>
+              {/* Header */}
+              <View style={{ alignItems: 'center', marginBottom: 20 }}>
+                <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#FEF3C7', alignItems: 'center', justifyContent: 'center', marginBottom: 10, borderWidth: 2, borderColor: '#FDE68A' }}>
+                  <Text style={{ fontSize: 30 }}>💛</Text>
+                </View>
+                <Text style={{ fontSize: 20, fontWeight: '900', color: '#1A0A00', letterSpacing: -0.3 }}>Buddy Fund</Text>
+                <Text style={{ fontSize: 12, color: '#78716C', marginTop: 4, textAlign: 'center', lineHeight: 17, paddingHorizontal: 20 }}>
+                  Aapki choti help — driver ka din bana degi.{'\n'}Har donation seedha driver bonus pool mein jaata hai.
+                </Text>
+              </View>
+
+              {/* Preset chips */}
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
+                {PRESETS.map((p, i) => {
+                  const sel = selected === p.amount && !custom;
+                  return (
+                    <Animated.View key={p.amount} style={{ flex: 1, transform: [{ scale: chipScales[i] }] }}>
+                      <TouchableOpacity
+                        activeOpacity={0.85}
+                        onPress={() => onSelectPreset(i, p.amount)}
+                        style={{ borderRadius: 18, borderWidth: 2, borderColor: sel ? '#F59E0B' : '#E7E5E4', backgroundColor: sel ? '#FFFBEB' : '#FAFAF9', padding: 14, alignItems: 'center' }}>
+                        <Text style={{ fontSize: 26, marginBottom: 4 }}>{p.emoji}</Text>
+                        <Text style={{ fontSize: 20, fontWeight: '900', color: sel ? '#92400E' : '#1C1917' }}>₹{p.amount}</Text>
+                        <Text style={{ fontSize: 10, color: sel ? '#B45309' : '#78716C', fontWeight: '700', marginTop: 2 }}>{p.label}</Text>
+                        <Text style={{ fontSize: 9, color: '#A8A29E', marginTop: 3, textAlign: 'center' }}>{p.desc}</Text>
+                      </TouchableOpacity>
+                    </Animated.View>
+                  );
+                })}
+              </View>
+
+              {/* Custom amount */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: custom ? '#F59E0B' : '#E7E5E4', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 20, backgroundColor: '#FAFAF9' }}>
+                <Text style={{ color: '#78716C', fontSize: 18, fontWeight: '700', marginRight: 6 }}>₹</Text>
+                <TextInput
+                  placeholder="Ya apni marzi se likhein…"
+                  placeholderTextColor="#C4B5AD"
+                  keyboardType="numeric"
+                  value={custom}
+                  onChangeText={t => { setCustom(t); setSelected(null); chipScales.forEach(s => s.setValue(1)); }}
+                  style={{ flex: 1, fontSize: 16, fontWeight: '700', color: '#1C1917' }}
+                />
+              </View>
+
+              {/* Donate button */}
+              <TouchableOpacity
+                onPress={handleDonate}
+                disabled={loading || finalAmount() < 1}
+                activeOpacity={0.85}
+                style={{ backgroundColor: finalAmount() >= 1 && !loading ? '#F59E0B' : '#E7E5E4', borderRadius: 16, paddingVertical: 15, alignItems: 'center', marginBottom: 10 }}>
+                {loading
+                  ? <Text style={{ color: '#92400E', fontSize: 15, fontWeight: '900' }}>Processing…</Text>
+                  : <Text style={{ color: finalAmount() >= 1 ? '#1A0A00' : '#A8A29E', fontSize: 15, fontWeight: '900' }}>
+                      {finalAmount() >= 1 ? `💛 ₹${finalAmount()} donate karo` : 'Amount chunno'}
+                    </Text>}
+              </TouchableOpacity>
+              <Text style={{ textAlign: 'center', fontSize: 10, color: '#A8A29E' }}>GST applicable · Secured by Razorpay · No refund</Text>
+            </View>
+          ) : (
+            /* Success state */
+            <View style={{ paddingHorizontal: 20, alignItems: 'center', paddingVertical: 16 }}>
+              {/* Burst hearts */}
+              <View style={{ width: 1, height: 1, position: 'relative', alignSelf: 'center' }}>
+                {burstHearts.map((h, i) => (
+                  <Animated.Text key={i} style={{
+                    position: 'absolute', fontSize: 20,
+                    opacity: h.op,
+                    transform: [{ translateX: h.tx }, { translateY: h.ty }],
+                  }}>💛</Animated.Text>
+                ))}
+              </View>
+
+              <Animated.View style={{ transform: [{ scale: successScale }], opacity: successOpacity, alignItems: 'center' }}>
+                <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: '#FEF3C7', alignItems: 'center', justifyContent: 'center', borderWidth: 2.5, borderColor: '#FCD34D', marginBottom: 14, elevation: 8, shadowColor: '#F59E0B', shadowOpacity: 0.4, shadowRadius: 16 }}>
+                  <Text style={{ fontSize: 40 }}>💛</Text>
+                </View>
+                <Text style={{ fontSize: 22, fontWeight: '900', color: '#1A0A00', marginBottom: 6, textAlign: 'center' }}>Shukriya! 🙏</Text>
+                <Text style={{ fontSize: 14, color: '#57534E', textAlign: 'center', lineHeight: 20, marginBottom: 18, paddingHorizontal: 10 }}>
+                  Aapne <Text style={{ fontWeight: '900', color: '#92400E' }}>₹{paidAmt}</Text> donate kiya.{'\n'}Ek driver ka din acha hoga!
+                </Text>
+                {newStats && (
+                  <View style={{ flexDirection: 'row', gap: 24, marginBottom: 24 }}>
+                    <View style={{ alignItems: 'center' }}>
+                      <Text style={{ fontSize: 20, fontWeight: '900', color: '#F59E0B' }}>₹{newStats.total_raised.toLocaleString('en-IN')}</Text>
+                      <Text style={{ fontSize: 10, color: '#78716C' }}>Total raised</Text>
+                    </View>
+                    <View style={{ width: 1, backgroundColor: '#E7E5E4' }} />
+                    <View style={{ alignItems: 'center' }}>
+                      <Text style={{ fontSize: 20, fontWeight: '900', color: '#F59E0B' }}>{newStats.contributor_count.toLocaleString('en-IN')}</Text>
+                      <Text style={{ fontSize: 10, color: '#78716C' }}>Donors</Text>
+                    </View>
+                  </View>
+                )}
+              </Animated.View>
+
+              <TouchableOpacity onPress={handleClose} style={{ backgroundColor: '#F59E0B', borderRadius: 14, paddingVertical: 13, paddingHorizontal: 48 }}>
+                <Text style={{ color: '#1A0A00', fontWeight: '900', fontSize: 14 }}>Done ✓</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
 /* Live pulse dot — double expanding ring, native driver */
 function PulseDot() {
   const r1 = useRef(new Animated.Value(1)).current;
@@ -540,6 +889,13 @@ function HomeTab() {
     userCoords,
     setRideType,
   } = useApp();
+
+  // Buddy Fund
+  const [showBuddyFund, setShowBuddyFund]     = useState(false);
+  const [buddyFundStats, setBuddyFundStats]   = useState<{ total_raised: number; contributor_count: number } | null>(null);
+  useEffect(() => {
+    apiGet('/api/buddy-fund/stats').then(r => { if (r && !r._error) setBuddyFundStats(r); }).catch(() => {});
+  }, []);
 
   // Show skeleton for first 550ms so grid loads-in cleanly
   const [homeReady, setHomeReady] = useState(false);
@@ -1021,6 +1377,11 @@ function HomeTab() {
             <FeatureIllustrationBanner />
           </SlideUp>
 
+          {/* 5c. ── Driver Buddy Fund banner ── */}
+          <SlideUp delay={40}>
+            <BuddyFundBanner onPress={() => setShowBuddyFund(true)} stats={buddyFundStats} />
+          </SlideUp>
+
           {/* 6. ── Sppero Buddy card (if has buddy) ── */}
           {favouriteBuddy && (
             <SlideUp delay={60}>
@@ -1226,6 +1587,12 @@ function HomeTab() {
       </Animated.ScrollView>
       <View style={s.navFloat}><NavBar /></View>
       <BuddyBookModal />
+      <BuddyFundModal
+        visible={showBuddyFund}
+        onClose={() => setShowBuddyFund(false)}
+        phone={phone}
+        onSuccess={(stats) => setBuddyFundStats(stats)}
+      />
       <NotificationCenter
         visible={notifOpen}
         onClose={() => setNotifOpen(false)}
