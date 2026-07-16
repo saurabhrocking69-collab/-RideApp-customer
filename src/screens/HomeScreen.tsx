@@ -1675,10 +1675,18 @@ function LiveTab() {
                       <Text style={{ color: C.text, fontWeight: '700', fontSize: 14 }}>{driverInfo.name}</Text>
                       {driverInfo.verified && <View style={{ backgroundColor: C.greenGlass, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: C.greenBorder }}><Text style={{ fontSize: 9, color: C.green, fontWeight: '800' }}>✓ VERIFIED</Text></View>}
                     </View>
-                    <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 1 }}>
-                      {[driverInfo.vehicle_brand, driverInfo.vehicle_model].filter(Boolean).join(' ')}
-                      {driverInfo.vehicle_no ? ` · ${driverInfo.vehicle_no}` : ''}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3, flexWrap: 'wrap' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: C.yellowGlass, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: C.yellowBorder }}>
+                        <Text style={{ fontSize: 10 }}>⭐</Text>
+                        <Text style={{ fontSize: 11, color: C.yellow, fontWeight: '900' }}>
+                          {driverInfo.rating ? parseFloat(driverInfo.rating).toFixed(1) : '5.0'}
+                        </Text>
+                      </View>
+                      <Text style={{ color: C.textMuted, fontSize: 12 }}>
+                        {[driverInfo.vehicle_brand, driverInfo.vehicle_model].filter(Boolean).join(' ')}
+                        {driverInfo.vehicle_no ? ` · ${driverInfo.vehicle_no}` : ''}
+                      </Text>
+                    </View>
                   </View>
                   {driverInfo?.name ? (
                     <TouchableOpacity onPress={callDriver} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: C.greenGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.greenBorder }}>
@@ -1737,7 +1745,15 @@ function LiveTab() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: C.text, fontWeight: '700', fontSize: 14 }}>{hourlyBooking.driver.name}</Text>
-                    <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 1 }}>{[hourlyBooking.driver.vehicle_brand, hourlyBooking.driver.vehicle_model].filter(Boolean).join(' ')}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: C.yellowGlass, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: C.yellowBorder }}>
+                        <Text style={{ fontSize: 10 }}>⭐</Text>
+                        <Text style={{ fontSize: 11, color: C.yellow, fontWeight: '900' }}>
+                          {hourlyBooking.driver.rating ? parseFloat(hourlyBooking.driver.rating).toFixed(1) : '5.0'}
+                        </Text>
+                      </View>
+                      <Text style={{ color: C.textMuted, fontSize: 12 }}>{[hourlyBooking.driver.vehicle_brand, hourlyBooking.driver.vehicle_model].filter(Boolean).join(' ')}</Text>
+                    </View>
                   </View>
                   {hourlyBooking?.driver?.name ? (
                     <TouchableOpacity onPress={() => initiateCall(null, hourlyBooking.id)} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(123,31,162,0.18)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(123,31,162,0.4)' }}>
