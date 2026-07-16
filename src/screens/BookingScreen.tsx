@@ -1364,13 +1364,13 @@ export function BookingScreen() {
               {/* Instant promo offer */}
               {!instantApplied && discount === 0 && (
                 <TouchableOpacity
-                  onPress={() => { setPromoDiscount(10); setPromoCode('SPPERO10'); setInstantApplied(true); }}
+                  onPress={() => { setPromoDiscount(2); setPromoCode('SPPERO2'); setInstantApplied(true); }}
                   style={{ marginHorizontal: 16, marginBottom: 14, backgroundColor: C.greenGlass, borderRadius: 14, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: C.greenBorder, borderStyle: 'dashed' }}>
                   <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: C.greenGlass, alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={{ fontSize: 17 }}>🎁</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '800', color: C.green }}>₹10 OFF — Instant Discount</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: C.green }}>₹2 OFF — Instant Discount</Text>
                     <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>Tap to apply • No code needed</Text>
                   </View>
                   <View style={{ backgroundColor: C.green, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, elevation: 2 }}>
@@ -1381,7 +1381,7 @@ export function BookingScreen() {
               {instantApplied && (
                 <View style={{ marginHorizontal: 16, marginBottom: 14, backgroundColor: C.greenGlass, borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: C.greenBorder }}>
                   <Text style={{ fontSize: 18 }}>✅</Text>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: C.green, flex: 1 }}>₹10 instant discount applied!</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: C.green, flex: 1 }}>₹2 instant discount applied!</Text>
                   <TouchableOpacity onPress={() => { setPromoDiscount(0); setPromoCode(''); setInstantApplied(false); }}>
                     <Ionicons name="close-circle" size={20} color={C.green} />
                   </TouchableOpacity>
