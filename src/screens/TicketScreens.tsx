@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import {
-  ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
-  ScrollView, Text, TextInput, TouchableOpacity, View,
+  ActivityIndicator, Alert, AppState, KeyboardAvoidingView, Platform,
+  RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
@@ -286,27 +286,51 @@ export function TicketListScreen() {
 
   const [tickets, setTickets]           = useState<any[]>([]);
   const [loading, setLoading]           = useState(true);
+  const [refreshing, setRefreshing]     = useState(false);
   const [activeTicket, setActiveTicket] = useState<any>(null);
   const [ticketDetail, setTicketDetail] = useState<{ ticket: any; messages: any[]; attachments: any[] } | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [reply, setReply]               = useState('');
   const [replying, setReplying]         = useState(false);
+  const activeTicketRef                 = useRef<any>(null);
 
   const back = () => { setScreen('support'); setTab('profile'); };
 
-  useEffect(() => {
-    loadTickets();
-  }, []);
-
-  const loadTickets = async () => {
-    setLoading(true);
+  const loadTickets = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const r = await fetch(`${API}/api/support/tickets?phone=${encodeURIComponent(phone)}&role=customer`);
       const d = await r.json();
       setTickets(d.tickets || []);
     } catch { /* silent */ }
-    finally { setLoading(false); }
-  };
+    finally { if (!silent) setLoading(false); setRefreshing(false); }
+  }, [phone]);
+
+  const refreshDetail = useCallback(async (silent = false) => {
+    const t = activeTicketRef.current;
+    if (!t) return;
+    if (!silent) setDetailLoading(true);
+    try {
+      const r = await fetch(`${API}/api/support/tickets/${t.id}?phone=${encodeURIComponent(phone)}`);
+      const d = await r.json();
+      setTicketDetail(d);
+    } catch { /* silent */ }
+    finally { if (!silent) setDetailLoading(false); }
+  }, [phone]);
+
+  // On mount: load list; on foreground return: refresh list or open ticket detail
+  useEffect(() => {
+    loadTickets();
+    const sub = AppState.addEventListener('change', s => {
+      if (s !== 'active') return;
+      if (activeTicketRef.current) refreshDetail(true);
+      else loadTickets(true);
+    });
+    return () => sub.remove();
+  }, [loadTickets, refreshDetail]);
+
+  // Keep ref in sync so AppState handler always sees current ticket
+  useEffect(() => { activeTicketRef.current = activeTicket; }, [activeTicket]);
 
   const openDetail = async (t: any) => {
     setActiveTicket(t);
@@ -330,10 +354,7 @@ export function TicketListScreen() {
         body: JSON.stringify({ phone, message: reply.trim() }),
       });
       setReply('');
-      // Reload detail
-      const r = await fetch(`${API}/api/support/tickets/${activeTicket.id}?phone=${encodeURIComponent(phone)}`);
-      const d = await r.json();
-      setTicketDetail(d);
+      await refreshDetail(true);
     } catch { Alert.alert('Error', 'Could not send reply. Try again.'); }
     finally { setReplying(false); }
   };
@@ -347,11 +368,13 @@ export function TicketListScreen() {
       <ScreenIn style={s.screen}>
         <DotBG />
         <View style={s.topBar}>
-          <TouchableOpacity onPress={() => { setActiveTicket(null); setTicketDetail(null); }} style={{ padding: 4 }}>
+          <TouchableOpacity onPress={() => { setActiveTicket(null); setTicketDetail(null); loadTickets(true); }} style={{ padding: 4 }}>
             <Ionicons name="arrow-back" size={22} color="#fff" />
           </TouchableOpacity>
           <Text style={s.topTitle} numberOfLines={1}>{activeTicket.ticket_no || 'Ticket'}</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity onPress={() => refreshDetail(false)} style={{ padding: 4 }}>
+            <Ionicons name="refresh" size={20} color="#fff" />
+          </TouchableOpacity>
         </View>
 
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
@@ -483,7 +506,11 @@ export function TicketListScreen() {
           </TouchableOpacity>
         </View>
       ) : (
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadTickets(); }} tintColor={C.pink} />}
+        >
           {tickets.map((t: any) => {
             const unread = parseInt(t.unread_replies) || 0;
             return (
