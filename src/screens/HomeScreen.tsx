@@ -566,13 +566,13 @@ function BuddyFundModal({
   // Heart burst anim on success
   const successScale = useRef(new Animated.Value(0)).current;
   const successOpacity = useRef(new Animated.Value(0)).current;
-  const [burstHearts] = useState(() => Array.from({ length: 7 }, () => ({
-    tx: useRef(new Animated.Value(0)).current,
-    ty: useRef(new Animated.Value(0)).current,
-    op: useRef(new Animated.Value(0)).current,
+  const burstHearts = useRef(Array.from({ length: 7 }, () => ({
+    tx: new Animated.Value(0),
+    ty: new Animated.Value(0),
+    op: new Animated.Value(0),
     angle: Math.random() * 360,
     dist:  60 + Math.random() * 60,
-  })));
+  }))).current;
 
   const onSelectPreset = (idx: number, amt: number) => {
     setSelected(amt); setCustom('');
