@@ -48,6 +48,7 @@ function BackHandlerWrapper() {
   useEffect(() => {
     const handler = BackHandler.addEventListener('hardwareBackPress', () => {
       if (screen === 'splash') return true;
+      if (screen === 'language-select') return true;
       if (screen === 'onboarding') return true;
       if (screen === 'otp') { setScreen('login'); return true; }
 

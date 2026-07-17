@@ -25,10 +25,12 @@ import { InsightsScreen } from './screens/InsightsScreen';
 import { TierScreen } from './screens/TierScreen';
 import { NewTicketScreen, TicketListScreen } from './screens/TicketScreens';
 import { FareRatesScreen } from './screens/FareRatesScreen';
+import { LanguageSelectScreen } from './screens/LanguageSelectScreen';
 
 function ActiveScreen() {
   const { screen } = useApp();
   if (screen === 'splash')           return null;
+  if (screen === 'language-select')  return <LanguageSelectScreen />;
   if (screen === 'onboarding')       return <OnboardingScreen />;
   if (screen === 'login')            return <LoginScreen />;
   if (screen === 'otp')              return <OtpScreen />;

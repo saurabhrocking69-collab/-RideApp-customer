@@ -1,10 +1,10 @@
 export type Screen =
-  | 'splash' | 'login' | 'otp' | 'onboarding' | 'home'
+  | 'splash' | 'login' | 'otp' | 'onboarding' | 'language-select' | 'home'
   | 'booking' | 'matching' | 'inride' | 'payment' | 'postride'
   | 'chat' | 'referral' | 'saved' | 'policy' | 'hourly'
   | 'wallet' | 'hourly-info' | 'promo' | 'support' | 'safety'
   | 'rewards' | 'budget' | 'surge' | 'insights' | 'tier'
-  | 'tickets' | 'ticket-new';
+  | 'tickets' | 'ticket-new' | 'fare-rates';
 
 export type Tab = 'home' | 'live' | 'history' | 'profile';
 

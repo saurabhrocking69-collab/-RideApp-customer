@@ -1243,19 +1243,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const onboardingDone = await AsyncStorage.getItem('onboardingCompleted');
         const nameIsDefault = !serverName || serverName === 'User' || serverName === 'Rider';
         const isNew = !onboardingDone && nameIsDefault;
+        const langSet = await AsyncStorage.getItem('userLanguage');
         if (isNew) {
-          onboardFade.setValue(0); onboardSlide.setValue(60);
-          setScreen('onboarding'); setResult('');
-          Animated.parallel([
-            Animated.timing(onboardFade, { toValue: 1, duration: 500, useNativeDriver: true }),
-            Animated.spring(onboardSlide, { toValue: 0, tension: 50, friction: 8, useNativeDriver: true }),
-          ]).start();
+          if (!langSet) {
+            await AsyncStorage.setItem('_postLangDest', 'onboarding');
+            setScreen('language-select'); setResult('');
+          } else {
+            onboardFade.setValue(0); onboardSlide.setValue(60);
+            setScreen('onboarding'); setResult('');
+            Animated.parallel([
+              Animated.timing(onboardFade, { toValue: 1, duration: 500, useNativeDriver: true }),
+              Animated.spring(onboardSlide, { toValue: 0, tension: 50, friction: 8, useNativeDriver: true }),
+            ]).start();
+          }
         } else {
           setUserName(serverName || 'Rider');
           await AsyncStorage.setItem('userName', serverName || 'Rider');
-          fetchAppConfig();
-          setScreen('home'); setResult(''); loadHistory(phone); loadWallet(phone);
+          fetchAppConfig(); loadHistory(phone); loadWallet(phone);
           registerFCM(phone); loadOffers(); loadHourlyPackages(); connectSocket(phone);
+          setResult('');
+          if (!langSet) {
+            await AsyncStorage.setItem('_postLangDest', 'home');
+            setScreen('language-select');
+          } else {
+            setScreen('home');
+          }
         }
       } else {
         setResult('❌ ' + (data.error || 'Incorrect OTP')); shakeOtp();
