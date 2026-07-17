@@ -2468,6 +2468,12 @@ function ProfileTab() {
             { label: 'Saved Places',  sub: 'Save Home, Office & more',        icon: 'bookmark-outline',   color: C.purple, bg: C.purpleGlass, border: C.purpleBorder, onPress: () => { loadSaved(); setScreen('saved'); } },
           ])}
 
+          {/* ── Fare Info ────────────────────────────────────────────────── */}
+          <Text style={{ fontSize: 11, fontWeight: '800', color: C.textDim, letterSpacing: 1.2, marginBottom: 8, paddingHorizontal: 2 }}>FARE INFO</Text>
+          {menuSection([
+            { label: 'Fare Rate Cards', sub: 'View base fare & per-km rates for all vehicles', icon: 'pricetags-outline', color: C.saffron, bg: C.saffGlass, border: C.saffBorder, onPress: () => setScreen('fare-rates') },
+          ])}
+
           {/* ── Help & Safety ────────────────────────────────────────────── */}
           <Text style={{ fontSize: 11, fontWeight: '800', color: C.textDim, letterSpacing: 1.2, marginBottom: 8, paddingHorizontal: 2 }}>HELP & SAFETY</Text>
           {menuSection([

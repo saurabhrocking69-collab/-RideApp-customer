@@ -24,6 +24,7 @@ import { SurgePricingScreen } from './screens/SurgePricingScreen';
 import { InsightsScreen } from './screens/InsightsScreen';
 import { TierScreen } from './screens/TierScreen';
 import { NewTicketScreen, TicketListScreen } from './screens/TicketScreens';
+import { FareRatesScreen } from './screens/FareRatesScreen';
 
 function ActiveScreen() {
   const { screen } = useApp();
@@ -54,6 +55,7 @@ if (screen === 'referral')         return <ReferralScreen />;
   if (screen === 'tier')             return <TierScreen />;
   if (screen === 'tickets')          return <TicketListScreen />;
   if (screen === 'ticket-new')       return <NewTicketScreen />;
+  if (screen === 'fare-rates')       return <FareRatesScreen />;
   return <HomeScreen />;
 }
 
