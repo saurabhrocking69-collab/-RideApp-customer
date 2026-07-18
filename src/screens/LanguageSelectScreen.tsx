@@ -178,10 +178,13 @@ export function LanguageSelectScreen() {
   );
 }
 
+const G = '#22C55E';           // primary green accent
+const G_DIM = 'rgba(34,197,94,0.55)'; // muted green for borders
+
 const s = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: C.bgDark,   // #1A0D2E — deep dark plum
+    backgroundColor: '#071A10',  // deep forest green
     overflow: 'hidden',
   },
 
@@ -189,12 +192,12 @@ const s = StyleSheet.create({
   blobA: {
     position: 'absolute', top: -90, right: -90,
     width: 280, height: 280, borderRadius: 140,
-    backgroundColor: 'rgba(255,45,120,0.07)',
+    backgroundColor: 'rgba(34,197,94,0.07)',
   },
   blobB: {
     position: 'absolute', bottom: 120, left: -110,
     width: 240, height: 240, borderRadius: 120,
-    backgroundColor: 'rgba(124,58,237,0.08)',
+    backgroundColor: 'rgba(5,150,105,0.09)',
   },
 
   // ── Header ─────────────────────────────────────
@@ -205,14 +208,14 @@ const s = StyleSheet.create({
   },
   globeRing: {
     width: 78, height: 78, borderRadius: 39,
-    backgroundColor: 'rgba(255,255,255,0.07)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.13)',
+    backgroundColor: 'rgba(34,197,94,0.10)',
+    borderWidth: 1.5, borderColor: 'rgba(34,197,94,0.28)',
     alignItems: 'center', justifyContent: 'center',
     marginBottom: SP.sm,
   },
   globeEmoji: { fontSize: 38 },
   brand: {
-    color: C.pink,
+    color: G,
     fontSize: 11, fontWeight: '900', letterSpacing: 5,
     marginBottom: SP.xs,
   },
@@ -222,7 +225,7 @@ const s = StyleSheet.create({
     textAlign: 'center',
   },
   sub: {
-    color: 'rgba(255,255,255,0.42)',
+    color: 'rgba(255,255,255,0.65)',  // bumped from 0.42 — passes contrast on green bg
     fontSize: 13, marginTop: 6,
     textAlign: 'center', lineHeight: 20,
   },
@@ -247,16 +250,19 @@ const s = StyleSheet.create({
     gap: 4,
   },
   cardEn: {
-    backgroundColor: 'rgba(255,45,120,0.15)',
+    backgroundColor: 'rgba(34,197,94,0.14)',
     borderWidth: 1.5,
-    borderColor: C.pink,
-    ...SHADOW.pink,
+    borderColor: G,
+    shadowColor: G,
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
   },
   cardOther: {
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    opacity: 0.8,
+    borderColor: 'rgba(255,255,255,0.12)',
+    opacity: 0.88,
   },
   // African wide card overrides
   cardWide: {
@@ -268,16 +274,16 @@ const s = StyleSheet.create({
 
   // Card content
   cardFlag:   { fontSize: 34 },
-  cardName:   { color: 'rgba(255,255,255,0.68)', fontSize: 14, fontWeight: '700', textAlign: 'center' },
+  cardName:   { color: 'rgba(255,255,255,0.82)', fontSize: 14, fontWeight: '700', textAlign: 'center' },
   cardNameEn: { color: '#FFFFFF' },
-  cardNative: { color: 'rgba(255,255,255,0.30)', fontSize: 11, textAlign: 'center' },
+  cardNative: { color: 'rgba(255,255,255,0.58)', fontSize: 11, textAlign: 'center' }, // bumped from 0.30
   wideTextBlock: { flex: 1 },
 
   // Badges
   checkBadge: {
     position: 'absolute', top: 8, right: 8,
     width: 22, height: 22, borderRadius: 11,
-    backgroundColor: C.pink,
+    backgroundColor: G,
     alignItems: 'center', justifyContent: 'center',
   },
   checkTxt: { color: '#fff', fontSize: 12, fontWeight: '900' },
@@ -285,66 +291,73 @@ const s = StyleSheet.create({
     position: 'absolute', top: 8, right: 8,
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: R.xs, paddingHorizontal: 5, paddingVertical: 2,
-    borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.18)',
   },
   // Inline version for the wide card (not absolute)
   soonTag: {
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: R.xs, paddingHorizontal: 6, paddingVertical: 3,
-    borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.18)',
   },
-  soonTxt: { color: 'rgba(255,255,255,0.38)', fontSize: 8, fontWeight: '800', letterSpacing: 0.8 },
+  soonTxt: { color: 'rgba(255,255,255,0.62)', fontSize: 8, fontWeight: '800', letterSpacing: 0.8 }, // bumped from 0.38
 
   // ── Footer ─────────────────────────────────────
   footer: {
     paddingHorizontal: HPAD,
     paddingTop: SP.md,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
-    backgroundColor: 'rgba(0,0,0,0.2)',
+    borderTopColor: 'rgba(34,197,94,0.14)',
+    backgroundColor: 'rgba(0,0,0,0.18)',
   },
   btn: {
-    backgroundColor: C.pink,
+    backgroundColor: G,
     borderRadius: R.md,
     paddingVertical: 17,
     alignItems: 'center',
-    ...SHADOW.pink,
+    shadowColor: G,
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    elevation: 8,
   },
   btnTxt: { color: '#fff', fontSize: 15, fontWeight: '800', letterSpacing: 0.2 },
   footNote: {
-    color: 'rgba(255,255,255,0.26)',
+    color: 'rgba(255,255,255,0.52)',  // bumped from 0.26 — was failing contrast
     fontSize: 11, textAlign: 'center', marginTop: SP.sm,
   },
 
   // ── Modal ──────────────────────────────────────
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.72)',
+    backgroundColor: 'rgba(0,0,0,0.78)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: SP.lg,
   },
   modal: {
-    backgroundColor: C.bgCard,
+    backgroundColor: '#0F2918',   // dark green card, consistent with screen
     borderRadius: R.xl,
     padding: SP.xl,
     alignItems: 'center',
-    width: '100%',
+    borderWidth: 1,
+    borderColor: 'rgba(34,197,94,0.22)',
     ...SHADOW.lg,
   },
   mIcon:  { fontSize: 52 },
-  mTitle: { color: C.text, fontSize: 22, fontWeight: '800', marginTop: SP.md },
-  mLang:  { fontSize: 18, color: C.textMuted, fontWeight: '600', marginTop: 6 },
-  mBody:  { color: C.textMuted, fontSize: 14, textAlign: 'center', marginTop: SP.sm, lineHeight: 22 },
+  mTitle: { color: '#FFFFFF', fontSize: 22, fontWeight: '800', marginTop: SP.md },
+  mLang:  { fontSize: 18, color: 'rgba(255,255,255,0.72)', fontWeight: '600', marginTop: 6 },
+  mBody:  { color: 'rgba(255,255,255,0.62)', fontSize: 14, textAlign: 'center', marginTop: SP.sm, lineHeight: 22 },
   mBtn: {
-    backgroundColor: C.pink,
+    backgroundColor: G,
     borderRadius: R.md,
     paddingVertical: 14,
     paddingHorizontal: SP.xl,
     marginTop: SP.lg,
     width: '100%',
     alignItems: 'center',
-    ...SHADOW.pink,
+    shadowColor: G,
+    shadowOpacity: 0.40,
+    shadowRadius: 10,
+    elevation: 6,
   },
   mBtnTxt: { color: '#fff', fontWeight: '800', fontSize: 15 },
 });
