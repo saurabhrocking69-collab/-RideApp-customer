@@ -269,6 +269,7 @@ export interface LiveMapProps {
   cameraTarget?: { lat: number; lng: number } | null; // fly camera here when set
   walkOrigin?: { lat: number; lng: number } | null;   // user GPS — draws dotted walk line to pickup
   pulsePickup?: boolean;    // pulsing sonar rings at pickup pin (matching mode)
+  pulseSearching?: boolean; // expanding yellow sonar rings at pickup while searching for a driver
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -299,6 +300,7 @@ export const LiveMap = memo(function LiveMap({
   cameraTarget = null,
   walkOrigin = null,
   pulsePickup = false,
+  pulseSearching = false,
 }: LiveMapProps) {
   const mapRef = useRef<MapView>(null);
   const prevPos = useRef<{ lat: number; lng: number } | null>(null);
@@ -312,6 +314,15 @@ export const LiveMap = memo(function LiveMap({
     const id = setInterval(() => setPulsePhase(p => (p + 1) % PULSE_STEPS), 80);
     return () => clearInterval(id);
   }, [pulsePickup, pickupCoords?.lat, pickupCoords?.lng]);
+
+  // Yellow sonar rings expanding from pickup during driver search
+  const SEARCH_STEPS = 36;
+  const [searchPhase, setSearchPhase] = useState(0);
+  useEffect(() => {
+    if (!pulseSearching || !pickupCoords) return;
+    const id = setInterval(() => setSearchPhase(p => (p + 1) % SEARCH_STEPS), 90);
+    return () => clearInterval(id);
+  }, [pulseSearching, pickupCoords?.lat, pickupCoords?.lng]);
 
   // ── Drag-pin lift animation ───────────────────────────────────────────────
   const [isMapDragging, setIsMapDragging] = useState(false);
@@ -713,6 +724,24 @@ export const LiveMap = memo(function LiveMap({
             <NearbyDriverMarker vehicleType={nd.vehicleType} />
           </Marker>
         ))}
+
+        {/* Yellow expanding sonar rings — searching for driver */}
+        {pickupCoords && pulseSearching && (() => {
+          const t  = (phase: number) => phase / SEARCH_STEPS;
+          const t1 = t(searchPhase);
+          const t2 = t((searchPhase + Math.floor(SEARCH_STEPS / 3)) % SEARCH_STEPS);
+          const t3 = t((searchPhase + Math.floor((SEARCH_STEPS * 2) / 3)) % SEARCH_STEPS);
+          const r  = (tv: number) => Math.max(8, 8 + 280 * tv);
+          const o  = (tv: number) => parseFloat((0.85 * (1 - tv)).toFixed(2));
+          const fo = (tv: number) => parseFloat((0.07 * (1 - tv)).toFixed(3));
+          return (
+            <>
+              <Circle center={{ latitude: pickupCoords.lat, longitude: pickupCoords.lng }} radius={r(t1)} strokeColor={`rgba(255,210,0,${o(t1)})`} fillColor={`rgba(255,210,0,${fo(t1)})`} strokeWidth={2.5} zIndex={1} />
+              <Circle center={{ latitude: pickupCoords.lat, longitude: pickupCoords.lng }} radius={r(t2)} strokeColor={`rgba(255,210,0,${o(t2)})`} fillColor={`rgba(255,210,0,${fo(t2)})`} strokeWidth={2.5} zIndex={1} />
+              <Circle center={{ latitude: pickupCoords.lat, longitude: pickupCoords.lng }} radius={r(t3)} strokeColor={`rgba(255,210,0,${o(t3)})`} fillColor={`rgba(255,210,0,${fo(t3)})`} strokeWidth={2.5} zIndex={1} />
+            </>
+          );
+        })()}
 
         {/* Pulsing sonar rings at pickup — matching mode only */}
         {mode === 'matching' && pickupCoords && pulsePickup && (() => {

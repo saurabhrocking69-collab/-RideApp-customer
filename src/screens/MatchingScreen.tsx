@@ -800,6 +800,7 @@ export function MatchingScreen() {
           followDriver={!!rideData?.driver}
           showTraffic={false}
           pulsePickup={!!rideData?.driver && !driverArrived}
+          pulseSearching={!!rideData && !rideData?.driver}
           walkOrigin={(() => {
             const lat = (userCoords as any)?.latitude ?? (userCoords as any)?.lat;
             const lng = (userCoords as any)?.longitude ?? (userCoords as any)?.lng;
@@ -1174,7 +1175,7 @@ export function MatchingScreen() {
             /* ═══════════════ SEARCHING STATE ═══════════════ */
             <>
               {/* ── Hero: scan lines + radar rings + vehicle icon + status ── */}
-              <View style={{ backgroundColor: '#FF2D78', borderRadius: 20, marginHorizontal: 12, marginTop: 8, marginBottom: 4, overflow: 'hidden' }}>
+              <View style={{ backgroundColor: 'rgba(10,3,24,0.82)', borderRadius: 20, marginHorizontal: 12, marginTop: 8, marginBottom: 4, overflow: 'hidden', borderWidth: 1.5, borderColor: 'rgba(255,45,120,0.55)' }}>
               {/* Horizontal scan-line micro-animation */}
               <ScanLines active={!noDriverFinal} />
               <View style={{ alignItems: 'center', paddingTop: 20, paddingBottom: 16 }}>
@@ -1234,10 +1235,10 @@ export function MatchingScreen() {
 
               {/* ── Search progress bar (hidden when no driver final) ── */}
               {!noDriverFinal && (
-                <View style={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 14 }}>
-                  <View style={{ height: 5, backgroundColor: C.glassMid, borderRadius: 3, overflow: 'hidden', borderWidth: 1, borderColor: C.glassBorder }}>
+                <View style={{ paddingHorizontal: 20, paddingTop: 6, paddingBottom: 14 }}>
+                  <View style={{ height: 9, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 5, overflow: 'hidden', shadowColor: C.pink, shadowOpacity: 0.4, shadowRadius: 6 }}>
                     <Animated.View style={{
-                      height: '100%', borderRadius: 3,
+                      height: '100%', borderRadius: 5,
                       width: surgeBarAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
                       backgroundColor: surgeBarAnim.interpolate({
                         inputRange: [0, 0.55, 0.78, 1],
