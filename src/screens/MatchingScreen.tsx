@@ -66,47 +66,51 @@ const V_ICONS: Record<string, string> = {
   auto: '🛺', car: '🚕', bike: '🏍️', eriksha: '🛵', luxury: '🚙', green_bike: '⚡', electric_auto: '🌿',
 };
 
-// ── 4-statement flip banner shown when driver is matched ───────────────────
+// ── Status pill — compact rotating chip between drag handle and ETA hero ─────
 function BuddyMessages({ visible }: { visible: boolean }) {
-  const CARDS = [
-    { border: C.pinkBorder, bg: C.pinkGlass, icon: '🤝', text: 'Sppero Buddy is connected' },
-    { border: C.plumBorder, bg: C.plumGlass, icon: '🛡️', text: 'Sppero Buddy dedicated to your ride' },
-    { border: C.glassBorder, bg: C.glass, icon: '💬', text: 'Keep patience and talk' },
-    { border: C.greenBorder, bg: C.greenGlass, icon: '✨', text: 'Make safe and good journey' },
+  const PILLS = [
+    { border: C.pinkBorder,  bg: C.pinkGlass,  icon: '🤝', text: 'Buddy connected' },
+    { border: C.plumBorder,  bg: C.plumGlass,  icon: '🛡️', text: 'Dedicated to your ride' },
+    { border: C.greenBorder, bg: C.greenGlass, icon: '📍', text: 'Live tracking active' },
+    { border: C.glassBorder, bg: C.glassMid,   icon: '✨', text: 'Safe journey ahead' },
   ];
-  const [idx, setIdx] = useState(0);
-  const flipAnim = useRef(new Animated.Value(0)).current;
+  const [idx, setIdx]  = useState(0);
+  const fadeAnim       = useRef(new Animated.Value(1)).current;
+  const slideAnim      = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (!visible) return;
     const iv = setInterval(() => {
-      Animated.timing(flipAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start(({ finished }) => {
-        if (!finished) return;
-        setIdx(p => (p + 1) % CARDS.length);
-        flipAnim.setValue(-1);
-        Animated.timing(flipAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start();
+      Animated.parallel([
+        Animated.timing(fadeAnim,  { toValue: 0, duration: 200, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: -5, duration: 200, useNativeDriver: true }),
+      ]).start(() => {
+        setIdx(p => (p + 1) % PILLS.length);
+        slideAnim.setValue(5);
+        Animated.parallel([
+          Animated.timing(fadeAnim,  { toValue: 1, duration: 200, useNativeDriver: true }),
+          Animated.timing(slideAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+        ]).start();
       });
     }, 3200);
     return () => clearInterval(iv);
   }, [visible]);
 
-  const rotateX = flipAnim.interpolate({
-    inputRange: [-1, 0, 1],
-    outputRange: ['-90deg', '0deg', '90deg'],
-  });
-  const card = CARDS[idx];
+  const pill = PILLS[idx];
   return (
-    <Animated.View style={{
-      marginHorizontal: 20, marginTop: 6, marginBottom: 6,
-      backgroundColor: card.bg, borderRadius: 12,
-      borderWidth: 1.5, borderColor: card.border,
-      paddingVertical: 11, paddingHorizontal: 16,
-      flexDirection: 'row', alignItems: 'center', gap: 12,
-      transform: [{ perspective: 700 }, { rotateX }],
-    }}>
-      <Text style={{ fontSize: 20 }}>{card.icon}</Text>
-      <Text style={{ color: C.text, fontSize: 13, fontWeight: '700', flex: 1 }}>{card.text}</Text>
-    </Animated.View>
+    <View style={{ alignItems: 'center', paddingTop: 6, paddingBottom: 8 }}>
+      <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+        <View style={{
+          flexDirection: 'row', alignItems: 'center', gap: 6,
+          backgroundColor: pill.bg, borderRadius: 20,
+          paddingHorizontal: 14, paddingVertical: 6,
+          borderWidth: 1.5, borderColor: pill.border,
+        }}>
+          <Text style={{ fontSize: 12 }}>{pill.icon}</Text>
+          <Text style={{ fontSize: 11, fontWeight: '700', color: C.text }}>{pill.text}</Text>
+        </View>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -894,7 +898,7 @@ export function MatchingScreen() {
               {!driverArrived && <BuddyMessages visible />}
 
               {/* ══ ETA HERO v2 — countdown + approach bar ══ */}
-              <View style={{ marginHorizontal: 16, marginTop: 14, marginBottom: 6 }}>
+              <View style={{ marginHorizontal: 20, marginTop: 10, marginBottom: 6 }}>
                 {driverArrived ? (
                   /* ── Arrived card ── */
                   <View style={{ backgroundColor: 'rgba(5,150,105,0.10)', borderRadius: 20, borderWidth: 2, borderColor: C.greenBorder, padding: 20, alignItems: 'center' }}>
@@ -950,7 +954,7 @@ export function MatchingScreen() {
 
               {/* ── Quick message chips ── */}
               {!driverArrived && (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 12, gap: 8 }}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12, gap: 8 }}>
                   {["On my way 🏃", "At the entrance 🚪", "2 min late ⏰", "Can't find you?"].map(msg => (
                     <TouchableOpacity
                       key={msg}
@@ -1037,7 +1041,7 @@ export function MatchingScreen() {
                 <View style={{ height: 1, backgroundColor: C.glassBorder, marginHorizontal: 16 }} />
 
                 {/* Chat + Call row */}
-                <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingTop: 12, paddingBottom: !driverArrived && driverLoc?.lat ? 4 : 12, gap: 8 }}>
+                <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingTop: 12, paddingBottom: !driverArrived && driverLoc?.lat ? 8 : 12, gap: 8 }}>
                   <Animated.View style={{ flex: 1, transform: [{ scale: chatBounceAnim }] }}>
                     <TouchableOpacity
                       onPress={() => { setUnreadChat(0); setChatOrigin('matching'); setScreen('chat'); }}
