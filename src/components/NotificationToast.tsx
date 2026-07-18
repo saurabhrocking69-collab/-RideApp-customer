@@ -102,7 +102,7 @@ export function NotificationToast({ notif, onDismiss, onTap }: Props) {
             <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, marginTop: 2 }} numberOfLines={hasImage ? 1 : 2}>{notif.body}</Text>
           </View>
           <TouchableOpacity onPress={dismiss} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Ionicons name="close" size={16} color="rgba(255,255,255,0.4)" />
+            <Ionicons name="close" size={16} color="rgba(255,255,255,0.60)" />
           </TouchableOpacity>
         </View>
 

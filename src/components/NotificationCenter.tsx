@@ -167,11 +167,15 @@ export function NotificationCenter({ visible, onClose, phone }: CenterProps) {
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' }}>
         <TouchableOpacity style={{ flex: 1 }} onPress={onClose} activeOpacity={1} />
         <Animated.View style={{
-          backgroundColor: C.bg || C.bgDark,
+          backgroundColor: C.bgDark,
           borderTopLeftRadius: 28, borderTopRightRadius: 28,
           maxHeight: '80%',
           transform: [{ translateY: slideY }],
           paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+          borderTopWidth: 1,
+          borderLeftWidth: 1,
+          borderRightWidth: 1,
+          borderColor: 'rgba(255,255,255,0.08)',
         }}>
           {/* Header */}
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 }}>
@@ -183,7 +187,7 @@ export function NotificationCenter({ visible, onClose, phone }: CenterProps) {
               </TouchableOpacity>
             )}
             <TouchableOpacity onPress={onClose} style={{ marginTop: 8, marginLeft: 8, padding: 4 }}>
-              <Ionicons name="close" size={20} color="rgba(255,255,255,0.5)" />
+              <Ionicons name="close" size={20} color="rgba(255,255,255,0.70)" />
             </TouchableOpacity>
           </View>
 
@@ -191,8 +195,8 @@ export function NotificationCenter({ visible, onClose, phone }: CenterProps) {
             {notifs.length === 0 ? (
               <View style={{ alignItems: 'center', paddingVertical: 48 }}>
                 <Text style={{ fontSize: 40 }}>🔔</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, marginTop: 12, fontWeight: '600' }}>No notifications yet</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12, marginTop: 4 }}>Book a ride to see updates here</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.70)', fontSize: 14, marginTop: 12, fontWeight: '600' }}>No notifications yet</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, marginTop: 4 }}>Book a ride to see updates here</Text>
               </View>
             ) : (
               notifs.map(n => {
@@ -214,8 +218,8 @@ export function NotificationCenter({ visible, onClose, phone }: CenterProps) {
                           <Text style={{ flex: 1, color: '#fff', fontSize: 13, fontWeight: '800' }} numberOfLines={1}>{n.title}</Text>
                           {!n.read && <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: C.pink }} />}
                         </View>
-                        <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 3, lineHeight: 17 }} numberOfLines={n.imageUrl ? 2 : 3}>{n.body}</Text>
-                        <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, marginTop: 5, fontWeight: '600' }}>{timeAgo(n.ts)}</Text>
+                        <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 12, marginTop: 3, lineHeight: 17 }} numberOfLines={n.imageUrl ? 2 : 3}>{n.body}</Text>
+                        <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, marginTop: 5, fontWeight: '600' }}>{timeAgo(n.ts)}</Text>
                       </View>
                     </View>
                     {/* Promo banner image */}
