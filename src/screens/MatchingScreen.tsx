@@ -795,12 +795,38 @@ export function MatchingScreen() {
           showRoute
           followDriver={!!rideData?.driver}
           showTraffic={false}
+          pulsePickup={!!rideData?.driver && !driverArrived}
           walkOrigin={(() => {
             const lat = (userCoords as any)?.latitude ?? (userCoords as any)?.lat;
             const lng = (userCoords as any)?.longitude ?? (userCoords as any)?.lng;
             return lat != null ? { lat: lat as number, lng: lng as number } : null;
           })()}
         />
+
+        {/* "Driver · countdown" floating chip — bottom of map, above sheet */}
+        {rideData?.driver && !driverArrived && etaRemaining > 0 && (
+          <View
+            style={{ position: 'absolute', bottom: OVERLAP + 12, left: 0, right: 0, alignItems: 'center' }}
+            pointerEvents="none"
+          >
+            <View style={{
+              backgroundColor: 'rgba(15,23,42,0.88)',
+              borderRadius: 22, paddingHorizontal: 16, paddingVertical: 9,
+              flexDirection: 'row', alignItems: 'center', gap: 8,
+              borderWidth: 1.5, borderColor: 'rgba(255,45,120,0.35)',
+              elevation: 10,
+              shadowColor: C.pink, shadowOpacity: 0.30, shadowRadius: 12,
+            }}>
+              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.green }} />
+              <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>
+                {(rideData.driver.name || 'Driver').split(' ')[0]} · {etaCountdown}
+              </Text>
+              {driverDist ? (
+                <Text style={{ color: 'rgba(255,255,255,0.50)', fontSize: 11 }}>· {driverDist}</Text>
+              ) : null}
+            </View>
+          </View>
+        )}
 
         {/* Minimal top overlay — back button + chat toast */}
         <View style={{

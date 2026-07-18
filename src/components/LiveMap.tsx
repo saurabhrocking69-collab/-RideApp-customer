@@ -268,6 +268,7 @@ export interface LiveMapProps {
   fill?: boolean;           // flex:1 to fill parent instead of fixed height
   cameraTarget?: { lat: number; lng: number } | null; // fly camera here when set
   walkOrigin?: { lat: number; lng: number } | null;   // user GPS — draws dotted walk line to pickup
+  pulsePickup?: boolean;    // pulsing sonar rings at pickup pin (matching mode)
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -297,12 +298,20 @@ export const LiveMap = memo(function LiveMap({
   fill = false,
   cameraTarget = null,
   walkOrigin = null,
+  pulsePickup = false,
 }: LiveMapProps) {
   const mapRef = useRef<MapView>(null);
   const prevPos = useRef<{ lat: number; lng: number } | null>(null);
   const [heading, setHeading] = useState(0);
   const [draggingPickup, setDraggingPickup] = useState(false);
   const [draggingDrop, setDraggingDrop] = useState(false);
+  const PULSE_STEPS = 20;
+  const [pulsePhase, setPulsePhase] = useState(0);
+  useEffect(() => {
+    if (!pulsePickup || !pickupCoords) return;
+    const id = setInterval(() => setPulsePhase(p => (p + 1) % PULSE_STEPS), 80);
+    return () => clearInterval(id);
+  }, [pulsePickup, pickupCoords?.lat, pickupCoords?.lng]);
 
   // ── Drag-pin lift animation ───────────────────────────────────────────────
   const [isMapDragging, setIsMapDragging] = useState(false);
@@ -694,6 +703,20 @@ export const LiveMap = memo(function LiveMap({
             <NearbyDriverMarker vehicleType={nd.vehicleType} />
           </Marker>
         ))}
+
+        {/* Pulsing sonar rings at pickup — matching mode only */}
+        {mode === 'matching' && pickupCoords && pulsePickup && (() => {
+          const t1 = pulsePhase / PULSE_STEPS;
+          const t2 = ((pulsePhase + PULSE_STEPS / 2) % PULSE_STEPS) / PULSE_STEPS;
+          const r  = (t: number) => Math.max(4, 4 + 38 * t);
+          const o  = (t: number) => parseFloat((0.75 * (1 - t)).toFixed(2));
+          return (
+            <>
+              <Circle center={{ latitude: pickupCoords.lat, longitude: pickupCoords.lng }} radius={r(t1)} strokeColor={`rgba(5,150,105,${o(t1)})`} fillColor="transparent" strokeWidth={3} zIndex={2} />
+              <Circle center={{ latitude: pickupCoords.lat, longitude: pickupCoords.lng }} radius={r(t2)} strokeColor={`rgba(5,150,105,${o(t2)})`} fillColor="transparent" strokeWidth={3} zIndex={2} />
+            </>
+          );
+        })()}
 
         {/* Pickup marker */}
         {pickupCoords && (
