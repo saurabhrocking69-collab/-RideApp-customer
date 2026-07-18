@@ -724,7 +724,7 @@ export function MatchingScreen() {
   const etaColor       = !etaRemaining ? C.textMuted : etaMins <= 2 ? C.green : etaMins <= 5 ? C.yellow : C.text;
   const etaCountdown   = etaRemaining > 0
     ? `${Math.floor(etaRemaining / 60)}:${String(etaRemaining % 60).padStart(2, '0')}`
-    : (driverEta || '...');
+    : 'Arriving';
 
   // ── Share tracking ─────────────────────────────────────────────────────────
   const shareTracking = () => {
@@ -900,20 +900,28 @@ export function MatchingScreen() {
               {/* ══ ETA HERO v2 — countdown + approach bar ══ */}
               <View style={{ marginHorizontal: 20, marginTop: 10, marginBottom: 6 }}>
                 {driverArrived ? (
-                  /* ── Arrived card ── */
-                  <View style={{ backgroundColor: 'rgba(5,150,105,0.10)', borderRadius: 20, borderWidth: 2, borderColor: C.greenBorder, padding: 20, alignItems: 'center' }}>
-                    <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: 'rgba(5,150,105,0.18)', alignItems: 'center', justifyContent: 'center', marginBottom: 12, borderWidth: 2, borderColor: C.greenBorder }}>
-                      <Ionicons name="checkmark-circle" size={36} color={C.green} />
-                    </View>
-                    <Text style={{ fontSize: 22, fontWeight: '900', color: C.green, textAlign: 'center' }}>Driver Has Arrived!</Text>
-                    <Text style={{ fontSize: 13, color: C.textMuted, marginTop: 6, textAlign: 'center' }}>Walk to your pickup · Show the PIN to start</Text>
-                    <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: freeSecLeft > 0 ? C.greenGlass : C.redGlass, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 9, borderWidth: 1.5, borderColor: freeSecLeft > 0 ? C.greenBorder : C.redBorder }}>
-                      <Ionicons name={freeSecLeft > 0 ? 'time-outline' : 'warning'} size={14} color={freeSecLeft > 0 ? C.green : C.red} />
-                      <Text style={{ fontSize: 12, fontWeight: '800', color: freeSecLeft > 0 ? C.green : C.red }}>
-                        {freeSecLeft > 0
-                          ? `Free wait: ${Math.floor(freeSecLeft / 60)}m ${String(freeSecLeft % 60).padStart(2, '0')}s left`
-                          : `Wait charge active: +₹${waitFareAdd}`}
-                      </Text>
+                  /* ── Arrived card — compact horizontal ── */
+                  <View style={{ backgroundColor: C.bgCard, borderRadius: 20, borderWidth: 1.5, borderColor: C.greenBorder, overflow: 'hidden', elevation: 6, shadowColor: C.green, shadowOpacity: 0.12, shadowRadius: 14 }}>
+                    {/* Full-width green bar at top */}
+                    <View style={{ height: 4, backgroundColor: C.green }} />
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 }}>
+                      {/* Icon */}
+                      <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: 'rgba(5,150,105,0.15)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.greenBorder, flexShrink: 0 }}>
+                        <Ionicons name="checkmark" size={26} color={C.green} />
+                      </View>
+                      {/* Text block */}
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Text style={{ fontSize: 17, fontWeight: '900', color: C.green }}>Driver is here!</Text>
+                        <Text style={{ fontSize: 12, color: C.textMuted }}>Walk over · Show PIN to start</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 5 }}>
+                          <Ionicons name={freeSecLeft > 0 ? 'time-outline' : 'warning-outline'} size={11} color={freeSecLeft > 0 ? C.green : C.red} />
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: freeSecLeft > 0 ? C.green : C.red }}>
+                            {freeSecLeft > 0
+                              ? `${Math.floor(freeSecLeft / 60)}m ${String(freeSecLeft % 60).padStart(2, '0')}s free wait left`
+                              : `Wait charge active · +₹${waitFareAdd}`}
+                          </Text>
+                        </View>
+                      </View>
                     </View>
                   </View>
                 ) : (
@@ -926,11 +934,20 @@ export function MatchingScreen() {
                     {/* Content row */}
                     <View style={{ padding: 18, flexDirection: 'row', alignItems: 'center', gap: 16 }}>
                       {/* Live countdown */}
-                      <View style={{ alignItems: 'center', minWidth: 76 }}>
-                        <Text adjustsFontSizeToFit numberOfLines={1} style={{ fontSize: 38, fontWeight: '900', color: etaColor, lineHeight: 42, letterSpacing: -1.5 }}>
-                          {etaCountdown}
+                      <View style={{ alignItems: 'center', minWidth: 72 }}>
+                        {etaRemaining > 0 ? (
+                          <Text adjustsFontSizeToFit numberOfLines={1} style={{ fontSize: 36, fontWeight: '900', color: etaColor, lineHeight: 40, letterSpacing: -1.5 }}>
+                            {etaCountdown}
+                          </Text>
+                        ) : (
+                          <View style={{ alignItems: 'center', gap: 3 }}>
+                            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.green }} />
+                            <Text style={{ fontSize: 15, fontWeight: '900', color: C.green }}>Arriving</Text>
+                          </View>
+                        )}
+                        <Text style={{ fontSize: 9, color: etaRemaining === 0 ? C.green : C.textDim, letterSpacing: 1, fontWeight: '700', marginTop: 3 }}>
+                          {etaRemaining === 0 ? 'NOW' : 'AWAY'}
                         </Text>
-                        <Text style={{ fontSize: 9, color: C.textDim, letterSpacing: 1, fontWeight: '700', marginTop: 2 }}>AWAY</Text>
                       </View>
                       {/* Vertical rule */}
                       <View style={{ width: 1, height: 52, backgroundColor: C.glassBorder }} />
@@ -966,19 +983,18 @@ export function MatchingScreen() {
                 </ScrollView>
               )}
 
-              {/* ══ OTP CARD — prominent digit boxes with pop-in ══ */}
+              {/* ══ PIN STRIP — compact single row ══ */}
               {rideData.startOtp ? (
-                <View style={{ marginHorizontal: 20, marginTop: 14 }}>
-                  <View style={{
-                    backgroundColor: C.plumGlass, borderRadius: 20,
-                    borderWidth: 2, borderColor: C.plumBorder,
-                    paddingVertical: 18, paddingHorizontal: 20, alignItems: 'center',
-                    elevation: 8, shadowColor: C.plum, shadowOpacity: 0.25, shadowRadius: 16,
-                  }}>
-                    <Text style={{ fontSize: 9, fontWeight: '900', color: C.plum, letterSpacing: 1.6, marginBottom: 14 }}>
-                      RIDE PIN — SHOW TO DRIVER TO START TRIP
-                    </Text>
-                    <OtpDisplay otp={String(rideData.startOtp)} />
+                <View style={{ marginHorizontal: 20, marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.glassMid, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 11, borderWidth: 1, borderColor: C.plumBorder }}>
+                  <Ionicons name="lock-closed-outline" size={14} color={C.plum} />
+                  <Text style={{ fontSize: 10, fontWeight: '900', color: C.textDim, letterSpacing: 1.5 }}>RIDE PIN</Text>
+                  <View style={{ flex: 1 }} />
+                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                    {String(rideData.startOtp).split('').slice(0, 4).map((d, i) => (
+                      <View key={i} style={{ width: 32, height: 38, borderRadius: 9, backgroundColor: C.plumGlass, borderWidth: 1.5, borderColor: C.plumBorder, alignItems: 'center', justifyContent: 'center' }}>
+                        <Text style={{ fontSize: 18, fontWeight: '900', color: C.plum }}>{d}</Text>
+                      </View>
+                    ))}
                   </View>
                 </View>
               ) : null}

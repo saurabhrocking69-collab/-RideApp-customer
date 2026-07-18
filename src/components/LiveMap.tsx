@@ -386,14 +386,24 @@ export const LiveMap = memo(function LiveMap({
     } as any).start();
   }, [driverLat, driverLng]);
 
-  // Camera follow driver in inride mode
+  // Camera follow driver in matching mode — fit driver + pickup so user sees driver approaching
   useEffect(() => {
     if (!followDriver || driverLat == null || driverLng == null || !mapRef.current) return;
-    mapRef.current.animateToRegion(
-      { latitude: driverLat, longitude: driverLng, latitudeDelta: 0.012, longitudeDelta: 0.012 },
-      900
-    );
-  }, [followDriver, driverLat, driverLng]);
+    if (mode === 'matching' && pickupCoords) {
+      mapRef.current.fitToCoordinates(
+        [
+          { latitude: driverLat, longitude: driverLng },
+          { latitude: pickupCoords.lat, longitude: pickupCoords.lng },
+        ],
+        { edgePadding: { top: 70, right: 60, bottom: 70, left: 60 }, animated: true }
+      );
+    } else {
+      mapRef.current.animateToRegion(
+        { latitude: driverLat, longitude: driverLng, latitudeDelta: 0.006, longitudeDelta: 0.006 },
+        900
+      );
+    }
+  }, [followDriver, driverLat, driverLng, mode, pickupCoords?.lat, pickupCoords?.lng]);
 
   // Fetch route
   useEffect(() => {
