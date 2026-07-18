@@ -684,6 +684,21 @@ export function MatchingScreen() {
     return () => clearInterval(iv);
   }, [cancelInfo?.driver_status, etaRemaining]);
 
+  // ── Approach progress — how far driver has travelled vs. original ETA ───────
+  const initialEtaRef = useRef<number>(0);
+  const approachAnim  = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (rideData?.driver && etaRemaining > 30 && !initialEtaRef.current)
+      initialEtaRef.current = etaRemaining;
+    if (!rideData?.driver) { initialEtaRef.current = 0; approachAnim.setValue(0); }
+  }, [!!rideData?.driver, etaRemaining]);
+  useEffect(() => {
+    if (initialEtaRef.current > 0) {
+      const pct = Math.max(0, Math.min(100, (1 - etaRemaining / initialEtaRef.current) * 100));
+      Animated.timing(approachAnim, { toValue: pct, duration: 1000, useNativeDriver: false }).start();
+    }
+  }, [etaRemaining]);
+
   // ── Derived values ─────────────────────────────────────────────────────────
   const driverArrived  = cancelInfo?.driver_status === 'arrived';
   const driverWaitSec  = cancelInfo?.driver_wait_sec ?? 0;
@@ -703,6 +718,9 @@ export function MatchingScreen() {
   const etaMins        = etaRemaining > 0 ? Math.ceil(etaRemaining / 60) : 0;
   const etaDisplay     = !etaRemaining ? (driverEta || '...') : etaMins <= 1 ? '< 1 min' : `${etaMins} min`;
   const etaColor       = !etaRemaining ? C.textMuted : etaMins <= 2 ? C.green : etaMins <= 5 ? C.yellow : C.text;
+  const etaCountdown   = etaRemaining > 0
+    ? `${Math.floor(etaRemaining / 60)}:${String(etaRemaining % 60).padStart(2, '0')}`
+    : (driverEta || '...');
 
   // ── Share tracking ─────────────────────────────────────────────────────────
   const shareTracking = () => {
@@ -849,31 +867,74 @@ export function MatchingScreen() {
             <>
               {!driverArrived && <BuddyMessages visible />}
 
-              {/* ══ ETA HERO — animated ring + status ══ */}
-              <View style={{ alignItems: 'center', paddingTop: 18, paddingBottom: 16, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: C.glassBorder }}>
-                <EtaRing etaMins={etaMins} etaColor={etaColor} driverArrived={driverArrived} />
-
-                <Text style={{ fontSize: 19, fontWeight: '900', color: driverArrived ? C.green : C.text, marginTop: 14, textAlign: 'center' }}>
-                  {driverArrived ? 'Sppero Buddy Has Arrived!' : `Pickup in ${etaDisplay}`}
-                </Text>
-                <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 5, textAlign: 'center' }}>
-                  {driverArrived
-                    ? 'Walk to your pickup point and show OTP'
-                    : driverDist ? `Your Buddy is ${driverDist} away` : 'Sppero Buddy is on the way…'}
-                </Text>
-
-                {/* Wait timer pill when driver has arrived */}
-                {driverArrived && (
-                  <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: freeSecLeft > 0 ? C.greenGlass : C.redGlass, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 9, borderWidth: 1.5, borderColor: freeSecLeft > 0 ? C.greenBorder : C.redBorder }}>
-                    <Ionicons name={freeSecLeft > 0 ? 'time-outline' : 'warning'} size={14} color={freeSecLeft > 0 ? C.green : C.red} />
-                    <Text style={{ fontSize: 12, fontWeight: '800', color: freeSecLeft > 0 ? C.green : C.red }}>
-                      {freeSecLeft > 0
-                        ? `Free wait: ${Math.floor(freeSecLeft / 60)}m ${String(freeSecLeft % 60).padStart(2, '0')}s left`
-                        : `Wait charge active: +₹${waitFareAdd}`}
-                    </Text>
+              {/* ══ ETA HERO v2 — countdown + approach bar ══ */}
+              <View style={{ marginHorizontal: 16, marginTop: 14, marginBottom: 6 }}>
+                {driverArrived ? (
+                  /* ── Arrived card ── */
+                  <View style={{ backgroundColor: 'rgba(5,150,105,0.10)', borderRadius: 20, borderWidth: 2, borderColor: C.greenBorder, padding: 20, alignItems: 'center' }}>
+                    <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: 'rgba(5,150,105,0.18)', alignItems: 'center', justifyContent: 'center', marginBottom: 12, borderWidth: 2, borderColor: C.greenBorder }}>
+                      <Ionicons name="checkmark-circle" size={36} color={C.green} />
+                    </View>
+                    <Text style={{ fontSize: 22, fontWeight: '900', color: C.green, textAlign: 'center' }}>Driver Has Arrived!</Text>
+                    <Text style={{ fontSize: 13, color: C.textMuted, marginTop: 6, textAlign: 'center' }}>Walk to your pickup · Show the PIN to start</Text>
+                    <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: freeSecLeft > 0 ? C.greenGlass : C.redGlass, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 9, borderWidth: 1.5, borderColor: freeSecLeft > 0 ? C.greenBorder : C.redBorder }}>
+                      <Ionicons name={freeSecLeft > 0 ? 'time-outline' : 'warning'} size={14} color={freeSecLeft > 0 ? C.green : C.red} />
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: freeSecLeft > 0 ? C.green : C.red }}>
+                        {freeSecLeft > 0
+                          ? `Free wait: ${Math.floor(freeSecLeft / 60)}m ${String(freeSecLeft % 60).padStart(2, '0')}s left`
+                          : `Wait charge active: +₹${waitFareAdd}`}
+                      </Text>
+                    </View>
+                  </View>
+                ) : (
+                  /* ── En-route hero ── */
+                  <View style={{ backgroundColor: C.bgCard, borderRadius: 20, borderWidth: 1.5, borderColor: etaMins <= 2 ? C.greenBorder : C.glassBorder, overflow: 'hidden', elevation: 6, shadowColor: '#000', shadowOpacity: 0.10, shadowRadius: 14 }}>
+                    {/* Approach progress bar */}
+                    <View style={{ height: 4, backgroundColor: C.glassMid }}>
+                      <Animated.View style={{ height: '100%', backgroundColor: etaColor, width: approachAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }) }} />
+                    </View>
+                    {/* Content row */}
+                    <View style={{ padding: 18, flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                      {/* Live countdown */}
+                      <View style={{ alignItems: 'center', minWidth: 76 }}>
+                        <Text adjustsFontSizeToFit numberOfLines={1} style={{ fontSize: 38, fontWeight: '900', color: etaColor, lineHeight: 42, letterSpacing: -1.5 }}>
+                          {etaCountdown}
+                        </Text>
+                        <Text style={{ fontSize: 9, color: C.textDim, letterSpacing: 1, fontWeight: '700', marginTop: 2 }}>AWAY</Text>
+                      </View>
+                      {/* Vertical rule */}
+                      <View style={{ width: 1, height: 52, backgroundColor: C.glassBorder }} />
+                      {/* Driver name + status */}
+                      <View style={{ flex: 1, gap: 4 }}>
+                        <Text style={{ fontSize: 19, fontWeight: '900', color: C.text, lineHeight: 23 }} numberOfLines={1}>
+                          {(rideData.driver.name || 'Driver').split(' ')[0]}
+                        </Text>
+                        <Text style={{ fontSize: 12, color: C.textMuted }}>
+                          {driverDist ? `${driverDist} from pickup` : 'En route to you…'}
+                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
+                          <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: C.green }} />
+                          <Text style={{ fontSize: 10, color: C.green, fontWeight: '700' }}>Live tracking active</Text>
+                        </View>
+                      </View>
+                    </View>
                   </View>
                 )}
               </View>
+
+              {/* ── Quick message chips ── */}
+              {!driverArrived && (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 12, gap: 8 }}>
+                  {["On my way 🏃", "At the entrance 🚪", "2 min late ⏰", "Can't find you?"].map(msg => (
+                    <TouchableOpacity
+                      key={msg}
+                      onPress={() => { setChatOrigin('matching'); setScreen('chat'); }}
+                      style={{ backgroundColor: C.glassMid, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: C.glassBorder }}>
+                      <Text style={{ color: C.textMuted, fontSize: 12, fontWeight: '600' }}>{msg}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
 
               {/* ══ OTP CARD — prominent digit boxes with pop-in ══ */}
               {rideData.startOtp ? (
@@ -949,8 +1010,8 @@ export function MatchingScreen() {
                 {/* Thin divider */}
                 <View style={{ height: 1, backgroundColor: C.glassBorder, marginHorizontal: 16 }} />
 
-                {/* Chat + AR + Call buttons row */}
-                <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 12, gap: 8 }}>
+                {/* Chat + Call row */}
+                <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingTop: 12, paddingBottom: !driverArrived && driverLoc?.lat ? 4 : 12, gap: 8 }}>
                   <Animated.View style={{ flex: 1, transform: [{ scale: chatBounceAnim }] }}>
                     <TouchableOpacity
                       onPress={() => { setUnreadChat(0); setChatOrigin('matching'); setScreen('chat'); }}
@@ -962,16 +1023,6 @@ export function MatchingScreen() {
                     </TouchableOpacity>
                   </Animated.View>
 
-                  {/* AR Driver Finder button — only when driver is en route */}
-                  {!driverArrived && driverLoc?.lat && (
-                    <TouchableOpacity
-                      onPress={() => setShowAR(true)}
-                      style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 13, borderRadius: 13, backgroundColor: 'rgba(255,45,120,0.09)', borderWidth: 1.5, borderColor: C.pinkBorder }}>
-                      <Ionicons name="camera" size={15} color={C.pink} />
-                      <Text style={{ fontSize: 12, fontWeight: '800', color: C.pink }}>AR Find</Text>
-                    </TouchableOpacity>
-                  )}
-
                   <TouchableOpacity
                     onPress={callDriver}
                     style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 13, borderRadius: 13, backgroundColor: 'rgba(34,197,94,0.10)', borderWidth: 1.5, borderColor: C.greenBorder }}>
@@ -979,6 +1030,24 @@ export function MatchingScreen() {
                     <Text style={{ fontSize: 12, fontWeight: '800', color: C.green }}>Call</Text>
                   </TouchableOpacity>
                 </View>
+
+                {/* AR Find — full-width featured button */}
+                {!driverArrived && driverLoc?.lat && (
+                  <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
+                    <TouchableOpacity
+                      onPress={() => setShowAR(true)}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 16, borderRadius: 13, backgroundColor: 'rgba(255,45,120,0.07)', borderWidth: 1.5, borderColor: C.pinkBorder }}>
+                      <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: 'rgba(255,45,120,0.15)', alignItems: 'center', justifyContent: 'center' }}>
+                        <Ionicons name="camera" size={18} color={C.pink} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: C.pink }}>AR Find — Augmented Reality</Text>
+                        <Text style={{ fontSize: 10, color: C.textDim, marginTop: 1 }}>Can't spot your driver? Point camera at the street</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color={C.pink} />
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
 
               {/* ══ TRIP TIMELINE — dotted route line with fare ══ */}
@@ -1036,9 +1105,9 @@ export function MatchingScreen() {
                   <Text style={{ color: C.red, fontSize: 12, fontWeight: '900' }}>{sosActive ? '🆘 Sent' : 'SOS'}</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity onPress={() => setShowCancelModal(true)} style={{ flex: 1, backgroundColor: C.pinkGlass, borderRadius: 13, paddingVertical: 13, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, borderWidth: 1, borderColor: C.pinkBorder }}>
-                  <Ionicons name="close" size={15} color={C.pink} />
-                  <Text style={{ color: C.pink, fontSize: 12, fontWeight: '700' }}>Cancel</Text>
+                <TouchableOpacity onPress={() => setShowCancelModal(true)} style={{ flex: 1, backgroundColor: C.glass, borderRadius: 13, paddingVertical: 13, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, borderWidth: 1, borderColor: C.glassBorder }}>
+                  <Ionicons name="close" size={14} color={C.textDim} />
+                  <Text style={{ color: C.textDim, fontSize: 12, fontWeight: '600' }}>Cancel</Text>
                 </TouchableOpacity>
               </View>
 
