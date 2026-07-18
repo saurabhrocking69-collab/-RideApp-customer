@@ -1402,7 +1402,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       try {
         const res = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${MAPS_KEY}&components=country:in&location=26.8467,80.9462&radius=50000`);
         const data = await res.json();
-        const sugg = data.predictions?.map((p: any) => ({ id: p.place_id, text: p.description })) || [];
+        const sugg = data.predictions?.map((p: any) => ({
+          id:         p.place_id,
+          text:       p.description,
+          main:       p.structured_formatting?.main_text      || p.description.split(',')[0],
+          secondary:  p.structured_formatting?.secondary_text || p.description.split(',').slice(1).join(',').trim(),
+          distance_m: p.distance_meters ?? null,
+        })) || [];
         type === 'pickup' ? setPickupSugg(sugg) : setDropSugg(sugg);
       } catch (_e) {}
     }, 400);

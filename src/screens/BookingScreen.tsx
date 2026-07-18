@@ -716,7 +716,7 @@ export function BookingScreen() {
                 shadowRadius: 14,
               }}>
                 {/* Pickup row */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.greenGlass, borderRadius: 12, paddingHorizontal: 10, borderWidth: 1, borderColor: C.greenBorder }}>
                   {/* Pulsing green tint overlay while GPS locating */}
                   {pickerLoading && (
                     <Animated.View style={[
@@ -734,8 +734,8 @@ export function BookingScreen() {
                     </Animated.Text>
                   ) : (
                     <TextInput
-                      style={{ flex: 1, fontSize: 14, color: C.text, fontWeight: '600', paddingVertical: 9 }}
-                      placeholder="Pickup location..."
+                      style={{ flex: 1, fontSize: 15, color: C.text, fontWeight: '700', paddingVertical: 10 }}
+                      placeholder="Search pickup location…"
                       placeholderTextColor={C.textDim}
                       value={pickup}
                       onFocus={() => setInputFocused(true)}
@@ -766,7 +766,8 @@ export function BookingScreen() {
                 {pickupSugg.length > 0 && (
                   <View style={[s.suggBox, { zIndex: 100 }]}>
                     {pickupSugg.slice(0, 5).map((sg: any, i: number) => (
-                      <TouchableOpacity key={i} style={[s.suggItem, { paddingVertical: 12 }]}
+                      <TouchableOpacity key={i}
+                        style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 11, paddingHorizontal: 4, borderBottomWidth: i < pickupSugg.length - 1 ? 1 : 0, borderBottomColor: C.glassBorder }}
                         onPress={async () => {
                           setPickup(sg.text);
                           setPickupSugg([]);
@@ -776,11 +777,25 @@ export function BookingScreen() {
                           if (coords) {
                             setPickerCoords(coords);
                           } else {
-                            geocodePlace(sg.text, 'pickup'); // fallback: set coords silently
+                            geocodePlace(sg.text, 'pickup');
                           }
                         }}>
-                        <Ionicons name="location" size={15} color={C.green} style={{ marginRight: 8 }} />
-                        <Text style={{ fontSize: 13, color: C.text, flex: 1, fontWeight: '500' }} numberOfLines={2}>{sg.text}</Text>
+                        <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: C.greenGlass, alignItems: 'center', justifyContent: 'center', marginRight: 10, borderWidth: 1, borderColor: C.greenBorder, flexShrink: 0 }}>
+                          <Ionicons name="location-outline" size={16} color={C.green} />
+                        </View>
+                        <View style={{ flex: 1, gap: 2 }}>
+                          <Text style={{ fontSize: 13, color: C.text, fontWeight: '700' }} numberOfLines={1}>{sg.main || sg.text}</Text>
+                          {!!sg.secondary && (
+                            <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: '500' }} numberOfLines={1}>{sg.secondary}</Text>
+                          )}
+                        </View>
+                        {sg.distance_m != null && (
+                          <View style={{ marginLeft: 8, backgroundColor: C.greenGlass, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: C.greenBorder }}>
+                            <Text style={{ fontSize: 10, color: C.green, fontWeight: '700' }}>
+                              {sg.distance_m < 1000 ? `${Math.round(sg.distance_m)}m` : `${(sg.distance_m / 1000).toFixed(1)}km`}
+                            </Text>
+                          </View>
+                        )}
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -838,11 +853,11 @@ export function BookingScreen() {
                 </View>
 
                 {/* Drop row */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.pinkGlass, borderRadius: 12, paddingHorizontal: 10, borderWidth: 1, borderColor: C.pinkBorder }}>
                   <View style={{ width: 13, height: 13, borderRadius: 3, backgroundColor: C.pink, borderWidth: 2.5, borderColor: C.pinkBorder }} />
                   <TextInput
-                    style={{ flex: 1, fontSize: 14, color: C.text, fontWeight: '600', paddingVertical: 9 }}
-                    placeholder="Where to?"
+                    style={{ flex: 1, fontSize: 15, color: C.text, fontWeight: '700', paddingVertical: 10 }}
+                    placeholder="Where do you want to go?"
                     placeholderTextColor={C.textDim}
                     value={drop}
                     onFocus={() => setInputFocused(true)}
@@ -853,6 +868,7 @@ export function BookingScreen() {
                       if (dropCoords || !t) { setDropCoords(null); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; }
                     }}
                     returnKeyType="done"
+                    autoFocus={!pickup}
                   />
                   {dropPickerLoading ? (
                     <View style={{ padding: 7 }}>
@@ -889,13 +905,28 @@ export function BookingScreen() {
 
                   {showDropSugg && dropSugg.slice(0, 5).map((sg: any, i: number) => (
                     <TouchableOpacity key={i}
-                      style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 13, paddingHorizontal: 16, borderBottomWidth: i < Math.min(dropSugg.length, 5) - 1 ? 1 : 0, borderBottomColor: C.glassBorder }}
+                      style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 11, paddingHorizontal: 16, borderBottomWidth: i < Math.min(dropSugg.length, 5) - 1 ? 1 : 0, borderBottomColor: C.glassBorder }}
                       onPress={() => { setDrop(sg.text); setDropSugg([]); geocodePlace(sg.text, 'drop'); }}>
-                      <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1, borderColor: C.pinkBorder }}>
-                        <Ionicons name="flag" size={14} color={C.pink} />
+                      {/* Location pin icon — clean, neutral */}
+                      <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: C.glassMid, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1, borderColor: C.glassBorder, flexShrink: 0 }}>
+                        <Ionicons name="location-outline" size={17} color={C.textMuted} />
                       </View>
-                      <Text style={{ fontSize: 13, color: C.text, flex: 1, fontWeight: '500' }} numberOfLines={2}>{sg.text}</Text>
-                      <Ionicons name="chevron-forward" size={14} color={C.textDim} />
+                      {/* Two-line address */}
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Text style={{ fontSize: 13, color: C.text, fontWeight: '700' }} numberOfLines={1}>{sg.main || sg.text}</Text>
+                        {!!sg.secondary && (
+                          <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: '500' }} numberOfLines={1}>{sg.secondary}</Text>
+                        )}
+                      </View>
+                      {/* Distance badge */}
+                      {sg.distance_m != null && (
+                        <View style={{ marginLeft: 8, backgroundColor: C.glassMid, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: C.glassBorder }}>
+                          <Text style={{ fontSize: 10, color: C.textMuted, fontWeight: '700' }}>
+                            {sg.distance_m < 1000 ? `${Math.round(sg.distance_m)}m` : `${(sg.distance_m / 1000).toFixed(1)}km`}
+                          </Text>
+                        </View>
+                      )}
+                      <Ionicons name="chevron-forward" size={13} color={C.textDim} style={{ marginLeft: 4 }} />
                     </TouchableOpacity>
                   ))}
 
@@ -1795,8 +1826,8 @@ export function BookingScreen() {
         </View>
       </Modal>
 
-      {/* ─── Fixed book bar — pinned above device nav bar ─── */}
-      <View style={{
+      {/* ─── Fixed book bar — hidden while keyboard/search is open ─── */}
+      {!inputFocused && <View style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
         zIndex: 20,
         backgroundColor: C.bg,
@@ -1876,7 +1907,7 @@ export function BookingScreen() {
             )}
           </TouchableOpacity>
         </Animated.View>
-      </View>
+      </View>}
 
       {/* ─── Pickup map picker modal ─── */}
       <PickupMapPicker
