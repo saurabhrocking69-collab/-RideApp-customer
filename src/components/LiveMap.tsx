@@ -456,9 +456,23 @@ export const LiveMap = memo(function LiveMap({
     driverLng != null ? Math.round(driverLng * 200) / 200 : null,
   ]);
 
+  // Zoom tight to pickup while searching — sonar animation is at pickup, needs close view
+  useEffect(() => {
+    if (!pulseSearching || !pickupCoords || !mapRef.current) return;
+    const t = setTimeout(() => {
+      mapRef.current?.animateToRegion({
+        latitude:      pickupCoords.lat,
+        longitude:     pickupCoords.lng,
+        latitudeDelta:  0.005,
+        longitudeDelta: 0.005,
+      }, 900);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [pulseSearching, pickupCoords?.lat, pickupCoords?.lng]);
+
   // Fit map — uses sampled route polyline when available for tighter framing
   useEffect(() => {
-    if (followDriver || skipAutoFit || !mapRef.current) return;
+    if (followDriver || skipAutoFit || pulseSearching || !mapRef.current) return;
     let coords: { latitude: number; longitude: number }[] = [];
     const routePts = remainingRef.current;
     if (routePts.length > 1) {

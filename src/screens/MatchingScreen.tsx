@@ -1085,6 +1085,20 @@ export function MatchingScreen() {
                       </View>
                     ) : null}
                   </View>
+
+                  {/* Vehicle photo — right side */}
+                  <View style={{
+                    width: 82, height: 62, borderRadius: 12,
+                    backgroundColor: C.glassMid,
+                    borderWidth: 1, borderColor: C.glassBorder,
+                    alignItems: 'center', justifyContent: 'center',
+                    overflow: 'hidden',
+                  }}>
+                    {rideData.driver.vehicle_photo
+                      ? <Image source={{ uri: rideData.driver.vehicle_photo }} style={{ width: 82, height: 62 }} resizeMode="cover" />
+                      : <Text style={{ fontSize: 28 }}>🚗</Text>
+                    }
+                  </View>
                 </View>
 
                 {/* Thin divider */}

@@ -337,6 +337,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                   vehicle_model: d.ride.vehicle_model,
                   rating: d.ride.driver_rating,
                   photo: d.ride.driver_photo,
+                  vehicle_photo: d.ride.driver_vehicle_photo || null,
                   verified: d.ride.driver_verified ?? false,
                 },
               } : p);
@@ -597,6 +598,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                   vehicle_model: ride.vehicle_model,
                   phone:         ride.driver_phone_masked,
                   photo:         ride.driver_photo,
+                  vehicle_photo: ride.driver_vehicle_photo || null,
                   rating:        ride.driver_rating,
                   upi_id:        ride.driver_upi_id,
                 } : null;
@@ -1069,6 +1071,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                       vehicle_model: d.ride.vehicle_model,
                       rating: d.ride.driver_rating,
                       photo: d.ride.driver_photo,
+                      vehicle_photo: d.ride.driver_vehicle_photo || null,
                       verified: d.ride.driver_verified ?? false,
                       upi_id: d.ride.driver_upi_id || null,
                     },
