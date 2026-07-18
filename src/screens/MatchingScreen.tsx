@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useMemo } from 'react';
 import { Animated, Easing, Dimensions, Linking, Platform, ScrollView, Share, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -24,6 +24,27 @@ function parseEtaSec(text: string): number {
   if (m) s += parseInt(m[1]) * 60;
   if (sc) s += parseInt(sc[1]);
   return s;
+}
+
+// Bearing from (fromLat,fromLng) → (toLat,toLng); used for driver approach direction
+function computeBearing(fromLat: number, fromLng: number, toLat: number, toLng: number) {
+  const toRad = (d: number) => d * Math.PI / 180;
+  const dLng = toRad(toLng - fromLng);
+  const φ1 = toRad(fromLat), φ2 = toRad(toLat);
+  const y = Math.sin(dLng) * Math.cos(φ2);
+  const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(dLng);
+  const bearing = ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360;
+  const DIRS = [
+    { name: 'North',      arrow: '↑' },
+    { name: 'North-East', arrow: '↗' },
+    { name: 'East',       arrow: '→' },
+    { name: 'South-East', arrow: '↘' },
+    { name: 'South',      arrow: '↓' },
+    { name: 'South-West', arrow: '↙' },
+    { name: 'West',       arrow: '←' },
+    { name: 'North-West', arrow: '↖' },
+  ];
+  return { bearing, ...DIRS[Math.round(bearing / 45) % 8] };
 }
 
 // ── Countdown timer for "retry after" ──────────────────────────────────────
@@ -726,6 +747,14 @@ export function MatchingScreen() {
     ? `${Math.floor(etaRemaining / 60)}:${String(etaRemaining % 60).padStart(2, '0')}`
     : 'Arriving';
 
+  // Bearing from pickup → driver: tells customer which side driver is coming from
+  const approachDir = useMemo(() => {
+    const pLat = (pickupCoords as any)?.lat ?? (pickupCoords as any)?.latitude;
+    const pLng = (pickupCoords as any)?.lng ?? (pickupCoords as any)?.longitude;
+    if (!pLat || !pLng || !driverLoc?.lat || !driverLoc?.lng) return null;
+    return computeBearing(pLat, pLng, driverLoc.lat, driverLoc.lng);
+  }, [pickupCoords, driverLoc]);
+
   // ── Share tracking ─────────────────────────────────────────────────────────
   const shareTracking = () => {
     const d = rideData?.driver;
@@ -808,26 +837,30 @@ export function MatchingScreen() {
           })()}
         />
 
-        {/* "Driver · countdown" floating chip — bottom of map, above sheet */}
-        {rideData?.driver && !driverArrived && etaRemaining > 0 && (
+        {/* Approach direction chip — light frosted glass, top of map, below back button */}
+        {rideData?.driver && !driverArrived && approachDir && (
           <View
-            style={{ position: 'absolute', bottom: OVERLAP + 12, left: 0, right: 0, alignItems: 'center' }}
+            style={{ position: 'absolute', top: (StatusBar.currentHeight ?? 28) + 64, left: 0, right: 0, alignItems: 'center' }}
             pointerEvents="none"
           >
             <View style={{
-              backgroundColor: 'rgba(15,23,42,0.88)',
-              borderRadius: 22, paddingHorizontal: 16, paddingVertical: 9,
-              flexDirection: 'row', alignItems: 'center', gap: 8,
-              borderWidth: 1.5, borderColor: 'rgba(255,45,120,0.35)',
-              elevation: 10,
-              shadowColor: C.pink, shadowOpacity: 0.30, shadowRadius: 12,
+              backgroundColor: 'rgba(255,255,255,0.88)',
+              borderRadius: 22, paddingHorizontal: 14, paddingVertical: 7,
+              flexDirection: 'row', alignItems: 'center', gap: 7,
+              borderWidth: 1, borderColor: 'rgba(200,210,230,0.55)',
+              elevation: 6,
+              shadowColor: '#000', shadowOpacity: 0.09, shadowRadius: 10,
+              shadowOffset: { width: 0, height: 2 },
             }}>
-              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.green }} />
-              <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>
-                {(rideData.driver.name || 'Driver').split(' ')[0]} · {etaCountdown}
+              <Text style={{ fontSize: 15, lineHeight: 20 }}>{approachDir.arrow}</Text>
+              <Text style={{ fontSize: 11, fontWeight: '800', color: '#1a1a2e' }}>
+                From {approachDir.name} side
               </Text>
               {driverDist ? (
-                <Text style={{ color: 'rgba(255,255,255,0.50)', fontSize: 11 }}>· {driverDist}</Text>
+                <>
+                  <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#ccc' }} />
+                  <Text style={{ fontSize: 11, color: '#666', fontWeight: '600' }}>{driverDist}</Text>
+                </>
               ) : null}
             </View>
           </View>
@@ -870,7 +903,7 @@ export function MatchingScreen() {
       {/* ══ BOTTOM SHEET ══ */}
       <View style={{
         height: sheetH,
-        backgroundColor: C.bg,
+        backgroundColor: '#F0F2F5',
         borderTopLeftRadius: OVERLAP,
         borderTopRightRadius: OVERLAP,
         marginTop: -OVERLAP,

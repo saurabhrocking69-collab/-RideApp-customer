@@ -184,7 +184,7 @@ const G_DIM = 'rgba(34,197,94,0.55)'; // muted green for borders
 const s = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#071A10',  // deep forest green
+    backgroundColor: '#F0F2F5',
     overflow: 'hidden',
   },
 
@@ -192,12 +192,12 @@ const s = StyleSheet.create({
   blobA: {
     position: 'absolute', top: -90, right: -90,
     width: 280, height: 280, borderRadius: 140,
-    backgroundColor: 'rgba(34,197,94,0.07)',
+    backgroundColor: 'rgba(34,197,94,0.09)',
   },
   blobB: {
     position: 'absolute', bottom: 120, left: -110,
     width: 240, height: 240, borderRadius: 120,
-    backgroundColor: 'rgba(5,150,105,0.09)',
+    backgroundColor: 'rgba(5,150,105,0.07)',
   },
 
   // ── Header ─────────────────────────────────────
@@ -208,8 +208,8 @@ const s = StyleSheet.create({
   },
   globeRing: {
     width: 78, height: 78, borderRadius: 39,
-    backgroundColor: 'rgba(34,197,94,0.10)',
-    borderWidth: 1.5, borderColor: 'rgba(34,197,94,0.28)',
+    backgroundColor: 'rgba(34,197,94,0.12)',
+    borderWidth: 1.5, borderColor: 'rgba(34,197,94,0.35)',
     alignItems: 'center', justifyContent: 'center',
     marginBottom: SP.sm,
   },
@@ -220,12 +220,12 @@ const s = StyleSheet.create({
     marginBottom: SP.xs,
   },
   headline: {
-    color: '#FFFFFF',
+    color: '#111827',
     fontSize: 24, fontWeight: '800', letterSpacing: -0.4,
     textAlign: 'center',
   },
   sub: {
-    color: 'rgba(255,255,255,0.65)',  // bumped from 0.42 — passes contrast on green bg
+    color: '#6B7280',
     fontSize: 13, marginTop: 6,
     textAlign: 'center', lineHeight: 20,
   },
@@ -250,19 +250,22 @@ const s = StyleSheet.create({
     gap: 4,
   },
   cardEn: {
-    backgroundColor: 'rgba(34,197,94,0.14)',
+    backgroundColor: 'rgba(34,197,94,0.10)',
     borderWidth: 1.5,
     borderColor: G,
     shadowColor: G,
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.25,
     shadowRadius: 10,
     elevation: 6,
   },
   cardOther: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    opacity: 0.88,
+    borderColor: 'rgba(0,0,0,0.08)',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
   },
   // African wide card overrides
   cardWide: {
@@ -274,9 +277,9 @@ const s = StyleSheet.create({
 
   // Card content
   cardFlag:   { fontSize: 34 },
-  cardName:   { color: 'rgba(255,255,255,0.82)', fontSize: 14, fontWeight: '700', textAlign: 'center' },
-  cardNameEn: { color: '#FFFFFF' },
-  cardNative: { color: 'rgba(255,255,255,0.58)', fontSize: 11, textAlign: 'center' }, // bumped from 0.30
+  cardName:   { color: '#374151', fontSize: 14, fontWeight: '700', textAlign: 'center' },
+  cardNameEn: { color: '#111827' },
+  cardNative: { color: '#9CA3AF', fontSize: 11, textAlign: 'center' },
   wideTextBlock: { flex: 1 },
 
   // Badges
@@ -289,25 +292,25 @@ const s = StyleSheet.create({
   checkTxt: { color: '#fff', fontSize: 12, fontWeight: '900' },
   soonBadge: {
     position: 'absolute', top: 8, right: 8,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: R.xs, paddingHorizontal: 5, paddingVertical: 2,
-    borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.10)',
   },
   // Inline version for the wide card (not absolute)
   soonTag: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: R.xs, paddingHorizontal: 6, paddingVertical: 3,
-    borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.10)',
   },
-  soonTxt: { color: 'rgba(255,255,255,0.62)', fontSize: 8, fontWeight: '800', letterSpacing: 0.8 }, // bumped from 0.38
+  soonTxt: { color: 'rgba(0,0,0,0.40)', fontSize: 8, fontWeight: '800', letterSpacing: 0.8 },
 
   // ── Footer ─────────────────────────────────────
   footer: {
     paddingHorizontal: HPAD,
     paddingTop: SP.md,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(34,197,94,0.14)',
-    backgroundColor: 'rgba(0,0,0,0.18)',
+    borderTopColor: 'rgba(34,197,94,0.20)',
+    backgroundColor: '#F0F2F5',
   },
   btn: {
     backgroundColor: G,
@@ -315,37 +318,37 @@ const s = StyleSheet.create({
     paddingVertical: 17,
     alignItems: 'center',
     shadowColor: G,
-    shadowOpacity: 0.45,
+    shadowOpacity: 0.40,
     shadowRadius: 12,
     elevation: 8,
   },
   btnTxt: { color: '#fff', fontSize: 15, fontWeight: '800', letterSpacing: 0.2 },
   footNote: {
-    color: 'rgba(255,255,255,0.52)',  // bumped from 0.26 — was failing contrast
+    color: '#9CA3AF',
     fontSize: 11, textAlign: 'center', marginTop: SP.sm,
   },
 
   // ── Modal ──────────────────────────────────────
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.78)',
+    backgroundColor: 'rgba(0,0,0,0.55)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: SP.lg,
   },
   modal: {
-    backgroundColor: '#0F2918',   // dark green card, consistent with screen
+    backgroundColor: '#FFFFFF',
     borderRadius: R.xl,
     padding: SP.xl,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(34,197,94,0.22)',
+    borderColor: 'rgba(34,197,94,0.25)',
     ...SHADOW.lg,
   },
   mIcon:  { fontSize: 52 },
-  mTitle: { color: '#FFFFFF', fontSize: 22, fontWeight: '800', marginTop: SP.md },
-  mLang:  { fontSize: 18, color: 'rgba(255,255,255,0.72)', fontWeight: '600', marginTop: 6 },
-  mBody:  { color: 'rgba(255,255,255,0.62)', fontSize: 14, textAlign: 'center', marginTop: SP.sm, lineHeight: 22 },
+  mTitle: { color: '#111827', fontSize: 22, fontWeight: '800', marginTop: SP.md },
+  mLang:  { fontSize: 18, color: '#374151', fontWeight: '600', marginTop: 6 },
+  mBody:  { color: '#6B7280', fontSize: 14, textAlign: 'center', marginTop: SP.sm, lineHeight: 22 },
   mBtn: {
     backgroundColor: G,
     borderRadius: R.md,
