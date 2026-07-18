@@ -1514,7 +1514,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         pickup_lat: pickupCoords?.lat, pickup_lng: pickupCoords?.lng, drop_lat: dropLat, drop_lng: dropLng,
         discount: promoDiscount, promo_code: promoDiscount > 0 ? promoCode : null
       });
-      if (data._error) { setResult('❌ ' + data.message); return; }
+      if (data.restricted) { setResult('🚫 ' + (data.error || 'Account on hold — contact support')); return; }
+      if (data._error || data.error) { setResult('❌ ' + (data.message || data.error || 'Booking failed')); return; }
+      if (!data.ride_id) { setResult('❌ Booking failed — please try again'); return; }
       if (promoDiscount > 0 && data.ride_id) {
         try { await apiPost('/api/promo/apply', { code: promoCode, phone, ride_id: data.ride_id, discount: promoDiscount }); } catch (_e) {}
       }
