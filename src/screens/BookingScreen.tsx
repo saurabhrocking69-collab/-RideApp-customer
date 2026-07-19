@@ -240,6 +240,18 @@ export function BookingScreen() {
   const onBookPressIn  = () => Animated.spring(bookBtnScale, { toValue: 0.97, useNativeDriver: true, friction: 5, tension: 300 }).start();
   const onBookPressOut = () => Animated.spring(bookBtnScale, { toValue: 1,    useNativeDriver: true, friction: 5, tension: 300 }).start();
 
+  // Pulse the book button once when fare becomes ready — rewarding "ready to book" signal
+  const prevHasFareRef = useRef(false);
+  useEffect(() => {
+    if (hasFare && !prevHasFareRef.current) {
+      Animated.sequence([
+        Animated.spring(bookBtnScale, { toValue: 1.04, useNativeDriver: true, friction: 4, tension: 250 }),
+        Animated.spring(bookBtnScale, { toValue: 1,    useNativeDriver: true, friction: 5, tension: 180 }),
+      ]).start();
+    }
+    prevHasFareRef.current = hasFare;
+  }, [hasFare]);
+
   // Forward geocode an address string → lat/lng (used before opening picker)
   const geocodeForPicker = async (address: string): Promise<{ lat: number; lng: number } | null> => {
     try {
@@ -733,12 +745,12 @@ export function BookingScreen() {
                 padding: 14,
                 paddingBottom: hasDropDown ? 10 : 14,
                 marginBottom: hasDropDown ? 0 : 14,
-                elevation: 6,
+                elevation: 8,
                 borderBottomWidth: hasDropDown ? 0 : 1.5,
                 borderColor: C.glassBorder,
-                shadowColor: C.pink,
-                shadowOpacity: 0.08,
-                shadowRadius: 14,
+                shadowColor: C.plum,
+                shadowOpacity: 0.12,
+                shadowRadius: 18,
               }}>
                 {/* Pickup row */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.greenGlass, borderRadius: 12, paddingHorizontal: 10, borderWidth: 1, borderColor: C.greenBorder }}>
@@ -760,7 +772,7 @@ export function BookingScreen() {
                   ) : (
                     <TextInput
                       style={{ flex: 1, fontSize: 15, color: C.text, fontWeight: '700', paddingVertical: 10 }}
-                      placeholder="Search pickup location…"
+                      placeholder="Pickup location"
                       placeholderTextColor={C.textDim}
                       value={pickup}
                       onFocus={() => setInputFocused(true)}
@@ -863,18 +875,23 @@ export function BookingScreen() {
                   </View>
                 )}
 
-                {/* Yellow dotted separator + swap */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 5, paddingLeft: 5 }}>
-                  <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
-                    {Array.from({ length: 40 }).map((_, i) => (
-                      <View key={i} style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#F59E0B', opacity: 0.7 }} />
-                    ))}
-                  </View>
+                {/* Separator with floating swap button */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 5 }}>
+                  <View style={{ flex: 1, height: 1, backgroundColor: C.glassBorder }} />
                   <TouchableOpacity
                     onPress={swapLocations}
-                    style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: C.glassMid, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#F59E0B', marginLeft: 8, marginRight: 2 }}>
-                    <Ionicons name="swap-vertical" size={14} color={C.pink} />
+                    style={{
+                      width: 32, height: 32, borderRadius: 16,
+                      backgroundColor: C.bgCard,
+                      alignItems: 'center', justifyContent: 'center',
+                      borderWidth: 1.5, borderColor: C.glassBorder,
+                      marginHorizontal: 10,
+                      elevation: 4,
+                      shadowColor: '#000', shadowOpacity: 0.10, shadowRadius: 6,
+                    }}>
+                    <Ionicons name="swap-vertical" size={15} color={C.pink} />
                   </TouchableOpacity>
+                  <View style={{ flex: 1, height: 1, backgroundColor: C.glassBorder }} />
                 </View>
 
                 {/* Drop row */}
@@ -882,7 +899,7 @@ export function BookingScreen() {
                   <View style={{ width: 13, height: 13, borderRadius: 3, backgroundColor: C.pink, borderWidth: 2.5, borderColor: C.pinkBorder }} />
                   <TextInput
                     style={{ flex: 1, fontSize: 15, color: C.text, fontWeight: '700', paddingVertical: 10 }}
-                    placeholder="Where do you want to go?"
+                    placeholder="Where to?"
                     placeholderTextColor={C.textDim}
                     value={drop}
                     onFocus={() => setInputFocused(true)}
@@ -1081,7 +1098,16 @@ export function BookingScreen() {
                   </View>
                   <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 10, fontWeight: '900', letterSpacing: 1.4 }}>LIVE ROUTE</Text>
                   <View style={{ flex: 1 }} />
-                  <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, fontWeight: '600' }}>tap card to edit</Text>
+                  {etaLoaded && Object.keys(driverEta).length > 0 ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(74,222,128,0.15)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
+                      <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#4ADE80' }} />
+                      <Text style={{ color: '#4ADE80', fontSize: 10, fontWeight: '800' }}>
+                        driver ~{Math.min(...Object.values(driverEta).map((v: any) => v?.eta_min ?? 999))} min
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text style={{ color: 'rgba(255,255,255,0.30)', fontSize: 10, fontWeight: '600' }}>tap to edit</Text>
+                  )}
                 </View>
 
                 {/* Hairline divider */}
@@ -1091,7 +1117,7 @@ export function BookingScreen() {
                 <View style={{ flexDirection: 'row', paddingVertical: 16, paddingHorizontal: 16 }}>
                   {/* Time */}
                   <Animated.View style={{ flex: 1, opacity: etaTimeFade, transform: [{ translateY: etaTimeSlide }] }}>
-                    <Text style={{ color: '#fff', fontSize: 28, fontWeight: '900', letterSpacing: -0.5 }}>{routeEta}</Text>
+                    <Text style={{ color: '#fff', fontSize: 30, fontWeight: '900', letterSpacing: -0.8 }}>{routeEta}</Text>
                     <Text style={{ color: 'rgba(255,255,255,0.50)', fontSize: 11, fontWeight: '700', marginTop: 4, letterSpacing: 0.3 }}>Est. travel time</Text>
                   </Animated.View>
 
@@ -1100,7 +1126,7 @@ export function BookingScreen() {
 
                   {/* Distance */}
                   <Animated.View style={{ flex: 1, paddingLeft: 18, opacity: etaDistFade, transform: [{ translateY: etaDistSlide }] }}>
-                    <Text style={{ color: '#fff', fontSize: 28, fontWeight: '900', letterSpacing: -0.5 }}>{routeDist}</Text>
+                    <Text style={{ color: '#fff', fontSize: 30, fontWeight: '900', letterSpacing: -0.8 }}>{routeDist}</Text>
                     <Text style={{ color: 'rgba(255,255,255,0.50)', fontSize: 11, fontWeight: '700', marginTop: 4, letterSpacing: 0.3 }}>Total distance</Text>
                   </Animated.View>
                 </View>
@@ -1188,13 +1214,16 @@ export function BookingScreen() {
                         ? (isLux ? 'rgba(124,58,237,0.09)' : C.pinkGlass)
                         : notAvail ? C.glassMid : C.bgCard,
                       borderRadius: R.md,
-                      borderWidth: isSel ? 2 : 1,
+                      borderWidth: isSel ? 2.5 : 1,
                       borderColor: isSel
                         ? (isLux ? C.purple : C.pink)
                         : isLux ? C.purpleBorder : C.glassBorder,
                       opacity: notAvail ? 0.5 : 1,
                       overflow: 'hidden',
-                      ...(isSel ? (isLux ? SHADOW.sm : SHADOW.pink) : SHADOW.sm),
+                      elevation: isSel ? 14 : 2,
+                      shadowColor: isSel ? (isLux ? C.purple : C.pink) : '#000',
+                      shadowOpacity: isSel ? 0.38 : 0.06,
+                      shadowRadius: isSel ? 18 : 4,
                     }}>
 
                     {/* Selected bottom accent bar */}
@@ -1926,16 +1955,16 @@ export function BookingScreen() {
               onPressIn={hasFare && !loading ? onBookPressIn : undefined}
               onPressOut={hasFare && !loading ? onBookPressOut : undefined}
               style={{
-                borderRadius: 15,
+                borderRadius: 16,
                 backgroundColor: loading ? C.glassMid
                   : hasFare ? (scheduledAt ? '#F59E0B' : C.plum)
                   : C.glassMid,
-                paddingVertical: 15, paddingHorizontal: 20,
+                paddingVertical: 17, paddingHorizontal: 20,
                 flexDirection: 'row', alignItems: 'center',
-                elevation: hasFare && !loading ? 8 : 0,
+                elevation: hasFare && !loading ? 14 : 0,
                 shadowColor: scheduledAt ? '#F59E0B' : C.plum,
-                shadowOpacity: hasFare && !loading ? 0.28 : 0,
-                shadowRadius: 12,
+                shadowOpacity: hasFare && !loading ? 0.44 : 0,
+                shadowRadius: 20,
               }}>
               {loading ? (
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
@@ -1947,17 +1976,17 @@ export function BookingScreen() {
               ) : hasFare ? (
                 <>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 17, fontWeight: '900', color: '#fff', letterSpacing: -0.2 }}>
+                    <Text style={{ fontSize: 18, fontWeight: '900', color: '#fff', letterSpacing: -0.3 }}>
                       {scheduledAt ? 'Schedule Ride' : 'Book Ride'}
                     </Text>
-                    <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)', marginTop: 1, fontWeight: '600' }}>
+                    <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)', marginTop: 2, fontWeight: '600' }}>
                       {scheduledAt
-                        ? `${selRide?.label} · Tap to confirm`
-                        : `${selRide?.desc || selRide?.label} · Tap to confirm`}
+                        ? `${selRide?.label} · scheduled`
+                        : `${selRide?.label} · instant booking`}
                     </Text>
                   </View>
                   <View style={{ alignItems: 'flex-end', gap: 1 }}>
-                    <Text style={{ fontSize: 26, fontWeight: '900', color: '#fff', letterSpacing: -0.5 }}>₹{finalFare}</Text>
+                    <Text style={{ fontSize: 30, fontWeight: '900', color: '#fff', letterSpacing: -0.5 }}>₹{finalFare}</Text>
                     {discount > 0 && (
                       <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.38)', textDecorationLine: 'line-through' }}>₹{rawFare}</Text>
                     )}
