@@ -1,4 +1,4 @@
-export const API = 'https://sppero.com';
+export const API = 'https://api.sppero.com';
 export const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 
 export const DEFAULT_HOURLY_PACKAGES: any = {
