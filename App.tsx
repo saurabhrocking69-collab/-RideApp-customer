@@ -70,6 +70,12 @@ function BackHandlerWrapper() {
         return true;
       }
 
+      // Intercity plan screen → back to booking to adjust pickup/drop
+      if (screen === 'intercity') {
+        setScreen('booking');
+        return true;
+      }
+
       if (screen === 'home') {
         if (tab !== 'home') { setTab('home'); return true; }
         // Double-tap to exit

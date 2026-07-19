@@ -51,6 +51,9 @@ interface AppContextType {
   screen: Screen; setScreen: (s: Screen) => void;
   tab: Tab; setTab: (t: Tab) => void;
   scheduleIntent: boolean; setScheduleIntent: (v: boolean) => void;
+  intercityRoute: { km: number; durationMin: number } | null;
+  setIntercityRoute: (v: { km: number; durationMin: number } | null) => void;
+  bookIntercity: (p: { vehicleType: 'car' | 'luxury'; tripKind: 'oneway' | 'round'; scheduledAt?: string | null; returnAt?: string | null }) => Promise<any>;
   // Auth
   phone: string; setPhone: (p: string) => void;
   otp: string; setOtp: (o: string) => void;
@@ -281,6 +284,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // When true, BookingScreen auto-opens the schedule picker on mount (set by
   // entry points like the Profile → Scheduled Rides "Book a Scheduled Ride" CTA).
   const [scheduleIntent, setScheduleIntent] = useState(false);
+  // Set when the selected route is >80km — BookingScreen hands off to IntercityScreen
+  const [intercityRoute, setIntercityRoute] = useState<{ km: number; durationMin: number } | null>(null);
 
   // ── Auth ────────────────────────────────────────────────────────────────
   const [phone, setPhone] = useState('');
@@ -1453,6 +1458,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const loadFareEstimates = async (km: number, durationMin?: number) => {
     lastFareKmRef.current = km;
     if (durationMin != null) lastFareDurRef.current = durationMin;
+    // Long-distance route (>80km) → this is an intercity trip, not a city ride.
+    // Hand off to the IntercityScreen instead of loading city fares.
+    if (km > 80) {
+      setIntercityRoute({ km, durationMin: durationMin ?? lastFareDurRef.current ?? (km / 20) * 60 });
+      setFareLoading(false);
+      setScreen((cur: Screen) => (cur === 'booking' || cur === 'intercity' ? 'intercity' : cur));
+      return;
+    }
+    setIntercityRoute(null);
     setFareLoading(true);
     const est: any = {};
     const durMin = durationMin ?? lastFareDurRef.current ?? (km / 20) * 60;
@@ -1559,6 +1573,48 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setBookTime(Date.now()); setCancelTimer(60); setSurgeCount(0); setSurgeFare(''); setSearchElapsed(0);
       try { const csd = await apiGet(`/api/customer/cancel-status?phone=${phone || '9999999999'}`); setFreeCancelsLeft(csd.free_cancels_left ?? 3); } catch (_e) {}
     } catch { setResult('❌ Could not connect to server'); }
+    finally { setLoading(false); }
+  };
+
+  const bookIntercity = async (p: { vehicleType: 'car' | 'luxury'; tripKind: 'oneway' | 'round'; scheduledAt?: string | null; returnAt?: string | null }) => {
+    if (!pickup || !drop || !intercityRoute) { Alert.alert('Missing route', 'Please select pickup and drop first'); return null; }
+    setLoading(true); setPaymentDone(false);
+    try {
+      const data = await apiPost('/api/intercity/book', {
+        passenger_phone: phone || '9999999999',
+        pickup, drop_location: drop,
+        vehicle_type: p.vehicleType,
+        trip_kind:    p.tripKind,
+        distance:     intercityRoute.km,
+        pickup_lat: pickupCoords?.lat, pickup_lng: pickupCoords?.lng,
+        drop_lat:   dropCoords?.lat,   drop_lng:   dropCoords?.lng,
+        scheduled_at: p.scheduledAt || null,
+        return_at:    p.returnAt || null,
+        discount: 0, promo_code: null,
+      });
+      if (data.restricted) { Alert.alert('Account on hold', data.error || 'Contact support: help@sppero.in'); return null; }
+      if (data._error || data.error) { Alert.alert('Could not book', data.error || data.message || 'Please try again'); return null; }
+      if (!data.ride_id) { Alert.alert('Could not book', 'Please try again'); return null; }
+
+      if (data.status === 'scheduled') {
+        setScreen('scheduled-rides');
+        Alert.alert(
+          '🛣️ Intercity Trip Scheduled!',
+          `Departure ${new Date(p.scheduledAt!).toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })}. We'll match a driver 15 mins before.`,
+          [{ text: 'View Trips', style: 'default' }]
+        );
+        return data;
+      }
+
+      // Leave now → same live-matching flow as a standard ride
+      setRideData({ ...data, discount: 0, platform_fee: 0 });
+      setScreen('matching'); setResult(''); setAltSuggest(null);
+      AsyncStorage.setItem('activeStdRideId', String(data.ride_id)).catch(() => {});
+      joinRideSocket(data.ride_id);
+      ride.setRide(data); ride.startPolling(phone || '9999999999');
+      setBookTime(Date.now()); setCancelTimer(60); setSurgeCount(0); setSurgeFare(''); setSearchElapsed(0);
+      return data;
+    } catch { Alert.alert('Could not book', 'Network error — please try again'); return null; }
     finally { setLoading(false); }
   };
 
@@ -1905,6 +1961,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ═══════════════════════════════════════════════════════════════════════
   const value: AppContextType = {
     screen, setScreen, tab, setTab, scheduleIntent, setScheduleIntent,
+    intercityRoute, setIntercityRoute, bookIntercity,
     phone, setPhone, otp, setOtp, otpSent, setOtpSent, otpDigits, setOtpDigits,
     resendTimer, setResendTimer, canResend, setCanResend, otpRefs, otpShakeAnim, otpSuccessAnim,
     userName, setUserName, gender, setGender,
