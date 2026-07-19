@@ -830,12 +830,8 @@ export function MatchingScreen() {
           showTraffic={false}
           pulsePickup={!!rideData?.driver && !driverArrived}
           pulseSearching={!!rideData && !rideData?.driver}
-          walkOrigin={(() => {
-            const lat = (userCoords as any)?.latitude ?? (userCoords as any)?.lat;
-            const lng = (userCoords as any)?.longitude ?? (userCoords as any)?.lng;
-            return lat != null ? { lat: lat as number, lng: lng as number } : null;
-          })()}
         />
+
 
         {/* Approach direction chip — light frosted glass, top of map, below back button */}
         {rideData?.driver && !driverArrived && approachDir && (
