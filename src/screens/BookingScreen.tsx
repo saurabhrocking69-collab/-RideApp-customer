@@ -1826,88 +1826,86 @@ export function BookingScreen() {
         </View>
       </Modal>
 
-      {/* ─── Fixed book bar — hidden while keyboard/search is open ─── */}
-      {!inputFocused && <View style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0,
-        zIndex: 20,
-        backgroundColor: C.bg,
-        paddingHorizontal: 14,
-        paddingTop: 12,
-        paddingBottom: Math.max(bottomInset, 12),
-        borderTopWidth: 1,
-        borderTopColor: C.glassBorder,
-        elevation: 16,
-        shadowColor: '#000',
-        shadowOpacity: 0.06,
-        shadowRadius: 16,
-      }}>
+      {/* ─── Fixed book bar — split layout: info left · action right ─── */}
+      {(!inputFocused || hasFare) && (
+        <View style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
+          backgroundColor: C.bg,
+          paddingHorizontal: 16, paddingTop: 14,
+          paddingBottom: Math.max(bottomInset, 14),
+          borderTopWidth: 1, borderTopColor: C.glassBorder,
+          elevation: 18, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 16,
+          flexDirection: 'row', alignItems: 'center', gap: 12,
+        }}>
 
-        {/* Info row: vehicle · payment · saved */}
-        {hasFare && !loading && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 6 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1 }}>
-              <RideVehicleIcon id={rideType} size={13} color={C.plum} />
-              <Text style={{ fontSize: 12, fontWeight: '700', color: C.text }}>{selRide?.label}</Text>
-              <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: C.glassBorder }} />
-              <Ionicons name="cash-outline" size={12} color={C.textMuted} />
-              <Text style={{ fontSize: 12, fontWeight: '600', color: C.textMuted }}>Cash</Text>
-            </View>
-            {discount > 0 ? (
-              <View style={{ backgroundColor: C.greenGlass, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: C.greenBorder }}>
-                <Text style={{ fontSize: 10, color: C.green, fontWeight: '800' }}>₹{discount} saved</Text>
-              </View>
-            ) : null}
-          </View>
-        )}
-
-        {/* Main book button */}
-        <Animated.View style={{ transform: [{ scale: bookBtnScale }] }}>
-          <TouchableOpacity
-            activeOpacity={hasFare && !loading ? 0.88 : 1}
-            onPress={hasFare && !loading ? handleBook : undefined}
-            onPressIn={hasFare && !loading ? onBookPressIn : undefined}
-            onPressOut={hasFare && !loading ? onBookPressOut : undefined}
-            style={{
-              borderRadius: 18,
-              backgroundColor: loading ? C.glassMid : hasFare ? C.plum : C.glassMid,
-              paddingVertical: 17,
-              paddingHorizontal: 20,
-              flexDirection: 'row',
-              alignItems: 'center',
-              elevation: hasFare && !loading ? 12 : 2,
-              shadowColor: C.plum,
-              shadowOpacity: hasFare && !loading ? 0.28 : 0,
-              shadowRadius: 16,
-            }}>
-
-            {/* Left: label + subtitle */}
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 17, fontWeight: '900', color: hasFare && !loading ? '#fff' : C.textMuted, letterSpacing: -0.2 }}>
-                {loading ? 'Finding driver…' : hasFare ? 'Book Ride' : 'Set pickup & drop'}
-              </Text>
-              {hasFare && !loading && (
-                <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', marginTop: 2, fontWeight: '600' }}>
-                  Tap to confirm · {selRide?.desc || selRide?.label}
-                </Text>
-              )}
-            </View>
-
-            {/* Right: fare or icon */}
-            {loading ? (
-              <ActivityIndicator size="small" color={C.textMuted} />
-            ) : hasFare ? (
-              <View style={{ alignItems: 'flex-end', gap: 2 }}>
-                <Text style={{ fontSize: 24, fontWeight: '900', color: '#fff', letterSpacing: -0.5 }}>₹{finalFare}</Text>
-                {discount > 0 && (
-                  <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', textDecorationLine: 'line-through' }}>₹{rawFare}</Text>
-                )}
-              </View>
+          {/* Left: vehicle + ETA + payment */}
+          <View style={{ flex: 1 }}>
+            {hasFare && !loading ? (
+              <>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <RideVehicleIcon id={rideType} size={14} color={C.plum} />
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: C.text }}>{selRide?.label}</Text>
+                  {etaLoaded && driverEta[rideType] && (
+                    <>
+                      <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: C.glassBorder }} />
+                      <Text style={{ fontSize: 12, color: C.green, fontWeight: '700' }}>
+                        {driverEta[rideType].eta_min <= 1 ? '< 1 min' : `~${driverEta[rideType].eta_min} min`}
+                      </Text>
+                    </>
+                  )}
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                  <Ionicons name="cash-outline" size={12} color={C.textMuted} />
+                  <Text style={{ fontSize: 12, color: C.textMuted, fontWeight: '600' }}>Cash payment</Text>
+                  {discount > 0 && (
+                    <View style={{ backgroundColor: C.greenGlass, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: C.greenBorder, marginLeft: 2 }}>
+                      <Text style={{ fontSize: 10, color: C.green, fontWeight: '800' }}>₹{discount} saved</Text>
+                    </View>
+                  )}
+                </View>
+              </>
+            ) : loading ? (
+              <Text style={{ fontSize: 14, color: C.textMuted, fontWeight: '700' }}>Finding driver…</Text>
             ) : (
-              <Ionicons name="arrow-forward" size={20} color={C.textMuted} />
+              <Text style={{ fontSize: 13, color: C.textDim, fontWeight: '600' }}>Select pickup & drop</Text>
             )}
-          </TouchableOpacity>
-        </Animated.View>
-      </View>}
+          </View>
+
+          {/* Right: Book button */}
+          <Animated.View style={{ transform: [{ scale: bookBtnScale }] }}>
+            <TouchableOpacity
+              activeOpacity={hasFare && !loading ? 0.85 : 1}
+              onPress={hasFare && !loading ? handleBook : undefined}
+              onPressIn={hasFare && !loading ? onBookPressIn : undefined}
+              onPressOut={hasFare && !loading ? onBookPressOut : undefined}
+              style={{
+                borderRadius: 16,
+                backgroundColor: loading ? C.glassMid : hasFare ? C.plum : C.glassMid,
+                paddingVertical: 13, paddingHorizontal: 22,
+                alignItems: 'center', justifyContent: 'center',
+                minWidth: 116,
+                elevation: hasFare && !loading ? 10 : 0,
+                shadowColor: C.plum, shadowOpacity: hasFare && !loading ? 0.35 : 0, shadowRadius: 12,
+              }}>
+              {loading ? (
+                <ActivityIndicator size="small" color={C.textMuted} />
+              ) : hasFare ? (
+                <>
+                  <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.65)', fontWeight: '800', letterSpacing: 0.8, marginBottom: 1 }}>BOOK NOW</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3 }}>
+                    <Text style={{ fontSize: 21, fontWeight: '900', color: '#fff', letterSpacing: -0.5 }}>₹{finalFare}</Text>
+                    {discount > 0 && (
+                      <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.40)', textDecorationLine: 'line-through' }}>₹{rawFare}</Text>
+                    )}
+                  </View>
+                </>
+              ) : (
+                <Ionicons name="arrow-forward" size={20} color={C.textDim} />
+              )}
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      )}
 
       {/* ─── Pickup map picker modal ─── */}
       <PickupMapPicker
