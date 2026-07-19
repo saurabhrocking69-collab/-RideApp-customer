@@ -677,7 +677,9 @@ export function BookingScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets
-          contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 14 }}>
+          // Clear the fixed book bar (~130px + safe area) so the last rows
+          // (offers, fare details) are never hidden behind the CTA
+          contentContainerStyle={{ paddingBottom: 150 + bottomInset, paddingHorizontal: 14 }}>
 
           {/* ─── Location card ─── */}
           {pickupCoords && dropCoords ? (
@@ -1894,12 +1896,14 @@ export function BookingScreen() {
         <View style={{
           position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
           backgroundColor: C.bg,
-          paddingHorizontal: 14, paddingTop: 10,
-          paddingBottom: Math.max(bottomInset, 8),
+          paddingHorizontal: 14, paddingTop: 12,
+          // Breathing room above the system nav bar: at least 18px on
+          // button-nav devices (inset 0), inset + 8 on gesture devices
+          paddingBottom: Math.max(bottomInset, 10) + 8,
           borderTopWidth: 1, borderTopColor: C.glassBorder,
           elevation: 22,
           shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 14,
-          gap: 8,
+          gap: 10,
         }}>
 
           {/* Compact info strip — vehicle / ETA / cash + schedule toggle */}
