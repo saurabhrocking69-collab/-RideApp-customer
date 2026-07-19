@@ -50,6 +50,7 @@ interface AppContextType {
   // Navigation
   screen: Screen; setScreen: (s: Screen) => void;
   tab: Tab; setTab: (t: Tab) => void;
+  scheduleIntent: boolean; setScheduleIntent: (v: boolean) => void;
   // Auth
   phone: string; setPhone: (p: string) => void;
   otp: string; setOtp: (o: string) => void;
@@ -277,6 +278,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ── Navigation ──────────────────────────────────────────────────────────
   const [screen, setScreen] = useState<Screen>('splash');
   const [tab, setTab] = useState<Tab>('home');
+  // When true, BookingScreen auto-opens the schedule picker on mount (set by
+  // entry points like the Profile → Scheduled Rides "Book a Scheduled Ride" CTA).
+  const [scheduleIntent, setScheduleIntent] = useState(false);
 
   // ── Auth ────────────────────────────────────────────────────────────────
   const [phone, setPhone] = useState('');
@@ -1900,7 +1904,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // PROVIDE
   // ═══════════════════════════════════════════════════════════════════════
   const value: AppContextType = {
-    screen, setScreen, tab, setTab,
+    screen, setScreen, tab, setTab, scheduleIntent, setScheduleIntent,
     phone, setPhone, otp, setOtp, otpSent, setOtpSent, otpDigits, setOtpDigits,
     resendTimer, setResendTimer, canResend, setCanResend, otpRefs, otpShakeAnim, otpSuccessAnim,
     userName, setUserName, gender, setGender,

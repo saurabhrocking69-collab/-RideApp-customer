@@ -126,7 +126,7 @@ function RideCard({ ride, onTap }: { ride: any; onTap: () => void }) {
 }
 
 export function ScheduledRidesScreen() {
-  const { phone, setScreen, setSelectedScheduledRide } = useApp() as any;
+  const { phone, setScreen, setSelectedScheduledRide, setScheduleIntent } = useApp() as any;
   const insets = useSafeAreaInsets();
   const [rides, setRides]     = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -194,7 +194,7 @@ export function ScheduledRidesScreen() {
             Book a ride in advance from the Booking screen using the schedule option.
           </Text>
           <TouchableOpacity
-            onPress={() => setScreen('booking')}
+            onPress={() => { setScheduleIntent(true); setScreen('booking'); }}
             style={{ marginTop: 24, backgroundColor: AMBER, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 14 }}
           >
             <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>Book a Scheduled Ride</Text>

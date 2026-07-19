@@ -42,6 +42,7 @@ export function BookingScreen() {
     phone,
     availablePromos, setAvailablePromos,
     scheduleRide,
+    scheduleIntent, setScheduleIntent,
   } = useApp() as any;
 
   const selRide   = RIDES.find(r => r.id === rideType);
@@ -123,6 +124,14 @@ export function BookingScreen() {
   // ── Schedule-for-later ──────────────────────────────────────────────────────
   const [scheduledAt, setScheduledAt]           = useState<ScheduleResult | null>(null);
   const [showSchedulePicker, setShowSchedulePicker] = useState(false);
+
+  // Arrived here via "Book a Scheduled Ride" (Profile → Scheduled Rides) — open the picker.
+  useEffect(() => {
+    if (scheduleIntent) {
+      setShowSchedulePicker(true);
+      setScheduleIntent(false);
+    }
+  }, [scheduleIntent]);
 
   const handleScheduleRide = useCallback(async () => {
     if (!pickup || !drop || !pickupCoords || !dropCoords) return;
