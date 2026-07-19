@@ -1699,6 +1699,47 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const addMoney = async (amt: number) => { openRazorpayTopup(amt); };
 
+  // ── Scheduled rides ──────────────────────────────────────────────────────
+  const [selectedScheduledRide, setSelectedScheduledRide] = useState<any>(null);
+
+  const scheduleRide = async (payload: {
+    pickup: string; drop: string; rideType: string;
+    pickupLat: number; pickupLng: number; dropLat: number; dropLng: number;
+    distanceKm: number; durationMin: number; discount: number; promoCode: string;
+    scheduledAt: string;
+  }) => {
+    setLoading(true);
+    try {
+      const data = await apiPost('/api/scheduled', {
+        passenger_phone: phone,
+        pickup:         payload.pickup,
+        drop_location:  payload.drop,
+        ride_type:      payload.rideType,
+        pickup_lat:     payload.pickupLat,
+        pickup_lng:     payload.pickupLng,
+        drop_lat:       payload.dropLat,
+        drop_lng:       payload.dropLng,
+        distance:       payload.distanceKm,
+        duration_min:   payload.durationMin,
+        discount:       payload.discount,
+        promo_code:     payload.promoCode,
+        scheduled_at:   payload.scheduledAt,
+      });
+      setScreen('scheduled-rides');
+      Alert.alert(
+        '📅 Ride Scheduled!',
+        `Your ${payload.rideType} is booked for ${new Date(payload.scheduledAt).toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })}. We'll match a driver 15 mins before.`,
+        [{ text: 'View Rides', style: 'default' }]
+      );
+      return data;
+    } catch (err: any) {
+      Alert.alert('Could not schedule', err?.message || 'Please try again');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ── Data loaders ─────────────────────────────────────────────────────────
   const loadHistory = async (ph: string) => {
     try {
@@ -1920,7 +1961,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     triggerSOS, applyReferral, shareReferral, savePlace, deletePlace,
     animateStar, sendChat, initiateCall, callDriver, rideIcon,
     rewardsDash, setRewardsDash, cashbackEarned, setCashbackEarned, loadRewardsDash,
-  };
+    selectedScheduledRide, setSelectedScheduledRide, scheduleRide,
+  } as any;
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

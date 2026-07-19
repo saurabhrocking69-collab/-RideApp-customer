@@ -2452,6 +2452,12 @@ function ProfileTab() {
           </ShineCard>
 
           {/* ── Offers & Rewards ─────────────────────────────────────────── */}
+          {/* ── Scheduled Rides ──────────────────────────────────────────── */}
+          <Text style={{ fontSize: 11, fontWeight: '800', color: C.textDim, letterSpacing: 1.2, marginBottom: 8, paddingHorizontal: 2 }}>SCHEDULE</Text>
+          {menuSection([
+            { label: 'Scheduled Rides', sub: 'Book rides up to 2 days in advance', icon: 'calendar-outline', color: '#F59E0B', bg: C.yellowGlass, border: C.yellowBorder, onPress: () => setScreen('scheduled-rides') },
+          ])}
+
           <Text style={{ fontSize: 11, fontWeight: '800', color: C.textDim, letterSpacing: 1.2, marginBottom: 8, paddingHorizontal: 2 }}>OFFERS & REWARDS</Text>
           {menuSection([
             { label: 'Refer & Earn',     sub: 'Invite friends, earn ₹50 each', icon: 'gift-outline',     color: C.pink,   bg: C.pinkGlass,   border: C.pinkBorder,   onPress: () => { loadReferral(); setScreen('referral'); } },

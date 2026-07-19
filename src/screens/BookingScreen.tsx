@@ -1,5 +1,6 @@
 import { ActivityIndicator, Animated, Dimensions, Easing, KeyboardAvoidingView, Modal, Platform, ScrollView, StatusBar, StyleSheet, TextInput, Text, TouchableOpacity, View } from 'react-native';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { SchedulePickerSheet, ScheduleResult } from '../components/SchedulePickerSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
@@ -40,7 +41,8 @@ export function BookingScreen() {
     userCoords, setUserCoords,
     phone,
     availablePromos, setAvailablePromos,
-  } = useApp();
+    scheduleRide,
+  } = useApp() as any;
 
   const selRide   = RIDES.find(r => r.id === rideType);
   const cardAnims = useRef<Record<string, Animated.Value>>(
@@ -117,6 +119,29 @@ export function BookingScreen() {
   const [surgeLabel, setSurgeLabel]           = useState<string | null>(null);
   const [vehicleBrowsing, setVehicleBrowsing] = useState(false);
   const [fareHistoryEntry, setFareHistoryEntry] = useState<{ fare: number; date: string } | null>(null);
+
+  // ── Schedule-for-later ──────────────────────────────────────────────────────
+  const [scheduledAt, setScheduledAt]           = useState<ScheduleResult | null>(null);
+  const [showSchedulePicker, setShowSchedulePicker] = useState(false);
+
+  const handleScheduleRide = useCallback(async () => {
+    if (!pickup || !drop || !pickupCoords || !dropCoords) return;
+    const _est2 = fareEstimates[rideType];
+    await scheduleRide({
+      pickup, drop,
+      rideType,
+      pickupLat:   (pickupCoords as any).lat,
+      pickupLng:   (pickupCoords as any).lng,
+      dropLat:     (dropCoords as any).lat,
+      dropLng:     (dropCoords as any).lng,
+      distanceKm:  parseFloat(_est2?.distance_km ?? '5') || 5,
+      durationMin: parseFloat(_est2?.duration_min ?? '15') || 15,
+      discount:    promoDiscount,
+      promoCode:   promoCode || '',
+      scheduledAt: scheduledAt!.iso,
+    });
+    setScheduledAt(null);
+  }, [pickup, drop, rideType, pickupCoords, dropCoords, fareEstimates, promoDiscount, promoCode, scheduledAt, scheduleRide]);
   // Load fare history for current pickup+drop+rideType combo
   useEffect(() => {
     if (!pickup || !drop) { setFareHistoryEntry(null); return; }
@@ -1826,13 +1851,12 @@ export function BookingScreen() {
         </View>
       </Modal>
 
-      {/* ─── Fixed book bar — compact strip + full-width CTA ─── */}
+      {/* ─── Fixed book bar — info strip + full-width CTA ─── */}
       {(!inputFocused || hasFare) && (
         <View style={{
           position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
           backgroundColor: C.bg,
-          paddingHorizontal: 14,
-          paddingTop: 10,
+          paddingHorizontal: 14, paddingTop: 10,
           paddingBottom: Math.max(bottomInset, 8),
           borderTopWidth: 1, borderTopColor: C.glassBorder,
           elevation: 22,
@@ -1840,57 +1864,96 @@ export function BookingScreen() {
           gap: 8,
         }}>
 
-          {/* Compact info strip — one line, only when route ready */}
+          {/* Compact info strip — vehicle / ETA / cash + schedule toggle */}
           {hasFare && !loading && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <RideVehicleIcon id={rideType} size={12} color={C.plum} />
-              <Text style={{ fontSize: 12, fontWeight: '700', color: C.text }}>{selRide?.label}</Text>
-              {etaLoaded && driverEta[rideType] && (
-                <Text style={{ fontSize: 11, color: C.green, fontWeight: '700' }}>
-                  {' · '}~{driverEta[rideType].eta_min <= 1 ? '< 1' : driverEta[rideType].eta_min} min away
-                </Text>
-              )}
-              <View style={{ flex: 1 }} />
-              <Ionicons name="cash-outline" size={11} color={C.textMuted} />
-              <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: '500' }}>Cash</Text>
-              {discount > 0 && (
-                <View style={{ backgroundColor: C.greenGlass, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: C.greenBorder, marginLeft: 3 }}>
-                  <Text style={{ fontSize: 9, color: C.green, fontWeight: '900' }}>₹{discount} saved</Text>
+              {scheduledAt ? (
+                /* Scheduled time badge */
+                <View style={{
+                  flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6,
+                  backgroundColor: '#FFFBEB', borderRadius: 8,
+                  paddingHorizontal: 10, paddingVertical: 5,
+                  borderWidth: 1, borderColor: '#FDE68A',
+                }}>
+                  <Ionicons name="calendar" size={12} color="#F59E0B" />
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#92400E', flex: 1 }} numberOfLines={1}>
+                    {scheduledAt.label}
+                  </Text>
+                  <TouchableOpacity onPress={() => setScheduledAt(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Ionicons name="close-circle" size={16} color="#D97706" />
+                  </TouchableOpacity>
                 </View>
+              ) : (
+                <>
+                  <RideVehicleIcon id={rideType} size={12} color={C.plum} />
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: C.text }}>{selRide?.label}</Text>
+                  {etaLoaded && driverEta[rideType] && (
+                    <Text style={{ fontSize: 11, color: C.green, fontWeight: '700' }}>
+                      {' · '}~{driverEta[rideType].eta_min <= 1 ? '< 1' : driverEta[rideType].eta_min} min
+                    </Text>
+                  )}
+                  <View style={{ flex: 1 }} />
+                  {/* Schedule for later */}
+                  <TouchableOpacity
+                    onPress={() => setShowSchedulePicker(true)}
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', gap: 4,
+                      backgroundColor: '#FFFBEB', borderRadius: 8,
+                      paddingHorizontal: 8, paddingVertical: 4,
+                      borderWidth: 1, borderColor: '#FDE68A',
+                    }}
+                  >
+                    <Ionicons name="calendar-outline" size={11} color="#F59E0B" />
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#92400E' }}>Later</Text>
+                  </TouchableOpacity>
+                  <Ionicons name="cash-outline" size={11} color={C.textMuted} style={{ marginLeft: 4 }} />
+                  <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: '500' }}>Cash</Text>
+                  {discount > 0 && (
+                    <View style={{ backgroundColor: C.greenGlass, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: C.greenBorder, marginLeft: 2 }}>
+                      <Text style={{ fontSize: 9, color: C.green, fontWeight: '900' }}>₹{discount} off</Text>
+                    </View>
+                  )}
+                </>
               )}
             </View>
           )}
 
-          {/* Full-width action button */}
+          {/* Full-width action button — amber when scheduled, plum for instant */}
           <Animated.View style={{ transform: [{ scale: bookBtnScale }] }}>
             <TouchableOpacity
               activeOpacity={hasFare && !loading ? 0.85 : 1}
-              onPress={hasFare && !loading ? handleBook : undefined}
+              onPress={hasFare && !loading ? (scheduledAt ? handleScheduleRide : handleBook) : undefined}
               onPressIn={hasFare && !loading ? onBookPressIn : undefined}
               onPressOut={hasFare && !loading ? onBookPressOut : undefined}
               style={{
                 borderRadius: 15,
-                backgroundColor: loading ? C.glassMid : hasFare ? C.plum : C.glassMid,
-                paddingVertical: 15,
-                paddingHorizontal: 20,
-                flexDirection: 'row',
-                alignItems: 'center',
+                backgroundColor: loading ? C.glassMid
+                  : hasFare ? (scheduledAt ? '#F59E0B' : C.plum)
+                  : C.glassMid,
+                paddingVertical: 15, paddingHorizontal: 20,
+                flexDirection: 'row', alignItems: 'center',
                 elevation: hasFare && !loading ? 8 : 0,
-                shadowColor: C.plum,
+                shadowColor: scheduledAt ? '#F59E0B' : C.plum,
                 shadowOpacity: hasFare && !loading ? 0.28 : 0,
                 shadowRadius: 12,
               }}>
               {loading ? (
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
                   <ActivityIndicator size="small" color={C.textMuted} />
-                  <Text style={{ fontSize: 15, fontWeight: '700', color: C.textMuted }}>Finding driver…</Text>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: C.textMuted }}>
+                    {scheduledAt ? 'Scheduling…' : 'Finding driver…'}
+                  </Text>
                 </View>
               ) : hasFare ? (
                 <>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 17, fontWeight: '900', color: '#fff', letterSpacing: -0.2 }}>Book Ride</Text>
-                    <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.52)', marginTop: 1, fontWeight: '600' }}>
-                      {selRide?.desc || selRide?.label} · Tap to confirm
+                    <Text style={{ fontSize: 17, fontWeight: '900', color: '#fff', letterSpacing: -0.2 }}>
+                      {scheduledAt ? 'Schedule Ride' : 'Book Ride'}
+                    </Text>
+                    <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)', marginTop: 1, fontWeight: '600' }}>
+                      {scheduledAt
+                        ? `${selRide?.label} · Tap to confirm`
+                        : `${selRide?.desc || selRide?.label} · Tap to confirm`}
                     </Text>
                   </View>
                   <View style={{ alignItems: 'flex-end', gap: 1 }}>
@@ -1911,6 +1974,13 @@ export function BookingScreen() {
           </Animated.View>
         </View>
       )}
+
+      {/* ─── Schedule Picker Sheet ─── */}
+      <SchedulePickerSheet
+        visible={showSchedulePicker}
+        onClose={() => setShowSchedulePicker(false)}
+        onConfirm={(result) => { setScheduledAt(result); setShowSchedulePicker(false); }}
+      />
 
       {/* ─── Pickup map picker modal ─── */}
       <PickupMapPicker

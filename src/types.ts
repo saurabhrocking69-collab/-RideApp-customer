@@ -4,7 +4,8 @@ export type Screen =
   | 'chat' | 'referral' | 'saved' | 'policy' | 'hourly'
   | 'wallet' | 'hourly-info' | 'promo' | 'support' | 'safety'
   | 'rewards' | 'budget' | 'surge' | 'insights' | 'tier'
-  | 'tickets' | 'ticket-new' | 'fare-rates';
+  | 'tickets' | 'ticket-new' | 'fare-rates'
+  | 'scheduled-rides' | 'scheduled-detail';
 
 export type Tab = 'home' | 'live' | 'history' | 'profile';
 
