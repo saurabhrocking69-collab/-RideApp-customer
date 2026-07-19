@@ -913,10 +913,39 @@ export function MatchingScreen() {
         shadowRadius: 20,
         shadowOffset: { width: 0, height: -4 },
       }}>
-        {/* Drag pill */}
-        <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 2 }}>
-          <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: C.glassMid }} />
-        </View>
+        {/* Walk-to-pickup banner — caps the sheet when driver is en-route */}
+        {rideData?.driver && !driverArrived && rideData?.status !== 'pre_assigned' ? (
+          <View style={{
+            backgroundColor: '#1356C4',
+            borderTopLeftRadius: OVERLAP,
+            borderTopRightRadius: OVERLAP,
+            paddingTop: 10, paddingBottom: 12,
+            paddingHorizontal: 20,
+            alignItems: 'center',
+          }}>
+            <View style={{ width: 36, height: 3.5, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.30)', marginBottom: 8 }} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="walk-outline" size={16} color="#fff" />
+              <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800', letterSpacing: 0.15 }}>
+                Walk to your pickup point
+              </Text>
+              {driverDist ? (
+                <View style={{
+                  backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 10,
+                  paddingHorizontal: 8, paddingVertical: 2,
+                }}>
+                  <Text style={{ color: 'rgba(255,255,255,0.92)', fontSize: 11, fontWeight: '700' }}>
+                    {driverDist}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+        ) : (
+          <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 2 }}>
+            <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: C.glassMid }} />
+          </View>
+        )}
 
         <ScrollView
           showsVerticalScrollIndicator={false}
