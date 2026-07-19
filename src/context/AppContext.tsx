@@ -1725,6 +1725,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         promo_code:     payload.promoCode,
         scheduled_at:   payload.scheduledAt,
       });
+      if (data?.error || data?._error) {
+        Alert.alert('Could not schedule', data.error || 'Please try again');
+        return;
+      }
       setScreen('scheduled-rides');
       Alert.alert(
         '📅 Ride Scheduled!',

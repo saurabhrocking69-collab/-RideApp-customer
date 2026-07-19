@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Animated, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View,
+  Alert, Animated, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -163,7 +163,14 @@ export function SchedulePickerSheet({ visible, onConfirm, onClose }: Props) {
     const dayStr = d.date.toLocaleDateString('en-IN', {
       weekday: 'short', day: 'numeric', month: 'short',
     }).toUpperCase();
-    return { dayStr, time: `${start} ${ampm}` };
+    // Check if < 1 hour from now
+    const [hh, mm] = start.split(':').map(Number);
+    const isPM = ampmIdx === 1;
+    const hour24 = hh % 12 + (isPM ? 12 : 0);
+    const target = new Date(d.date);
+    target.setHours(hour24, mm, 0, 0);
+    const tooSoon = (target.getTime() - Date.now()) < 60 * 60 * 1000;
+    return { dayStr, time: `${start} ${ampm}`, tooSoon };
   }, [dateIdx, slotIdx, ampmIdx, dates]);
 
   // ── Build ISO datetime ───────────────────────────────────────────────────────
@@ -227,15 +234,20 @@ export function SchedulePickerSheet({ visible, onConfirm, onClose }: Props) {
         {/* "YOUR PICKUP WILL BE ON" banner */}
         <View style={{
           marginHorizontal: 16, marginBottom: 16,
-          backgroundColor: AMBER_BG, borderRadius: 12,
-          borderWidth: 1, borderColor: '#FDE68A',
+          backgroundColor: previewLabel.tooSoon ? '#FEF2F2' : AMBER_BG,
+          borderRadius: 12,
+          borderWidth: 1,
+          borderColor: previewLabel.tooSoon ? '#FECACA' : '#FDE68A',
           paddingVertical: 12, paddingHorizontal: 16,
           alignItems: 'center',
         }}>
-          <Text style={{ fontSize: 10, color: AMBER, fontWeight: '800', letterSpacing: 1, marginBottom: 4 }}>
-            YOUR PICKUP WILL BE ON
+          <Text style={{
+            fontSize: 10, fontWeight: '800', letterSpacing: 1, marginBottom: 4,
+            color: previewLabel.tooSoon ? '#EF4444' : AMBER,
+          }}>
+            {previewLabel.tooSoon ? '⚠️ TOO SOON — MINIMUM 1 HOUR' : 'YOUR PICKUP WILL BE ON'}
           </Text>
-          <Text style={{ fontSize: 18, fontWeight: '900', color: '#92400E' }}>
+          <Text style={{ fontSize: 18, fontWeight: '900', color: previewLabel.tooSoon ? '#991B1B' : '#92400E' }}>
             {previewLabel.dayStr}, {previewLabel.time}
           </Text>
         </View>
@@ -285,20 +297,26 @@ export function SchedulePickerSheet({ visible, onConfirm, onClose }: Props) {
         {/* Confirm button */}
         <TouchableOpacity
           activeOpacity={0.85}
-          onPress={() => onConfirm(buildISO())}
+          onPress={() => {
+            if (previewLabel.tooSoon) {
+              Alert.alert('Time too soon', 'Please pick a time at least 1 hour from now.');
+              return;
+            }
+            onConfirm(buildISO());
+          }}
           style={{
             marginHorizontal: 16,
-            backgroundColor: AMBER,
+            backgroundColor: previewLabel.tooSoon ? '#D1D5DB' : AMBER,
             borderRadius: 16,
             paddingVertical: 16,
             alignItems: 'center',
-            elevation: 6,
+            elevation: previewLabel.tooSoon ? 0 : 6,
             shadowColor: AMBER,
-            shadowOpacity: 0.35,
+            shadowOpacity: previewLabel.tooSoon ? 0 : 0.35,
             shadowRadius: 12,
           }}
         >
-          <Text style={{ fontSize: 16, fontWeight: '900', color: '#fff', letterSpacing: -0.2 }}>
+          <Text style={{ fontSize: 16, fontWeight: '900', color: previewLabel.tooSoon ? '#9CA3AF' : '#fff', letterSpacing: -0.2 }}>
             Confirm Pickup Time
           </Text>
         </TouchableOpacity>
