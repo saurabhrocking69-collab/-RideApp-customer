@@ -524,12 +524,12 @@ function BuddyFundBanner({ onPress, stats }: { onPress: () => void; stats: { tot
           {stats ? (
             <>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                <Text style={{ color: '#F59E0B', fontSize: 13, fontWeight: '900' }}>₹{stats.total_raised.toLocaleString('en-IN')}</Text>
+                <Text style={{ color: '#F59E0B', fontSize: 13, fontWeight: '900' }}>₹{(stats.total_raised || 0).toLocaleString('en-IN')}</Text>
                 <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10 }}>raised</Text>
               </View>
               <View style={{ width: 1, height: 14, backgroundColor: 'rgba(245,158,11,0.25)' }} />
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                <Text style={{ color: '#FCD34D', fontSize: 13, fontWeight: '900' }}>{stats.contributor_count.toLocaleString('en-IN')}</Text>
+                <Text style={{ color: '#FCD34D', fontSize: 13, fontWeight: '900' }}>{(stats.contributor_count || 0).toLocaleString('en-IN')}</Text>
                 <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10 }}>donors</Text>
               </View>
             </>
@@ -749,12 +749,12 @@ function BuddyFundModal({
                 {newStats && (
                   <View style={{ flexDirection: 'row', gap: 24, marginBottom: 24 }}>
                     <View style={{ alignItems: 'center' }}>
-                      <Text style={{ fontSize: 20, fontWeight: '900', color: '#F59E0B' }}>₹{newStats.total_raised.toLocaleString('en-IN')}</Text>
+                      <Text style={{ fontSize: 20, fontWeight: '900', color: '#F59E0B' }}>₹{(newStats.total_raised || 0).toLocaleString('en-IN')}</Text>
                       <Text style={{ fontSize: 10, color: '#78716C' }}>Total raised</Text>
                     </View>
                     <View style={{ width: 1, backgroundColor: '#E7E5E4' }} />
                     <View style={{ alignItems: 'center' }}>
-                      <Text style={{ fontSize: 20, fontWeight: '900', color: '#F59E0B' }}>{newStats.contributor_count.toLocaleString('en-IN')}</Text>
+                      <Text style={{ fontSize: 20, fontWeight: '900', color: '#F59E0B' }}>{(newStats.contributor_count || 0).toLocaleString('en-IN')}</Text>
                       <Text style={{ fontSize: 10, color: '#78716C' }}>Donors</Text>
                     </View>
                   </View>
