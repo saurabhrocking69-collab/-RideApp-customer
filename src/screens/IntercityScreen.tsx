@@ -87,6 +87,7 @@ export function IntercityScreen() {
     await bookIntercity({
       vehicleType: selVehicle,
       tripKind,
+      fare: selOpt?.fare,
       scheduledAt: leaveMode === 'later' ? scheduledAt?.iso : null,
       returnAt: tripKind === 'round' ? returnAt?.iso : null,
     });

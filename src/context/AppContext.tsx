@@ -53,7 +53,7 @@ interface AppContextType {
   scheduleIntent: boolean; setScheduleIntent: (v: boolean) => void;
   intercityRoute: { km: number; durationMin: number } | null;
   setIntercityRoute: (v: { km: number; durationMin: number } | null) => void;
-  bookIntercity: (p: { vehicleType: 'car' | 'luxury'; tripKind: 'oneway' | 'round'; scheduledAt?: string | null; returnAt?: string | null }) => Promise<any>;
+  bookIntercity: (p: { vehicleType: 'car' | 'luxury'; tripKind: 'oneway' | 'round'; fare?: number; scheduledAt?: string | null; returnAt?: string | null }) => Promise<any>;
   // Auth
   phone: string; setPhone: (p: string) => void;
   otp: string; setOtp: (o: string) => void;
@@ -1518,6 +1518,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const bookRide = async (route?: { distanceKm: number; durationMin: number; polyline: string; routeType: string }) => {
     if (!pickup || !drop) { setResult('❌ Enter pickup and drop locations'); return; }
+    // High-value city ride (>₹3000, rare — surge/long trip): collect the 1/3
+    // advance before booking, same as intercity.
+    let advance: { order_id: string; payment_id: string; signature: string } | null = null;
+    const estFare = (fareEstimates[rideType]?.fare ?? 0) as number;
+    if (estFare > ADVANCE_THRESHOLD) {
+      advance = await collectAdvance(estFare);
+      if (!advance) return; // advance cancelled → abort booking
+    }
     setLoading(true); setPaymentDone(false);
     try {
       let distanceKm: number, durationMin: number;
@@ -1549,6 +1557,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         pickup_lat: pickupCoords?.lat, pickup_lng: pickupCoords?.lng, drop_lat: dropLat, drop_lng: dropLng,
         discount: promoDiscount, promo_code: promoDiscount > 0 ? promoCode : null,
         route_polyline: route?.polyline ?? null, route_type: route?.routeType ?? null,
+        advance,
       });
       if (data.restricted) { setResult('🚫 ' + (data.error || 'Account on hold — contact support')); return; }
       if (data._error || data.error) { setResult('❌ ' + (data.message || data.error || 'Booking failed')); return; }
@@ -1585,8 +1594,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     finally { setLoading(false); }
   };
 
-  const bookIntercity = async (p: { vehicleType: 'car' | 'luxury'; tripKind: 'oneway' | 'round'; scheduledAt?: string | null; returnAt?: string | null }) => {
+  // High-value ride 1/3 advance: create order → Razorpay → return the payment
+  // proof to attach to the booking call. Returns null if cancelled/failed.
+  const ADVANCE_THRESHOLD = 3000;
+  const collectAdvance = async (fare: number): Promise<{ order_id: string; payment_id: string; signature: string } | null> => {
+    if (!RazorpayCheckout) { Alert.alert('Payment Error', 'Payment module failed to load. Please restart the app.'); return null; }
+    try {
+      const d = await apiPost('/api/advance/order', { phone: phone || '9999999999', fare });
+      if (!d.success) { Alert.alert('Payment Error', d.error || 'Could not start advance payment'); return null; }
+      return await new Promise((resolve) => {
+        RazorpayCheckout.open({
+          key: d.key_id, amount: d.amount, currency: 'INR', order_id: d.order_id, name: 'Sppero',
+          description: `Advance ₹${d.advance} now · ₹${d.remaining} at drop`,
+          prefill: { contact: phone }, theme: { color: C.pink },
+        })
+          .then((payment: any) => resolve({ order_id: payment.razorpay_order_id, payment_id: payment.razorpay_payment_id, signature: payment.razorpay_signature }))
+          .catch((e: any) => { const { cancelled, msg } = rzpErr(e); if (!cancelled) Alert.alert('Advance payment failed', msg); resolve(null); });
+      });
+    } catch { Alert.alert('Error', 'Could not connect to server'); return null; }
+  };
+
+  const bookIntercity = async (p: { vehicleType: 'car' | 'luxury'; tripKind: 'oneway' | 'round'; fare?: number; scheduledAt?: string | null; returnAt?: string | null }) => {
     if (!pickup || !drop || !intercityRoute) { Alert.alert('Missing route', 'Please select pickup and drop first'); return null; }
+    // Collect the 1/3 advance up front for high-value bookings, before creating the ride.
+    let advance: { order_id: string; payment_id: string; signature: string } | null = null;
+    if ((p.fare ?? 0) > ADVANCE_THRESHOLD) {
+      advance = await collectAdvance(p.fare!);
+      if (!advance) return null; // customer cancelled the advance payment → don't book
+    }
     setLoading(true); setPaymentDone(false);
     try {
       const data = await apiPost('/api/intercity/book', {
@@ -1600,6 +1635,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         scheduled_at: p.scheduledAt || null,
         return_at:    p.returnAt || null,
         discount: 0, promo_code: null,
+        advance,
       });
       if (data.restricted) { Alert.alert('Account on hold', data.error || 'Contact support: help@sppero.in'); return null; }
       if (data._error || data.error) { Alert.alert('Could not book', data.error || data.message || 'Please try again'); return null; }
