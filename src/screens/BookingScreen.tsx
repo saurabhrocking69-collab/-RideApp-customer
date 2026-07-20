@@ -15,12 +15,21 @@ import { apiGet, apiPost, externalGet } from '../../api';
 import { useNearbyDrivers } from '../offline';
 
 const SCREEN_H   = Dimensions.get('window').height;
-const DRAWER_COMPACT = Math.round(SCREEN_H * 0.40); // route confirmed — 60% map visible
-const DRAWER_INPUT   = Math.round(SCREEN_H * 0.56); // searching / editing
-const DRAWER_BROWSE  = Math.round(SCREEN_H * 0.68); // expanded on tap — 10% more than before
+const DRAWER_COMPACT = Math.round(SCREEN_H * 0.44); // route confirmed — sheet reaches further down, less dead map space above the CTA
+const DRAWER_INPUT   = Math.round(SCREEN_H * 0.58); // searching / editing
+const DRAWER_BROWSE  = Math.round(SCREEN_H * 0.70); // expanded on tap
+
+// Android safe-area insets can misreport a much larger value than the device's
+// actual nav-bar/gesture-pill height during layout transitions (a known
+// react-native-safe-area-context flakiness on edge-to-edge builds — see
+// DRAWER animation below). Clamping keeps the CTA bar's bottom padding to a
+// realistic range so it never balloons into a big empty strip above the nav
+// bar; MAX_SAFE_BOTTOM covers the tallest real device paddings (~34dp).
+const MAX_SAFE_BOTTOM = 34;
 
 export function BookingScreen() {
-  const { bottom: bottomInset } = useSafeAreaInsets();
+  const { bottom: rawBottomInset } = useSafeAreaInsets();
+  const bottomInset = Math.min(Math.max(rawBottomInset, 0), MAX_SAFE_BOTTOM);
   const {
     screen, setScreen,
     pickup, setPickup, drop, setDrop,
@@ -590,8 +599,10 @@ export function BookingScreen() {
       </View>
 
       {/* ─── Bottom drawer — slides up/down over map ─── */}
-      {/* Floor seal: covers any gap below the drawer and blocks DotBG blobs */}
-      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 120, backgroundColor: C.bg }} pointerEvents="none" />
+      {/* Floor seal: covers any gap below the drawer and blocks DotBG blobs.
+          Height tracks the same clamped inset as the CTA bar below so the two
+          never disagree and leave a mismatched strip on either side. */}
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 100 + bottomInset, backgroundColor: C.bg }} pointerEvents="none" />
       <Animated.View style={{ height: drawerHeightAnim, backgroundColor: C.bg, elevation: 3, zIndex: 2 }}>
       <GlassPanel intensity={22} style={{
         flex: 1,
@@ -1897,9 +1908,12 @@ export function BookingScreen() {
           position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
           backgroundColor: C.bg,
           paddingHorizontal: 14, paddingTop: 12,
-          // Breathing room above the system nav bar: at least 18px on
-          // button-nav devices (inset 0), inset + 8 on gesture devices
-          paddingBottom: Math.max(bottomInset, 10) + 8,
+          // On button-nav devices (inset 0) a small fixed pad gives finger
+          // clearance; on gesture-nav/notch devices the clamped safe-area
+          // inset already IS that clearance, so we don't add anything on
+          // top of it — avoids the double-padding that showed up as a big
+          // empty strip above the system bar on some Android builds.
+          paddingBottom: bottomInset > 0 ? bottomInset : 14,
           borderTopWidth: 1, borderTopColor: C.glassBorder,
           elevation: 22,
           shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 14,
