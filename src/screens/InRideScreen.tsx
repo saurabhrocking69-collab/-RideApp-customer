@@ -103,8 +103,20 @@ export function InRideScreen() {
     pickupCoords, dropCoords,
     driverLoc, driverEta, driverDist,
     rideData, rideType,
-    sosActive, setSosActive, triggerSOS,
+    sosActive, setSosActive, triggerSOS, reportCancelRide,
   } = useApp();
+
+  const REPORT_REASONS = ['Medical emergency', 'Feeling unsafe', 'Driver misbehaviour', 'Wrong route / detour', 'Other emergency'];
+  const promptReportCancel = () => {
+    Alert.alert(
+      '🛡️ Emergency — End Trip?',
+      'This ends the trip now and reports it for review. Any advance you paid is held and refunded per our team\'s decision within 2 days. Use only in a genuine emergency.',
+      [
+        { text: 'Keep riding', style: 'cancel' },
+        ...REPORT_REASONS.map(r => ({ text: r, onPress: () => reportCancelRide(r) })),
+      ],
+    );
+  };
 
   const [elapsed, setElapsed] = useState(0);
   const startRef = useRef(
@@ -492,6 +504,25 @@ export function InRideScreen() {
               </View>
             </View>
           )}
+
+          {/* ── Emergency: end trip & report (advance held for admin review) ── */}
+          <TouchableOpacity
+            activeOpacity={0.82}
+            onPress={promptReportCancel}
+            style={{
+              backgroundColor: C.redGlass, borderRadius: 14,
+              paddingVertical: 12, paddingHorizontal: 16, marginBottom: 10,
+              flexDirection: 'row', alignItems: 'center', gap: 10,
+              borderWidth: 1, borderColor: C.red,
+            }}
+          >
+            <Ionicons name="alert-circle" size={18} color={C.red} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, color: C.red, fontWeight: '900' }}>Emergency — End Trip & Report</Text>
+              <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 1 }}>Advance held · refund decided within 2 days</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={15} color={C.red} />
+          </TouchableOpacity>
 
           {/* ── Share tracking ── */}
           <TouchableOpacity

@@ -262,6 +262,7 @@ interface AppContextType {
   registerFCM: (userPhone: string) => Promise<void>;
   // Functions — misc
   triggerSOS: () => Promise<void>;
+  reportCancelRide: (reason: string) => Promise<void>;
   applyReferral: () => Promise<void>;
   shareReferral: () => Promise<void>;
   savePlace: (label: string) => Promise<void>;
@@ -1918,6 +1919,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // ── Misc ─────────────────────────────────────────────────────────────────
+  // Emergency mid-trip cancel: ends the trip and reports it; any advance is held
+  // and refunded per admin's decision within 2 days.
+  const reportCancelRide = async (reason: string) => {
+    const rideId = rideData?.ride_id;
+    if (!rideId) return;
+    try {
+      const res = await apiPost('/api/rides/report-cancel', { ride_id: rideId, phone: phone || '9999999999', reason });
+      if (res?.success) {
+        Alert.alert('🛡️ Report Submitted', res.message || 'Your report is under review. Any refund will be decided within 2 days.', [{ text: 'OK' }]);
+        try { ride.stopPolling(); } catch (_e) {}
+        setScreen('home');
+      } else {
+        Alert.alert('Could not submit', res?.error || res?.message || 'Please try again');
+      }
+    } catch { Alert.alert('Error', 'Network error — please try again'); }
+  };
+
   const triggerSOS = async () => {
     setSosActive(true);
     // 1. Notify backend
@@ -2068,7 +2086,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     handlePayment, payWithWallet, createScratchCard, scratchNow, addMoney, openRazorpayTopup,
     loadHistory, loadWallet, loadWalletDetail, loadLoyalty, loadOffers, loadHourlyPackages,
     loadReferral, loadSaved, loadFavouriteBuddy, addFavouriteBuddy, removeFavouriteBuddy, registerFCM,
-    triggerSOS, applyReferral, shareReferral, savePlace, deletePlace,
+    triggerSOS, reportCancelRide, applyReferral, shareReferral, savePlace, deletePlace,
     animateStar, sendChat, initiateCall, callDriver, rideIcon,
     rewardsDash, setRewardsDash, cashbackEarned, setCashbackEarned, loadRewardsDash,
     selectedScheduledRide, setSelectedScheduledRide, scheduleRide,
