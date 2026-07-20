@@ -229,7 +229,7 @@ interface AppContextType {
   joinRideSocket: (rideId: string | number) => void;
   joinHourlySocket: (bookingId: string | number) => void;
   // Functions — booking
-  bookRide: () => Promise<void>;
+  bookRide: (route?: { distanceKm: number; durationMin: number; polyline: string; routeType: string }) => Promise<void>;
   surgeFareNow: (amount: number) => Promise<void>;
   switchVehicle: (newType: string) => Promise<void>;
   searchPlaces: (text: string, type: 'pickup'|'drop') => void;
@@ -1516,14 +1516,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (_e) { setResult('❌ Error'); }
   };
 
-  const bookRide = async () => {
+  const bookRide = async (route?: { distanceKm: number; durationMin: number; polyline: string; routeType: string }) => {
     if (!pickup || !drop) { setResult('❌ Enter pickup and drop locations'); return; }
     setLoading(true); setPaymentDone(false);
     try {
-      const ddata = await externalGet(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(pickup)}&destinations=${encodeURIComponent(drop)}&key=${MAPS_KEY}&mode=driving&departure_time=now`);
-      const el = ddata._error ? null : ddata.rows?.[0]?.elements?.[0];
-      const distanceKm = el?.status === 'OK' ? el.distance.value / 1000 : 5;
-      const durationMin = el?.status === 'OK' ? (el.duration_in_traffic?.value ?? el.duration?.value ?? 0) / 60 : (distanceKm / 20) * 60;
+      let distanceKm: number, durationMin: number;
+      if (route) {
+        // Customer chose a specific route (e.g. bike shortest) — price the ride
+        // on exactly that route so fare, map, and driver navigation all agree.
+        distanceKm = route.distanceKm;
+        durationMin = route.durationMin;
+      } else {
+        const ddata = await externalGet(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(pickup)}&destinations=${encodeURIComponent(drop)}&key=${MAPS_KEY}&mode=driving&departure_time=now`);
+        const el = ddata._error ? null : ddata.rows?.[0]?.elements?.[0];
+        distanceKm = el?.status === 'OK' ? el.distance.value / 1000 : 5;
+        durationMin = el?.status === 'OK' ? (el.duration_in_traffic?.value ?? el.duration?.value ?? 0) / 60 : (distanceKm / 20) * 60;
+      }
       // Resolve drop coords inline — can't read state immediately after setDropCoords
       let dropLat = dropCoords?.lat;
       let dropLng = dropCoords?.lng;
@@ -1539,7 +1547,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         passenger_phone: phone || '9999999999', pickup, drop_location: drop, ride_type: rideType, distance: distanceKm,
         duration_min: durationMin,
         pickup_lat: pickupCoords?.lat, pickup_lng: pickupCoords?.lng, drop_lat: dropLat, drop_lng: dropLng,
-        discount: promoDiscount, promo_code: promoDiscount > 0 ? promoCode : null
+        discount: promoDiscount, promo_code: promoDiscount > 0 ? promoCode : null,
+        route_polyline: route?.polyline ?? null, route_type: route?.routeType ?? null,
       });
       if (data.restricted) { setResult('🚫 ' + (data.error || 'Account on hold — contact support')); return; }
       if (data._error || data.error) { setResult('❌ ' + (data.message || data.error || 'Booking failed')); return; }

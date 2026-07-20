@@ -5,6 +5,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { MAPS_KEY } from '../constants';
 import { C } from '../styles';
 
+// A single Google Directions route option, surfaced to the parent so the
+// customer can choose between (e.g.) fastest and shortest.
+export interface RouteOption {
+  polyline: string;      // encoded overview_polyline — stored on the ride so the driver draws the same path
+  distanceKm: number;
+  durationMin: number;
+  distText: string;      // "13 km"
+  etaText: string;       // "49 min"
+}
+
 // ── Polyline decoder ──────────────────────────────────────────────────────────
 function decodePolyline(encoded: string): { latitude: number; longitude: number }[] {
   const pts: { latitude: number; longitude: number }[] = [];
@@ -263,6 +273,8 @@ export interface LiveMapProps {
   onRegionChange?: (coords: { lat: number; lng: number }) => void;
   skipAutoFit?: boolean;
   onRouteInfo?: (eta: string, dist: string) => void;
+  onRoutes?: (routes: { fastest: RouteOption; shortest: RouteOption | null }) => void;
+  selectedRouteType?: 'fastest' | 'shortest';
   fitKey?: number;
   adjustOrigin?: { lat: number; lng: number } | null;
   fill?: boolean;           // flex:1 to fill parent instead of fixed height
@@ -294,6 +306,8 @@ export const LiveMap = memo(function LiveMap({
   onRegionChange,
   skipAutoFit = false,
   onRouteInfo,
+  onRoutes,
+  selectedRouteType = 'fastest',
   fitKey = 0,
   adjustOrigin = null,
   fill = false,
@@ -431,27 +445,54 @@ export const LiveMap = memo(function LiveMap({
     }
     if (!origin || !destination) { setRouteCoords([]); setEtaText(''); setDistText(''); return; }
 
+    // Only the pickup→drop booking route needs alternatives (for the customer's
+    // fastest/shortest choice). The driver-approach route (matching mode) stays
+    // single — no choice to make there.
+    const wantAlternatives = mode === 'booking';
     let cancelled = false;
-    fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&mode=driving&key=${MAPS_KEY}`)
+    fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&mode=driving${wantAlternatives ? '&alternatives=true' : ''}&key=${MAPS_KEY}`)
       .then(r => r.json())
       .then(data => {
         if (cancelled) return;
-        const route = data.routes?.[0];
-        if (!route) return;
-        setRouteCoords(decodePolyline(route.overview_polyline?.points || ''));
-        const leg = route.legs?.[0];
-        if (leg) {
-          const et = leg.duration?.text || '';
-          const dt = leg.distance?.text || '';
-          setEtaText(et); setDistText(dt);
-          onRouteInfo?.(et, dt);
+        const routes = data.routes || [];
+        if (!routes.length) return;
+
+        const toOption = (route: any): RouteOption => {
+          const leg = route.legs?.[0];
+          return {
+            polyline:   route.overview_polyline?.points || '',
+            distanceKm: (leg?.distance?.value ?? 0) / 1000,
+            durationMin: (leg?.duration?.value ?? 0) / 60,
+            distText:   leg?.distance?.text || '',
+            etaText:    leg?.duration?.text || '',
+          };
+        };
+
+        // Google returns routes sorted by duration → [0] is fastest.
+        const fastest = toOption(routes[0]);
+        // Shortest = least distance among alternatives.
+        let shortest: RouteOption | null = null;
+        if (wantAlternatives && routes.length > 1) {
+          const cand = routes.map(toOption).reduce((a: RouteOption, b: RouteOption) => b.distanceKm < a.distanceKm ? b : a);
+          // Only offer it if it's meaningfully shorter AND not absurdly slower —
+          // otherwise the "choice" is noise.
+          const shorterEnough = cand.distanceKm <= fastest.distanceKm - 0.8 && cand.distanceKm <= fastest.distanceKm * 0.92;
+          const notTooSlow     = cand.durationMin <= fastest.durationMin * 1.2;
+          if (shorterEnough && notTooSlow && cand.polyline !== fastest.polyline) shortest = cand;
         }
+        onRoutes?.({ fastest, shortest });
+
+        // Draw whichever the parent has selected (defaults to fastest).
+        const drawn = (selectedRouteType === 'shortest' && shortest) ? shortest : fastest;
+        setRouteCoords(decodePolyline(drawn.polyline));
+        setEtaText(drawn.etaText); setDistText(drawn.distText);
+        onRouteInfo?.(drawn.etaText, drawn.distText);
       })
       .catch(() => {});
     return () => { cancelled = true; };
   }, [
     pickupCoords?.lat, pickupCoords?.lng, dropCoords?.lat, dropCoords?.lng,
-    showRoute, mode,
+    showRoute, mode, selectedRouteType,
     driverLat != null ? Math.round(driverLat * 200) / 200 : null,
     driverLng != null ? Math.round(driverLng * 200) / 200 : null,
   ]);

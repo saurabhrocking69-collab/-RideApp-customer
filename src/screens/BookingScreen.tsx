@@ -7,7 +7,7 @@ import * as Location from 'expo-location';
 import { Storage as AsyncStorage } from '../storage';
 import { useApp } from '../context/AppContext';
 import { GlassPanel, RideVehicleIcon, DotBG, SkeletonBox } from '../components/ui';
-import { LiveMap } from '../components/LiveMap';
+import { LiveMap, RouteOption } from '../components/LiveMap';
 import { PickupMapPicker } from '../components/PickupMapPicker';
 import { s, C, T, R, SP, SHADOW } from '../styles';
 import { RIDES, MAPS_KEY } from '../constants';
@@ -62,8 +62,18 @@ export function BookingScreen() {
     Object.fromEntries(RIDES.map((r: any) => [r.id, { ty: new Animated.Value(38), op: new Animated.Value(0) }]))
   ).current;
   const bookPulseAnim = useRef(new Animated.Value(1)).current; // kept for layout compat
+
+  // ── Bike route choice (fastest vs shortest) ──────────────────────────────────
+  const [routeOptions, setRouteOptions] = useState<{ fastest: RouteOption; shortest: RouteOption | null } | null>(null);
+  const [selectedRoute, setSelectedRoute] = useState<'fastest' | 'shortest'>('fastest');
+  const [bikeRouteFares, setBikeRouteFares] = useState<{ fastest: number; shortest: number } | null>(null);
+  // Only bikes get the choice, and only when a genuinely shorter route exists.
+  const bikeChoiceActive = rideType === 'bike' && !!routeOptions?.shortest;
+
   const _est        = fareEstimates[rideType];
-  const rawFare     = (_est?.fare ?? _est) || 0;
+  // For bikes with a route choice, the shown fare follows the selected route.
+  const routeFareOverride = bikeChoiceActive && bikeRouteFares ? bikeRouteFares[selectedRoute] : null;
+  const rawFare     = routeFareOverride ?? ((_est?.fare ?? _est) || 0);
   const estDistFare = Math.round(_est?.dist_fare ?? 0);
   const estTimeFare = Math.round(_est?.time_fare ?? 0);
   const estPlatFee  = Math.round(parseFloat(String(_est?.platform_fee ?? 2)) || 2);
@@ -248,10 +258,44 @@ export function BookingScreen() {
     setNearbyPlaces([]);
   };
 
+  // Fare for each route option (bike only) — priced from each route's own distance.
+  const fetchBikeRouteFares = useCallback(async (fastKm: number, shortKm: number, fastDur: number, shortDur: number) => {
+    try {
+      const [f, s] = await Promise.all([
+        apiPost('/api/fare-estimate', { ride_type: 'bike', distance: fastKm, duration_min: fastDur }),
+        apiPost('/api/fare-estimate', { ride_type: 'bike', distance: shortKm, duration_min: shortDur }),
+      ]);
+      if (f?.fare != null && s?.fare != null) setBikeRouteFares({ fastest: f.fare, shortest: s.fare });
+      else setBikeRouteFares(null);
+    } catch { setBikeRouteFares(null); }
+  }, []);
+
+  // Only reset the choice when the ROUTE itself changes (new destination) — not
+  // on the re-fetch that our own selection toggle triggers.
+  const lastRouteKeyRef = useRef<string>('');
+  const handleRoutes = useCallback((routes: { fastest: RouteOption; shortest: RouteOption | null }) => {
+    setRouteOptions(routes);
+    const key = routes.fastest.polyline;
+    if (key !== lastRouteKeyRef.current) {
+      lastRouteKeyRef.current = key;
+      setSelectedRoute('fastest');
+      if (routes.shortest) fetchBikeRouteFares(routes.fastest.distanceKm, routes.shortest.distanceKm, routes.fastest.durationMin, routes.shortest.durationMin);
+      else setBikeRouteFares(null);
+    }
+  }, [fetchBikeRouteFares]);
+
   const handleBook = () => {
     const eta = driverEta[rideType];
     if (eta && eta.dist_km > 5) { setWaitConfirmed(false); setShowWaitModal(true); return; }
-    bookRide();
+    // Pass the customer's chosen route so the fare, map, and driver navigation
+    // all agree on the same path.
+    const chosen = bikeChoiceActive
+      ? (selectedRoute === 'shortest' ? routeOptions!.shortest! : routeOptions!.fastest)
+      : (routeOptions?.fastest ?? null);
+    const routeArg = chosen
+      ? { distanceKm: chosen.distanceKm, durationMin: chosen.durationMin, polyline: chosen.polyline, routeType: bikeChoiceActive ? selectedRoute : 'fastest' }
+      : undefined;
+    bookRide(routeArg);
   };
 
   // Book button press animation
@@ -430,7 +474,13 @@ export function BookingScreen() {
   const [routeEta, setRouteEta]   = useState('');
   const [routeDist, setRouteDist] = useState('');
   // Reset when route is cleared
-  useEffect(() => { if (!dropCoords) { setRouteEta(''); setRouteDist(''); } }, [dropCoords]);
+  useEffect(() => {
+    if (!dropCoords) {
+      setRouteEta(''); setRouteDist('');
+      setRouteOptions(null); setBikeRouteFares(null); setSelectedRoute('fastest');
+      lastRouteKeyRef.current = '';
+    }
+  }, [dropCoords]);
 
   // ── Coupon modal ──────────────────────────────────────────────────────────
   const [showCouponModal, setShowCouponModal] = useState(false);
@@ -577,6 +627,8 @@ export function BookingScreen() {
           draggablePickup={!!pickupCoords && !!dropCoords}
           onPickupDragEnd={handlePickupDragEnd}
           onRouteInfo={(et, dt) => { setRouteEta(et); setRouteDist(dt); }}
+          onRoutes={handleRoutes}
+          selectedRouteType={selectedRoute}
           fitKey={fitKey}
           walkOrigin={walkGpsOrigin}
         />
@@ -1927,6 +1979,52 @@ export function BookingScreen() {
           shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 14,
           gap: 10,
         }}>
+
+          {/* ── Bike route choice — Fastest vs Shortest (saves money) ── */}
+          {bikeChoiceActive && bikeRouteFares && !loading && !scheduledAt && (() => {
+            const saving = Math.max(0, Math.round(bikeRouteFares.fastest - bikeRouteFares.shortest));
+            const opts: { key: 'fastest' | 'shortest'; icon: string; label: string; route: RouteOption; fare: number }[] = [
+              { key: 'fastest',  icon: '⚡', label: 'Fastest',  route: routeOptions!.fastest,   fare: bikeRouteFares.fastest },
+              { key: 'shortest', icon: '🛵', label: 'Shortest', route: routeOptions!.shortest!, fare: bikeRouteFares.shortest },
+            ];
+            return (
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {opts.map(o => {
+                  const active = selectedRoute === o.key;
+                  return (
+                    <TouchableOpacity
+                      key={o.key}
+                      activeOpacity={0.85}
+                      onPress={() => setSelectedRoute(o.key)}
+                      style={{
+                        flex: 1, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 10,
+                        borderWidth: active ? 2 : 1,
+                        borderColor: active ? C.plum : C.glassBorder,
+                        backgroundColor: active ? C.plumGlass : C.bgCard,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Text style={{ fontSize: 12, fontWeight: '900', color: active ? C.plum : C.text }}>
+                          {o.icon} {o.label}
+                        </Text>
+                        {o.key === 'shortest' && saving > 0 && (
+                          <View style={{ backgroundColor: C.green, borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1 }}>
+                            <Text style={{ fontSize: 9, fontWeight: '900', color: '#fff' }}>SAVE ₹{saving}</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 2, fontWeight: '600' }}>
+                        {o.route.etaText} · {o.route.distText}
+                      </Text>
+                      <Text style={{ fontSize: 14, fontWeight: '900', color: active ? C.plum : C.text, marginTop: 1 }}>
+                        ₹{o.fare}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            );
+          })()}
 
           {/* Compact info strip — vehicle / ETA / cash + schedule toggle */}
           {hasFare && !loading && (
