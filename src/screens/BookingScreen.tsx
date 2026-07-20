@@ -1,4 +1,4 @@
-import { ActivityIndicator, Animated, Dimensions, Easing, KeyboardAvoidingView, Modal, Platform, ScrollView, StatusBar, StyleSheet, TextInput, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Dimensions, Easing, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, StatusBar, StyleSheet, TextInput, Text, TouchableOpacity, View } from 'react-native';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { SchedulePickerSheet, ScheduleResult } from '../components/SchedulePickerSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -108,6 +108,7 @@ export function BookingScreen() {
   };
 
   const selectSaved = (place: SavedPlace) => {
+    Keyboard.dismiss();
     setDrop(place.text); setDropSugg([]);
     setDropCoords(place.coords);
   };
@@ -828,6 +829,7 @@ export function BookingScreen() {
                       <TouchableOpacity key={i}
                         style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 11, paddingHorizontal: 4, borderBottomWidth: i < pickupSugg.length - 1 ? 1 : 0, borderBottomColor: C.glassBorder }}
                         onPress={async () => {
+                          Keyboard.dismiss();
                           setPickup(sg.text);
                           setPickupSugg([]);
                           setPickerLoading(true);
@@ -970,7 +972,7 @@ export function BookingScreen() {
                   {showDropSugg && dropSugg.slice(0, 5).map((sg: any, i: number) => (
                     <TouchableOpacity key={i}
                       style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 11, paddingHorizontal: 16, borderBottomWidth: i < Math.min(dropSugg.length, 5) - 1 ? 1 : 0, borderBottomColor: C.glassBorder }}
-                      onPress={() => { setDrop(sg.text); setDropSugg([]); geocodePlace(sg.text, 'drop'); }}>
+                      onPress={() => { Keyboard.dismiss(); setDrop(sg.text); setDropSugg([]); geocodePlace(sg.text, 'drop'); }}>
                       {/* Location pin icon — clean, neutral */}
                       <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: C.glassMid, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1, borderColor: C.glassBorder, flexShrink: 0 }}>
                         <Ionicons name="location-outline" size={17} color={C.textMuted} />
@@ -1044,7 +1046,7 @@ export function BookingScreen() {
                             <TouchableOpacity key={i}
                               activeOpacity={0.75}
                               style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 13, paddingHorizontal: 16, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: C.glassBorder }}
-                              onPress={() => { setDrop(h.text); setDropSugg([]); if (h.coords) setDropCoords(h.coords); else geocodePlace(h.text, 'drop'); }}>
+                              onPress={() => { Keyboard.dismiss(); setDrop(h.text); setDropSugg([]); if (h.coords) setDropCoords(h.coords); else geocodePlace(h.text, 'drop'); }}>
                               {/* Icon */}
                               <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: C.glassMid, alignItems: 'center', justifyContent: 'center', marginRight: 13, borderWidth: 1.5, borderColor: C.glassBorder }}>
                                 <Ionicons name="location-outline" size={16} color={C.textMuted} />
@@ -1902,8 +1904,14 @@ export function BookingScreen() {
         </View>
       </Modal>
 
-      {/* ─── Fixed book bar — info strip + full-width CTA ─── */}
-      {(!inputFocused || hasFare) && (
+      {/* ─── Fixed book bar — info strip + full-width CTA ───
+           Hidden while a pickup/drop input is focused: showing a stale fare
+           from the OLD destination while the user is actively typing a NEW
+           one is misleading, and the bar was fighting the suggestion list
+           for the same screen space (the actual reported bug). Search gets
+           the full drawer to itself, like Uber/Rapido, until the user is
+           done editing. */}
+      {!inputFocused && (
         <View style={{
           position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
           backgroundColor: C.bg,
