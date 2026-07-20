@@ -1471,29 +1471,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setFareLoading(true);
     const est: any = {};
     const durMin = durationMin ?? lastFareDurRef.current ?? (km / 20) * 60;
-    await Promise.all(RIDES.map(async (r) => {
-      try {
-        const res = await fetch(`${API}/api/fare-estimate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
-          body: JSON.stringify({ ride_type: r.id, distance: km, duration_min: durMin }),
-        });
-        const d = await res.json();
-        if (!d.error && d.fare != null) {
-          est[r.id] = {
-            fare:         d.fare,
-            base_fare:    d.base_fare,
-            dist_fare:    d.dist_fare,
-            time_fare:    d.time_fare,
-            platform_fee: d.platform_fee,
-            min_fare:     d.min_fare,
-            per_km_rate:  d.per_km_rate,
-            is_night:     d.is_night,
-            is_min_applied: d.is_min_applied,
-          };
-        }
-      } catch (_e) {}
-    }));
+    // ONE batched call for all vehicle fares (was 7 separate requests → felt
+    // slow). Falls back to per-vehicle calls if the batch endpoint is missing.
+    try {
+      const res = await fetch(`${API}/api/fare-estimate/batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
+        body: JSON.stringify({ distance: km, duration_min: durMin }),
+      });
+      const d = await res.json();
+      if (d?.fares && !d.error) {
+        for (const r of RIDES) if (d.fares[r.id]) est[r.id] = d.fares[r.id];
+      }
+    } catch (_e) {}
+    // Fallback: if the batch returned nothing (old backend), fan out per vehicle.
+    if (Object.keys(est).length === 0) {
+      await Promise.all(RIDES.map(async (r) => {
+        try {
+          const res = await fetch(`${API}/api/fare-estimate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
+            body: JSON.stringify({ ride_type: r.id, distance: km, duration_min: durMin }),
+          });
+          const d = await res.json();
+          if (!d.error && d.fare != null) est[r.id] = d;
+        } catch (_e) {}
+      }));
+    }
     setFareEstimates(est); setFareLoading(false);
   };
 
