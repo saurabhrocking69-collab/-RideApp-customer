@@ -1980,6 +1980,25 @@ export function BookingScreen() {
           gap: 10,
         }}>
 
+          {/* ── Bike route: always show a route row; upgrade to an interactive
+                 Fastest/Shortest choice only when a genuinely shorter route
+                 exists (most city trips have one best route = no fake choice). ── */}
+          {rideType === 'bike' && routeOptions && !loading && !scheduledAt && !(bikeChoiceActive && bikeRouteFares) && (
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', gap: 8,
+              backgroundColor: C.bgCard, borderRadius: 12,
+              borderWidth: 1, borderColor: C.glassBorder,
+              paddingVertical: 8, paddingHorizontal: 12,
+            }}>
+              <Text style={{ fontSize: 13 }}>🛵</Text>
+              <Text style={{ fontSize: 12, fontWeight: '800', color: C.text }}>Best route</Text>
+              <View style={{ flex: 1 }} />
+              <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: '600' }}>
+                {routeOptions.fastest.etaText} · {routeOptions.fastest.distText}
+              </Text>
+            </View>
+          )}
+
           {/* ── Bike route choice — Fastest vs Shortest (saves money) ── */}
           {bikeChoiceActive && bikeRouteFares && !loading && !scheduledAt && (() => {
             const saving = Math.max(0, Math.round(bikeRouteFares.fastest - bikeRouteFares.shortest));
