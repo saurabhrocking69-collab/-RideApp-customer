@@ -582,6 +582,21 @@ export function BookingScreen() {
   const [drawerExpanded, setDrawerExpanded] = useState(false);
   const bothSet = !!(pickupCoords && dropCoords);
 
+  // ROOT FIX for the "book button disappears / gap shows background" bug:
+  // The book bar used to hide on `inputFocused`, but RN's onBlur is unreliable
+  // (tapping the map, picking a suggestion, or a programmatic Keyboard.dismiss
+  // often doesn't fire it) so the flag got stuck true → the whole book bar
+  // stopped rendering and the drawer left an empty reserved gap showing the
+  // background. keyboardDidShow/Hide are OS-level events tied to the ACTUAL
+  // keyboard, so they're the reliable source of truth — the bar shows whenever
+  // the keyboard is physically down and can never get stuck again.
+  const [keyboardShown, setKeyboardShown] = useState(false);
+  useEffect(() => {
+    const s1 = Keyboard.addListener('keyboardDidShow', () => setKeyboardShown(true));
+    const s2 = Keyboard.addListener('keyboardDidHide', () => { setKeyboardShown(false); setInputFocused(false); });
+    return () => { s1.remove(); s2.remove(); };
+  }, []);
+
   // Auto-collapse drawer when route is confirmed so map becomes prominent
   useEffect(() => {
     if (bothSet) setDrawerExpanded(false);
@@ -1967,13 +1982,12 @@ export function BookingScreen() {
       </Modal>
 
       {/* ─── Fixed book bar — info strip + full-width CTA ───
-           Hidden while a pickup/drop input is focused: showing a stale fare
-           from the OLD destination while the user is actively typing a NEW
-           one is misleading, and the bar was fighting the suggestion list
-           for the same screen space (the actual reported bug). Search gets
-           the full drawer to itself, like Uber/Rapido, until the user is
-           done editing. */}
-      {!inputFocused && (
+           Visibility is driven by the ACTUAL keyboard state (keyboardShown),
+           NOT the unreliable inputFocused flag — so it always reappears the
+           moment the keyboard closes and can never get stuck hidden. Hidden
+           only while the keyboard is up (typing a destination), so the
+           suggestion list gets the full drawer, like Uber/Rapido. */}
+      {!keyboardShown && (
         <View style={{
           position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
           backgroundColor: C.bg,
