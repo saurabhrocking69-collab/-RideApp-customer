@@ -14,6 +14,10 @@ import { RIDES, MAPS_KEY } from '../constants';
 import { apiGet, apiPost, externalGet } from '../../api';
 import { useNearbyDrivers } from '../offline';
 
+// Nimble vehicles that can actually take a tighter/shorter route (a car/luxury
+// often can't) — these get the Fastest/Shortest route choice.
+const ROUTE_CHOICE_VEHICLES = ['bike', 'auto', 'eriksha', 'electric_auto', 'green_bike'];
+
 const SCREEN_H   = Dimensions.get('window').height;
 const DRAWER_COMPACT = Math.round(SCREEN_H * 0.44); // route confirmed — sheet reaches further down, less dead map space above the CTA
 const DRAWER_INPUT   = Math.round(SCREEN_H * 0.58); // searching / editing
@@ -63,16 +67,17 @@ export function BookingScreen() {
   ).current;
   const bookPulseAnim = useRef(new Animated.Value(1)).current; // kept for layout compat
 
-  // ── Bike route choice (fastest vs shortest) ──────────────────────────────────
+  // ── Route choice (fastest vs shortest) — nimble vehicles only ────────────────
   const [routeOptions, setRouteOptions] = useState<{ fastest: RouteOption; shortest: RouteOption | null } | null>(null);
   const [selectedRoute, setSelectedRoute] = useState<'fastest' | 'shortest'>('fastest');
-  const [bikeRouteFares, setBikeRouteFares] = useState<{ fastest: number; shortest: number } | null>(null);
-  // Only bikes get the choice, and only when a genuinely shorter route exists.
-  const bikeChoiceActive = rideType === 'bike' && !!routeOptions?.shortest;
+  const [routeFares, setRouteFares] = useState<{ fastest: number; shortest: number } | null>(null);
+  const routeChoiceEligible = ROUTE_CHOICE_VEHICLES.includes(rideType);
+  // Offer the choice only when the selected vehicle can use it AND a genuinely shorter route exists.
+  const routeChoiceActive = routeChoiceEligible && !!routeOptions?.shortest;
 
   const _est        = fareEstimates[rideType];
-  // For bikes with a route choice, the shown fare follows the selected route.
-  const routeFareOverride = bikeChoiceActive && bikeRouteFares ? bikeRouteFares[selectedRoute] : null;
+  // With a route choice, the shown fare follows the selected route.
+  const routeFareOverride = routeChoiceActive && routeFares ? routeFares[selectedRoute] : null;
   const rawFare     = routeFareOverride ?? ((_est?.fare ?? _est) || 0);
   const estDistFare = Math.round(_est?.dist_fare ?? 0);
   const estTimeFare = Math.round(_est?.time_fare ?? 0);
@@ -258,18 +263,6 @@ export function BookingScreen() {
     setNearbyPlaces([]);
   };
 
-  // Fare for each route option (bike only) — priced from each route's own distance.
-  const fetchBikeRouteFares = useCallback(async (fastKm: number, shortKm: number, fastDur: number, shortDur: number) => {
-    try {
-      const [f, s] = await Promise.all([
-        apiPost('/api/fare-estimate', { ride_type: 'bike', distance: fastKm, duration_min: fastDur }),
-        apiPost('/api/fare-estimate', { ride_type: 'bike', distance: shortKm, duration_min: shortDur }),
-      ]);
-      if (f?.fare != null && s?.fare != null) setBikeRouteFares({ fastest: f.fare, shortest: s.fare });
-      else setBikeRouteFares(null);
-    } catch { setBikeRouteFares(null); }
-  }, []);
-
   // Only reset the choice when the ROUTE itself changes (new destination) — not
   // on the re-fetch that our own selection toggle triggers.
   const lastRouteKeyRef = useRef<string>('');
@@ -279,21 +272,38 @@ export function BookingScreen() {
     if (key !== lastRouteKeyRef.current) {
       lastRouteKeyRef.current = key;
       setSelectedRoute('fastest');
-      if (routes.shortest) fetchBikeRouteFares(routes.fastest.distanceKm, routes.shortest.distanceKm, routes.fastest.durationMin, routes.shortest.durationMin);
-      else setBikeRouteFares(null);
     }
-  }, [fetchBikeRouteFares]);
+  }, []);
+
+  // Price both route options for the CURRENTLY selected vehicle. Re-runs when the
+  // route changes OR the vehicle changes (an auto and a bike price differently),
+  // but not on a mere selection toggle (deps are the polylines, not the object).
+  useEffect(() => {
+    if (!routeChoiceEligible || !routeOptions?.shortest) { setRouteFares(null); return; }
+    const f = routeOptions.fastest, s = routeOptions.shortest;
+    let cancelled = false;
+    Promise.all([
+      apiPost('/api/fare-estimate', { ride_type: rideType, distance: f.distanceKm, duration_min: f.durationMin }),
+      apiPost('/api/fare-estimate', { ride_type: rideType, distance: s.distanceKm, duration_min: s.durationMin }),
+    ]).then(([ff, ss]) => {
+      if (cancelled) return;
+      if (ff?.fare != null && ss?.fare != null) setRouteFares({ fastest: ff.fare, shortest: ss.fare });
+      else setRouteFares(null);
+    }).catch(() => { if (!cancelled) setRouteFares(null); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeOptions?.fastest.polyline, routeOptions?.shortest?.polyline, rideType, routeChoiceEligible]);
 
   const handleBook = () => {
     const eta = driverEta[rideType];
     if (eta && eta.dist_km > 5) { setWaitConfirmed(false); setShowWaitModal(true); return; }
     // Pass the customer's chosen route so the fare, map, and driver navigation
     // all agree on the same path.
-    const chosen = bikeChoiceActive
+    const chosen = routeChoiceActive
       ? (selectedRoute === 'shortest' ? routeOptions!.shortest! : routeOptions!.fastest)
       : (routeOptions?.fastest ?? null);
     const routeArg = chosen
-      ? { distanceKm: chosen.distanceKm, durationMin: chosen.durationMin, polyline: chosen.polyline, routeType: bikeChoiceActive ? selectedRoute : 'fastest' }
+      ? { distanceKm: chosen.distanceKm, durationMin: chosen.durationMin, polyline: chosen.polyline, routeType: routeChoiceActive ? selectedRoute : 'fastest' }
       : undefined;
     bookRide(routeArg);
   };
@@ -477,7 +487,7 @@ export function BookingScreen() {
   useEffect(() => {
     if (!dropCoords) {
       setRouteEta(''); setRouteDist('');
-      setRouteOptions(null); setBikeRouteFares(null); setSelectedRoute('fastest');
+      setRouteOptions(null); setRouteFares(null); setSelectedRoute('fastest');
       lastRouteKeyRef.current = '';
     }
   }, [dropCoords]);
@@ -1980,17 +1990,17 @@ export function BookingScreen() {
           gap: 10,
         }}>
 
-          {/* ── Bike route: always show a route row; upgrade to an interactive
-                 Fastest/Shortest choice only when a genuinely shorter route
-                 exists (most city trips have one best route = no fake choice). ── */}
-          {rideType === 'bike' && routeOptions && !loading && !scheduledAt && !(bikeChoiceActive && bikeRouteFares) && (
+          {/* ── Route: always show a route row for eligible vehicles; upgrade to
+                 an interactive Fastest/Shortest choice only when a genuinely
+                 shorter route exists (most city trips have one best route). ── */}
+          {routeChoiceEligible && routeOptions && !loading && !scheduledAt && !(routeChoiceActive && routeFares) && (
             <View style={{
               flexDirection: 'row', alignItems: 'center', gap: 8,
               backgroundColor: C.bgCard, borderRadius: 12,
               borderWidth: 1, borderColor: C.glassBorder,
               paddingVertical: 8, paddingHorizontal: 12,
             }}>
-              <Text style={{ fontSize: 13 }}>🛵</Text>
+              <Text style={{ fontSize: 13 }}>🛣️</Text>
               <Text style={{ fontSize: 12, fontWeight: '800', color: C.text }}>Best route</Text>
               <View style={{ flex: 1 }} />
               <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: '600' }}>
@@ -1999,12 +2009,12 @@ export function BookingScreen() {
             </View>
           )}
 
-          {/* ── Bike route choice — Fastest vs Shortest (saves money) ── */}
-          {bikeChoiceActive && bikeRouteFares && !loading && !scheduledAt && (() => {
-            const saving = Math.max(0, Math.round(bikeRouteFares.fastest - bikeRouteFares.shortest));
+          {/* ── Route choice — Fastest vs Shortest (saves money) ── */}
+          {routeChoiceActive && routeFares && !loading && !scheduledAt && (() => {
+            const saving = Math.max(0, Math.round(routeFares.fastest - routeFares.shortest));
             const opts: { key: 'fastest' | 'shortest'; icon: string; label: string; route: RouteOption; fare: number }[] = [
-              { key: 'fastest',  icon: '⚡', label: 'Fastest',  route: routeOptions!.fastest,   fare: bikeRouteFares.fastest },
-              { key: 'shortest', icon: '🛵', label: 'Shortest', route: routeOptions!.shortest!, fare: bikeRouteFares.shortest },
+              { key: 'fastest',  icon: '⚡', label: 'Fastest',  route: routeOptions!.fastest,   fare: routeFares.fastest },
+              { key: 'shortest', icon: '🛣️', label: 'Shortest', route: routeOptions!.shortest!, fare: routeFares.shortest },
             ];
             return (
               <View style={{ flexDirection: 'row', gap: 8 }}>
