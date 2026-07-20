@@ -859,8 +859,10 @@ export const LiveMap = memo(function LiveMap({
         </View>
       )}
 
-      {/* ETA chip — top-left, not shown in booking (displayed in bottom sheet instead) */}
-      {etaText && mode !== 'booking' ? <EtaChip eta={etaText} distance={distText} /> : null}
+      {/* ETA chip — top-left. Hidden in booking (shown in bottom sheet instead) and
+          in matching (overlapped the back button; the "Arriving NOW" card below
+          already covers driver ETA there, making the chip redundant clutter). */}
+      {etaText && mode === 'inride' ? <EtaChip eta={etaText} distance={distText} /> : null}
 
       {/* Drag hint */}
       <DragHint visible={dropDragMode} isAdjust={!!adjustOrigin} />

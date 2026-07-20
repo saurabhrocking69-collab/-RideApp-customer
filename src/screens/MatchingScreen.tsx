@@ -630,6 +630,7 @@ function OtpDisplay({ otp }: { otp: string }) {
 }
 
 export function MatchingScreen() {
+  const { bottom: screenBottomInset } = useSafeAreaInsets();
   const {
     phone,
     screen, setScreen,
@@ -898,7 +899,11 @@ export function MatchingScreen() {
 
       {/* ══ BOTTOM SHEET ══ */}
       <View style={{
-        height: sheetH,
+        // sheetH is computed from SCREEN_H alone, with no safe-area awareness --
+        // on edge-to-edge Android builds the sheet then falls short of the true
+        // screen bottom, exposing the dark screen backdrop as a stray strip
+        // above the system nav bar. Extend the sheet itself to cover it.
+        height: sheetH + screenBottomInset,
         backgroundColor: '#F0F2F5',
         borderTopLeftRadius: OVERLAP,
         borderTopRightRadius: OVERLAP,
@@ -944,9 +949,10 @@ export function MatchingScreen() {
         )}
 
         <ScrollView
+          style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
           bounces={false}
-          contentContainerStyle={{ paddingBottom: 20 }}
+          contentContainerStyle={{ paddingBottom: 20 + screenBottomInset }}
         >
 
           {/* ═══════════════ PRE-ASSIGNED STATE ═══════════════ */}
