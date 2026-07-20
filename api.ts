@@ -51,6 +51,23 @@ export const apiPost = async (path: string, body: any, retries = 1): Promise<any
   return { _error: true, message: 'Network error — dobara try karo' };
 };
 
+export const apiDelete = async (path: string, body: any, retries = 1): Promise<any> => {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const res = await fetchWithTimeout(`${API}${path}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }, 10000);
+      return await res.json();
+    } catch (err) {
+      if (i === retries) return { _error: true, message: 'Network error — dobara try karo' };
+      await new Promise(r => setTimeout(r, 800));
+    }
+  }
+  return { _error: true, message: 'Network error — dobara try karo' };
+};
+
 // ─── Auth-aware helpers (include Bearer token from AsyncStorage) ───
 // Use these for JWT-protected endpoints like /api/complaints, /api/wallet, etc.
 import AsyncStorage from '@react-native-async-storage/async-storage';

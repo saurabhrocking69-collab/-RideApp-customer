@@ -159,9 +159,13 @@ export function ScheduledRideDetailScreen() {
   async function handleCancel(reason: string) {
     setCancelling(true);
     try {
-      const { apiPost } = await import('../../api');
-      await apiPost(`/api/scheduled/${ride.id}`, { phone, reason }, 'DELETE');
-      setSelectedScheduledRide({ ...ride, status: 'scheduled_cancelled', sr_status: 'cancelled' });
+      const { apiDelete } = await import('../../api');
+      const resp = await apiDelete(`/api/scheduled/${ride.id}`, { phone, reason });
+      if (resp?._error || resp?.error) {
+        Alert.alert('Could not cancel', resp?.error || resp?.message || 'Please try again.');
+        return;
+      }
+      setSelectedScheduledRide({ ...ride, status: 'scheduled_cancelled', sr_status: 'cancelled', cancel_reason: reason });
       setShowCancelModal(false);
       Alert.alert('Cancelled', 'Your scheduled ride has been cancelled.');
     } catch (_e) {
