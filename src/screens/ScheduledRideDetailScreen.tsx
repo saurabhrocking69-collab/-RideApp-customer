@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator, Alert, Modal, ScrollView,
   Text, TouchableOpacity, View,
@@ -6,6 +6,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
+import { apiGet } from '../../api';
 import { C } from '../styles';
 
 const AMBER    = '#F59E0B';
@@ -138,12 +139,37 @@ function CancelModal({
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 export function ScheduledRideDetailScreen() {
-  const { phone, setScreen, selectedScheduledRide, setSelectedScheduledRide } = useApp() as any;
+  const { phone, setScreen, selectedScheduledRide, setSelectedScheduledRide, adoptActiveRide } = useApp() as any;
   const insets = useSafeAreaInsets();
   const ride   = selectedScheduledRide;
 
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelling,      setCancelling]      = useState(false);
+  const [tracking,        setTracking]        = useState(false);
+
+  // Keep this screen live. It's handed a one-time snapshot from the list
+  // screen, but the backend matches/dispatches scheduled rides in the
+  // background (a driver can get assigned any time up to 15 min before
+  // pickup) — without polling, this screen would stay frozen on whatever
+  // status it was opened with (e.g. "Matching Driver…" forever, even after
+  // a driver is actually en route).
+  useEffect(() => {
+    if (!ride?.id || !phone) return;
+    const terminal = ride.status === 'scheduled_cancelled' || ride.status === 'completed'
+      || ride.sr_status === 'cancelled' || ride.sr_status === 'failed';
+    if (terminal) return;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const d = await apiGet(`/api/scheduled/my-rides?phone=${phone}`);
+        const fresh = (d.scheduled_rides || []).find((r: any) => String(r.id) === String(ride.id));
+        if (fresh && !cancelled) setSelectedScheduledRide((prev: any) => prev ? { ...prev, ...fresh } : fresh);
+      } catch { /* keep last known state */ }
+    };
+    poll();
+    const iv = setInterval(poll, 8000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, [ride?.id, ride?.status, ride?.sr_status, phone]);
 
   if (!ride) {
     setScreen('scheduled-rides');
@@ -155,6 +181,18 @@ export function ScheduledRideDetailScreen() {
   const emoji  = VEHICLE_EMOJI[ride.ride_type] || '🚗';
   const netFare = Math.round(ride.fare - (ride.discount || 0));
   const canCancel = ['scheduled'].includes(ride.status) && ride.sr_status !== 'cancelled' && ride.sr_status !== 'failed';
+  const isLive = ['matched', 'arrived', 'started'].includes(ride.status);
+
+  async function handleTrackLive() {
+    setTracking(true);
+    try {
+      const ok = await adoptActiveRide(ride.id);
+      if (ok) setScreen(ride.status === 'started' ? 'inride' : 'matching');
+      else Alert.alert('Not ready yet', 'Driver tracking will be available in a moment — please try again.');
+    } finally {
+      setTracking(false);
+    }
+  }
 
   async function handleCancel(reason: string) {
     setCancelling(true);
@@ -198,6 +236,33 @@ export function ScheduledRideDetailScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }} showsVerticalScrollIndicator={false}>
+
+        {/* Driver assigned — jump into the live tracking screen */}
+        {isLive && (
+          <TouchableOpacity
+            activeOpacity={0.88}
+            onPress={handleTrackLive}
+            disabled={tracking}
+            style={{
+              flexDirection: 'row', alignItems: 'center', gap: 12,
+              backgroundColor: C.green, borderRadius: 16,
+              padding: 16, elevation: 6, shadowColor: C.green, shadowOpacity: 0.35, shadowRadius: 12,
+            }}
+          >
+            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' }}>
+              {tracking ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="navigate" size={20} color="#fff" />}
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: '900', color: '#fff' }}>
+                {ride.status === 'started' ? 'Trip is live — track it' : 'Driver assigned — track live'}
+              </Text>
+              <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>
+                Tap to see driver location, OTP & ETA
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#fff" />
+          </TouchableOpacity>
+        )}
 
         {/* "You will get captain details 15 mins before" info strip */}
         {canCancel && (

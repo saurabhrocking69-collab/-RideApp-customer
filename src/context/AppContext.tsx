@@ -675,6 +675,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (data?.type === 'ride_cancelled') {
         setDriverCancelPopup(true);
       }
+      // Silently adopt the ride into live tracking (rideData + socket room)
+      // so the Live tab reflects a match/arrival even if the user never taps
+      // the push — e.g. it arrives while they're already in the app.
+      if (['ride_matched', 'driver_arrived', 'trip_started', 'scheduled_matching'].includes(data?.type) && data?.ride_id) {
+        adoptActiveRide(data.ride_id).catch(() => {});
+      }
       const toast: ToastNotif = {
         id:       n.request.identifier,
         title:    content.title || 'Sppero',
@@ -693,13 +699,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!data?.type) return;
       const rideId = data.ride_id;
       if (rideId) await AsyncStorage.setItem('activeStdRideId', String(rideId)).catch(() => {});
-      // Ride flow
-      if (['ride_matched', 'driver_arrived'].includes(data.type)) setScreen('matching');
-      else if (data.type === 'trip_started')                       setScreen('inride');
+      // Ride flow — adopt the ride into live tracking state (rideData +
+      // socket room) before navigating, so matching/in-ride screens render
+      // real data immediately instead of a stale/empty context.
+      if (['ride_matched', 'driver_arrived', 'scheduled_matching'].includes(data.type)) {
+        if (rideId) await adoptActiveRide(rideId);
+        setScreen('matching');
+      }
+      else if (data.type === 'trip_started') {
+        if (rideId) await adoptActiveRide(rideId);
+        setScreen('inride');
+      }
       else if (data.type === 'trip_completed')                     setScreen('payment');
       else if (data.type === 'ride_cancelled')                     { setScreen('home'); setDriverCancelPopup(true); }
       else if (data.type === 'no_driver_found')                    setScreen('home');
-      else if (data.type === 'extension_accepted')                 setScreen('matching');
+      else if (data.type === 'extension_accepted')                 { if (rideId) await adoptActiveRide(rideId); setScreen('matching'); }
+      else if (data.type === 'scheduled_confirmed')                setScreen('scheduled-rides');
       // Wallet / payments
       else if (['cashback_earned', 'refund', 'wallet_topup'].includes(data.type)) setScreen('home');
       // Account
@@ -734,6 +749,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 setHourlyStep(step);
                 if (screen === 'home') setScreen('hourly');
               }
+            })
+            .catch(() => {});
+        }
+        // Catch a scheduled ride that got matched/dispatched while the app was
+        // fully backgrounded (no notification tap happened, so activeStdRideId
+        // was never adopted) — reconcile against the scheduled-rides list.
+        if (!rideDataRef.current?.ride_id) {
+          fetch(`${API}/api/scheduled/my-rides?phone=${phone}`)
+            .then(r => r.json())
+            .then(sd => {
+              const active = (sd.scheduled_rides || []).find((sr: any) =>
+                ['requested', 'matched', 'arrived', 'started'].includes(sr.status)
+              );
+              if (active) adoptActiveRide(active.id);
             })
             .catch(() => {});
         }
@@ -1209,6 +1238,52 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const joinHourlySocket = (bookingId: string | number) => {
     activeHourlyIdRef.current = bookingId;
     socketRef.current?.emit('joinHourly', { bookingId });
+  };
+
+  // Pull a ride's current state from the server and wire it into live
+  // tracking (rideData + socket room + AsyncStorage) — the same bookkeeping
+  // the instant-booking flows do at booking time. Scheduled rides never get
+  // this at booking time (there's no driver yet), so this is what lets the
+  // app catch up once the backend actually matches/dispatches one — from a
+  // push notification (tap or foreground-received) or an app-resume check.
+  const adoptActiveRide = async (rideId: string | number) => {
+    try {
+      const r    = await fetch(`${API}/api/rides/status/${rideId}`);
+      const d    = await r.json();
+      const ride = d.ride;
+      const st   = ride?.status;
+      if (!ride || !['requested', 'searching', 'matched', 'arrived', 'started'].includes(st)) return false;
+
+      const driver = ride.driver_name ? {
+        name:          ride.driver_name,
+        vehicle_no:    ride.vehicle_no,
+        vehicle_brand: ride.vehicle_brand,
+        vehicle_model: ride.vehicle_model,
+        phone:         ride.driver_phone_masked,
+        photo:         ride.driver_photo,
+        vehicle_photo: ride.driver_vehicle_photo || null,
+        rating:        ride.driver_rating,
+        upi_id:        ride.driver_upi_id,
+      } : null;
+
+      setRideData({
+        ...ride,
+        ride_id:  ride.ride_id ?? ride.id,
+        startOtp: st === 'started' ? '' : (ride.start_otp || ''),
+        driver,
+      });
+
+      if (ride.pickup)        setPickup(ride.pickup);
+      if (ride.drop_location) setDrop(ride.drop_location);
+      if (ride.pickup_lat && ride.pickup_lng)
+        setPickupCoords({ lat: parseFloat(ride.pickup_lat), lng: parseFloat(ride.pickup_lng) });
+      if (ride.drop_lat && ride.drop_lng)
+        setDropCoords({ lat: parseFloat(ride.drop_lat), lng: parseFloat(ride.drop_lng) });
+
+      await AsyncStorage.setItem('activeStdRideId', String(rideId)).catch(() => {});
+      joinRideSocket(rideId);
+      return true;
+    } catch { return false; }
   };
 
   // ── Auth ─────────────────────────────────────────────────────────────────
@@ -2084,7 +2159,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     result, setResult, loading, setLoading, storeStatus,
     socketRef, phoneRef, pickupDebounceRef, dropDebounceRef, hPickupDebounceRef, hDropDebounceRef, buddyPUDebRef, buddyDRDebRef,
     sendOtp, verifyOtp, completeOnboarding, handleOtpChange, handleOtpKeyPress,
-    connectSocket, joinRideSocket, joinHourlySocket,
+    connectSocket, joinRideSocket, joinHourlySocket, adoptActiveRide,
     bookRide, surgeFareNow, switchVehicle, searchPlaces, geocodePlace, swapLocations,
     fetchEtaByCoords, loadFareEstimates, applyPromo, useMyLocation, calcDriverEta,
     handlePayment, payWithWallet, createScratchCard, scratchNow, addMoney, openRazorpayTopup,
