@@ -19,9 +19,9 @@ import { useNearbyDrivers } from '../offline';
 const ROUTE_CHOICE_VEHICLES = ['bike', 'auto', 'eriksha', 'electric_auto', 'green_bike'];
 
 const SCREEN_H   = Dimensions.get('window').height;
-const DRAWER_COMPACT = Math.round(SCREEN_H * 0.44); // route confirmed — sheet reaches further down, less dead map space above the CTA
+const DRAWER_COMPACT = Math.round(SCREEN_H * 0.40); // route confirmed — map gets more room to breathe, drawer is a compact summary
 const DRAWER_INPUT   = Math.round(SCREEN_H * 0.58); // searching / editing
-const DRAWER_BROWSE  = Math.round(SCREEN_H * 0.70); // expanded on tap
+const DRAWER_BROWSE  = Math.round(SCREEN_H * 0.72); // expanded on tap — clearer contrast against compact
 
 // Android safe-area insets can misreport a much larger value than the device's
 // actual nav-bar/gesture-pill height during layout transitions (a known
@@ -659,20 +659,21 @@ export function BookingScreen() {
         />
         {/* Floating back button */}
         <TouchableOpacity
+          activeOpacity={0.85}
           onPress={() => { setScreen('home'); setPickupSugg([]); setDropSugg([]); setEta(''); setPromoCode(''); setPromoDiscount(0); setInstantApplied(false); setShowPromoInput(false); }}
           style={{
             position: 'absolute', zIndex: 10,
-            top: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 8 : 52,
-            left: 14,
-            width: 40, height: 40, borderRadius: 20,
-            backgroundColor: 'rgba(255,255,255,0.93)',
+            top: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 10 : 54,
+            left: 16,
+            width: 44, height: 44, borderRadius: 22,
+            backgroundColor: '#fff',
             alignItems: 'center', justifyContent: 'center',
-            elevation: 8,
-            shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 10,
+            borderWidth: 1, borderColor: 'rgba(46,20,97,0.08)',
+            elevation: 10,
+            shadowColor: C.plum, shadowOpacity: 0.24, shadowRadius: 14, shadowOffset: { width: 0, height: 5 },
           }}>
-          <Ionicons name="arrow-back" size={20} color={C.plum} />
+          <Ionicons name="arrow-back" size={21} color={C.plum} />
         </TouchableOpacity>
-
 
       </View>
 
@@ -684,14 +685,15 @@ export function BookingScreen() {
       <Animated.View style={{ height: drawerHeightAnim, backgroundColor: C.bg, elevation: 3, zIndex: 2 }}>
       <GlassPanel intensity={22} style={{
         flex: 1,
-        borderTopLeftRadius: 28,
-        borderTopRightRadius: 28,
-        marginTop: -28,
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
+        marginTop: -32,
         overflow: 'hidden',
-        elevation: 20,
-        shadowColor: C.pink,
-        shadowOpacity: 0.14,
-        shadowRadius: 20,
+        elevation: 26,
+        shadowColor: C.plum,
+        shadowOpacity: 0.20,
+        shadowRadius: 26,
+        shadowOffset: { width: 0, height: -8 },
         backgroundColor: C.bg,
         borderColor: 'rgba(180,160,255,0.18)',
       }}>
@@ -699,13 +701,21 @@ export function BookingScreen() {
         <TouchableOpacity
           activeOpacity={bothSet && !inputFocused ? 0.7 : 1}
           onPress={() => { if (bothSet && !inputFocused) setDrawerExpanded(e => !e); }}
-          style={{ alignItems: 'center', paddingTop: 10, paddingBottom: bothSet && !inputFocused ? 2 : 10 }}>
-          <View style={{ width: 48, height: 4, borderRadius: 2, backgroundColor: C.glassB2 }} />
+          style={{ alignItems: 'center', paddingTop: 12, paddingBottom: bothSet && !inputFocused ? 3 : 10 }}>
+          <View style={{ width: 40, height: 5, borderRadius: 3, backgroundColor: C.glassB2 }} />
           {bothSet && !inputFocused && (
-            <Ionicons
-              name={drawerExpanded ? 'chevron-down' : 'chevron-up'}
-              size={15} color={C.textDim}
-              style={{ marginTop: 5 }} />
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 7,
+              backgroundColor: C.glassMid, borderRadius: R.full,
+              paddingHorizontal: 10, paddingVertical: 3,
+            }}>
+              <Ionicons
+                name={drawerExpanded ? 'chevron-down' : 'chevron-up'}
+                size={12} color={C.textMuted} />
+              <Text style={{ fontSize: 10, fontWeight: '700', color: C.textMuted }}>
+                {drawerExpanded ? 'Less' : 'More'}
+              </Text>
+            </View>
           )}
         </TouchableOpacity>
 
@@ -722,11 +732,11 @@ export function BookingScreen() {
               style={{
                 flexDirection: 'row', alignItems: 'center',
                 backgroundColor: applied ? '#16A34A' : '#FF2D78',
-                paddingVertical: 9, paddingHorizontal: 16, gap: 10,
+                paddingVertical: 11, paddingHorizontal: 18, gap: 11,
               }}>
               {/* Icon bubble */}
               <View style={{
-                width: 30, height: 30, borderRadius: 9,
+                width: 32, height: 32, borderRadius: 11,
                 backgroundColor: 'rgba(255,255,255,0.22)',
                 alignItems: 'center', justifyContent: 'center',
               }}>
@@ -778,42 +788,43 @@ export function BookingScreen() {
               onPress={() => { setDropCoords(null); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; }}
               style={{
                 backgroundColor: C.bgCard,
-                marginHorizontal: -14,
+                borderRadius: R.lg,
                 marginBottom: 14,
-                elevation: 6,
+                elevation: 8,
                 overflow: 'hidden',
-                borderBottomWidth: 1.5,
+                borderWidth: 1.5,
                 borderColor: C.glassBorder,
-                shadowColor: C.pink,
+                shadowColor: C.plum,
                 shadowOpacity: 0.10,
-                shadowRadius: 14,
+                shadowRadius: 18,
+                shadowOffset: { width: 0, height: 6 },
               }}>
 
-              <View style={{ padding: 16 }}>
+              <View style={{ padding: 18 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'stretch' }}>
                   {/* Swap button */}
                   <TouchableOpacity
                     onPress={e => { e.stopPropagation(); swapLocations(); }}
-                    style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', marginRight: 12, alignSelf: 'center', borderWidth: 1.5, borderColor: C.pinkBorder }}>
-                    <Ionicons name="swap-vertical" size={16} color={C.pink} />
+                    style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', marginRight: 13, alignSelf: 'center', borderWidth: 1.5, borderColor: C.pinkBorder }}>
+                    <Ionicons name="swap-vertical" size={17} color={C.pink} />
                   </TouchableOpacity>
 
                   {/* Route indicator */}
-                  <View style={{ width: 16, alignItems: 'center', marginRight: 12, paddingVertical: 3 }}>
+                  <View style={{ width: 16, alignItems: 'center', marginRight: 13, paddingVertical: 4 }}>
                     <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: C.green, borderWidth: 2.5, borderColor: 'rgba(5,150,105,0.3)' }} />
-                    <View style={{ flex: 1, width: 2, backgroundColor: C.glassBorder, marginVertical: 3, minHeight: 24 }} />
+                    <View style={{ flex: 1, width: 2, backgroundColor: C.glassBorder, marginVertical: 4, minHeight: 26 }} />
                     <View style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: C.pink, borderWidth: 2.5, borderColor: C.pinkBorder }} />
                   </View>
 
                   {/* Text labels */}
-                  <View style={{ flex: 1, gap: 14 }}>
+                  <View style={{ flex: 1, gap: 15 }}>
                     <View>
-                      <Text style={{ fontSize: 9, color: C.textDim, fontWeight: '800', letterSpacing: 1, marginBottom: 3 }}>FROM</Text>
-                      <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: '800', color: C.text }}>{pickup}</Text>
+                      <Text style={{ fontSize: 9.5, color: C.textDim, fontWeight: '800', letterSpacing: 1.1, marginBottom: 3 }}>FROM</Text>
+                      <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: '800', color: C.text, letterSpacing: -0.2 }}>{pickup}</Text>
                     </View>
                     <View>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                        <Text style={{ fontSize: 9, color: C.textDim, fontWeight: '800', letterSpacing: 1 }}>TO</Text>
+                        <Text style={{ fontSize: 9.5, color: C.textDim, fontWeight: '800', letterSpacing: 1.1 }}>TO</Text>
                         {/* Save drop location */}
                         {dropCoords && (
                           <TouchableOpacity
@@ -824,13 +835,13 @@ export function BookingScreen() {
                           </TouchableOpacity>
                         )}
                       </View>
-                      <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: '800', color: C.text }}>{drop}</Text>
+                      <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: '800', color: C.text, letterSpacing: -0.2 }}>{drop}</Text>
                     </View>
                   </View>
 
                   {/* Edit badge */}
-                  <View style={{ alignSelf: 'center', marginLeft: 10, width: 34, height: 34, borderRadius: 17, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.pinkBorder }}>
-                    <Ionicons name="pencil" size={15} color={C.pink} />
+                  <View style={{ alignSelf: 'center', marginLeft: 10, width: 36, height: 36, borderRadius: 18, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.pinkBorder }}>
+                    <Ionicons name="pencil" size={16} color={C.pink} />
                   </View>
                 </View>
               </View>
@@ -838,19 +849,22 @@ export function BookingScreen() {
             </TouchableOpacity>
           ) : (
             /* Input mode — also hidden while dragging */
-            <>
+            <View style={{
+              backgroundColor: C.bgCard,
+              borderRadius: R.lg,
+              overflow: 'hidden',
+              marginBottom: 14,
+              elevation: 9,
+              borderWidth: 1.5,
+              borderColor: C.glassBorder,
+              shadowColor: C.plum,
+              shadowOpacity: 0.13,
+              shadowRadius: 20,
+              shadowOffset: { width: 0, height: 6 },
+            }}>
               <View style={{
-                backgroundColor: C.bgCard,
-                marginHorizontal: -14,
-                padding: 14,
-                paddingBottom: hasDropDown ? 10 : 14,
-                marginBottom: hasDropDown ? 0 : 14,
-                elevation: 8,
-                borderBottomWidth: hasDropDown ? 0 : 1.5,
-                borderColor: C.glassBorder,
-                shadowColor: C.plum,
-                shadowOpacity: 0.12,
-                shadowRadius: 18,
+                padding: 16,
+                paddingBottom: hasDropDown ? 10 : 16,
               }}>
                 {/* Pickup row */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.greenGlass, borderRadius: 12, paddingHorizontal: 10, borderWidth: 1, borderColor: C.greenBorder }}>
@@ -1029,22 +1043,11 @@ export function BookingScreen() {
                 </View>
               </View>
 
-              {/* ── Attached dropdown — appears directly below input card ── */}
+              {/* ── Attached dropdown — appears directly below input card, same rounded surface ── */}
               {hasDropDown && (
-                <View style={{
-                  backgroundColor: C.bgCard,
-                  marginHorizontal: -14,
-                  marginBottom: 14,
-                  elevation: 18,
-                  borderBottomWidth: 1.5,
-                  borderColor: C.glassBorder,
-                  shadowColor: C.pink,
-                  shadowOpacity: 0.14,
-                  shadowRadius: 14,
-                  overflow: 'hidden',
-                }}>
+                <View>
                   {/* Thin separator line */}
-                  <View style={{ height: 1, backgroundColor: C.glassBorder, marginHorizontal: 14 }} />
+                  <View style={{ height: 1, backgroundColor: C.glassBorder, marginHorizontal: 16 }} />
 
                   {showDropSugg && dropSugg.slice(0, 5).map((sg: any, i: number) => (
                     <TouchableOpacity key={i}
@@ -1169,7 +1172,7 @@ export function BookingScreen() {
                   )}
                 </View>
               )}
-            </>
+            </View>
           )}
 
           {/* ─── Plum ETA card — animated, only when route is ready ──────────────── */}
@@ -1177,15 +1180,18 @@ export function BookingScreen() {
             <Animated.View style={{ opacity: etaCardFade, transform: [{ translateY: etaCardSlide }], marginBottom: 16 }}>
               <View style={{
                 backgroundColor: C.plum,
-                borderRadius: 20,
+                borderRadius: R.lg,
                 overflow: 'hidden',
-                elevation: 10,
+                elevation: 14,
                 shadowColor: C.plum,
-                shadowOpacity: 0.40,
-                shadowRadius: 16,
+                shadowOpacity: 0.45,
+                shadowRadius: 22,
+                shadowOffset: { width: 0, height: 10 },
+                borderWidth: 1,
+                borderColor: 'rgba(255,255,255,0.06)',
               }}>
                 {/* Top row — live badge */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 13, paddingBottom: 9, gap: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingTop: 14, paddingBottom: 10, gap: 8 }}>
                   {/* Pulse dot */}
                   <View style={{ width: 14, height: 14, alignItems: 'center', justifyContent: 'center' }}>
                     <Animated.View style={{
@@ -1197,10 +1203,10 @@ export function BookingScreen() {
                     }} />
                     <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#4ADE80' }} />
                   </View>
-                  <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 10, fontWeight: '900', letterSpacing: 1.4 }}>LIVE ROUTE</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 10.5, fontWeight: '900', letterSpacing: 1.6 }}>LIVE ROUTE</Text>
                   <View style={{ flex: 1 }} />
                   {etaLoaded && Object.keys(driverEta).length > 0 ? (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(74,222,128,0.15)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(74,222,128,0.16)', borderRadius: R.full, paddingHorizontal: 9, paddingVertical: 4 }}>
                       <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#4ADE80' }} />
                       <Text style={{ color: '#4ADE80', fontSize: 10, fontWeight: '800' }}>
                         driver ~{Math.min(...Object.values(driverEta).map((v: any) => v?.eta_min ?? 999))} min
@@ -1212,30 +1218,30 @@ export function BookingScreen() {
                 </View>
 
                 {/* Hairline divider */}
-                <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.10)', marginHorizontal: 16 }} />
+                <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.10)', marginHorizontal: 18 }} />
 
                 {/* Stats row */}
-                <View style={{ flexDirection: 'row', paddingVertical: 16, paddingHorizontal: 16 }}>
+                <View style={{ flexDirection: 'row', paddingVertical: 18, paddingHorizontal: 18 }}>
                   {/* Time */}
                   <Animated.View style={{ flex: 1, opacity: etaTimeFade, transform: [{ translateY: etaTimeSlide }] }}>
-                    <Text style={{ color: '#fff', fontSize: 30, fontWeight: '900', letterSpacing: -0.8 }}>{routeEta}</Text>
-                    <Text style={{ color: 'rgba(255,255,255,0.50)', fontSize: 11, fontWeight: '700', marginTop: 4, letterSpacing: 0.3 }}>Est. travel time</Text>
+                    <Text style={{ color: '#fff', fontSize: 33, fontWeight: '900', letterSpacing: -1.0 }}>{routeEta}</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.52)', fontSize: 11, fontWeight: '700', marginTop: 5, letterSpacing: 0.3 }}>Est. travel time</Text>
                   </Animated.View>
 
                   {/* Vertical separator */}
                   <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.12)', marginVertical: 2, marginHorizontal: 4 }} />
 
                   {/* Distance */}
-                  <Animated.View style={{ flex: 1, paddingLeft: 18, opacity: etaDistFade, transform: [{ translateY: etaDistSlide }] }}>
-                    <Text style={{ color: '#fff', fontSize: 30, fontWeight: '900', letterSpacing: -0.8 }}>{routeDist}</Text>
-                    <Text style={{ color: 'rgba(255,255,255,0.50)', fontSize: 11, fontWeight: '700', marginTop: 4, letterSpacing: 0.3 }}>Total distance</Text>
+                  <Animated.View style={{ flex: 1, paddingLeft: 20, opacity: etaDistFade, transform: [{ translateY: etaDistSlide }] }}>
+                    <Text style={{ color: '#fff', fontSize: 33, fontWeight: '900', letterSpacing: -1.0 }}>{routeDist}</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.52)', fontSize: 11, fontWeight: '700', marginTop: 5, letterSpacing: 0.3 }}>Total distance</Text>
                   </Animated.View>
                 </View>
               </View>
             </Animated.View>
           ) : bothSet ? (
             /* Calculating skeleton */
-            <View style={{ backgroundColor: C.bgDeep, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 16, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: C.plumBorder }}>
+            <View style={{ backgroundColor: C.bgDeep, borderRadius: R.lg, paddingVertical: 16, paddingHorizontal: 18, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: C.plumBorder }}>
               <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.plum, opacity: 0.5 }} />
               <Text style={{ color: C.plum, fontWeight: '700', fontSize: 12, opacity: 0.7 }}>Calculating route…</Text>
             </View>
@@ -1243,12 +1249,12 @@ export function BookingScreen() {
 
           {/* ─── Vehicle + fare + promo ───────────────────────────────────────────── */}
           <>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, marginTop: 2 }}>
-            <Text style={{ fontSize: 11, fontWeight: '900', color: C.textDim, letterSpacing: 1.4, flex: 1 }}>CHOOSE VEHICLE</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, marginTop: 4 }}>
+            <Text style={{ fontSize: 12, fontWeight: '900', color: C.text, letterSpacing: 1.2, flex: 1 }}>CHOOSE A RIDE</Text>
             {etaLoaded && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.greenGlass, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: C.greenBorder }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.greenGlass, borderRadius: R.full, paddingHorizontal: 9, paddingVertical: 4, borderWidth: 1, borderColor: C.greenBorder }}>
                 <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: C.green }} />
-                <Text style={{ fontSize: 9, color: C.green, fontWeight: '800' }}>LIVE</Text>
+                <Text style={{ fontSize: 9.5, color: C.green, fontWeight: '800' }}>LIVE</Text>
               </View>
             )}
           </View>
@@ -1261,14 +1267,14 @@ export function BookingScreen() {
               .sort((a, b) => (a.info?.eta_min || 999) - (b.info?.eta_min || 999))[0];
             if (!nearest) return null;
             return (
-              <View style={{ backgroundColor: C.greenGlass, borderRadius: R.sm, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: C.greenBorder }}>
-                <Text style={{ fontSize: 16 }}>💡</Text>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: C.green, flex: 1 }}>
+              <View style={{ backgroundColor: C.greenGlass, borderRadius: R.sm, padding: 13, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: C.greenBorder }}>
+                <Text style={{ fontSize: 17 }}>💡</Text>
+                <Text style={{ fontSize: 12.5, fontWeight: '700', color: C.green, flex: 1 }}>
                   {nearest.r.label} is nearest — arriving in ~{nearest.info?.eta_min} min
                 </Text>
                 {rideType !== nearest.r.id && (
-                  <TouchableOpacity onPress={() => { setRideType(nearest.r.id); setVehicleBrowsing(false); }} style={{ backgroundColor: C.green, borderRadius: R.xs, paddingHorizontal: 10, paddingVertical: 5 }}>
-                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900' }}>Select</Text>
+                  <TouchableOpacity onPress={() => { setRideType(nearest.r.id); setVehicleBrowsing(false); }} style={{ backgroundColor: C.green, borderRadius: R.xs, paddingHorizontal: 12, paddingVertical: 7, elevation: 3, shadowColor: C.green, shadowOpacity: 0.3, shadowRadius: 6 }}>
+                    <Text style={{ color: '#fff', fontSize: 11.5, fontWeight: '900' }}>Select</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -1306,39 +1312,40 @@ export function BookingScreen() {
                     }}
                     activeOpacity={0.82}
                     style={{
-                      width: 126,
+                      width: 138,
                       alignItems: 'center',
-                      paddingHorizontal: 10,
-                      paddingTop: 14,
-                      paddingBottom: 12,
+                      paddingHorizontal: 12,
+                      paddingTop: 16,
+                      paddingBottom: 14,
                       backgroundColor: isSel
-                        ? (isLux ? 'rgba(124,58,237,0.09)' : C.pinkGlass)
+                        ? (isLux ? 'rgba(124,58,237,0.10)' : C.pinkGlass)
                         : notAvail ? C.glassMid : C.bgCard,
-                      borderRadius: R.md,
-                      borderWidth: isSel ? 2.5 : 1,
+                      borderRadius: R.lg,
+                      borderWidth: isSel ? 2.5 : 1.5,
                       borderColor: isSel
                         ? (isLux ? C.purple : C.pink)
                         : isLux ? C.purpleBorder : C.glassBorder,
-                      opacity: notAvail ? 0.5 : 1,
+                      opacity: notAvail ? 0.55 : 1,
                       overflow: 'hidden',
-                      elevation: isSel ? 14 : 2,
-                      shadowColor: isSel ? (isLux ? C.purple : C.pink) : '#000',
-                      shadowOpacity: isSel ? 0.38 : 0.06,
-                      shadowRadius: isSel ? 18 : 4,
+                      elevation: isSel ? 16 : 3,
+                      shadowColor: isSel ? (isLux ? C.purple : C.pink) : C.plum,
+                      shadowOpacity: isSel ? 0.40 : 0.08,
+                      shadowRadius: isSel ? 20 : 6,
+                      shadowOffset: { width: 0, height: isSel ? 8 : 3 },
                     }}>
 
-                    {/* Selected bottom accent bar */}
+                    {/* Selected top accent bar */}
                     {isSel && (
                       <View style={{
-                        position: 'absolute', bottom: 0, left: 0, right: 0, height: 3,
+                        position: 'absolute', top: 0, left: 0, right: 0, height: 4,
                         backgroundColor: isLux ? C.purple : C.pink,
                       }} />
                     )}
 
                     {/* Tag row — fixed height keeps all icon circles aligned */}
-                    <View style={{ height: 16, marginBottom: 10, alignItems: 'center', justifyContent: 'center' }}>
+                    <View style={{ height: 16, marginBottom: 11, alignItems: 'center', justifyContent: 'center' }}>
                       {r.tag ? (
-                        <View style={{ backgroundColor: isLux ? C.purple : r.tagColor, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
+                        <View style={{ backgroundColor: isLux ? C.purple : r.tagColor, borderRadius: R.xs - 2, paddingHorizontal: 7, paddingVertical: 2 }}>
                           <Text style={{ color: '#fff', fontSize: 8, fontWeight: '900', letterSpacing: 0.4 }}>{r.tag}</Text>
                         </View>
                       ) : null}
@@ -1346,26 +1353,26 @@ export function BookingScreen() {
 
                     {/* Icon circle */}
                     <View style={{
-                      width: 50, height: 50, borderRadius: 25,
+                      width: 56, height: 56, borderRadius: 28,
                       backgroundColor: isSel
-                        ? (isLux ? 'rgba(124,58,237,0.12)' : 'rgba(255,45,120,0.12)')
+                        ? (isLux ? 'rgba(124,58,237,0.14)' : 'rgba(255,45,120,0.14)')
                         : isLux ? C.purpleGlass : C.glassMid,
                       alignItems: 'center', justifyContent: 'center',
                       borderWidth: isSel ? 2 : 1.5,
                       borderColor: isSel ? (isLux ? C.purple : C.pink) : isLux ? C.purpleBorder : C.glassBorder,
-                      marginBottom: 10,
+                      marginBottom: 12,
                     }}>
-                      <RideVehicleIcon id={r.id} size={26} color={isSel ? (isLux ? C.purple : C.pink) : isLux ? C.purple : C.textMuted} />
+                      <RideVehicleIcon id={r.id} size={28} color={isSel ? (isLux ? C.purple : C.pink) : isLux ? C.purple : C.textMuted} />
                     </View>
 
                     {/* Vehicle name */}
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: isSel ? C.text : notAvail ? C.textMuted : C.textDim, textAlign: 'center', marginBottom: 2 }} numberOfLines={1}>{r.label}</Text>
+                    <Text style={{ fontSize: 12.5, fontWeight: '800', color: isSel ? C.text : notAvail ? C.textMuted : C.textDim, textAlign: 'center', marginBottom: 3 }} numberOfLines={1}>{r.label}</Text>
 
                     {/* Fare */}
                     {fareLoading ? (
-                      <SkeletonBox width={56} height={18} radius={6} style={{ marginBottom: 6, alignSelf: 'center' }} />
+                      <SkeletonBox width={58} height={20} radius={6} style={{ marginBottom: 7, alignSelf: 'center' }} />
                     ) : (
-                      <Text style={{ fontSize: 16, fontWeight: '900', color: isSel ? (isLux ? C.purple : C.pink) : C.text, textAlign: 'center', marginBottom: 6, letterSpacing: -0.3 }}>
+                      <Text style={{ fontSize: 17.5, fontWeight: '900', color: isSel ? (isLux ? C.purple : C.pink) : C.text, textAlign: 'center', marginBottom: 7, letterSpacing: -0.4 }}>
                         {fareText}
                       </Text>
                     )}
@@ -1388,8 +1395,12 @@ export function BookingScreen() {
 
                     {/* Selected checkmark badge */}
                     {isSel && (
-                      <View style={{ position: 'absolute', top: 9, right: 9, width: 18, height: 18, borderRadius: 9, backgroundColor: isLux ? C.purple : C.pink, alignItems: 'center', justifyContent: 'center' }}>
-                        <Ionicons name="checkmark" size={11} color="#fff" />
+                      <View style={{
+                        position: 'absolute', top: 10, right: 10, width: 20, height: 20, borderRadius: 10,
+                        backgroundColor: isLux ? C.purple : C.pink, alignItems: 'center', justifyContent: 'center',
+                        elevation: 4, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 3,
+                      }}>
+                        <Ionicons name="checkmark" size={12} color="#fff" />
                       </View>
                     )}
                   </TouchableOpacity>
@@ -1413,9 +1424,9 @@ export function BookingScreen() {
                                .sort((a, b) => ((driverEta[a.id]?.eta_min || 999) - (driverEta[b.id]?.eta_min || 999)))[0]
               : null;
             return (
-              <View style={{ backgroundColor: stripBg, borderRadius: R.sm, padding: 12, marginBottom: 4, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: stripBorder }}>
-                <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: stripBg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: stripBorder }}>
-                  <RideVehicleIcon id={rideType} size={17} color={stripColor} />
+              <View style={{ backgroundColor: stripBg, borderRadius: R.sm, padding: 13, marginBottom: 6, flexDirection: 'row', alignItems: 'center', gap: 11, borderWidth: 1.5, borderColor: stripBorder }}>
+                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: stripBg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: stripBorder }}>
+                  <RideVehicleIcon id={rideType} size={18} color={stripColor} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 12, fontWeight: '800', color: stripColor }} numberOfLines={1}>
@@ -1449,15 +1460,16 @@ export function BookingScreen() {
           {selRide && hasFare ? (
             <View style={{
               backgroundColor: C.bgCard,
-              borderRadius: 20,
-              marginTop: 16,
-              elevation: 5,
+              borderRadius: R.lg,
+              marginTop: 18,
+              elevation: 8,
               overflow: 'hidden',
               borderWidth: 1.5,
               borderColor: C.glassBorder,
-              shadowColor: C.pink,
-              shadowOpacity: 0.08,
-              shadowRadius: 14,
+              shadowColor: C.plum,
+              shadowOpacity: 0.10,
+              shadowRadius: 20,
+              shadowOffset: { width: 0, height: 8 },
             }}>
               {/* Surge banner */}
               {surgeLabel && (
@@ -1474,19 +1486,19 @@ export function BookingScreen() {
               )}
 
               {/* Header row */}
-              <View style={{ backgroundColor: C.pinkGlass, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderColor: C.glassBorder }}>
-                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.pinkBorder }}>
-                  <RideVehicleIcon id={selRide.id} size={19} color={C.pink} />
+              <View style={{ backgroundColor: C.pinkGlass, paddingHorizontal: 18, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', gap: 13, borderBottomWidth: 1, borderColor: C.glassBorder }}>
+                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.pinkBorder }}>
+                  <RideVehicleIcon id={selRide.id} size={21} color={C.pink} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: C.text, fontWeight: '800', fontSize: 14 }}>{selRide.label}</Text>
+                  <Text style={{ color: C.text, fontWeight: '800', fontSize: 14.5 }}>{selRide.label}</Text>
                   <Text style={{ color: C.textMuted, fontSize: 11, marginTop: 1 }}>{selRide.desc}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={{ color: C.plum, fontWeight: '900', fontSize: 22 }}>₹{finalFare}</Text>
+                  <Text style={{ color: C.plum, fontWeight: '900', fontSize: 26, letterSpacing: -0.6 }}>₹{finalFare}</Text>
                   {discount > 0 && <Text style={{ color: C.textDim, fontSize: 11, textDecorationLine: 'line-through' }}>₹{rawFare}</Text>}
                   {fareHistoryEntry && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, backgroundColor: C.greenGlass, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: C.greenBorder }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 5, backgroundColor: C.greenGlass, borderRadius: R.full, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: C.greenBorder }}>
                       <Text style={{ fontSize: 9, color: C.green, fontWeight: '700' }}>
                         Last time: ₹{fareHistoryEntry.fare}
                       </Text>
@@ -1496,7 +1508,7 @@ export function BookingScreen() {
               </View>
 
               {/* Line items */}
-              <View style={{ paddingHorizontal: 16, paddingVertical: 12, gap: 8 }}>
+              <View style={{ paddingHorizontal: 18, paddingVertical: 14, gap: 9 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                   <Text style={{ fontSize: 13, color: C.textMuted }}>Distance fare</Text>
                   <Text style={{ fontSize: 13, fontWeight: '600', color: C.text }}>₹{estDistFare > 0 ? estDistFare : '—'}</Text>
@@ -1535,31 +1547,32 @@ export function BookingScreen() {
                     <Text style={{ fontSize: 13, fontWeight: '800', color: C.green }}>−₹{discount}</Text>
                   </View>
                 )}
-                <View style={{ height: 1, backgroundColor: C.glassBorder, marginVertical: 2 }} />
+                <View style={{ height: 1, backgroundColor: C.glassBorder, marginVertical: 3 }} />
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <View>
-                    <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>Total</Text>
+                    <Text style={{ fontSize: 15.5, fontWeight: '800', color: C.text }}>Total</Text>
                     {discount > 0 && (
                       <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 1 }}>Trip ₹{tripSubtotal} + Platform ₹{estPlatFee}</Text>
                     )}
                   </View>
-                  <Text style={{ fontSize: 22, fontWeight: '900', color: C.plum }}>₹{finalFare}</Text>
+                  <Text style={{ fontSize: 25, fontWeight: '900', color: C.plum, letterSpacing: -0.5 }}>₹{finalFare}</Text>
                 </View>
               </View>
 
               {/* Instant promo offer */}
               {!instantApplied && discount === 0 && (
                 <TouchableOpacity
+                  activeOpacity={0.85}
                   onPress={() => { setPromoDiscount(2); setPromoCode('SPPERO2'); setInstantApplied(true); }}
-                  style={{ marginHorizontal: 16, marginBottom: 14, backgroundColor: C.greenGlass, borderRadius: 14, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: C.greenBorder, borderStyle: 'dashed' }}>
-                  <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: C.greenGlass, alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ fontSize: 17 }}>🎁</Text>
+                  style={{ marginHorizontal: 18, marginBottom: 16, backgroundColor: C.greenGlass, borderRadius: R.sm, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 11, borderWidth: 1.5, borderColor: C.greenBorder, borderStyle: 'dashed' }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.greenGlass, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 18 }}>🎁</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '800', color: C.green }}>₹2 OFF — Instant Discount</Text>
+                    <Text style={{ fontSize: 13.5, fontWeight: '800', color: C.green }}>₹2 OFF — Instant Discount</Text>
                     <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>Tap to apply • No code needed</Text>
                   </View>
-                  <View style={{ backgroundColor: C.green, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, elevation: 2 }}>
+                  <View style={{ backgroundColor: C.green, borderRadius: R.xs, paddingHorizontal: 13, paddingVertical: 7, elevation: 3, shadowColor: C.green, shadowOpacity: 0.3, shadowRadius: 6 }}>
                     <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900' }}>APPLY</Text>
                   </View>
                 </TouchableOpacity>
@@ -1577,12 +1590,12 @@ export function BookingScreen() {
               {/* Promo code toggle */}
               <TouchableOpacity
                 onPress={() => setShowPromoInput(!showPromoInput)}
-                style={{ marginHorizontal: 16, marginBottom: showPromoInput ? 0 : 14, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                style={{ marginHorizontal: 18, marginBottom: showPromoInput ? 0 : 16, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Text style={{ fontSize: 13, fontWeight: '700', color: C.pink }}>🏷️ Have a promo code?</Text>
                 <Ionicons name={showPromoInput ? 'chevron-up' : 'chevron-down'} size={14} color={C.pink} />
               </TouchableOpacity>
               {showPromoInput && (
-                <View style={{ marginHorizontal: 16, marginBottom: 10, marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.glassMid, borderRadius: 12, padding: 10, borderWidth: 1, borderColor: C.glassBorder }}>
+                <View style={{ marginHorizontal: 18, marginBottom: 12, marginTop: 9, flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: C.glassMid, borderRadius: R.sm, padding: 11, borderWidth: 1, borderColor: C.glassBorder }}>
                   <Ionicons name="pricetag" size={16} color={C.textMuted} />
                   <TextInput
                     style={{ flex: 1, fontSize: 13, color: C.text, fontWeight: '700', letterSpacing: 1 }}
@@ -1594,7 +1607,7 @@ export function BookingScreen() {
                     onBlur={() => setInputFocused(false)}
                     onChangeText={setPromoCode}
                   />
-                  <TouchableOpacity onPress={applyPromo} style={{ backgroundColor: C.pink, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8, elevation: 4, shadowColor: C.pink, shadowOpacity: 0.4, shadowRadius: 6 }}>
+                  <TouchableOpacity onPress={applyPromo} style={{ backgroundColor: C.pink, borderRadius: R.xs, paddingHorizontal: 15, paddingVertical: 9, elevation: 4, shadowColor: C.pink, shadowOpacity: 0.4, shadowRadius: 6 }}>
                     <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>Apply</Text>
                   </TouchableOpacity>
                 </View>
@@ -1707,16 +1720,16 @@ export function BookingScreen() {
         const extraMin = info ? Math.max(0, info.eta_min - 5) : 0;
         const selLabel = RIDES.find(r => r.id === rideType)?.label || 'Ride';
         return (
-          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end', zIndex: 999 }}>
-            <View style={{ backgroundColor: C.bgDark, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 24, paddingTop: 24, paddingBottom: 24 + bottomInset, borderTopWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)' }}>
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.68)', justifyContent: 'flex-end', zIndex: 999 }}>
+            <View style={{ backgroundColor: C.bgDark, borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingHorizontal: 24, paddingTop: 24, paddingBottom: 24 + bottomInset, borderTopWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)', elevation: 30, shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 30 }}>
 
               {/* Warning icon + title */}
-              <View style={{ alignItems: 'center', marginBottom: 20 }}>
-                <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: C.yellowGlass, alignItems: 'center', justifyContent: 'center', marginBottom: 12, borderWidth: 2, borderColor: C.yellowBorder }}>
-                  <Text style={{ fontSize: 28 }}>⚠️</Text>
+              <View style={{ alignItems: 'center', marginBottom: 22 }}>
+                <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: C.yellowGlass, alignItems: 'center', justifyContent: 'center', marginBottom: 13, borderWidth: 2, borderColor: C.yellowBorder }}>
+                  <Text style={{ fontSize: 30 }}>⚠️</Text>
                 </View>
-                <Text style={{ fontSize: 19, fontWeight: '900', color: '#fff' }}>Driver is a Bit Far</Text>
-                <Text style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>{selLabel} driver is outside your pickup area</Text>
+                <Text style={{ fontSize: 20, fontWeight: '900', color: '#fff' }}>Driver is a Bit Far</Text>
+                <Text style={{ fontSize: 12.5, color: C.textDim, marginTop: 5 }}>{selLabel} driver is outside your pickup area</Text>
               </View>
 
               {/* Distance / ETA info card */}
@@ -1770,7 +1783,7 @@ export function BookingScreen() {
                 <TouchableOpacity
                   onPress={() => { setShowWaitModal(false); bookRide(); }}
                   disabled={!waitConfirmed}
-                  style={{ flex: 2, backgroundColor: waitConfirmed ? C.pink : C.glassMid, borderRadius: 14, paddingVertical: 16, alignItems: 'center', elevation: waitConfirmed ? 8 : 0, shadowColor: C.pink, shadowOpacity: waitConfirmed ? 0.45 : 0, shadowRadius: 12 }}>
+                  style={{ flex: 2, backgroundColor: waitConfirmed ? C.pink : C.glassMid, borderRadius: 16, paddingVertical: 17, alignItems: 'center', elevation: waitConfirmed ? 10 : 0, shadowColor: C.pink, shadowOpacity: waitConfirmed ? 0.48 : 0, shadowRadius: 16, shadowOffset: { width: 0, height: 6 } }}>
                   <Text style={{ fontWeight: '900', color: waitConfirmed ? '#fff' : C.textMuted, fontSize: 15 }}>
                     {waitConfirmed ? 'Book Now →' : 'Confirm First'}
                   </Text>
@@ -1785,13 +1798,13 @@ export function BookingScreen() {
 
       {/* ─── Save Place picker modal ─────────────────────────────────────────── */}
       {showSavePicker && (
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end', zIndex: 999 }}>
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.58)', justifyContent: 'flex-end', zIndex: 999 }}>
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowSavePicker(false)} />
-          <View style={{ backgroundColor: C.bg, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 20 + bottomInset, borderTopWidth: 1.5, borderColor: C.glassBorder }}>
+          <View style={{ backgroundColor: C.bg, borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 20 + bottomInset, borderTopWidth: 1.5, borderColor: C.glassBorder, elevation: 28, shadowColor: C.plum, shadowOpacity: 0.22, shadowRadius: 26 }}>
 
             {/* Handle */}
             <View style={{ alignItems: 'center', marginBottom: 20 }}>
-              <View style={{ width: 44, height: 4, borderRadius: 2, backgroundColor: C.glassB2 }} />
+              <View style={{ width: 40, height: 5, borderRadius: 3, backgroundColor: C.glassB2 }} />
             </View>
 
             {/* Label */}
@@ -1803,13 +1816,13 @@ export function BookingScreen() {
             {/* Options */}
             <View style={{ gap: 12 }}>
               {/* Home */}
-              <TouchableOpacity onPress={() => savePlaceAs('home')}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: C.plumGlass, borderRadius: 18, padding: 16, borderWidth: 1.5, borderColor: C.plumBorder }}>
-                <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: C.plum, alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ fontSize: 22 }}>🏠</Text>
+              <TouchableOpacity activeOpacity={0.85} onPress={() => savePlaceAs('home')}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: C.plumGlass, borderRadius: R.md, padding: 16, borderWidth: 1.5, borderColor: C.plumBorder }}>
+                <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: C.plum, alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: C.plum, shadowOpacity: 0.3, shadowRadius: 8 }}>
+                  <Text style={{ fontSize: 23 }}>🏠</Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>Home</Text>
+                  <Text style={{ fontSize: 15.5, fontWeight: '800', color: C.text }}>Home</Text>
                   <Text style={{ fontSize: 12, color: C.textDim, marginTop: 2 }}>
                     {savedPlaces.home ? `Replace: ${savedPlaces.home.text}` : 'Set your home address'}
                   </Text>
@@ -1818,13 +1831,13 @@ export function BookingScreen() {
               </TouchableOpacity>
 
               {/* Office */}
-              <TouchableOpacity onPress={() => savePlaceAs('office')}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: C.purpleGlass, borderRadius: 18, padding: 16, borderWidth: 1.5, borderColor: C.purpleBorder }}>
-                <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: C.purple, alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ fontSize: 22 }}>🏢</Text>
+              <TouchableOpacity activeOpacity={0.85} onPress={() => savePlaceAs('office')}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: C.purpleGlass, borderRadius: R.md, padding: 16, borderWidth: 1.5, borderColor: C.purpleBorder }}>
+                <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: C.purple, alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: C.purple, shadowOpacity: 0.3, shadowRadius: 8 }}>
+                  <Text style={{ fontSize: 23 }}>🏢</Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>Office</Text>
+                  <Text style={{ fontSize: 15.5, fontWeight: '800', color: C.text }}>Office</Text>
                   <Text style={{ fontSize: 12, color: C.textDim, marginTop: 2 }}>
                     {savedPlaces.office ? `Replace: ${savedPlaces.office.text}` : 'Set your work address'}
                   </Text>
@@ -1833,13 +1846,13 @@ export function BookingScreen() {
               </TouchableOpacity>
 
               {/* Other */}
-              <TouchableOpacity onPress={() => savePlaceAs('other')}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: C.glassMid, borderRadius: 18, padding: 16, borderWidth: 1.5, borderColor: C.glassBorder }}>
-                <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: C.bgCard, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.glassBorder }}>
-                  <Text style={{ fontSize: 22 }}>📍</Text>
+              <TouchableOpacity activeOpacity={0.85} onPress={() => savePlaceAs('other')}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: C.glassMid, borderRadius: R.md, padding: 16, borderWidth: 1.5, borderColor: C.glassBorder }}>
+                <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: C.bgCard, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.glassBorder }}>
+                  <Text style={{ fontSize: 23 }}>📍</Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>Favourite Place</Text>
+                  <Text style={{ fontSize: 15.5, fontWeight: '800', color: C.text }}>Favourite Place</Text>
                   <Text style={{ fontSize: 12, color: C.textDim, marginTop: 2 }}>Save as a favourite spot</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={C.textDim} />
@@ -1863,15 +1876,17 @@ export function BookingScreen() {
         onRequestClose={() => setShowCouponModal(false)}
         statusBarTranslucent
       >
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.48)', justifyContent: 'flex-end' }}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.52)', justifyContent: 'flex-end' }}>
           {/* Backdrop tap closes modal */}
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowCouponModal(false)} />
 
           <View style={{
             backgroundColor: C.bg,
-            borderTopLeftRadius: 26, borderTopRightRadius: 26,
+            borderTopLeftRadius: 32, borderTopRightRadius: 32,
             paddingBottom: bottomInset + 20,
             maxHeight: '78%',
+            elevation: 28,
+            shadowColor: C.plum, shadowOpacity: 0.22, shadowRadius: 26,
           }}>
             {/* Handle + header */}
             <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 4 }}>
@@ -1991,17 +2006,18 @@ export function BookingScreen() {
         <View style={{
           position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
           backgroundColor: C.bg,
-          paddingHorizontal: 14, paddingTop: 12,
+          borderTopLeftRadius: 26, borderTopRightRadius: 26,
+          paddingHorizontal: 16, paddingTop: 14,
           // On button-nav devices (inset 0) a small fixed pad gives finger
           // clearance; on gesture-nav/notch devices the clamped safe-area
           // inset already IS that clearance, so we don't add anything on
           // top of it — avoids the double-padding that showed up as a big
           // empty strip above the system bar on some Android builds.
           paddingBottom: bottomInset > 0 ? bottomInset : 14,
-          borderTopWidth: 1, borderTopColor: C.glassBorder,
-          elevation: 22,
-          shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 14,
-          gap: 10,
+          borderWidth: 1, borderColor: 'rgba(46,20,97,0.08)', borderBottomWidth: 0,
+          elevation: 26,
+          shadowColor: C.plum, shadowOpacity: 0.18, shadowRadius: 22, shadowOffset: { width: 0, height: -8 },
+          gap: 11,
         }}>
 
           {/* ── Route: always show a route row for eligible vehicles; upgrade to
@@ -2009,15 +2025,15 @@ export function BookingScreen() {
                  shorter route exists (most city trips have one best route). ── */}
           {routeChoiceEligible && routeOptions && !loading && !scheduledAt && !(routeChoiceActive && routeFares) && (
             <View style={{
-              flexDirection: 'row', alignItems: 'center', gap: 8,
-              backgroundColor: C.bgCard, borderRadius: 12,
-              borderWidth: 1, borderColor: C.glassBorder,
-              paddingVertical: 8, paddingHorizontal: 12,
+              flexDirection: 'row', alignItems: 'center', gap: 9,
+              backgroundColor: C.bgCard, borderRadius: R.sm,
+              borderWidth: 1.5, borderColor: C.glassBorder,
+              paddingVertical: 10, paddingHorizontal: 14,
             }}>
-              <Text style={{ fontSize: 13 }}>🛣️</Text>
-              <Text style={{ fontSize: 12, fontWeight: '800', color: C.text }}>Best route</Text>
+              <Text style={{ fontSize: 14 }}>🛣️</Text>
+              <Text style={{ fontSize: 12.5, fontWeight: '800', color: C.text }}>Best route</Text>
               <View style={{ flex: 1 }} />
-              <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: '600' }}>
+              <Text style={{ fontSize: 11.5, color: C.textMuted, fontWeight: '600' }}>
                 {routeOptions.fastest.etaText} · {routeOptions.fastest.distText}
               </Text>
             </View>
@@ -2031,7 +2047,7 @@ export function BookingScreen() {
               { key: 'shortest', icon: '🛣️', label: 'Shortest', route: routeOptions!.shortest!, fare: routeFares.shortest },
             ];
             return (
-              <View style={{ flexDirection: 'row', gap: 8 }}>
+              <View style={{ flexDirection: 'row', gap: 9 }}>
                 {opts.map(o => {
                   const active = selectedRoute === o.key;
                   return (
@@ -2040,26 +2056,28 @@ export function BookingScreen() {
                       activeOpacity={0.85}
                       onPress={() => setSelectedRoute(o.key)}
                       style={{
-                        flex: 1, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 10,
-                        borderWidth: active ? 2 : 1,
-                        borderColor: active ? C.plum : C.glassBorder,
-                        backgroundColor: active ? C.plumGlass : C.bgCard,
+                        flex: 1, borderRadius: R.sm, paddingVertical: 10, paddingHorizontal: 12,
+                        borderWidth: active ? 0 : 1.5,
+                        borderColor: C.glassBorder,
+                        backgroundColor: active ? C.plum : C.bgCard,
+                        elevation: active ? 8 : 1,
+                        shadowColor: C.plum, shadowOpacity: active ? 0.35 : 0.05, shadowRadius: active ? 12 : 3,
                       }}
                     >
                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Text style={{ fontSize: 12, fontWeight: '900', color: active ? C.plum : C.text }}>
+                        <Text style={{ fontSize: 12.5, fontWeight: '900', color: active ? '#fff' : C.text }}>
                           {o.icon} {o.label}
                         </Text>
                         {o.key === 'shortest' && saving > 0 && (
-                          <View style={{ backgroundColor: C.green, borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1 }}>
+                          <View style={{ backgroundColor: active ? 'rgba(255,255,255,0.22)' : C.green, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
                             <Text style={{ fontSize: 9, fontWeight: '900', color: '#fff' }}>SAVE ₹{saving}</Text>
                           </View>
                         )}
                       </View>
-                      <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 2, fontWeight: '600' }}>
+                      <Text style={{ fontSize: 10.5, color: active ? 'rgba(255,255,255,0.6)' : C.textMuted, marginTop: 3, fontWeight: '600' }}>
                         {o.route.etaText} · {o.route.distText}
                       </Text>
-                      <Text style={{ fontSize: 14, fontWeight: '900', color: active ? C.plum : C.text, marginTop: 1 }}>
+                      <Text style={{ fontSize: 15.5, fontWeight: '900', color: active ? '#fff' : C.text, marginTop: 2, letterSpacing: -0.3 }}>
                         ₹{o.fare}
                       </Text>
                     </TouchableOpacity>
@@ -2071,13 +2089,13 @@ export function BookingScreen() {
 
           {/* Compact info strip — vehicle / ETA / cash + schedule toggle */}
           {hasFare && !loading && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
               {scheduledAt ? (
                 /* Scheduled time badge */
                 <View style={{
-                  flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6,
-                  backgroundColor: '#FFFBEB', borderRadius: 8,
-                  paddingHorizontal: 10, paddingVertical: 5,
+                  flex: 1, flexDirection: 'row', alignItems: 'center', gap: 7,
+                  backgroundColor: '#FFFBEB', borderRadius: R.full,
+                  paddingHorizontal: 12, paddingVertical: 6,
                   borderWidth: 1, borderColor: '#FDE68A',
                 }}>
                   <Ionicons name="calendar" size={12} color="#F59E0B" />
@@ -2090,12 +2108,23 @@ export function BookingScreen() {
                 </View>
               ) : (
                 <>
-                  <RideVehicleIcon id={rideType} size={12} color={C.plum} />
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: C.text }}>{selRide?.label}</Text>
-                  {etaLoaded && driverEta[rideType] && (
-                    <Text style={{ fontSize: 11, color: C.green, fontWeight: '700' }}>
-                      {' · '}~{driverEta[rideType].eta_min <= 1 ? '< 1' : driverEta[rideType].eta_min} min
-                    </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.glassMid, borderRadius: R.full, paddingHorizontal: 10, paddingVertical: 5 }}>
+                    <RideVehicleIcon id={rideType} size={12} color={C.plum} />
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: C.text }}>{selRide?.label}</Text>
+                    {etaLoaded && driverEta[rideType] && (
+                      <Text style={{ fontSize: 11, color: C.green, fontWeight: '700' }}>
+                        · ~{driverEta[rideType].eta_min <= 1 ? '< 1' : driverEta[rideType].eta_min} min
+                      </Text>
+                    )}
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.glassMid, borderRadius: R.full, paddingHorizontal: 10, paddingVertical: 5 }}>
+                    <Ionicons name="cash-outline" size={12} color={C.textMuted} />
+                    <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: '600' }}>Cash</Text>
+                  </View>
+                  {discount > 0 && (
+                    <View style={{ backgroundColor: C.greenGlass, borderRadius: R.full, paddingHorizontal: 8, paddingVertical: 5, borderWidth: 1, borderColor: C.greenBorder }}>
+                      <Text style={{ fontSize: 10, color: C.green, fontWeight: '900' }}>₹{discount} off</Text>
+                    </View>
                   )}
                   <View style={{ flex: 1 }} />
                   {/* Schedule for later */}
@@ -2103,21 +2132,14 @@ export function BookingScreen() {
                     onPress={() => setShowSchedulePicker(true)}
                     style={{
                       flexDirection: 'row', alignItems: 'center', gap: 4,
-                      backgroundColor: '#FFFBEB', borderRadius: 8,
-                      paddingHorizontal: 8, paddingVertical: 4,
+                      backgroundColor: '#FFFBEB', borderRadius: R.full,
+                      paddingHorizontal: 10, paddingVertical: 5,
                       borderWidth: 1, borderColor: '#FDE68A',
                     }}
                   >
                     <Ionicons name="calendar-outline" size={11} color="#F59E0B" />
-                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#92400E' }}>Later</Text>
+                    <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#92400E' }}>Later</Text>
                   </TouchableOpacity>
-                  <Ionicons name="cash-outline" size={11} color={C.textMuted} style={{ marginLeft: 4 }} />
-                  <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: '500' }}>Cash</Text>
-                  {discount > 0 && (
-                    <View style={{ backgroundColor: C.greenGlass, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: C.greenBorder, marginLeft: 2 }}>
-                      <Text style={{ fontSize: 9, color: C.green, fontWeight: '900' }}>₹{discount} off</Text>
-                    </View>
-                  )}
                 </>
               )}
             </View>
@@ -2126,21 +2148,24 @@ export function BookingScreen() {
           {/* Full-width action button — amber when scheduled, plum for instant */}
           <Animated.View style={{ transform: [{ scale: bookBtnScale }] }}>
             <TouchableOpacity
-              activeOpacity={hasFare && !loading ? 0.85 : 1}
+              activeOpacity={hasFare && !loading ? 0.88 : 1}
               onPress={hasFare && !loading ? (scheduledAt ? handleScheduleRide : handleBook) : undefined}
               onPressIn={hasFare && !loading ? onBookPressIn : undefined}
               onPressOut={hasFare && !loading ? onBookPressOut : undefined}
               style={{
-                borderRadius: 16,
+                borderRadius: 20,
                 backgroundColor: loading ? C.glassMid
                   : hasFare ? (scheduledAt ? '#F59E0B' : C.plum)
                   : C.glassMid,
-                paddingVertical: 17, paddingHorizontal: 20,
+                paddingVertical: 18, paddingHorizontal: 22,
                 flexDirection: 'row', alignItems: 'center',
-                elevation: hasFare && !loading ? 14 : 0,
+                elevation: hasFare && !loading ? 18 : 0,
                 shadowColor: scheduledAt ? '#F59E0B' : C.plum,
-                shadowOpacity: hasFare && !loading ? 0.44 : 0,
-                shadowRadius: 20,
+                shadowOpacity: hasFare && !loading ? 0.48 : 0,
+                shadowRadius: 24,
+                shadowOffset: { width: 0, height: 10 },
+                borderWidth: hasFare && !loading ? 0 : 1.5,
+                borderColor: C.glassBorder,
               }}>
               {loading ? (
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
@@ -2152,22 +2177,28 @@ export function BookingScreen() {
               ) : hasFare ? (
                 <>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 18, fontWeight: '900', color: '#fff', letterSpacing: -0.3 }}>
+                    <Text style={{ fontSize: 19, fontWeight: '900', color: '#fff', letterSpacing: -0.4 }}>
                       {scheduledAt ? 'Schedule Ride' : 'Book Ride'}
                     </Text>
-                    <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)', marginTop: 2, fontWeight: '600' }}>
+                    <Text style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.58)', marginTop: 3, fontWeight: '600' }}>
                       {scheduledAt
                         ? `${selRide?.label} · scheduled`
                         : `${selRide?.label} · instant booking`}
                     </Text>
                   </View>
                   <View style={{ alignItems: 'flex-end', gap: 1 }}>
-                    <Text style={{ fontSize: 30, fontWeight: '900', color: '#fff', letterSpacing: -0.5 }}>₹{finalFare}</Text>
+                    <Text style={{ fontSize: 32, fontWeight: '900', color: '#fff', letterSpacing: -0.7 }}>₹{finalFare}</Text>
                     {discount > 0 && (
-                      <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.38)', textDecorationLine: 'line-through' }}>₹{rawFare}</Text>
+                      <Text style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.40)', textDecorationLine: 'line-through' }}>₹{rawFare}</Text>
                     )}
                   </View>
-                  <Ionicons name="chevron-forward" size={22} color="rgba(255,255,255,0.55)" style={{ marginLeft: 10 }} />
+                  <View style={{
+                    marginLeft: 12, width: 34, height: 34, borderRadius: 17,
+                    backgroundColor: 'rgba(255,255,255,0.16)',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Ionicons name="chevron-forward" size={19} color="#fff" />
+                  </View>
                 </>
               ) : (
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
