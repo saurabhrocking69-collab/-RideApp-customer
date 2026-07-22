@@ -16,19 +16,20 @@ export const C = {
   red:     '#EF4444',
   purple:  '#7C3AED',
 
-  // Backgrounds — lavender-tinted (premium, not generic white)
-  bg:      '#F5F2FF',   // App base — very subtle lavender
-  bgCard:  '#FFFFFF',   // Card surfaces — pure white pops on F5F2FF
-  bgDeep:  '#EAE5FF',   // Hero sections, tinted areas
-  bgPlum:  '#F0EBF8',   // Plum-tinted surface for premium cards
+  // Backgrounds — neutral grey/off-white (was lavender-tinted; replaced
+  // app-wide 2026-07-22 for a calmer, less saturated base)
+  bg:      '#F7F7F8',   // App base — very light neutral grey
+  bgCard:  '#FFFFFF',   // Card surfaces — pure white pops on F7F7F8
+  bgDeep:  '#EDEDEF',   // Hero sections, tinted areas
+  bgPlum:  '#F0F0F1',   // Neutral surface for premium cards
   bgDark:  '#1A0D2E',   // Deep plum — bill modal, dark overlays
 
   // Glass tokens — light-mode cards with subtle depth
   glass:       '#FFFFFF',
-  glassMid:    '#F3F0FE',
-  glassHigh:   '#E8E3FC',
-  glassBorder: '#E2DCFF',
-  glassB2:     '#D4CCFA',
+  glassMid:    '#F1F1F3',
+  glassHigh:   '#E9E9EC',
+  glassBorder: '#E3E3E6',
+  glassB2:     '#D6D6DA',
 
   // Tinted fills — alpha layers on white cards
   pinkGlass:    'rgba(255,45,120,0.07)',
