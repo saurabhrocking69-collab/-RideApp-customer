@@ -20,7 +20,7 @@ const ROUTE_CHOICE_VEHICLES = ['bike', 'auto', 'eriksha', 'electric_auto', 'gree
 
 const SCREEN_H   = Dimensions.get('window').height;
 const DRAWER_COMPACT = Math.round(SCREEN_H * 0.40); // route confirmed — map gets more room to breathe, drawer is a compact summary
-const DRAWER_INPUT   = Math.round(SCREEN_H * 0.86); // searching / editing — near-full-page like Maps' search sheet
+const DRAWER_INPUT   = Math.round(SCREEN_H * 0.80); // searching / editing — near-full-page like Maps' search sheet, but leaves enough map clearance that the floating back button doesn't ghost through the glass panel's top edge
 const DRAWER_BROWSE  = Math.round(SCREEN_H * 0.72); // expanded on tap — clearer contrast against compact
 
 // Android safe-area insets can misreport a much larger value than the device's
@@ -1140,16 +1140,19 @@ export function BookingScreen() {
 
           {/* ─── Nearest driver recommendation banner ─── */}
           {etaLoaded && (() => {
+            // Only consider drivers with a real ETA — a driver whose GPS hasn't
+            // reported yet has info but a null eta_min, which used to render as
+            // a literal blank ("arriving in ~ min").
             const nearest = RIDES
               .map(r => ({ r, info: driverEta[r.id] }))
-              .filter(x => x.info)
-              .sort((a, b) => (a.info?.eta_min || 999) - (b.info?.eta_min || 999))[0];
+              .filter((x): x is { r: typeof x.r; info: NonNullable<typeof x.info> & { eta_min: number } } => x.info?.eta_min != null)
+              .sort((a, b) => a.info.eta_min - b.info.eta_min)[0];
             if (!nearest) return null;
             return (
               <View style={{ backgroundColor: C.greenGlass, borderRadius: R.sm, padding: 13, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: C.greenBorder }}>
                 <Text style={{ fontSize: 17 }}>💡</Text>
                 <Text style={{ fontSize: 12.5, fontWeight: '700', color: C.green, flex: 1 }}>
-                  {nearest.r.label} is nearest — arriving in ~{nearest.info?.eta_min} min
+                  {nearest.r.label} is nearest — arriving in ~{nearest.info.eta_min} min
                 </Text>
                 {rideType !== nearest.r.id && (
                   <TouchableOpacity onPress={() => { setRideType(nearest.r.id); setVehicleBrowsing(false); }} style={{ backgroundColor: C.green, borderRadius: R.xs, paddingHorizontal: 12, paddingVertical: 7, elevation: 3, shadowColor: C.green, shadowOpacity: 0.3, shadowRadius: 6 }}>
@@ -1192,22 +1195,31 @@ export function BookingScreen() {
                       <Text style={{ fontSize: 12, color: C.textDim }}>·</Text>
                       <Text style={{ fontSize: 13, fontWeight: '700', color: C.textMuted }}>{routeDist}</Text>
                       <View style={{ flex: 1 }} />
-                      {etaLoaded && Object.keys(driverEta).length > 0 ? (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                          <View style={{ width: 14, height: 14, alignItems: 'center', justifyContent: 'center' }}>
-                            <Animated.View style={{
-                              position: 'absolute', width: 14, height: 14, borderRadius: 7,
-                              backgroundColor: C.green,
-                              opacity: pulseDot.interpolate({ inputRange: [1, 1.9], outputRange: [0.35, 0] }),
-                              transform: [{ scale: pulseDot }],
-                            }} />
-                            <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: C.green }} />
+                      {(() => {
+                        // Only count drivers with a real ETA — one whose GPS
+                        // hasn't reported yet has an entry but a null eta_min,
+                        // which used to fall through to a 999-sentinel and
+                        // render literally as "driver ~999 min".
+                        if (!etaLoaded) return null;
+                        const etas = Object.values(driverEta).map((v: any) => v?.eta_min).filter((n: any) => n != null);
+                        if (etas.length === 0) return null;
+                        return (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                            <View style={{ width: 14, height: 14, alignItems: 'center', justifyContent: 'center' }}>
+                              <Animated.View style={{
+                                position: 'absolute', width: 14, height: 14, borderRadius: 7,
+                                backgroundColor: C.green,
+                                opacity: pulseDot.interpolate({ inputRange: [1, 1.9], outputRange: [0.35, 0] }),
+                                transform: [{ scale: pulseDot }],
+                              }} />
+                              <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: C.green }} />
+                            </View>
+                            <Text style={{ fontSize: 11, color: C.green, fontWeight: '800' }}>
+                              driver ~{Math.min(...etas)} min
+                            </Text>
                           </View>
-                          <Text style={{ fontSize: 11, color: C.green, fontWeight: '800' }}>
-                            driver ~{Math.min(...Object.values(driverEta).map((v: any) => v?.eta_min ?? 999))} min
-                          </Text>
-                        </View>
-                      ) : null}
+                        );
+                      })()}
                     </>
                   ) : (
                     <>
@@ -1230,7 +1242,13 @@ export function BookingScreen() {
                 const isSel = rideType === r.id;
                 const isLux = r.id === 'luxury';
                 const accent = isLux ? C.purple : C.pink;
-                const fareText = fareLoading ? '…' : fareEstimates[r.id] ? `₹${fareEstimates[r.id].fare ?? fareEstimates[r.id]}` : `₹${r.base}+`;
+                // routeFares (Fastest/Shortest) only ever apply to whichever
+                // vehicle is currently selected — for that one tab, show the
+                // same overridden fare the Book button uses below, so the two
+                // numbers on screen never disagree with each other.
+                const fareText = fareLoading ? '…'
+                  : (isSel && routeChoiceActive && routeFares) ? `₹${routeFares[selectedRoute]}`
+                  : fareEstimates[r.id] ? `₹${fareEstimates[r.id].fare ?? fareEstimates[r.id]}` : `₹${r.base}+`;
                 const anim = cardAnims[r.id];
                 const entry = cardEntryAnims[r.id];
                 const info = driverEta[r.id];
