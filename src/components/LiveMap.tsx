@@ -141,18 +141,22 @@ function NearbyDriverMarker({ vehicleType }: { vehicleType: string }) {
 // measures for anchoring, so the pin still points at the exact coordinate. ──
 function PinLabel({ text, accent }: { text: string; accent: string }) {
   return (
-    <View style={{
-      position: 'absolute', bottom: '100%', marginBottom: 8,
-      alignSelf: 'center',
-      flexDirection: 'row', alignItems: 'center', gap: 5,
-      backgroundColor: '#fff', borderRadius: 10,
-      paddingHorizontal: 9, paddingVertical: 5,
-      maxWidth: 170,
-      borderWidth: 1.5, borderColor: accent,
-      elevation: 6, shadowColor: '#000', shadowOpacity: 0.22, shadowRadius: 5, shadowOffset: { width: 0, height: 2 },
-    }}>
-      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: accent }} />
-      <Text numberOfLines={1} style={{ fontSize: 11, fontWeight: '800', color: '#1a1a1a', flexShrink: 1 }}>{text}</Text>
+    <View style={{ position: 'absolute', bottom: '100%', alignSelf: 'center', alignItems: 'center' }}>
+      {/* Frosted-glass area-name tag — short locality name, not the full address */}
+      <View style={{
+        flexDirection: 'row', alignItems: 'center', gap: 5,
+        backgroundColor: 'rgba(255,255,255,0.65)',
+        borderRadius: 10,
+        paddingHorizontal: 9, paddingVertical: 5,
+        maxWidth: 130,
+        borderWidth: 1, borderColor: 'rgba(255,255,255,0.9)',
+        elevation: 6, shadowColor: '#000', shadowOpacity: 0.22, shadowRadius: 5, shadowOffset: { width: 0, height: 2 },
+      }}>
+        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: accent }} />
+        <Text numberOfLines={1} style={{ fontSize: 11, fontWeight: '800', color: '#1a1a1a', flexShrink: 1 }}>{text}</Text>
+      </View>
+      {/* Connector "rope" down to the pin */}
+      <View style={{ width: 1.5, height: 9, backgroundColor: accent, opacity: 0.8 }} />
     </View>
   );
 }
@@ -670,6 +674,31 @@ export const LiveMap = memo(function LiveMap({
         {mode === 'booking' && !animDone && bookingAhead.length > 1 && (
           <Polyline coordinates={bookingAhead} strokeColor={C.plum} strokeWidth={5} lineCap="round" />
         )}
+        {/* Booking: once the arrow animation finishes, the route stays on the
+             map as a plain plum line (previously nothing replaced the arrow
+             trail, so the route visually disappeared) with a small km tag
+             at the midpoint. */}
+        {mode === 'booking' && animDone && routeCoords.length > 1 && (
+          <>
+            <Polyline coordinates={routeCoords} strokeColor={C.plum} strokeWidth={4} lineCap="round" />
+            {(() => {
+              const mid = routeCoords[Math.floor(routeCoords.length / 2)];
+              if (!mid || !distText) return null;
+              return (
+                <Marker coordinate={mid} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false} zIndex={5}>
+                  <View style={{
+                    backgroundColor: '#fff', borderRadius: 10,
+                    paddingHorizontal: 8, paddingVertical: 4,
+                    borderWidth: 1.5, borderColor: C.plum,
+                    elevation: 5, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 4, shadowOffset: { width: 0, height: 2 },
+                  }}>
+                    <Text style={{ fontSize: 10.5, fontWeight: '900', color: C.plum }}>{distText}</Text>
+                  </View>
+                </Marker>
+              );
+            })()}
+          </>
+        )}
 
         {/* Non-booking route */}
         {mode !== 'booking' && remainingCoords.length > 1 && (
@@ -818,7 +847,12 @@ export const LiveMap = memo(function LiveMap({
           <Marker
             coordinate={{ latitude: pickupCoords.lat, longitude: pickupCoords.lng }}
             anchor={{ x: 0.5, y: 0.5 }}
-            tracksViewChanges={draggingPickup}
+            // tracksViewChanges=false caches the marker's native snapshot after
+            // its first paint — if the label text wasn't ready on that very
+            // first render (or changes later), it silently never appears.
+            // Keeping it tied to `label` too (not just drag state) fixes that;
+            // only 2 markers on screen, so the perf cost is negligible.
+            tracksViewChanges={draggingPickup || !!pickupLabel}
             draggable={draggablePickup}
             onDragStart={() => setDraggingPickup(true)}
             onDragEnd={e => {
@@ -838,7 +872,7 @@ export const LiveMap = memo(function LiveMap({
           <Marker
             coordinate={{ latitude: dropCoords.lat, longitude: dropCoords.lng }}
             anchor={{ x: 0.5, y: 1 }}
-            tracksViewChanges={draggingDrop}
+            tracksViewChanges={draggingDrop || !!dropLabel}
             draggable={draggableDrop}
             onDragStart={() => setDraggingDrop(true)}
             onDragEnd={e => {

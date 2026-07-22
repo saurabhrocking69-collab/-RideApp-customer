@@ -27,6 +27,18 @@ const BRAND_PINK = C.pink;
 // often can't) — these get the Fastest/Shortest route choice.
 const ROUTE_CHOICE_VEHICLES = ['bike', 'auto', 'eriksha', 'electric_auto', 'green_bike'];
 
+// Short area-name for the map pin tags — a plain `split(',')[0]` usually grabs
+// the house/plot number ("660/ZH/P-69") since that's the first segment of a
+// typical formatted address, not a readable place name. Skip segments that
+// look like a plot code (short, has a slash/hyphen/hash alongside digits) and
+// use the first segment that reads like an actual locality name instead.
+function shortAreaLabel(address?: string): string | undefined {
+  if (!address) return undefined;
+  const parts = address.split(',').map(p => p.trim()).filter(Boolean);
+  const isPlotLike = (p: string) => p.length < 20 && /\d/.test(p) && /[\/\-#]/.test(p);
+  return parts.find(p => !isPlotLike(p)) || parts[0];
+}
+
 // Drawer heights are fractions of the CURRENT window height, read live via
 // useWindowDimensions() inside the component rather than a static constant —
 // Android's windowSoftInputMode="adjustResize" actually shrinks the window
@@ -680,8 +692,8 @@ export function BookingScreen() {
           selectedRouteType={selectedRoute}
           fitKey={fitKey}
           walkOrigin={walkGpsOrigin}
-          pickupLabel={pickup ? pickup.split(',')[0] : undefined}
-          dropLabel={drop ? drop.split(',')[0] : undefined}
+          pickupLabel={shortAreaLabel(pickup)}
+          dropLabel={shortAreaLabel(drop)}
         />
         {/* Floating back button */}
         <TouchableOpacity
@@ -1192,15 +1204,12 @@ export function BookingScreen() {
                  for whichever vehicle is currently selected. ─── */}
           <View style={{
             backgroundColor: C.bgCard,
-            borderRadius: R.lg,
+            marginHorizontal: -14,
             overflow: 'hidden',
             marginBottom: 16,
-            borderWidth: 1,
+            borderTopWidth: 1,
+            borderBottomWidth: 1,
             borderColor: C.glassBorder,
-            elevation: 3,
-            shadowColor: C.plum,
-            shadowOpacity: 0.06,
-            shadowRadius: 10,
           }}>
             {/* Route summary row — only once both points are set */}
             {bothSet && (
@@ -1259,7 +1268,7 @@ export function BookingScreen() {
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 14, gap: 2 }}
+              contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 16, gap: 2 }}
             >
               {RIDES.map((r: any) => {
                 const isSel = rideType === r.id;
@@ -1292,27 +1301,27 @@ export function BookingScreen() {
                       }}
                       activeOpacity={0.75}
                       style={{
-                        minWidth: 82, alignItems: 'center',
-                        paddingHorizontal: 14, paddingBottom: 8, paddingTop: 2,
+                        minWidth: 96, alignItems: 'center',
+                        paddingHorizontal: 16, paddingBottom: 10, paddingTop: 4,
                         opacity: notAvail ? 0.45 : 1,
-                        borderBottomWidth: 2.5,
+                        borderBottomWidth: 3,
                         borderBottomColor: isSel ? accent : 'transparent',
                       }}>
-                      <RideVehicleIcon id={r.id} size={25} color={isSel ? accent : notAvail ? C.textDim : C.textMuted} />
+                      <RideVehicleIcon id={r.id} size={28} color={isSel ? accent : notAvail ? C.textDim : C.textMuted} />
                       {fareLoading ? (
-                        <SkeletonBox width={42} height={15} radius={4} style={{ marginTop: 7 }} />
+                        <SkeletonBox width={46} height={16} radius={4} style={{ marginTop: 8 }} />
                       ) : (
-                        <Text style={{ fontSize: 14, fontWeight: isSel ? '900' : '700', color: isSel ? C.text : C.textMuted, marginTop: 7 }}>
+                        <Text style={{ fontSize: 15, fontWeight: isSel ? '900' : '700', color: isSel ? C.text : C.textMuted, marginTop: 8 }}>
                           {fareText}
                         </Text>
                       )}
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4, minHeight: 13 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 5, minHeight: 14 }}>
                         {!etaLoaded ? null : notAvail ? (
-                          <Text style={{ fontSize: 9, color: C.textDim, fontWeight: '700' }}>no driver</Text>
+                          <Text style={{ fontSize: 9.5, color: C.textDim, fontWeight: '700' }}>no driver</Text>
                         ) : info ? (
                           <>
                             <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: isFar ? C.yellow : C.green }} />
-                            <Text style={{ fontSize: 9, color: isFar ? C.yellow : C.green, fontWeight: '800' }}>
+                            <Text style={{ fontSize: 9.5, color: isFar ? C.yellow : C.green, fontWeight: '800' }}>
                               {info.eta_min !== null ? `${info.eta_min}m` : '…'}
                             </Text>
                           </>
