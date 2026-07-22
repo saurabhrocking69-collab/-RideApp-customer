@@ -697,12 +697,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (['ride_matched', 'driver_arrived', 'trip_started', 'scheduled_matching'].includes(data?.type) && data?.ride_id) {
         adoptActiveRide(data.ride_id).catch(() => {});
       }
-      // Driver confirmed payment — reconcile even if the user doesn't tap the
-      // push, so the pay-now screen doesn't sit stale if they're already
-      // looking at the app on another screen.
-      if (data?.type === 'payment_confirmed' && data?.ride_id) {
-        reconcilePaymentConfirmed(data.ride_id).then(ok => { if (ok) setScreen('postride'); }).catch(() => {});
-      }
       const toast: ToastNotif = {
         id:       n.request.identifier,
         title:    content.title || 'Sppero',
@@ -733,10 +727,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setScreen('inride');
       }
       else if (data.type === 'trip_completed')                     setScreen('payment');
-      else if (data.type === 'payment_confirmed') {
-        const ok = rideId ? await reconcilePaymentConfirmed(rideId) : false;
-        setScreen(ok ? 'postride' : 'payment');
-      }
       else if (data.type === 'ride_cancelled')                     { setScreen('home'); setDriverCancelPopup(true); }
       else if (data.type === 'no_driver_found')                    setScreen('home');
       else if (data.type === 'extension_accepted')                 { if (rideId) await adoptActiveRide(rideId); setScreen('matching'); }
@@ -1099,6 +1089,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (data.cashbacks?.length) setCashbackEarned(data.cashbacks);
         setPaymentDone(true);
         setScreen('postride');
+        notifyPaymentReceivedInApp(rideDataRef.current?.fare);
         AsyncStorage.removeItem('activeStdRideId').catch(() => {});
         s.emit('leaveRide', { rideId: data.ride_id }); // leave room so old events can't leak again
       }
@@ -1326,6 +1317,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // the exact instant the driver taps confirm. rides.status stays
   // 'completed' for both "please pay" and "already paid", so this checks the
   // separate payment_status column to tell them apart and route correctly.
+  // In-app-only notification — no OS push for this event by design, just a
+  // toast + notification-center entry using the app's own existing system,
+  // for whenever we discover the driver has confirmed payment.
+  const notifyPaymentReceivedInApp = (fare?: number) => {
+    const toast: ToastNotif = {
+      id:   `payment-confirmed-${Date.now()}`,
+      title: '✅ Payment Received',
+      body:  fare ? `Your ₹${Math.round(fare)} payment has been confirmed by the driver.` : 'Your payment has been confirmed by the driver.',
+      type:  'payment_confirmed',
+      ts:    Date.now(),
+    };
+    saveNotification(toast);
+    setNotifToast(toast);
+  };
+
   const reconcilePaymentConfirmed = async (rideId: string | number): Promise<boolean> => {
     try {
       const r = await fetch(`${API}/api/rides/status/${rideId}`);
@@ -1334,6 +1340,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!ride || ride.status !== 'completed' || ride.payment_status !== 'completed') return false;
       setRideData({ ...ride, ride_id: ride.ride_id ?? ride.id });
       setPaymentDone(true);
+      notifyPaymentReceivedInApp(ride.fare);
       await AsyncStorage.removeItem('activeStdRideId').catch(() => {});
       return true;
     } catch { return false; }
