@@ -157,13 +157,19 @@ function PinLabel({ text, accent }: { text: string; accent: string }) {
   );
 }
 
-// ── Pickup pin — green circle with white center ───────────────────────────────
+// ── Pickup pin — beacon-style ring with a soft glow halo and a subtle
+// highlight on the center dot for a bit of depth, rather than a flat bullseye ──
 function PickupMarker({ dragging, label }: { dragging?: boolean; label?: string }) {
   return (
     <View style={{ alignItems: 'center' }}>
       {!!label && <PinLabel text={label} accent={C.green} />}
-      <View style={[styles.pickupRing, dragging && { borderColor: C.green, borderWidth: 3 }]}>
-        <View style={styles.pickupDot} />
+      <View style={{ width: 42, height: 42, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={styles.pickupGlow} />
+        <View style={[styles.pickupRing, dragging && { borderColor: C.green, borderWidth: 3.5 }]}>
+          <View style={styles.pickupDot}>
+            <View style={styles.pickupDotShine} />
+          </View>
+        </View>
       </View>
     </View>
   );
@@ -213,18 +219,22 @@ function DragHint({ visible, isAdjust }: { visible: boolean; isAdjust?: boolean 
   );
 }
 
-// ── "You are here" GPS marker ─────────────────────────────────────────────────
+// ── "Currently here" GPS marker — frosted-glass label (semi-transparent +
+// border + shadow, this codebase's no-native-blur "glass" technique, same
+// as GlassPanel in ui.tsx) instead of the old solid-white pill ────────────
 function YouMarker() {
   return (
     <View style={{ alignItems: 'center' }}>
       <View style={{
-        backgroundColor: 'rgba(255,255,255,0.97)',
-        borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2,
-        marginBottom: 4, borderWidth: 1.5, borderColor: C.pink,
-        elevation: 4,
-        shadowColor: C.pink, shadowOpacity: 0.22, shadowRadius: 4,
+        flexDirection: 'row', alignItems: 'center', gap: 5,
+        backgroundColor: 'rgba(255,255,255,0.62)',
+        borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5,
+        marginBottom: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.85)',
+        elevation: 5,
+        shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 6, shadowOffset: { width: 0, height: 2 },
       }}>
-        <Text style={{ fontSize: 10, fontWeight: '900', color: C.pink, letterSpacing: 0.4 }}>You</Text>
+        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#3B82F6' }} />
+        <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#1a1a1a', letterSpacing: 0.2 }}>Currently here</Text>
       </View>
       <View style={{
         width: 14, height: 14, borderRadius: 7,
@@ -1000,13 +1010,24 @@ const styles = StyleSheet.create({
   },
 
   // Pickup — green ring + white center dot
-  pickupRing: {
-    width: 22, height: 22, borderRadius: 11,
-    backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
-    elevation: 5, shadowColor: C.green, shadowOpacity: 0.30, shadowRadius: 6,
-    borderWidth: 2.5, borderColor: C.green,
+  pickupGlow: {
+    position: 'absolute', width: 42, height: 42, borderRadius: 21,
+    backgroundColor: 'rgba(5,150,105,0.16)',
   },
-  pickupDot: { width: 9, height: 9, borderRadius: 4.5, backgroundColor: C.green },
+  pickupRing: {
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
+    elevation: 6, shadowColor: C.green, shadowOpacity: 0.35, shadowRadius: 7,
+    borderWidth: 3, borderColor: C.green,
+  },
+  pickupDot: {
+    width: 12, height: 12, borderRadius: 6, backgroundColor: C.green,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  pickupDotShine: {
+    width: 4, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.75)',
+    marginBottom: 2.5, marginLeft: -1.5,
+  },
 
   // Drop — pink teardrop pin
   dropOuter: { alignItems: 'center' },

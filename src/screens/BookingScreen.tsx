@@ -1,4 +1,4 @@
-import { ActivityIndicator, Animated, Dimensions, Easing, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, StatusBar, StyleSheet, TextInput, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, StatusBar, StyleSheet, TextInput, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { SchedulePickerSheet, ScheduleResult } from '../components/SchedulePickerSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -27,10 +27,14 @@ const BRAND_PINK = C.pink;
 // often can't) — these get the Fastest/Shortest route choice.
 const ROUTE_CHOICE_VEHICLES = ['bike', 'auto', 'eriksha', 'electric_auto', 'green_bike'];
 
-const SCREEN_H   = Dimensions.get('window').height;
-const DRAWER_COMPACT = Math.round(SCREEN_H * 0.40); // route confirmed — map gets more room to breathe, drawer is a compact summary
-const DRAWER_INPUT   = Math.round(SCREEN_H * 0.80); // searching / editing — near-full-page like Maps' search sheet, but leaves enough map clearance that the floating back button doesn't ghost through the glass panel's top edge
-const DRAWER_BROWSE  = Math.round(SCREEN_H * 0.72); // expanded on tap — clearer contrast against compact
+// Drawer heights are fractions of the CURRENT window height, read live via
+// useWindowDimensions() inside the component rather than a static constant —
+// Android's windowSoftInputMode="adjustResize" actually shrinks the window
+// itself while the keyboard is up, so a one-time Dimensions.get() snapshot
+// (taken from the full, keyboard-less screen) made the drawer request a
+// height taller than the space now available above the keyboard, clipping
+// the bottom of the suggestion list behind it. Reading the height reactively
+// means the drawer's target height shrinks in step with the keyboard.
 
 // Android safe-area insets can misreport a much larger value than the device's
 // actual nav-bar/gesture-pill height during layout transitions (a known
@@ -43,6 +47,10 @@ const MAX_SAFE_BOTTOM = 34;
 export function BookingScreen() {
   const { bottom: rawBottomInset } = useSafeAreaInsets();
   const bottomInset = Math.min(Math.max(rawBottomInset, 0), MAX_SAFE_BOTTOM);
+  const { height: winH } = useWindowDimensions();
+  const drawerCompact = Math.round(winH * 0.40); // route confirmed — map gets more room to breathe, drawer is a compact summary
+  const drawerInputH  = Math.round(winH * 0.80); // searching / editing — near-full-page like Maps' search sheet
+  const drawerBrowse  = Math.round(winH * 0.72); // expanded on tap — clearer contrast against compact
   const {
     screen, setScreen,
     pickup, setPickup, drop, setDrop,
@@ -586,7 +594,7 @@ export function BookingScreen() {
   }, []);
 
   // ── Drawer state machine ──────────────────────────────────────────────────
-  //  DRAWER_INPUT when searching | DRAWER_COMPACT when route confirmed | DRAWER_BROWSE when expanded
+  //  drawerInputH when searching | drawerCompact when route confirmed | drawerBrowse when expanded
   const [inputFocused, setInputFocused]     = useState(false);
   const [drawerExpanded, setDrawerExpanded] = useState(false);
   const bothSet = !!(pickupCoords && dropCoords);
@@ -611,13 +619,13 @@ export function BookingScreen() {
     if (bothSet) setDrawerExpanded(false);
   }, [bothSet]);
 
-  const drawerHeightAnim = useRef(new Animated.Value(DRAWER_INPUT)).current;
+  const drawerHeightAnim = useRef(new Animated.Value(drawerInputH)).current;
   useEffect(() => {
-    const target = !bothSet || inputFocused ? DRAWER_INPUT
-      : drawerExpanded                       ? DRAWER_BROWSE
-      : DRAWER_COMPACT;
+    const target = !bothSet || inputFocused ? drawerInputH
+      : drawerExpanded                       ? drawerBrowse
+      : drawerCompact;
     Animated.spring(drawerHeightAnim, { toValue: target, friction: 8, tension: 85, useNativeDriver: false }).start();
-  }, [bothSet, inputFocused, drawerExpanded]);
+  }, [bothSet, inputFocused, drawerExpanded, drawerInputH, drawerBrowse, drawerCompact]);
 
   // ── fitKey — re-triggers fitToCoordinates on route/map changes ───────────
   const [fitKey, setFitKey] = useState(0);
