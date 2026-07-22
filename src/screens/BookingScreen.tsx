@@ -6,46 +6,22 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { Storage as AsyncStorage } from '../storage';
 import { useApp } from '../context/AppContext';
-import { GlassPanel, RideVehicleIcon, SkeletonBox } from '../components/ui';
+import { GlassPanel, RideVehicleIcon, DotBG, SkeletonBox } from '../components/ui';
 import { LiveMap, RouteOption } from '../components/LiveMap';
 import { PickupMapPicker } from '../components/PickupMapPicker';
-import { s, C as BrandC, T, R, SP, SHADOW } from '../styles';
+import { s, C, T, R, SP, SHADOW } from '../styles';
 import { RIDES, MAPS_KEY } from '../constants';
 import { apiGet, apiPost, externalGet } from '../../api';
 import { useNearbyDrivers } from '../offline';
 
-// ── Prototype: restrained neutral palette (comparison exercise, this screen
-// only — the shared design system in '../styles' is untouched) ─────────────
-// Pink is reserved ONLY for the final booking CTA and true "needs attention"
-// moments (applying a promo code, the wait-modal's book-now button) —
-// restored explicitly via BRAND_PINK at those specific call sites. Every
-// other decorative use of C.pink/C.plum/C.purple in this file (icons,
-// borders, selected-tab underlines, badges) now resolves to a neutral gray
-// instead of brand color, closer to a utility-app look (Maps/AccuWeather)
-// than the saturated-brand "bold & premium" pass.
-const BRAND_PINK = BrandC.pink;
-const C = {
-  ...BrandC,
-  bg:          '#F5F6F8',
-  bgDeep:      '#ECEDEF',
-  bgPlum:      '#EFEFF1',
-  glassMid:    '#EFF0F2',
-  glassHigh:   '#E7E8EC',
-  glassBorder: '#E2E4E8',
-  glassB2:     '#D2D4D9',
-  text:        '#14161B',
-  textMuted:   '#6B7280',
-  textDim:     '#9AA0AA',
-  plum:        '#1C1F26',
-  purple:      '#3D4250',
-  plumGlass:   'rgba(28,31,38,0.06)',
-  plumBorder:  'rgba(28,31,38,0.14)',
-  purpleGlass: 'rgba(61,66,80,0.06)',
-  purpleBorder: 'rgba(61,66,80,0.20)',
-  pink:        '#2B2F38',
-  pinkGlass:   'rgba(0,0,0,0.045)',
-  pinkBorder:  'rgba(0,0,0,0.12)',
-};
+// Reverted the local neutral-accent shadow tried earlier: on real-device
+// testing, every C.pink/C.plum/C.purple use in this file turned out to be
+// meaningful state (selected vehicle tab, swap/edit/GPS buttons, save chips)
+// rather than pure decoration — neutralizing all of it read as "offline"/
+// disabled, not calm. The one part of that experiment worth keeping — a
+// calmer neutral background instead of the lavender tint — is already live
+// app-wide via the shared tokens in '../styles', so nothing needed here.
+const BRAND_PINK = C.pink;
 
 // Nimble vehicles that can actually take a tighter/shorter route (a car/luxury
 // often can't) — these get the Fastest/Shortest route choice.
@@ -667,8 +643,7 @@ export function BookingScreen() {
 
   return (
     <KeyboardAvoidingView style={[s.screen, { backgroundColor: C.bg }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      {/* DotBG's soft pink/amber/purple blobs are brand-colored decoration —
-          dropped for this neutral-palette prototype; plain background instead. */}
+      <DotBG />
 
       {/* ─── Map — flex:1 fills all space above the drawer ─── */}
       <View style={{ flex: 1 }}>
@@ -972,6 +947,10 @@ export function BookingScreen() {
 
                 {pickupSugg.length > 0 && (
                   <View style={[s.suggBox, { zIndex: 100, borderColor: C.glassBorder }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4, paddingTop: 2, paddingBottom: 6 }}>
+                      <Ionicons name="location" size={11} color={C.green} />
+                      <Text style={{ fontSize: 10, color: C.textMuted, fontWeight: '900', letterSpacing: 1.2 }}>PICKUP SUGGESTIONS</Text>
+                    </View>
                     {pickupSugg.slice(0, 5).map((sg: any, i: number) => (
                       <TouchableOpacity key={i}
                         style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 11, paddingHorizontal: 4, borderBottomWidth: i < pickupSugg.length - 1 ? 1 : 0, borderBottomColor: C.glassBorder }}
@@ -1105,6 +1084,12 @@ export function BookingScreen() {
                   {/* Thin separator line */}
                   <View style={{ height: 1, backgroundColor: C.glassBorder, marginHorizontal: 16 }} />
 
+                  {showDropSugg && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 6 }}>
+                      <Ionicons name="location" size={11} color={C.pink} />
+                      <Text style={{ fontSize: 10, color: C.textMuted, fontWeight: '900', letterSpacing: 1.2 }}>DROP SUGGESTIONS</Text>
+                    </View>
+                  )}
                   {showDropSugg && dropSugg.slice(0, 5).map((sg: any, i: number) => (
                     <TouchableOpacity key={i}
                       style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 11, paddingHorizontal: 16, borderBottomWidth: i < Math.min(dropSugg.length, 5) - 1 ? 1 : 0, borderBottomColor: C.glassBorder }}
