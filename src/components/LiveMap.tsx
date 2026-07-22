@@ -101,30 +101,6 @@ function interpolateRoute(
   return coords[coords.length - 1];
 }
 
-// ── Quadratic Bezier arch between two map coords ─────────────────────────────
-function generateArcPoints(
-  lat1: number, lng1: number,
-  lat2: number, lng2: number,
-  steps = 60,
-): { latitude: number; longitude: number }[] {
-  const mx = (lat1 + lat2) / 2;
-  const my = (lng1 + lng2) / 2;
-  const dx = lat2 - lat1;
-  const dy = lng2 - lng1;
-  // Control point lifted perpendicular to route — arch height = 45% of distance
-  const cx = mx - dy * 0.45;
-  const cy = my + dx * 0.45;
-  const pts: { latitude: number; longitude: number }[] = [];
-  for (let i = 0; i <= steps; i++) {
-    const t = i / steps;
-    pts.push({
-      latitude:  (1 - t) ** 2 * lat1 + 2 * (1 - t) * t * cx + t ** 2 * lat2,
-      longitude: (1 - t) ** 2 * lng1 + 2 * (1 - t) * t * cy + t ** 2 * lng2,
-    });
-  }
-  return pts;
-}
-
 // ── Vehicle icons ─────────────────────────────────────────────────────────────
 const VEHICLE_ICONS: Record<string, string> = {
   bike: '🏍️', green_bike: '⚡', auto: '🛺', electric_auto: '🌿',
@@ -676,30 +652,14 @@ export const LiveMap = memo(function LiveMap({
           <Polyline coordinates={completedCoords} strokeColor="rgba(5,150,105,0.5)" strokeWidth={5} lineCap="round" />
         )}
 
-        {/* Booking: pink trail behind arrow — hidden once animation finishes */}
+        {/* Booking: black trail behind arrow — hidden once animation finishes */}
         {mode === 'booking' && !animDone && bookingBehind.length > 1 && (
-          <Polyline coordinates={bookingBehind} strokeColor={C.pink} strokeWidth={5} lineCap="round" />
+          <Polyline coordinates={bookingBehind} strokeColor="#1A1A1A" strokeWidth={5} lineCap="round" />
         )}
-        {/* Booking: green route ahead of arrow — hidden once animation finishes */}
+        {/* Booking: plum route ahead of arrow — hidden once animation finishes */}
         {mode === 'booking' && !animDone && bookingAhead.length > 1 && (
-          <Polyline coordinates={bookingAhead} strokeColor={C.green} strokeWidth={5} lineCap="round" />
+          <Polyline coordinates={bookingAhead} strokeColor={C.plum} strokeWidth={5} lineCap="round" />
         )}
-        {/* Dotted arch — appears after animation completes */}
-        {mode === 'booking' && animDone && pickupCoords && dropCoords && (() => {
-          const archPts = generateArcPoints(
-            pickupCoords.lat, pickupCoords.lng,
-            dropCoords.lat,   dropCoords.lng,
-          );
-          return (
-            <Polyline
-              coordinates={archPts}
-              strokeColor="rgba(160,90,255,0.82)"
-              strokeWidth={3}
-              lineDashPattern={[9, 7]}
-              lineCap="round"
-            />
-          );
-        })()}
 
         {/* Non-booking route */}
         {mode !== 'booking' && remainingCoords.length > 1 && (
@@ -992,11 +952,11 @@ const MAP_STYLE = [
   // Landscape base — very light cool grey
   { featureType: 'landscape',     elementType: 'geometry',        stylers: [{ color: '#EDEEF2' }] },
 
-  // Parks & green spaces — visible and green
-  { featureType: 'poi.park',      elementType: 'geometry',        stylers: [{ color: '#bbf7d0' }] },
-  { featureType: 'poi.park',      elementType: 'labels.text.fill', stylers: [{ color: '#059669' }] },
+  // Parks & green spaces — visible, neutral grey instead of green
+  { featureType: 'poi.park',      elementType: 'geometry',        stylers: [{ color: '#DDDFE3' }] },
+  { featureType: 'poi.park',      elementType: 'labels.text.fill', stylers: [{ color: '#6B7280' }] },
   { featureType: 'poi.park',                                       stylers: [{ visibility: 'on' }] },
-  { featureType: 'landscape.natural', elementType: 'geometry',    stylers: [{ color: '#d1fae5' }] },
+  { featureType: 'landscape.natural', elementType: 'geometry',    stylers: [{ color: '#E3E5E9' }] },
 
   // Other POI — hide to keep clean
   { featureType: 'poi',           elementType: 'geometry',        stylers: [{ visibility: 'off' }] },
