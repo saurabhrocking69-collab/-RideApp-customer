@@ -866,15 +866,42 @@ export function BookingScreen() {
                 padding: 16,
                 paddingBottom: hasDropDown ? 10 : 16,
               }}>
-                {/* Pickup row */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.greenGlass, borderRadius: 12, paddingHorizontal: 10, borderWidth: 1, borderColor: C.greenBorder }}>
-                  {/* Pulsing green tint overlay while GPS locating */}
-                  {pickerLoading && (
-                    <Animated.View style={[
-                      StyleSheet.absoluteFillObject,
-                      { borderRadius: 10, backgroundColor: C.greenGlass, opacity: pickupLocAnim },
-                    ]} pointerEvents="none" />
+                {/* ── Quick access — Home / Office, always visible (Maps-style shortcut chips) ── */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 12 }}>
+                  {savedPlaces.home ? (
+                    <TouchableOpacity
+                      onPress={() => selectSaved(savedPlaces.home!)}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: C.glassMid, borderRadius: R.full, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: C.glassBorder }}>
+                      <Text style={{ fontSize: 14 }}>🏠</Text>
+                      <Text style={{ fontSize: 12.5, fontWeight: '800', color: C.text }}>Home</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      onPress={() => { setSaveTarget(null); setShowSavePicker(true); }}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: R.full, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: C.glassBorder, borderStyle: 'dashed' }}>
+                      <Ionicons name="add" size={14} color={C.textMuted} />
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: C.textMuted }}>Add Home</Text>
+                    </TouchableOpacity>
                   )}
+                  {savedPlaces.office ? (
+                    <TouchableOpacity
+                      onPress={() => selectSaved(savedPlaces.office!)}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: C.glassMid, borderRadius: R.full, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: C.glassBorder }}>
+                      <Text style={{ fontSize: 14 }}>🏢</Text>
+                      <Text style={{ fontSize: 12.5, fontWeight: '800', color: C.text }}>Office</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      onPress={() => { setSaveTarget(null); setShowSavePicker(true); }}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: R.full, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: C.glassBorder, borderStyle: 'dashed' }}>
+                      <Ionicons name="add" size={14} color={C.textMuted} />
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: C.textMuted }}>Add Office</Text>
+                    </TouchableOpacity>
+                  )}
+                </ScrollView>
+
+                {/* Pickup row — flat/minimal, Maps-style (no tinted box, just the dot) */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 2 }}>
                   <Animated.View style={[
                     { width: 13, height: 13, borderRadius: 6.5, backgroundColor: C.green, borderWidth: 2.5, borderColor: 'rgba(5,150,105,0.3)' },
                     pickerLoading && { transform: [{ scale: pickupLocAnim.interpolate({ inputRange: [0.4, 1], outputRange: [0.85, 1.25] }) }] },
@@ -932,8 +959,8 @@ export function BookingScreen() {
                             geocodePlace(sg.text, 'pickup');
                           }
                         }}>
-                        <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: C.greenGlass, alignItems: 'center', justifyContent: 'center', marginRight: 10, borderWidth: 1, borderColor: C.greenBorder, flexShrink: 0 }}>
-                          <Ionicons name="location-outline" size={16} color={C.green} />
+                        <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: C.glassMid, alignItems: 'center', justifyContent: 'center', marginRight: 10, borderWidth: 1, borderColor: C.glassBorder, flexShrink: 0 }}>
+                          <Ionicons name="location-outline" size={16} color={C.textMuted} />
                         </View>
                         <View style={{ flex: 1, gap: 2 }}>
                           <Text style={{ fontSize: 13, color: C.text, fontWeight: '700' }} numberOfLines={1}>{sg.main || sg.text}</Text>
@@ -942,8 +969,8 @@ export function BookingScreen() {
                           )}
                         </View>
                         {sg.distance_m != null && (
-                          <View style={{ marginLeft: 8, backgroundColor: C.greenGlass, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: C.greenBorder }}>
-                            <Text style={{ fontSize: 10, color: C.green, fontWeight: '700' }}>
+                          <View style={{ marginLeft: 8, backgroundColor: C.glassMid, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: C.glassBorder }}>
+                            <Text style={{ fontSize: 10, color: C.textMuted, fontWeight: '700' }}>
                               {sg.distance_m < 1000 ? `${Math.round(sg.distance_m)}m` : `${(sg.distance_m / 1000).toFixed(1)}km`}
                             </Text>
                           </View>
@@ -1009,8 +1036,8 @@ export function BookingScreen() {
                   <View style={{ flex: 1, height: 1, backgroundColor: C.glassBorder }} />
                 </View>
 
-                {/* Drop row */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.pinkGlass, borderRadius: 12, paddingHorizontal: 10, borderWidth: 1, borderColor: C.pinkBorder }}>
+                {/* Drop row — flat/minimal, Maps-style (no tinted box, just the pin) */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 2 }}>
                   <View style={{ width: 13, height: 13, borderRadius: 3, backgroundColor: C.pink, borderWidth: 2.5, borderColor: C.pinkBorder }} />
                   <TextInput
                     style={{ flex: 1, fontSize: 15, color: C.text, fontWeight: '700', paddingVertical: 10 }}
@@ -1078,46 +1105,9 @@ export function BookingScreen() {
 
                   {showDropHist && (
                     <>
-                      {/* ── Saved Places — Home & Office ── */}
-                      {hasSavedPlaces && (
-                        <View style={{ paddingHorizontal: 14, paddingTop: 14, paddingBottom: 8 }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-                            <Ionicons name="bookmark" size={11} color={C.pink} />
-                            <Text style={{ fontSize: 10, color: C.pink, fontWeight: '900', letterSpacing: 1.3 }}>SAVED PLACES</Text>
-                          </View>
-                          <View style={{ flexDirection: 'row', gap: 10 }}>
-                            {savedPlaces.home && (
-                              <TouchableOpacity onPress={() => selectSaved(savedPlaces.home!)}
-                                style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: C.plumGlass, borderRadius: 16, padding: 12, borderWidth: 1.5, borderColor: C.plumBorder }}>
-                                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.plum, alignItems: 'center', justifyContent: 'center' }}>
-                                  <Text style={{ fontSize: 17 }}>🏠</Text>
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                  <Text style={{ fontSize: 13, fontWeight: '800', color: C.text }}>Home</Text>
-                                  <Text style={{ fontSize: 10, color: C.textDim, marginTop: 1 }} numberOfLines={1}>{savedPlaces.home.text}</Text>
-                                </View>
-                              </TouchableOpacity>
-                            )}
-                            {savedPlaces.office && (
-                              <TouchableOpacity onPress={() => selectSaved(savedPlaces.office!)}
-                                style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: C.purpleGlass, borderRadius: 16, padding: 12, borderWidth: 1.5, borderColor: C.purpleBorder }}>
-                                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.purple, alignItems: 'center', justifyContent: 'center' }}>
-                                  <Text style={{ fontSize: 17 }}>🏢</Text>
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                  <Text style={{ fontSize: 13, fontWeight: '800', color: C.text }}>Office</Text>
-                                  <Text style={{ fontSize: 10, color: C.textDim, marginTop: 1 }} numberOfLines={1}>{savedPlaces.office.text}</Text>
-                                </View>
-                              </TouchableOpacity>
-                            )}
-                          </View>
-                        </View>
-                      )}
-
-                      {/* ── Recent destinations (max 3) ── */}
+                      {/* ── Recent destinations (max 3) — Home/Office are always-visible chips above now ── */}
                       {dropHistory.length > 0 && (
                         <>
-                          <View style={{ height: 1, backgroundColor: C.glassBorder, marginHorizontal: 14, marginTop: hasSavedPlaces ? 4 : 0 }} />
                           <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 6, gap: 6 }}>
                             <Ionicons name="time" size={11} color={C.textMuted} />
                             <Text style={{ fontSize: 10, color: C.textMuted, fontWeight: '900', letterSpacing: 1.2 }}>RECENT</Text>
@@ -1146,118 +1136,12 @@ export function BookingScreen() {
                           ))}
                         </>
                       )}
-
-                      {/* ── Add Home / Office nudge (if neither set) ── */}
-                      {(!savedPlaces.home || !savedPlaces.office) && (
-                        <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 14, paddingVertical: 12, borderTopWidth: 1, borderTopColor: C.glassBorder }}>
-                          {!savedPlaces.home && (
-                            <TouchableOpacity
-                              onPress={() => { setSaveTarget(null); setShowSavePicker(true); }}
-                              style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 12, borderWidth: 1.5, borderColor: C.plumBorder, borderStyle: 'dashed', paddingVertical: 11, backgroundColor: C.plumGlass }}>
-                              <Text style={{ fontSize: 15 }}>🏠</Text>
-                              <Text style={{ fontSize: 12, fontWeight: '700', color: C.plum }}>Add Home</Text>
-                            </TouchableOpacity>
-                          )}
-                          {!savedPlaces.office && (
-                            <TouchableOpacity
-                              onPress={() => { setSaveTarget(null); setShowSavePicker(true); }}
-                              style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 12, borderWidth: 1.5, borderColor: C.purpleBorder, borderStyle: 'dashed', paddingVertical: 11, backgroundColor: C.purpleGlass }}>
-                              <Text style={{ fontSize: 15 }}>🏢</Text>
-                              <Text style={{ fontSize: 12, fontWeight: '700', color: C.purple }}>Add Office</Text>
-                            </TouchableOpacity>
-                          )}
-                        </View>
-                      )}
                     </>
                   )}
                 </View>
               )}
             </View>
           )}
-
-          {/* ─── Plum ETA card — animated, only when route is ready ──────────────── */}
-          {bothSet && routeEta ? (
-            <Animated.View style={{ opacity: etaCardFade, transform: [{ translateY: etaCardSlide }], marginBottom: 16 }}>
-              <View style={{
-                backgroundColor: C.plum,
-                borderRadius: R.lg,
-                overflow: 'hidden',
-                elevation: 14,
-                shadowColor: C.plum,
-                shadowOpacity: 0.45,
-                shadowRadius: 22,
-                shadowOffset: { width: 0, height: 10 },
-                borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.06)',
-              }}>
-                {/* Top row — live badge */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingTop: 14, paddingBottom: 10, gap: 8 }}>
-                  {/* Pulse dot */}
-                  <View style={{ width: 14, height: 14, alignItems: 'center', justifyContent: 'center' }}>
-                    <Animated.View style={{
-                      position: 'absolute',
-                      width: 14, height: 14, borderRadius: 7,
-                      backgroundColor: '#4ADE80',
-                      opacity: pulseDot.interpolate({ inputRange: [1, 1.9], outputRange: [0.4, 0] }),
-                      transform: [{ scale: pulseDot }],
-                    }} />
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#4ADE80' }} />
-                  </View>
-                  <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 10.5, fontWeight: '900', letterSpacing: 1.6 }}>LIVE ROUTE</Text>
-                  <View style={{ flex: 1 }} />
-                  {etaLoaded && Object.keys(driverEta).length > 0 ? (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(74,222,128,0.16)', borderRadius: R.full, paddingHorizontal: 9, paddingVertical: 4 }}>
-                      <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#4ADE80' }} />
-                      <Text style={{ color: '#4ADE80', fontSize: 10, fontWeight: '800' }}>
-                        driver ~{Math.min(...Object.values(driverEta).map((v: any) => v?.eta_min ?? 999))} min
-                      </Text>
-                    </View>
-                  ) : (
-                    <Text style={{ color: 'rgba(255,255,255,0.30)', fontSize: 10, fontWeight: '600' }}>tap to edit</Text>
-                  )}
-                </View>
-
-                {/* Hairline divider */}
-                <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.10)', marginHorizontal: 18 }} />
-
-                {/* Stats row */}
-                <View style={{ flexDirection: 'row', paddingVertical: 18, paddingHorizontal: 18 }}>
-                  {/* Time */}
-                  <Animated.View style={{ flex: 1, opacity: etaTimeFade, transform: [{ translateY: etaTimeSlide }] }}>
-                    <Text style={{ color: '#fff', fontSize: 33, fontWeight: '900', letterSpacing: -1.0 }}>{routeEta}</Text>
-                    <Text style={{ color: 'rgba(255,255,255,0.52)', fontSize: 11, fontWeight: '700', marginTop: 5, letterSpacing: 0.3 }}>Est. travel time</Text>
-                  </Animated.View>
-
-                  {/* Vertical separator */}
-                  <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.12)', marginVertical: 2, marginHorizontal: 4 }} />
-
-                  {/* Distance */}
-                  <Animated.View style={{ flex: 1, paddingLeft: 20, opacity: etaDistFade, transform: [{ translateY: etaDistSlide }] }}>
-                    <Text style={{ color: '#fff', fontSize: 33, fontWeight: '900', letterSpacing: -1.0 }}>{routeDist}</Text>
-                    <Text style={{ color: 'rgba(255,255,255,0.52)', fontSize: 11, fontWeight: '700', marginTop: 5, letterSpacing: 0.3 }}>Total distance</Text>
-                  </Animated.View>
-                </View>
-              </View>
-            </Animated.View>
-          ) : bothSet ? (
-            /* Calculating skeleton */
-            <View style={{ backgroundColor: C.bgDeep, borderRadius: R.lg, paddingVertical: 16, paddingHorizontal: 18, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: C.plumBorder }}>
-              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.plum, opacity: 0.5 }} />
-              <Text style={{ color: C.plum, fontWeight: '700', fontSize: 12, opacity: 0.7 }}>Calculating route…</Text>
-            </View>
-          ) : null}
-
-          {/* ─── Vehicle + fare + promo ───────────────────────────────────────────── */}
-          <>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, marginTop: 4 }}>
-            <Text style={{ fontSize: 12, fontWeight: '900', color: C.text, letterSpacing: 1.2, flex: 1 }}>CHOOSE A RIDE</Text>
-            {etaLoaded && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.greenGlass, borderRadius: R.full, paddingHorizontal: 9, paddingVertical: 4, borderWidth: 1, borderColor: C.greenBorder }}>
-                <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: C.green }} />
-                <Text style={{ fontSize: 9.5, color: C.green, fontWeight: '800' }}>LIVE</Text>
-              </View>
-            )}
-          </View>
 
           {/* ─── Nearest driver recommendation banner ─── */}
           {etaLoaded && (() => {
@@ -1281,180 +1165,198 @@ export function BookingScreen() {
             );
           })()}
 
-          {/* ─── Horizontal vehicle carousel ─── */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 8, paddingRight: 4 }}
-            style={{ marginBottom: 10 }}
-          >
-            {RIDES.map((r: any) => {
-              const isSel = rideType === r.id;
-              const isLux = r.id === 'luxury';
-              const fareText = fareLoading ? '...' : fareEstimates[r.id] ? `₹${fareEstimates[r.id].fare ?? fareEstimates[r.id]}` : `₹${r.base}+`;
-              const anim = cardAnims[r.id];
-              const entry = cardEntryAnims[r.id];
-              const info = driverEta[r.id];
-              const notAvail = etaLoaded && !info;
-              const isFar = info?.dist_km !== null && info?.dist_km > 5;
-              return (
-                <Animated.View key={r.id} style={{ transform: [{ scale: anim }, { translateY: entry.ty }], opacity: entry.op }}>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setRideType(r.id);
-                      setVehicleBrowsing(false);
-                      RIDES.forEach((ride: any) => {
-                        Animated.spring(cardAnims[ride.id], {
-                          toValue: ride.id === r.id ? 1.02 : 1,
-                          friction: 5, tension: 180, useNativeDriver: true,
-                        }).start();
-                      });
-                    }}
-                    activeOpacity={0.82}
-                    style={{
-                      width: 138,
-                      alignItems: 'center',
-                      paddingHorizontal: 12,
-                      paddingTop: 16,
-                      paddingBottom: 14,
-                      backgroundColor: isSel
-                        ? (isLux ? 'rgba(124,58,237,0.10)' : C.pinkGlass)
-                        : notAvail ? C.glassMid : C.bgCard,
-                      borderRadius: R.lg,
-                      borderWidth: isSel ? 2.5 : 1.5,
-                      borderColor: isSel
-                        ? (isLux ? C.purple : C.pink)
-                        : isLux ? C.purpleBorder : C.glassBorder,
-                      opacity: notAvail ? 0.55 : 1,
-                      overflow: 'hidden',
-                      elevation: isSel ? 16 : 3,
-                      shadowColor: isSel ? (isLux ? C.purple : C.pink) : C.plum,
-                      shadowOpacity: isSel ? 0.40 : 0.08,
-                      shadowRadius: isSel ? 20 : 6,
-                      shadowOffset: { width: 0, height: isSel ? 8 : 3 },
-                    }}>
-
-                    {/* Selected top accent bar */}
-                    {isSel && (
-                      <View style={{
-                        position: 'absolute', top: 0, left: 0, right: 0, height: 4,
-                        backgroundColor: isLux ? C.purple : C.pink,
-                      }} />
-                    )}
-
-                    {/* Tag row — fixed height keeps all icon circles aligned */}
-                    <View style={{ height: 16, marginBottom: 11, alignItems: 'center', justifyContent: 'center' }}>
-                      {r.tag ? (
-                        <View style={{ backgroundColor: isLux ? C.purple : r.tagColor, borderRadius: R.xs - 2, paddingHorizontal: 7, paddingVertical: 2 }}>
-                          <Text style={{ color: '#fff', fontSize: 8, fontWeight: '900', letterSpacing: 0.4 }}>{r.tag}</Text>
+          {/* ─── Route + vehicle — one flat Maps-style card: route summary, a
+                 thin mode-tab strip (icon+fare per vehicle, underline-selected —
+                 mirrors Maps' "Public transport" mode tabs), then the detail row
+                 for whichever vehicle is currently selected. ─── */}
+          <View style={{
+            backgroundColor: C.bgCard,
+            borderRadius: R.lg,
+            overflow: 'hidden',
+            marginBottom: 16,
+            borderWidth: 1,
+            borderColor: C.glassBorder,
+            elevation: 3,
+            shadowColor: C.plum,
+            shadowOpacity: 0.06,
+            shadowRadius: 10,
+          }}>
+            {/* Route summary row — only once both points are set */}
+            {bothSet && (
+              <>
+                <Animated.View style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 10,
+                  paddingHorizontal: 16, paddingVertical: 13,
+                  opacity: routeEta ? etaCardFade : 1,
+                  transform: routeEta ? [{ translateY: etaCardSlide }] : [],
+                }}>
+                  {routeEta ? (
+                    <>
+                      <Ionicons name="time-outline" size={15} color={C.textMuted} />
+                      <Text style={{ fontSize: 13.5, fontWeight: '900', color: C.text }}>{routeEta}</Text>
+                      <Text style={{ fontSize: 12, color: C.textDim }}>·</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: C.textMuted }}>{routeDist}</Text>
+                      <View style={{ flex: 1 }} />
+                      {etaLoaded && Object.keys(driverEta).length > 0 ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                          <View style={{ width: 14, height: 14, alignItems: 'center', justifyContent: 'center' }}>
+                            <Animated.View style={{
+                              position: 'absolute', width: 14, height: 14, borderRadius: 7,
+                              backgroundColor: C.green,
+                              opacity: pulseDot.interpolate({ inputRange: [1, 1.9], outputRange: [0.35, 0] }),
+                              transform: [{ scale: pulseDot }],
+                            }} />
+                            <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: C.green }} />
+                          </View>
+                          <Text style={{ fontSize: 11, color: C.green, fontWeight: '800' }}>
+                            driver ~{Math.min(...Object.values(driverEta).map((v: any) => v?.eta_min ?? 999))} min
+                          </Text>
                         </View>
                       ) : null}
-                    </View>
-
-                    {/* Icon circle */}
-                    <View style={{
-                      width: 56, height: 56, borderRadius: 28,
-                      backgroundColor: isSel
-                        ? (isLux ? 'rgba(124,58,237,0.14)' : 'rgba(255,45,120,0.14)')
-                        : isLux ? C.purpleGlass : C.glassMid,
-                      alignItems: 'center', justifyContent: 'center',
-                      borderWidth: isSel ? 2 : 1.5,
-                      borderColor: isSel ? (isLux ? C.purple : C.pink) : isLux ? C.purpleBorder : C.glassBorder,
-                      marginBottom: 12,
-                    }}>
-                      <RideVehicleIcon id={r.id} size={28} color={isSel ? (isLux ? C.purple : C.pink) : isLux ? C.purple : C.textMuted} />
-                    </View>
-
-                    {/* Vehicle name */}
-                    <Text style={{ fontSize: 12.5, fontWeight: '800', color: isSel ? C.text : notAvail ? C.textMuted : C.textDim, textAlign: 'center', marginBottom: 3 }} numberOfLines={1}>{r.label}</Text>
-
-                    {/* Fare */}
-                    {fareLoading ? (
-                      <SkeletonBox width={58} height={20} radius={6} style={{ marginBottom: 7, alignSelf: 'center' }} />
-                    ) : (
-                      <Text style={{ fontSize: 17.5, fontWeight: '900', color: isSel ? (isLux ? C.purple : C.pink) : C.text, textAlign: 'center', marginBottom: 7, letterSpacing: -0.4 }}>
-                        {fareText}
-                      </Text>
-                    )}
-
-                    {/* ETA status row */}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 16 }}>
-                      {!etaLoaded ? (
-                        <Text style={{ fontSize: 9, color: C.textDim }}>{r.eta}</Text>
-                      ) : notAvail ? (
-                        <Text style={{ fontSize: 9, color: C.textMuted, fontWeight: '700' }}>No driver</Text>
-                      ) : info ? (
-                        <>
-                          <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: isFar ? C.yellow : C.green }} />
-                          <Text style={{ fontSize: 9, color: isFar ? C.yellow : C.green, fontWeight: '800' }}>
-                            {info.eta_min !== null ? `~${info.eta_min} min` : 'Locating'}
-                          </Text>
-                        </>
-                      ) : null}
-                    </View>
-
-                    {/* Selected checkmark badge */}
-                    {isSel && (
-                      <View style={{
-                        position: 'absolute', top: 10, right: 10, width: 20, height: 20, borderRadius: 10,
-                        backgroundColor: isLux ? C.purple : C.pink, alignItems: 'center', justifyContent: 'center',
-                        elevation: 4, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 3,
-                      }}>
-                        <Ionicons name="checkmark" size={12} color="#fff" />
-                      </View>
-                    )}
-                  </TouchableOpacity>
+                    </>
+                  ) : (
+                    <>
+                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.plum, opacity: 0.5 }} />
+                      <Text style={{ color: C.plum, fontWeight: '700', fontSize: 12, opacity: 0.7 }}>Calculating route…</Text>
+                    </>
+                  )}
                 </Animated.View>
-              );
-            })}
-          </ScrollView>
+                <View style={{ height: 1, backgroundColor: C.glassBorder }} />
+              </>
+            )}
 
-          {/* ─── Selected vehicle detail strip ─── */}
-          {(() => {
-            const info = driverEta[rideType];
-            const sel = RIDES.find((r: any) => r.id === rideType);
-            if (!sel) return null;
-            const notAvail = etaLoaded && !info;
-            const isFar = info?.dist_km !== null && info?.dist_km > 5;
-            const stripBg = notAvail ? C.redGlass : isFar ? C.yellowGlass : etaLoaded ? C.greenGlass : C.glassMid;
-            const stripBorder = notAvail ? C.redBorder : isFar ? C.yellowBorder : etaLoaded ? C.greenBorder : C.glassBorder;
-            const stripColor = notAvail ? C.red : isFar ? C.yellow : etaLoaded ? C.green : C.textMuted;
-            const bestAlt = notAvail
-              ? (RIDES as any[]).filter(r => r.id !== rideType && driverEta[r.id])
-                               .sort((a, b) => ((driverEta[a.id]?.eta_min || 999) - (driverEta[b.id]?.eta_min || 999)))[0]
-              : null;
-            return (
-              <View style={{ backgroundColor: stripBg, borderRadius: R.sm, padding: 13, marginBottom: 6, flexDirection: 'row', alignItems: 'center', gap: 11, borderWidth: 1.5, borderColor: stripBorder }}>
-                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: stripBg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: stripBorder }}>
-                  <RideVehicleIcon id={rideType} size={18} color={stripColor} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '800', color: stripColor }} numberOfLines={1}>
-                    {notAvail
-                      ? `No ${sel.label} driver nearby`
-                      : isFar
-                        ? `${sel.label} driver is a bit far`
-                        : etaLoaded
-                          ? `${sel.label} driver available`
-                          : sel.label}
+            {/* Vehicle mode-tab strip */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 14, gap: 2 }}
+            >
+              {RIDES.map((r: any) => {
+                const isSel = rideType === r.id;
+                const isLux = r.id === 'luxury';
+                const accent = isLux ? C.purple : C.pink;
+                const fareText = fareLoading ? '…' : fareEstimates[r.id] ? `₹${fareEstimates[r.id].fare ?? fareEstimates[r.id]}` : `₹${r.base}+`;
+                const anim = cardAnims[r.id];
+                const entry = cardEntryAnims[r.id];
+                const info = driverEta[r.id];
+                const notAvail = etaLoaded && !info;
+                const isFar = info?.dist_km !== null && info?.dist_km > 5;
+                return (
+                  <Animated.View key={r.id} style={{ transform: [{ scale: anim }, { translateY: entry.ty }], opacity: entry.op }}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setRideType(r.id);
+                        setVehicleBrowsing(false);
+                        RIDES.forEach((ride: any) => {
+                          Animated.spring(cardAnims[ride.id], {
+                            toValue: ride.id === r.id ? 1.02 : 1,
+                            friction: 5, tension: 180, useNativeDriver: true,
+                          }).start();
+                        });
+                      }}
+                      activeOpacity={0.75}
+                      style={{
+                        minWidth: 64, alignItems: 'center',
+                        paddingHorizontal: 10, paddingBottom: 8, paddingTop: 2,
+                        opacity: notAvail ? 0.45 : 1,
+                        borderBottomWidth: 2.5,
+                        borderBottomColor: isSel ? accent : 'transparent',
+                      }}>
+                      <RideVehicleIcon id={r.id} size={22} color={isSel ? accent : notAvail ? C.textDim : C.textMuted} />
+                      {fareLoading ? (
+                        <SkeletonBox width={36} height={14} radius={4} style={{ marginTop: 6 }} />
+                      ) : (
+                        <Text style={{ fontSize: 13, fontWeight: isSel ? '900' : '700', color: isSel ? C.text : C.textMuted, marginTop: 6 }}>
+                          {fareText}
+                        </Text>
+                      )}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3, minHeight: 12 }}>
+                        {!etaLoaded ? null : notAvail ? (
+                          <Text style={{ fontSize: 8.5, color: C.textDim, fontWeight: '700' }}>no driver</Text>
+                        ) : info ? (
+                          <>
+                            <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: isFar ? C.yellow : C.green }} />
+                            <Text style={{ fontSize: 8.5, color: isFar ? C.yellow : C.green, fontWeight: '800' }}>
+                              {info.eta_min !== null ? `${info.eta_min}m` : '…'}
+                            </Text>
+                          </>
+                        ) : null}
+                      </View>
+                    </TouchableOpacity>
+                  </Animated.View>
+                );
+              })}
+            </ScrollView>
+
+            {/* "Leave now ▾" row — Maps-style departure-time control, sits right
+                 below the mode-tab strip (was previously a chip buried in the
+                 fixed bottom bar). */}
+            <View style={{ borderTopWidth: 1, borderTopColor: C.glassBorder }}>
+              {scheduledAt ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 11 }}>
+                  <Ionicons name="calendar" size={14} color="#F59E0B" />
+                  <Text style={{ flex: 1, fontSize: 12.5, fontWeight: '800', color: '#92400E' }} numberOfLines={1}>
+                    {scheduledAt.label}
                   </Text>
-                  <Text style={{ fontSize: 10, color: C.textDim, marginTop: 2 }} numberOfLines={1}>
-                    {sel.desc}
-                    {info?.eta_min != null ? `  ·  ~${info.eta_min} min` : ''}
-                    {info?.dist_km != null ? `  ·  ${info.dist_km} km away` : ''}
-                    {!etaLoaded ? '' : ''}
-                  </Text>
-                </View>
-                {bestAlt && (
-                  <TouchableOpacity
-                    onPress={() => { setRideType(bestAlt.id); setVehicleBrowsing(false); }}
-                    style={{ backgroundColor: C.pink, borderRadius: R.xs, paddingHorizontal: 10, paddingVertical: 6, elevation: 4, shadowColor: C.pink, shadowOpacity: 0.35, shadowRadius: 6 }}>
-                    <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>Try {bestAlt.label}</Text>
+                  <TouchableOpacity onPress={() => setScheduledAt(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Ionicons name="close-circle" size={17} color="#D97706" />
                   </TouchableOpacity>
-                )}
-              </View>
-            );
-          })()}
+                </View>
+              ) : (
+                <TouchableOpacity
+                  onPress={() => setShowSchedulePicker(true)}
+                  activeOpacity={0.7}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 11 }}
+                >
+                  <Ionicons name="time-outline" size={14} color={C.textMuted} />
+                  <Text style={{ fontSize: 12.5, fontWeight: '700', color: C.textMuted }}>Leave now</Text>
+                  <Ionicons name="chevron-down" size={13} color={C.textDim} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Selected vehicle detail row */}
+            {(() => {
+              const info = driverEta[rideType];
+              const sel = RIDES.find((r: any) => r.id === rideType);
+              if (!sel) return null;
+              const notAvail = etaLoaded && !info;
+              const isFar = info?.dist_km !== null && info?.dist_km > 5;
+              const stripColor = notAvail ? C.red : isFar ? C.yellow : etaLoaded ? C.green : C.textMuted;
+              const bestAlt = notAvail
+                ? (RIDES as any[]).filter(r => r.id !== rideType && driverEta[r.id])
+                                 .sort((a, b) => ((driverEta[a.id]?.eta_min || 999) - (driverEta[b.id]?.eta_min || 999)))[0]
+                : null;
+              return (
+                <View style={{ borderTopWidth: 1, borderTopColor: C.glassBorder, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 11 }}>
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: stripColor }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: C.text }} numberOfLines={1}>
+                      {notAvail
+                        ? `No ${sel.label} driver nearby`
+                        : isFar
+                          ? `${sel.label} driver is a bit far`
+                          : etaLoaded
+                            ? `${sel.label} driver available`
+                            : sel.label}
+                    </Text>
+                    <Text style={{ fontSize: 10.5, color: C.textDim, marginTop: 2 }} numberOfLines={1}>
+                      {sel.desc}
+                      {info?.eta_min != null ? `  ·  ~${info.eta_min} min` : ''}
+                      {info?.dist_km != null ? `  ·  ${info.dist_km} km away` : ''}
+                    </Text>
+                  </View>
+                  {bestAlt && (
+                    <TouchableOpacity
+                      onPress={() => { setRideType(bestAlt.id); setVehicleBrowsing(false); }}
+                      style={{ backgroundColor: C.pink, borderRadius: R.xs, paddingHorizontal: 10, paddingVertical: 6, elevation: 3, shadowColor: C.pink, shadowOpacity: 0.3, shadowRadius: 6 }}>
+                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>Try {bestAlt.label}</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              );
+            })()}
+          </View>
 
           {/* ─── Fare breakdown ─────────────────────────────── */}
           {selRide && hasFare ? (
@@ -1708,7 +1610,6 @@ export function BookingScreen() {
           ) : null}
 
           {result ? <Text style={[s.err, { marginTop: 12 }]}>{result}</Text> : null}
-          </>
         </ScrollView>
 
       </GlassPanel>
@@ -2087,127 +1988,89 @@ export function BookingScreen() {
             );
           })()}
 
-          {/* Compact info strip — vehicle / ETA / cash + schedule toggle */}
+          {/* Compact info strip — vehicle / ETA / cash. Departure time (now vs
+               scheduled) is now shown/edited in the route+vehicle card above,
+               Maps' "Leave at ▾" style — no longer duplicated down here. */}
           {hasFare && !loading && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
-              {scheduledAt ? (
-                /* Scheduled time badge */
-                <View style={{
-                  flex: 1, flexDirection: 'row', alignItems: 'center', gap: 7,
-                  backgroundColor: '#FFFBEB', borderRadius: R.full,
-                  paddingHorizontal: 12, paddingVertical: 6,
-                  borderWidth: 1, borderColor: '#FDE68A',
-                }}>
-                  <Ionicons name="calendar" size={12} color="#F59E0B" />
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#92400E', flex: 1 }} numberOfLines={1}>
-                    {scheduledAt.label}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.glassMid, borderRadius: R.full, paddingHorizontal: 10, paddingVertical: 5 }}>
+                <RideVehicleIcon id={rideType} size={12} color={C.plum} />
+                <Text style={{ fontSize: 12, fontWeight: '700', color: C.text }}>{selRide?.label}</Text>
+                {etaLoaded && driverEta[rideType] && (
+                  <Text style={{ fontSize: 11, color: C.green, fontWeight: '700' }}>
+                    · ~{driverEta[rideType].eta_min <= 1 ? '< 1' : driverEta[rideType].eta_min} min
                   </Text>
-                  <TouchableOpacity onPress={() => setScheduledAt(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                    <Ionicons name="close-circle" size={16} color="#D97706" />
-                  </TouchableOpacity>
+                )}
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.glassMid, borderRadius: R.full, paddingHorizontal: 10, paddingVertical: 5 }}>
+                <Ionicons name="cash-outline" size={12} color={C.textMuted} />
+                <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: '600' }}>Cash</Text>
+              </View>
+              {discount > 0 && (
+                <View style={{ backgroundColor: C.greenGlass, borderRadius: R.full, paddingHorizontal: 8, paddingVertical: 5, borderWidth: 1, borderColor: C.greenBorder }}>
+                  <Text style={{ fontSize: 10, color: C.green, fontWeight: '900' }}>₹{discount} off</Text>
                 </View>
-              ) : (
-                <>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.glassMid, borderRadius: R.full, paddingHorizontal: 10, paddingVertical: 5 }}>
-                    <RideVehicleIcon id={rideType} size={12} color={C.plum} />
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: C.text }}>{selRide?.label}</Text>
-                    {etaLoaded && driverEta[rideType] && (
-                      <Text style={{ fontSize: 11, color: C.green, fontWeight: '700' }}>
-                        · ~{driverEta[rideType].eta_min <= 1 ? '< 1' : driverEta[rideType].eta_min} min
-                      </Text>
-                    )}
-                  </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.glassMid, borderRadius: R.full, paddingHorizontal: 10, paddingVertical: 5 }}>
-                    <Ionicons name="cash-outline" size={12} color={C.textMuted} />
-                    <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: '600' }}>Cash</Text>
-                  </View>
-                  {discount > 0 && (
-                    <View style={{ backgroundColor: C.greenGlass, borderRadius: R.full, paddingHorizontal: 8, paddingVertical: 5, borderWidth: 1, borderColor: C.greenBorder }}>
-                      <Text style={{ fontSize: 10, color: C.green, fontWeight: '900' }}>₹{discount} off</Text>
-                    </View>
-                  )}
-                  <View style={{ flex: 1 }} />
-                  {/* Schedule for later */}
-                  <TouchableOpacity
-                    onPress={() => setShowSchedulePicker(true)}
-                    style={{
-                      flexDirection: 'row', alignItems: 'center', gap: 4,
-                      backgroundColor: '#FFFBEB', borderRadius: R.full,
-                      paddingHorizontal: 10, paddingVertical: 5,
-                      borderWidth: 1, borderColor: '#FDE68A',
-                    }}
-                  >
-                    <Ionicons name="calendar-outline" size={11} color="#F59E0B" />
-                    <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#92400E' }}>Later</Text>
-                  </TouchableOpacity>
-                </>
+              )}
+              {scheduledAt && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FFFBEB', borderRadius: R.full, paddingHorizontal: 9, paddingVertical: 5, borderWidth: 1, borderColor: '#FDE68A' }}>
+                  <Ionicons name="calendar-outline" size={11} color="#F59E0B" />
+                  <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#92400E' }}>Scheduled</Text>
+                </View>
               )}
             </View>
           )}
 
-          {/* Full-width action button — amber when scheduled, plum for instant */}
-          <Animated.View style={{ transform: [{ scale: bookBtnScale }] }}>
-            <TouchableOpacity
-              activeOpacity={hasFare && !loading ? 0.88 : 1}
-              onPress={hasFare && !loading ? (scheduledAt ? handleScheduleRide : handleBook) : undefined}
-              onPressIn={hasFare && !loading ? onBookPressIn : undefined}
-              onPressOut={hasFare && !loading ? onBookPressOut : undefined}
-              style={{
-                borderRadius: 20,
-                backgroundColor: loading ? C.glassMid
-                  : hasFare ? (scheduledAt ? '#F59E0B' : C.plum)
-                  : C.glassMid,
-                paddingVertical: 18, paddingHorizontal: 22,
-                flexDirection: 'row', alignItems: 'center',
-                elevation: hasFare && !loading ? 18 : 0,
-                shadowColor: scheduledAt ? '#F59E0B' : C.plum,
-                shadowOpacity: hasFare && !loading ? 0.48 : 0,
-                shadowRadius: 24,
-                shadowOffset: { width: 0, height: 10 },
-                borderWidth: hasFare && !loading ? 0 : 1.5,
-                borderColor: C.glassBorder,
-              }}>
+          {/* Fare + compact pink CTA pill — Maps' "Start" button treatment
+               (small pill action button beside the info, not a full-width
+               hero bar), just labeled "Book"/"Schedule" and pink. */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <View style={{ flex: 1 }}>
               {loading ? (
-                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <ActivityIndicator size="small" color={C.textMuted} />
-                  <Text style={{ fontSize: 15, fontWeight: '700', color: C.textMuted }}>
+                  <Text style={{ fontSize: 13.5, fontWeight: '700', color: C.textMuted }}>
                     {scheduledAt ? 'Scheduling…' : 'Finding driver…'}
                   </Text>
                 </View>
               ) : hasFare ? (
                 <>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 19, fontWeight: '900', color: '#fff', letterSpacing: -0.4 }}>
-                      {scheduledAt ? 'Schedule Ride' : 'Book Ride'}
-                    </Text>
-                    <Text style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.58)', marginTop: 3, fontWeight: '600' }}>
-                      {scheduledAt
-                        ? `${selRide?.label} · scheduled`
-                        : `${selRide?.label} · instant booking`}
-                    </Text>
-                  </View>
-                  <View style={{ alignItems: 'flex-end', gap: 1 }}>
-                    <Text style={{ fontSize: 32, fontWeight: '900', color: '#fff', letterSpacing: -0.7 }}>₹{finalFare}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 7 }}>
+                    <Text style={{ fontSize: 26, fontWeight: '900', color: C.text, letterSpacing: -0.6 }}>₹{finalFare}</Text>
                     {discount > 0 && (
-                      <Text style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.40)', textDecorationLine: 'line-through' }}>₹{rawFare}</Text>
+                      <Text style={{ fontSize: 12, color: C.textDim, textDecorationLine: 'line-through' }}>₹{rawFare}</Text>
                     )}
                   </View>
-                  <View style={{
-                    marginLeft: 12, width: 34, height: 34, borderRadius: 17,
-                    backgroundColor: 'rgba(255,255,255,0.16)',
-                    alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <Ionicons name="chevron-forward" size={19} color="#fff" />
-                  </View>
+                  <Text style={{ fontSize: 11.5, color: C.textMuted, marginTop: 2, fontWeight: '600' }} numberOfLines={1}>
+                    {selRide?.label} · {scheduledAt ? 'scheduled' : 'instant booking'}
+                  </Text>
                 </>
               ) : (
-                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: C.textMuted }}>Select pickup & drop</Text>
-                  <Ionicons name="arrow-forward" size={16} color={C.textDim} />
-                </View>
+                <Text style={{ fontSize: 13.5, fontWeight: '700', color: C.textMuted }}>Select pickup & drop</Text>
               )}
-            </TouchableOpacity>
-          </Animated.View>
+            </View>
+
+            <Animated.View style={{ transform: [{ scale: bookBtnScale }] }}>
+              <TouchableOpacity
+                activeOpacity={hasFare && !loading ? 0.85 : 1}
+                disabled={!hasFare || loading}
+                onPress={scheduledAt ? handleScheduleRide : handleBook}
+                onPressIn={hasFare && !loading ? onBookPressIn : undefined}
+                onPressOut={hasFare && !loading ? onBookPressOut : undefined}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 6,
+                  backgroundColor: hasFare && !loading ? C.pink : C.glassMid,
+                  borderRadius: R.full,
+                  paddingHorizontal: 22, paddingVertical: 13,
+                  elevation: hasFare && !loading ? 10 : 0,
+                  shadowColor: C.pink, shadowOpacity: hasFare && !loading ? 0.4 : 0, shadowRadius: 14, shadowOffset: { width: 0, height: 5 },
+                }}>
+                <Text style={{ fontSize: 15, fontWeight: '900', color: hasFare && !loading ? '#fff' : C.textDim }}>
+                  {scheduledAt ? 'Schedule' : 'Book'}
+                </Text>
+                <Ionicons name="arrow-forward" size={16} color={hasFare && !loading ? '#fff' : C.textDim} />
+              </TouchableOpacity>
+            </Animated.View>
+          </View>
         </View>
       )}
 
