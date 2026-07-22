@@ -20,7 +20,7 @@ const ROUTE_CHOICE_VEHICLES = ['bike', 'auto', 'eriksha', 'electric_auto', 'gree
 
 const SCREEN_H   = Dimensions.get('window').height;
 const DRAWER_COMPACT = Math.round(SCREEN_H * 0.40); // route confirmed — map gets more room to breathe, drawer is a compact summary
-const DRAWER_INPUT   = Math.round(SCREEN_H * 0.58); // searching / editing
+const DRAWER_INPUT   = Math.round(SCREEN_H * 0.86); // searching / editing — near-full-page like Maps' search sheet
 const DRAWER_BROWSE  = Math.round(SCREEN_H * 0.72); // expanded on tap — clearer contrast against compact
 
 // Android safe-area insets can misreport a much larger value than the device's
@@ -848,23 +848,18 @@ export function BookingScreen() {
 
             </TouchableOpacity>
           ) : (
-            /* Input mode — also hidden while dragging */
+            /* Input mode — also hidden while dragging. Full-bleed edge-to-edge
+                 (Maps' search-sheet look): the outer drawer panel already
+                 provides the rounded-top sheet chrome, so this content runs
+                 flush to the screen edges instead of sitting as an inset card. */
             <View style={{
               backgroundColor: C.bgCard,
-              borderRadius: R.lg,
-              overflow: 'hidden',
+              marginHorizontal: -14,
               marginBottom: 14,
-              elevation: 9,
-              borderWidth: 1.5,
-              borderColor: C.glassBorder,
-              shadowColor: C.plum,
-              shadowOpacity: 0.13,
-              shadowRadius: 20,
-              shadowOffset: { width: 0, height: 6 },
             }}>
               <View style={{
-                padding: 16,
-                paddingBottom: hasDropDown ? 10 : 16,
+                padding: 18,
+                paddingBottom: hasDropDown ? 12 : 18,
               }}>
                 {/* ── Quick access — Home / Office, always visible (Maps-style shortcut chips) ── */}
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 12 }}>
@@ -872,30 +867,30 @@ export function BookingScreen() {
                     <TouchableOpacity
                       onPress={() => selectSaved(savedPlaces.home!)}
                       style={{ flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: C.glassMid, borderRadius: R.full, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: C.glassBorder }}>
-                      <Text style={{ fontSize: 14 }}>🏠</Text>
-                      <Text style={{ fontSize: 12.5, fontWeight: '800', color: C.text }}>Home</Text>
+                      <Text style={{ fontSize: 15 }}>🏠</Text>
+                      <Text style={{ fontSize: 13.5, fontWeight: '800', color: C.text }}>Home</Text>
                     </TouchableOpacity>
                   ) : (
                     <TouchableOpacity
                       onPress={() => { setSaveTarget(null); setShowSavePicker(true); }}
                       style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: R.full, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: C.glassBorder, borderStyle: 'dashed' }}>
-                      <Ionicons name="add" size={14} color={C.textMuted} />
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: C.textMuted }}>Add Home</Text>
+                      <Ionicons name="add" size={15} color={C.textMuted} />
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: C.textMuted }}>Add Home</Text>
                     </TouchableOpacity>
                   )}
                   {savedPlaces.office ? (
                     <TouchableOpacity
                       onPress={() => selectSaved(savedPlaces.office!)}
                       style={{ flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: C.glassMid, borderRadius: R.full, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: C.glassBorder }}>
-                      <Text style={{ fontSize: 14 }}>🏢</Text>
-                      <Text style={{ fontSize: 12.5, fontWeight: '800', color: C.text }}>Office</Text>
+                      <Text style={{ fontSize: 15 }}>🏢</Text>
+                      <Text style={{ fontSize: 13.5, fontWeight: '800', color: C.text }}>Office</Text>
                     </TouchableOpacity>
                   ) : (
                     <TouchableOpacity
                       onPress={() => { setSaveTarget(null); setShowSavePicker(true); }}
                       style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: R.full, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: C.glassBorder, borderStyle: 'dashed' }}>
-                      <Ionicons name="add" size={14} color={C.textMuted} />
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: C.textMuted }}>Add Office</Text>
+                      <Ionicons name="add" size={15} color={C.textMuted} />
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: C.textMuted }}>Add Office</Text>
                     </TouchableOpacity>
                   )}
                 </ScrollView>
@@ -907,12 +902,12 @@ export function BookingScreen() {
                     pickerLoading && { transform: [{ scale: pickupLocAnim.interpolate({ inputRange: [0.4, 1], outputRange: [0.85, 1.25] }) }] },
                   ]} />
                   {pickerLoading ? (
-                    <Animated.Text style={{ flex: 1, fontSize: 13, color: C.green, fontWeight: '700', paddingVertical: 9, opacity: pickupLocAnim }}>
+                    <Animated.Text style={{ flex: 1, fontSize: 14.5, color: C.green, fontWeight: '700', paddingVertical: 10, opacity: pickupLocAnim }}>
                       Finding your location…
                     </Animated.Text>
                   ) : (
                     <TextInput
-                      style={{ flex: 1, fontSize: 15, color: C.text, fontWeight: '700', paddingVertical: 10 }}
+                      style={{ flex: 1, fontSize: 17, color: C.text, fontWeight: '700', paddingVertical: 11 }}
                       placeholder="Pickup location"
                       placeholderTextColor={C.textDim}
                       value={pickup}
@@ -959,18 +954,18 @@ export function BookingScreen() {
                             geocodePlace(sg.text, 'pickup');
                           }
                         }}>
-                        <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: C.glassMid, alignItems: 'center', justifyContent: 'center', marginRight: 10, borderWidth: 1, borderColor: C.glassBorder, flexShrink: 0 }}>
-                          <Ionicons name="location-outline" size={16} color={C.textMuted} />
+                        <View style={{ width: 36, height: 36, borderRadius: 11, backgroundColor: C.glassMid, alignItems: 'center', justifyContent: 'center', marginRight: 11, borderWidth: 1, borderColor: C.glassBorder, flexShrink: 0 }}>
+                          <Ionicons name="location-outline" size={17} color={C.textMuted} />
                         </View>
                         <View style={{ flex: 1, gap: 2 }}>
-                          <Text style={{ fontSize: 13, color: C.text, fontWeight: '700' }} numberOfLines={1}>{sg.main || sg.text}</Text>
+                          <Text style={{ fontSize: 14.5, color: C.text, fontWeight: '700' }} numberOfLines={1}>{sg.main || sg.text}</Text>
                           {!!sg.secondary && (
-                            <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: '500' }} numberOfLines={1}>{sg.secondary}</Text>
+                            <Text style={{ fontSize: 12.5, color: C.textMuted, fontWeight: '500' }} numberOfLines={1}>{sg.secondary}</Text>
                           )}
                         </View>
                         {sg.distance_m != null && (
-                          <View style={{ marginLeft: 8, backgroundColor: C.glassMid, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: C.glassBorder }}>
-                            <Text style={{ fontSize: 10, color: C.textMuted, fontWeight: '700' }}>
+                          <View style={{ marginLeft: 8, backgroundColor: C.glassMid, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4 }}>
+                            <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: '700' }}>
                               {sg.distance_m < 1000 ? `${Math.round(sg.distance_m)}m` : `${(sg.distance_m / 1000).toFixed(1)}km`}
                             </Text>
                           </View>
@@ -1001,8 +996,8 @@ export function BookingScreen() {
                               maxWidth: 200, elevation: 2,
                               shadowColor: ic.color, shadowOpacity: 0.12, shadowRadius: 6,
                             }}>
-                            <Text style={{ fontSize: 16 }}>{ic.emoji}</Text>
-                            <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: '700', color: C.text, flexShrink: 1 }}>{place.name}</Text>
+                            <Text style={{ fontSize: 17 }}>{ic.emoji}</Text>
+                            <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: '700', color: C.text, flexShrink: 1 }}>{place.name}</Text>
                           </TouchableOpacity>
                         );
                       })}
@@ -1040,7 +1035,7 @@ export function BookingScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 2 }}>
                   <View style={{ width: 13, height: 13, borderRadius: 3, backgroundColor: C.pink, borderWidth: 2.5, borderColor: C.pinkBorder }} />
                   <TextInput
-                    style={{ flex: 1, fontSize: 15, color: C.text, fontWeight: '700', paddingVertical: 10 }}
+                    style={{ flex: 1, fontSize: 17, color: C.text, fontWeight: '700', paddingVertical: 11 }}
                     placeholder="Where to?"
                     placeholderTextColor={C.textDim}
                     value={drop}
@@ -1081,25 +1076,25 @@ export function BookingScreen() {
                       style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 11, paddingHorizontal: 16, borderBottomWidth: i < Math.min(dropSugg.length, 5) - 1 ? 1 : 0, borderBottomColor: C.glassBorder }}
                       onPress={() => { Keyboard.dismiss(); setDrop(sg.text); setDropSugg([]); geocodePlace(sg.text, 'drop'); }}>
                       {/* Location pin icon — clean, neutral */}
-                      <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: C.glassMid, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1, borderColor: C.glassBorder, flexShrink: 0 }}>
-                        <Ionicons name="location-outline" size={17} color={C.textMuted} />
+                      <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: C.glassMid, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1, borderColor: C.glassBorder, flexShrink: 0 }}>
+                        <Ionicons name="location-outline" size={18} color={C.textMuted} />
                       </View>
                       {/* Two-line address */}
                       <View style={{ flex: 1, gap: 2 }}>
-                        <Text style={{ fontSize: 13, color: C.text, fontWeight: '700' }} numberOfLines={1}>{sg.main || sg.text}</Text>
+                        <Text style={{ fontSize: 14.5, color: C.text, fontWeight: '700' }} numberOfLines={1}>{sg.main || sg.text}</Text>
                         {!!sg.secondary && (
-                          <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: '500' }} numberOfLines={1}>{sg.secondary}</Text>
+                          <Text style={{ fontSize: 12.5, color: C.textMuted, fontWeight: '500' }} numberOfLines={1}>{sg.secondary}</Text>
                         )}
                       </View>
-                      {/* Distance badge */}
+                      {/* Distance badge — from pickup, once pickup is set */}
                       {sg.distance_m != null && (
-                        <View style={{ marginLeft: 8, backgroundColor: C.glassMid, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: C.glassBorder }}>
-                          <Text style={{ fontSize: 10, color: C.textMuted, fontWeight: '700' }}>
+                        <View style={{ marginLeft: 8, backgroundColor: C.glassMid, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4 }}>
+                          <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: '700' }}>
                             {sg.distance_m < 1000 ? `${Math.round(sg.distance_m)}m` : `${(sg.distance_m / 1000).toFixed(1)}km`}
                           </Text>
                         </View>
                       )}
-                      <Ionicons name="chevron-forward" size={13} color={C.textDim} style={{ marginLeft: 4 }} />
+                      <Ionicons name="chevron-forward" size={14} color={C.textDim} style={{ marginLeft: 4 }} />
                     </TouchableOpacity>
                   ))}
 
@@ -1109,8 +1104,8 @@ export function BookingScreen() {
                       {dropHistory.length > 0 && (
                         <>
                           <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 6, gap: 6 }}>
-                            <Ionicons name="time" size={11} color={C.textMuted} />
-                            <Text style={{ fontSize: 10, color: C.textMuted, fontWeight: '900', letterSpacing: 1.2 }}>RECENT</Text>
+                            <Ionicons name="time" size={12} color={C.textMuted} />
+                            <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: '900', letterSpacing: 1.2 }}>RECENT</Text>
                           </View>
                           {dropHistory.slice(0, 3).map((h, i) => (
                             <TouchableOpacity key={i}
@@ -1119,10 +1114,10 @@ export function BookingScreen() {
                               onPress={() => { Keyboard.dismiss(); setDrop(h.text); setDropSugg([]); if (h.coords) setDropCoords(h.coords); else geocodePlace(h.text, 'drop'); }}>
                               {/* Icon */}
                               <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: C.glassMid, alignItems: 'center', justifyContent: 'center', marginRight: 13, borderWidth: 1.5, borderColor: C.glassBorder }}>
-                                <Ionicons name="location-outline" size={16} color={C.textMuted} />
+                                <Ionicons name="location-outline" size={17} color={C.textMuted} />
                               </View>
                               {/* Address */}
-                              <Text style={{ fontSize: 13, color: C.text, flex: 1, fontWeight: '600' }} numberOfLines={1}>{h.text}</Text>
+                              <Text style={{ fontSize: 14.5, color: C.text, flex: 1, fontWeight: '600' }} numberOfLines={1}>{h.text}</Text>
                               {/* Save bookmark */}
                               {h.coords && (
                                 <TouchableOpacity
@@ -1906,8 +1901,9 @@ export function BookingScreen() {
       {!keyboardShown && (
         <View style={{
           position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
-          backgroundColor: C.bg,
-          borderTopLeftRadius: 26, borderTopRightRadius: 26,
+          // Flush bottom-menu bar — flat, edge-to-edge, opaque white like a
+          // standard bottom nav/action bar, not a floating rounded card.
+          backgroundColor: C.bgCard,
           paddingHorizontal: 16, paddingTop: 14,
           // On button-nav devices (inset 0) a small fixed pad gives finger
           // clearance; on gesture-nav/notch devices the clamped safe-area
@@ -1915,9 +1911,9 @@ export function BookingScreen() {
           // top of it — avoids the double-padding that showed up as a big
           // empty strip above the system bar on some Android builds.
           paddingBottom: bottomInset > 0 ? bottomInset : 14,
-          borderWidth: 1, borderColor: 'rgba(46,20,97,0.08)', borderBottomWidth: 0,
-          elevation: 26,
-          shadowColor: C.plum, shadowOpacity: 0.18, shadowRadius: 22, shadowOffset: { width: 0, height: -8 },
+          borderTopWidth: 1, borderTopColor: C.glassBorder,
+          elevation: 20,
+          shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: -3 },
           gap: 11,
         }}>
 

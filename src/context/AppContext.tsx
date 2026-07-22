@@ -1485,7 +1485,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (ref.current) clearTimeout(ref.current);
     ref.current = setTimeout(async () => {
       try {
-        const res = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${MAPS_KEY}&components=country:in&location=26.8467,80.9462&radius=50000`);
+        // Places Autocomplete only returns `distance_meters` per-prediction when
+        // an `origin` is supplied. Drop suggestions are measured from the
+        // pickup point (what the customer actually cares about once pickup is
+        // set); pickup suggestions from the device's current location.
+        const originCoords = type === 'drop'
+          ? pickupCoords
+          : (userCoords
+              ? { lat: (userCoords as any).latitude ?? (userCoords as any).lat, lng: (userCoords as any).longitude ?? (userCoords as any).lng }
+              : null);
+        const originParam = originCoords?.lat != null ? `&origin=${originCoords.lat},${originCoords.lng}` : '';
+        const res = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${MAPS_KEY}&components=country:in&location=26.8467,80.9462&radius=50000${originParam}`);
         const data = await res.json();
         const sugg = data.predictions?.map((p: any) => ({
           id:         p.place_id,
