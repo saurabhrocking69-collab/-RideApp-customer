@@ -641,8 +641,15 @@ export function BookingScreen() {
   }, [bothSet, drawerExpanded]);
 
 
+  // Android already resizes the window for the keyboard via
+  // android:windowSoftInputMode="adjustResize" in the manifest — layering
+  // KeyboardAvoidingView's own 'height' resize on top of that is
+  // double-compensation, and over many repeated keyboard open/close cycles
+  // (editing pickup/drop back and forth) it drifts, which showed up as the
+  // fixed bottom bar intermittently leaving a gap above the OS nav bar.
+  // Only iOS (no OS-level auto-resize) needs RN to do this.
   return (
-    <KeyboardAvoidingView style={[s.screen, { backgroundColor: C.bg }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <KeyboardAvoidingView style={[s.screen, { backgroundColor: C.bg }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <DotBG />
 
       {/* ─── Map — flex:1 fills all space above the drawer ─── */}
@@ -870,7 +877,12 @@ export function BookingScreen() {
                 padding: 18,
                 paddingBottom: hasDropDown ? 12 : 18,
               }}>
-                {/* ── Quick access — Home / Office, always visible (Maps-style shortcut chips) ── */}
+                {/* ── Quick access — Home / Office. These are DESTINATION shortcuts, so
+                       they (and the rest of the drop step below) only appear once
+                       pickup is actually chosen — until then this is a dedicated
+                       full-height/width pickup search, no other step competing
+                       for space, per the "one step at a time" ask. ── */}
+                {!!pickupCoords && (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 12 }}>
                   {savedPlaces.home ? (
                     <TouchableOpacity
@@ -903,6 +915,7 @@ export function BookingScreen() {
                     </TouchableOpacity>
                   )}
                 </ScrollView>
+                )}
 
                 {/* Pickup row — flat/minimal, Maps-style (no tinted box, just the dot) */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 2 }}>
@@ -1025,7 +1038,10 @@ export function BookingScreen() {
                   </View>
                 )}
 
-                {/* Separator with floating swap button */}
+                {/* Separator with floating swap button + Drop row — the "step 2"
+                     of the search, only shown once pickup is chosen (step 1). */}
+                {!!pickupCoords && (
+                <>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 5 }}>
                   <View style={{ flex: 1, height: 1, backgroundColor: C.glassBorder }} />
                   <TouchableOpacity
@@ -1060,7 +1076,7 @@ export function BookingScreen() {
                       if (dropCoords || !t) { setDropCoords(null); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; }
                     }}
                     returnKeyType="done"
-                    autoFocus={!pickup}
+                    autoFocus
                   />
                   {dropPickerLoading ? (
                     <View style={{ padding: 7 }}>
@@ -1076,10 +1092,12 @@ export function BookingScreen() {
                     </TouchableOpacity>
                   )}
                 </View>
+                </>
+                )}
               </View>
 
               {/* ── Attached dropdown — appears directly below input card, same rounded surface ── */}
-              {hasDropDown && (
+              {!!pickupCoords && hasDropDown && (
                 <View>
                   {/* Thin separator line */}
                   <View style={{ height: 1, backgroundColor: C.glassBorder, marginHorizontal: 16 }} />
@@ -1288,27 +1306,27 @@ export function BookingScreen() {
                       }}
                       activeOpacity={0.75}
                       style={{
-                        minWidth: 64, alignItems: 'center',
-                        paddingHorizontal: 10, paddingBottom: 8, paddingTop: 2,
+                        minWidth: 82, alignItems: 'center',
+                        paddingHorizontal: 14, paddingBottom: 8, paddingTop: 2,
                         opacity: notAvail ? 0.45 : 1,
                         borderBottomWidth: 2.5,
                         borderBottomColor: isSel ? accent : 'transparent',
                       }}>
-                      <RideVehicleIcon id={r.id} size={22} color={isSel ? accent : notAvail ? C.textDim : C.textMuted} />
+                      <RideVehicleIcon id={r.id} size={25} color={isSel ? accent : notAvail ? C.textDim : C.textMuted} />
                       {fareLoading ? (
-                        <SkeletonBox width={36} height={14} radius={4} style={{ marginTop: 6 }} />
+                        <SkeletonBox width={42} height={15} radius={4} style={{ marginTop: 7 }} />
                       ) : (
-                        <Text style={{ fontSize: 13, fontWeight: isSel ? '900' : '700', color: isSel ? C.text : C.textMuted, marginTop: 6 }}>
+                        <Text style={{ fontSize: 14, fontWeight: isSel ? '900' : '700', color: isSel ? C.text : C.textMuted, marginTop: 7 }}>
                           {fareText}
                         </Text>
                       )}
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3, minHeight: 12 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4, minHeight: 13 }}>
                         {!etaLoaded ? null : notAvail ? (
-                          <Text style={{ fontSize: 8.5, color: C.textDim, fontWeight: '700' }}>no driver</Text>
+                          <Text style={{ fontSize: 9, color: C.textDim, fontWeight: '700' }}>no driver</Text>
                         ) : info ? (
                           <>
                             <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: isFar ? C.yellow : C.green }} />
-                            <Text style={{ fontSize: 8.5, color: isFar ? C.yellow : C.green, fontWeight: '800' }}>
+                            <Text style={{ fontSize: 9, color: isFar ? C.yellow : C.green, fontWeight: '800' }}>
                               {info.eta_min !== null ? `${info.eta_min}m` : '…'}
                             </Text>
                           </>
