@@ -1923,12 +1923,13 @@ export function BookingScreen() {
           // standard bottom nav/action bar, not a floating rounded card.
           backgroundColor: C.bgCard,
           paddingHorizontal: 16, paddingTop: 14,
-          // On button-nav devices (inset 0) a small fixed pad gives finger
-          // clearance; on gesture-nav/notch devices the clamped safe-area
-          // inset already IS that clearance, so we don't add anything on
-          // top of it — avoids the double-padding that showed up as a big
-          // empty strip above the system bar on some Android builds.
-          paddingBottom: bottomInset > 0 ? bottomInset : 14,
+          // Match the app's own bottom tab bar (HomeScreen's `s.nav` style)
+          // exactly: a fixed platform padding, not `useSafeAreaInsets()`.
+          // The dynamic inset here used to under-report on some devices,
+          // leaving a black gap between this bar and the OS nav bar — the
+          // home tab bar never has that problem because it never relies on
+          // the inset at all.
+          paddingBottom: Platform.OS === 'android' ? 44 : Math.max(bottomInset, 16),
           borderTopWidth: 1, borderTopColor: C.glassBorder,
           elevation: 20,
           shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: -3 },
