@@ -160,23 +160,50 @@ function NearbyDriverMarker({ vehicleType }: { vehicleType: string }) {
   );
 }
 
-// ── Pickup pin — green circle with white center ───────────────────────────────
-function PickupMarker({ dragging }: { dragging?: boolean }) {
+// ── Address tag — floats above a pin without shifting its anchor point.
+// position:absolute keeps it out of the layout box react-native-maps
+// measures for anchoring, so the pin still points at the exact coordinate. ──
+function PinLabel({ text, accent }: { text: string; accent: string }) {
   return (
-    <View style={[styles.pickupRing, dragging && { borderColor: C.green, borderWidth: 3 }]}>
-      <View style={styles.pickupDot} />
+    <View style={{
+      position: 'absolute', bottom: '100%', marginBottom: 8,
+      alignSelf: 'center',
+      flexDirection: 'row', alignItems: 'center', gap: 5,
+      backgroundColor: '#fff', borderRadius: 10,
+      paddingHorizontal: 9, paddingVertical: 5,
+      maxWidth: 170,
+      borderWidth: 1.5, borderColor: accent,
+      elevation: 6, shadowColor: '#000', shadowOpacity: 0.22, shadowRadius: 5, shadowOffset: { width: 0, height: 2 },
+    }}>
+      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: accent }} />
+      <Text numberOfLines={1} style={{ fontSize: 11, fontWeight: '800', color: '#1a1a1a', flexShrink: 1 }}>{text}</Text>
+    </View>
+  );
+}
+
+// ── Pickup pin — green circle with white center ───────────────────────────────
+function PickupMarker({ dragging, label }: { dragging?: boolean; label?: string }) {
+  return (
+    <View style={{ alignItems: 'center' }}>
+      {!!label && <PinLabel text={label} accent={C.green} />}
+      <View style={[styles.pickupRing, dragging && { borderColor: C.green, borderWidth: 3 }]}>
+        <View style={styles.pickupDot} />
+      </View>
     </View>
   );
 }
 
 // ── Drop pin — pink teardrop ──────────────────────────────────────────────────
-function DropMarker({ dragging }: { dragging?: boolean }) {
+function DropMarker({ dragging, label }: { dragging?: boolean; label?: string }) {
   return (
-    <View style={styles.dropOuter}>
-      <View style={[styles.dropPin, dragging && { backgroundColor: C.pink }]}>
-        <View style={styles.dropHole} />
+    <View style={{ alignItems: 'center' }}>
+      {!!label && <PinLabel text={label} accent={C.pink} />}
+      <View style={styles.dropOuter}>
+        <View style={[styles.dropPin, dragging && { backgroundColor: C.pink }]}>
+          <View style={styles.dropHole} />
+        </View>
+        <View style={styles.dropTail} />
       </View>
-      <View style={styles.dropTail} />
     </View>
   );
 }
@@ -282,6 +309,8 @@ export interface LiveMapProps {
   walkOrigin?: { lat: number; lng: number } | null;   // user GPS — draws dotted walk line to pickup
   pulsePickup?: boolean;    // pulsing sonar rings at pickup pin (matching mode)
   pulseSearching?: boolean; // expanding yellow sonar rings at pickup while searching for a driver
+  pickupLabel?: string;     // address tag floated above the pickup pin
+  dropLabel?: string;       // address tag floated above the drop pin
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -315,6 +344,8 @@ export const LiveMap = memo(function LiveMap({
   walkOrigin = null,
   pulsePickup = false,
   pulseSearching = false,
+  pickupLabel,
+  dropLabel,
 }: LiveMapProps) {
   const mapRef = useRef<MapView>(null);
   const prevPos = useRef<{ lat: number; lng: number } | null>(null);
@@ -828,7 +859,7 @@ export const LiveMap = memo(function LiveMap({
               });
             }}
           >
-            <PickupMarker dragging={draggingPickup} />
+            <PickupMarker dragging={draggingPickup} label={pickupLabel} />
           </Marker>
         )}
 
@@ -848,7 +879,7 @@ export const LiveMap = memo(function LiveMap({
               });
             }}
           >
-            <DropMarker dragging={draggingDrop} />
+            <DropMarker dragging={draggingDrop} label={dropLabel} />
           </Marker>
         )}
 

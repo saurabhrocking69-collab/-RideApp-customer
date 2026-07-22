@@ -672,6 +672,8 @@ export function BookingScreen() {
           selectedRouteType={selectedRoute}
           fitKey={fitKey}
           walkOrigin={walkGpsOrigin}
+          pickupLabel={pickup ? pickup.split(',')[0] : undefined}
+          dropLabel={drop ? drop.split(',')[0] : undefined}
         />
         {/* Floating back button */}
         <TouchableOpacity
@@ -690,6 +692,44 @@ export function BookingScreen() {
           }}>
           <Ionicons name="arrow-back" size={21} color={C.plum} />
         </TouchableOpacity>
+
+        {/* Edit + save — floating over the map once both points are confirmed.
+             Replaces the old tappable FROM/TO card in the drawer: the
+             addresses now live as tags on the pins themselves, so editing
+             happens from here instead. */}
+        {!!(pickupCoords && dropCoords) && (
+          <View style={{
+            position: 'absolute', zIndex: 10, right: 16,
+            top: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 10 : 54,
+            gap: 10,
+          }}>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => { setDropCoords(null); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; }}
+              style={{
+                width: 44, height: 44, borderRadius: 22,
+                backgroundColor: C.pink,
+                alignItems: 'center', justifyContent: 'center',
+                elevation: 10,
+                shadowColor: C.pink, shadowOpacity: 0.35, shadowRadius: 14, shadowOffset: { width: 0, height: 5 },
+              }}>
+              <Ionicons name="pencil" size={19} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => openSavePicker({ text: drop, coords: dropCoords! })}
+              style={{
+                width: 44, height: 44, borderRadius: 22,
+                backgroundColor: '#fff',
+                alignItems: 'center', justifyContent: 'center',
+                borderWidth: 1, borderColor: 'rgba(46,20,97,0.08)',
+                elevation: 10,
+                shadowColor: C.plum, shadowOpacity: 0.24, shadowRadius: 14, shadowOffset: { width: 0, height: 5 },
+              }}>
+              <Ionicons name="bookmark-outline" size={19} color={C.plum} />
+            </TouchableOpacity>
+          </View>
+        )}
 
       </View>
 
@@ -796,74 +836,12 @@ export function BookingScreen() {
           // (offers, fare details) are never hidden behind the CTA
           contentContainerStyle={{ paddingBottom: 150 + bottomInset, paddingHorizontal: 14 }}>
 
-          {/* ─── Location card ─── */}
-          {pickupCoords && dropCoords ? (
-            /* Confirmed route — tap to edit drop */
-            <TouchableOpacity
-              activeOpacity={0.88}
-              onPress={() => { setDropCoords(null); setFareEstimates({}); setEta(''); lastFetchKey.current = ''; }}
-              style={{
-                backgroundColor: C.bgCard,
-                borderRadius: R.lg,
-                marginBottom: 14,
-                elevation: 8,
-                overflow: 'hidden',
-                borderWidth: 1.5,
-                borderColor: C.glassBorder,
-                shadowColor: C.plum,
-                shadowOpacity: 0.10,
-                shadowRadius: 18,
-                shadowOffset: { width: 0, height: 6 },
-              }}>
-
-              <View style={{ padding: 18 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'stretch' }}>
-                  {/* Swap button */}
-                  <TouchableOpacity
-                    onPress={e => { e.stopPropagation(); swapLocations(); }}
-                    style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', marginRight: 13, alignSelf: 'center', borderWidth: 1.5, borderColor: C.pinkBorder }}>
-                    <Ionicons name="swap-vertical" size={17} color={C.pink} />
-                  </TouchableOpacity>
-
-                  {/* Route indicator */}
-                  <View style={{ width: 16, alignItems: 'center', marginRight: 13, paddingVertical: 4 }}>
-                    <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: C.green, borderWidth: 2.5, borderColor: 'rgba(5,150,105,0.3)' }} />
-                    <View style={{ flex: 1, width: 2, backgroundColor: C.glassBorder, marginVertical: 4, minHeight: 26 }} />
-                    <View style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: C.pink, borderWidth: 2.5, borderColor: C.pinkBorder }} />
-                  </View>
-
-                  {/* Text labels */}
-                  <View style={{ flex: 1, gap: 15 }}>
-                    <View>
-                      <Text style={{ fontSize: 9.5, color: C.textDim, fontWeight: '800', letterSpacing: 1.1, marginBottom: 3 }}>FROM</Text>
-                      <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: '800', color: C.text, letterSpacing: -0.2 }}>{pickup}</Text>
-                    </View>
-                    <View>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                        <Text style={{ fontSize: 9.5, color: C.textDim, fontWeight: '800', letterSpacing: 1.1 }}>TO</Text>
-                        {/* Save drop location */}
-                        {dropCoords && (
-                          <TouchableOpacity
-                            onPress={e => { e.stopPropagation(); openSavePicker({ text: drop, coords: dropCoords }); }}
-                            style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: C.plumGlass, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: C.plumBorder }}>
-                            <Ionicons name="bookmark-outline" size={9} color={C.plum} />
-                            <Text style={{ fontSize: 9, fontWeight: '800', color: C.plum }}>SAVE</Text>
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                      <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: '800', color: C.text, letterSpacing: -0.2 }}>{drop}</Text>
-                    </View>
-                  </View>
-
-                  {/* Edit badge */}
-                  <View style={{ alignSelf: 'center', marginLeft: 10, width: 36, height: 36, borderRadius: 18, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.pinkBorder }}>
-                    <Ionicons name="pencil" size={16} color={C.pink} />
-                  </View>
-                </View>
-              </View>
-
-            </TouchableOpacity>
-          ) : (
+          {/* ─── Location card — once both points are set, the addresses are
+                 shown as tags directly on the map pins instead (with an edit
+                 pencil + save bookmark floating over the map), so the drawer
+                 skips straight to route/vehicle/fare. Nothing to render here
+                 in that state. ─── */}
+          {pickupCoords && dropCoords ? null : (
             /* Input mode — also hidden while dragging. Full-bleed edge-to-edge
                  (Maps' search-sheet look): the outer drawer panel already
                  provides the rounded-top sheet chrome, so this content runs
