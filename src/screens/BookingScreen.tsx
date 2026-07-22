@@ -6,13 +6,46 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { Storage as AsyncStorage } from '../storage';
 import { useApp } from '../context/AppContext';
-import { GlassPanel, RideVehicleIcon, DotBG, SkeletonBox } from '../components/ui';
+import { GlassPanel, RideVehicleIcon, SkeletonBox } from '../components/ui';
 import { LiveMap, RouteOption } from '../components/LiveMap';
 import { PickupMapPicker } from '../components/PickupMapPicker';
-import { s, C, T, R, SP, SHADOW } from '../styles';
+import { s, C as BrandC, T, R, SP, SHADOW } from '../styles';
 import { RIDES, MAPS_KEY } from '../constants';
 import { apiGet, apiPost, externalGet } from '../../api';
 import { useNearbyDrivers } from '../offline';
+
+// ── Prototype: restrained neutral palette (comparison exercise, this screen
+// only — the shared design system in '../styles' is untouched) ─────────────
+// Pink is reserved ONLY for the final booking CTA and true "needs attention"
+// moments (applying a promo code, the wait-modal's book-now button) —
+// restored explicitly via BRAND_PINK at those specific call sites. Every
+// other decorative use of C.pink/C.plum/C.purple in this file (icons,
+// borders, selected-tab underlines, badges) now resolves to a neutral gray
+// instead of brand color, closer to a utility-app look (Maps/AccuWeather)
+// than the saturated-brand "bold & premium" pass.
+const BRAND_PINK = BrandC.pink;
+const C = {
+  ...BrandC,
+  bg:          '#F5F6F8',
+  bgDeep:      '#ECEDEF',
+  bgPlum:      '#EFEFF1',
+  glassMid:    '#EFF0F2',
+  glassHigh:   '#E7E8EC',
+  glassBorder: '#E2E4E8',
+  glassB2:     '#D2D4D9',
+  text:        '#14161B',
+  textMuted:   '#6B7280',
+  textDim:     '#9AA0AA',
+  plum:        '#1C1F26',
+  purple:      '#3D4250',
+  plumGlass:   'rgba(28,31,38,0.06)',
+  plumBorder:  'rgba(28,31,38,0.14)',
+  purpleGlass: 'rgba(61,66,80,0.06)',
+  purpleBorder: 'rgba(61,66,80,0.20)',
+  pink:        '#2B2F38',
+  pinkGlass:   'rgba(0,0,0,0.045)',
+  pinkBorder:  'rgba(0,0,0,0.12)',
+};
 
 // Nimble vehicles that can actually take a tighter/shorter route (a car/luxury
 // often can't) — these get the Fastest/Shortest route choice.
@@ -633,8 +666,9 @@ export function BookingScreen() {
 
 
   return (
-    <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <DotBG />
+    <KeyboardAvoidingView style={[s.screen, { backgroundColor: C.bg }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      {/* DotBG's soft pink/amber/purple blobs are brand-colored decoration —
+          dropped for this neutral-palette prototype; plain background instead. */}
 
       {/* ─── Map — flex:1 fills all space above the drawer ─── */}
       <View style={{ flex: 1 }}>
@@ -937,7 +971,7 @@ export function BookingScreen() {
                 </View>
 
                 {pickupSugg.length > 0 && (
-                  <View style={[s.suggBox, { zIndex: 100 }]}>
+                  <View style={[s.suggBox, { zIndex: 100, borderColor: C.glassBorder }]}>
                     {pickupSugg.slice(0, 5).map((sg: any, i: number) => (
                       <TouchableOpacity key={i}
                         style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 11, paddingHorizontal: 4, borderBottomWidth: i < pickupSugg.length - 1 ? 1 : 0, borderBottomColor: C.glassBorder }}
@@ -1522,7 +1556,7 @@ export function BookingScreen() {
                     onBlur={() => setInputFocused(false)}
                     onChangeText={setPromoCode}
                   />
-                  <TouchableOpacity onPress={applyPromo} style={{ backgroundColor: C.pink, borderRadius: R.xs, paddingHorizontal: 15, paddingVertical: 9, elevation: 4, shadowColor: C.pink, shadowOpacity: 0.4, shadowRadius: 6 }}>
+                  <TouchableOpacity onPress={applyPromo} style={{ backgroundColor: BRAND_PINK, borderRadius: R.xs, paddingHorizontal: 15, paddingVertical: 9, elevation: 4, shadowColor: BRAND_PINK, shadowOpacity: 0.4, shadowRadius: 6 }}>
                     <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>Apply</Text>
                   </TouchableOpacity>
                 </View>
@@ -1697,7 +1731,7 @@ export function BookingScreen() {
                 <TouchableOpacity
                   onPress={() => { setShowWaitModal(false); bookRide(); }}
                   disabled={!waitConfirmed}
-                  style={{ flex: 2, backgroundColor: waitConfirmed ? C.pink : C.glassMid, borderRadius: 16, paddingVertical: 17, alignItems: 'center', elevation: waitConfirmed ? 10 : 0, shadowColor: C.pink, shadowOpacity: waitConfirmed ? 0.48 : 0, shadowRadius: 16, shadowOffset: { width: 0, height: 6 } }}>
+                  style={{ flex: 2, backgroundColor: waitConfirmed ? BRAND_PINK : C.glassMid, borderRadius: 16, paddingVertical: 17, alignItems: 'center', elevation: waitConfirmed ? 10 : 0, shadowColor: BRAND_PINK, shadowOpacity: waitConfirmed ? 0.48 : 0, shadowRadius: 16, shadowOffset: { width: 0, height: 6 } }}>
                   <Text style={{ fontWeight: '900', color: waitConfirmed ? '#fff' : C.textMuted, fontSize: 15 }}>
                     {waitConfirmed ? 'Book Now →' : 'Confirm First'}
                   </Text>
@@ -2073,11 +2107,11 @@ export function BookingScreen() {
                 onPressOut={hasFare && !loading ? onBookPressOut : undefined}
                 style={{
                   flexDirection: 'row', alignItems: 'center', gap: 6,
-                  backgroundColor: hasFare && !loading ? C.pink : C.glassMid,
+                  backgroundColor: hasFare && !loading ? BRAND_PINK : C.glassMid,
                   borderRadius: R.full,
                   paddingHorizontal: 22, paddingVertical: 13,
                   elevation: hasFare && !loading ? 10 : 0,
-                  shadowColor: C.pink, shadowOpacity: hasFare && !loading ? 0.4 : 0, shadowRadius: 14, shadowOffset: { width: 0, height: 5 },
+                  shadowColor: BRAND_PINK, shadowOpacity: hasFare && !loading ? 0.4 : 0, shadowRadius: 14, shadowOffset: { width: 0, height: 5 },
                 }}>
                 <Text style={{ fontSize: 15, fontWeight: '900', color: hasFare && !loading ? '#fff' : C.textDim }}>
                   {scheduledAt ? 'Schedule' : 'Book'}
