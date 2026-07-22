@@ -630,7 +630,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 activeRideIdRef.current = activeRideId;
                 setScreen(st === 'started' ? 'inride' : 'matching');
               } else if (st === 'completed' || st === 'payment') {
-                setScreen('payment');
+                // rides.status alone can't distinguish "trip ended, please pay"
+                // from "driver already confirmed payment" — both read as
+                // 'completed' here. payment_status is the column that actually
+                // changes when the driver taps confirm (cash-confirm / online
+                // payment-complete), so it's the one that decides which screen
+                // is correct. Without this check, reopening the app after the
+                // driver already confirmed payment always re-showed the
+                // pay-now screen instead of the completed/post-ride screen.
+                if (ride.payment_status === 'completed') {
+                  setRideData({ ...ride, ride_id: ride.ride_id ?? ride.id });
+                  setPaymentDone(true);
+                  setScreen('postride');
+                  AsyncStorage.removeItem('activeStdRideId').catch(() => {});
+                } else {
+                  setRideData({ ...ride, ride_id: ride.ride_id ?? ride.id });
+                  setScreen('payment');
+                }
               } else {
                 AsyncStorage.removeItem('activeStdRideId').catch(() => {});
               }
@@ -681,6 +697,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (['ride_matched', 'driver_arrived', 'trip_started', 'scheduled_matching'].includes(data?.type) && data?.ride_id) {
         adoptActiveRide(data.ride_id).catch(() => {});
       }
+      // Driver confirmed payment — reconcile even if the user doesn't tap the
+      // push, so the pay-now screen doesn't sit stale if they're already
+      // looking at the app on another screen.
+      if (data?.type === 'payment_confirmed' && data?.ride_id) {
+        reconcilePaymentConfirmed(data.ride_id).then(ok => { if (ok) setScreen('postride'); }).catch(() => {});
+      }
       const toast: ToastNotif = {
         id:       n.request.identifier,
         title:    content.title || 'Sppero',
@@ -711,6 +733,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setScreen('inride');
       }
       else if (data.type === 'trip_completed')                     setScreen('payment');
+      else if (data.type === 'payment_confirmed') {
+        const ok = rideId ? await reconcilePaymentConfirmed(rideId) : false;
+        setScreen(ok ? 'postride' : 'payment');
+      }
       else if (data.type === 'ride_cancelled')                     { setScreen('home'); setDriverCancelPopup(true); }
       else if (data.type === 'no_driver_found')                    setScreen('home');
       else if (data.type === 'extension_accepted')                 { if (rideId) await adoptActiveRide(rideId); setScreen('matching'); }
@@ -766,6 +792,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             })
             .catch(() => {});
         }
+        // Catch a driver "payment confirmed" event missed entirely while the
+        // socket was disconnected (backgrounded) — the socket event is the
+        // fast path, this resume check is the durable fallback so the pay-now
+        // screen doesn't sit stale if the push was also missed.
+        AsyncStorage.getItem('activeStdRideId').then(id => {
+          if (!id) return;
+          reconcilePaymentConfirmed(id).then(ok => { if (ok && screen === 'payment') setScreen('postride'); });
+        }).catch(() => {});
       }
     });
     return () => sub.remove();
@@ -1282,6 +1316,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       await AsyncStorage.setItem('activeStdRideId', String(rideId)).catch(() => {});
       joinRideSocket(rideId);
+      return true;
+    } catch { return false; }
+  };
+
+  // Reconcile a ride the driver has already marked paid (cash-confirm /
+  // payment-complete) — the durable fallback for the 'paymentConfirmed'
+  // socket event, which only fires if the customer's socket is connected at
+  // the exact instant the driver taps confirm. rides.status stays
+  // 'completed' for both "please pay" and "already paid", so this checks the
+  // separate payment_status column to tell them apart and route correctly.
+  const reconcilePaymentConfirmed = async (rideId: string | number): Promise<boolean> => {
+    try {
+      const r = await fetch(`${API}/api/rides/status/${rideId}`);
+      const d = await r.json();
+      const ride = d.ride;
+      if (!ride || ride.status !== 'completed' || ride.payment_status !== 'completed') return false;
+      setRideData({ ...ride, ride_id: ride.ride_id ?? ride.id });
+      setPaymentDone(true);
+      await AsyncStorage.removeItem('activeStdRideId').catch(() => {});
       return true;
     } catch { return false; }
   };
