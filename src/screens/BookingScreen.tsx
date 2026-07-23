@@ -1231,13 +1231,13 @@ export function BookingScreen() {
               .sort((a, b) => a.info.eta_min - b.info.eta_min)[0];
             if (!nearest) return null;
             return (
-              <View style={{ backgroundColor: C.greenGlass, borderRadius: R.sm, padding: 13, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: C.greenBorder }}>
-                <Text style={{ fontSize: 17 }}>💡</Text>
-                <Text style={{ fontSize: 12.5, fontWeight: '700', color: C.green, flex: 1 }}>
+              <View style={{ backgroundColor: C.bgCard, borderRadius: R.sm, paddingVertical: 8, paddingHorizontal: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: C.glassBorder }}>
+                <Text style={{ fontSize: 15 }}>💡</Text>
+                <Text style={{ fontSize: 12.5, fontWeight: '700', color: C.textMuted, flex: 1 }}>
                   {nearest.r.label} is nearest — arriving in ~{nearest.info.eta_min} min
                 </Text>
                 {rideType !== nearest.r.id && (
-                  <TouchableOpacity onPress={() => { setRideType(nearest.r.id); setVehicleBrowsing(false); }} style={{ backgroundColor: C.green, borderRadius: R.xs, paddingHorizontal: 12, paddingVertical: 7, elevation: 3, shadowColor: C.green, shadowOpacity: 0.3, shadowRadius: 6 }}>
+                  <TouchableOpacity onPress={() => { setRideType(nearest.r.id); setVehicleBrowsing(false); }} style={{ backgroundColor: C.textMuted, borderRadius: R.xs, paddingHorizontal: 12, paddingVertical: 6, elevation: 3, shadowColor: C.textMuted, shadowOpacity: 0.3, shadowRadius: 6 }}>
                     <Text style={{ color: '#fff', fontSize: 11.5, fontWeight: '900' }}>Select</Text>
                   </TouchableOpacity>
                 )}
