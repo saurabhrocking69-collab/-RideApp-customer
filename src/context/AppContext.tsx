@@ -96,6 +96,10 @@ interface AppContextType {
   promoScreenCode: string; setPromoScreenCode: (c: string) => void;
   promoScreenMsg: string; setPromoScreenMsg: (m: string) => void;
   availablePromos: any[]; setAvailablePromos: (p: any[]) => void;
+  // Who's riding
+  rideForSelf: boolean; setRideForSelf: (v: boolean) => void;
+  riderName: string; setRiderName: (n: string) => void;
+  riderPhone: string; setRiderPhone: (p: string) => void;
   // Active ride
   rideData: any; setRideData: (d: any) => void;
   altSuggest: any; setAltSuggest: (s: any) => void;
@@ -399,6 +403,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [promoScreenCode, setPromoScreenCode] = useState('');
   const [promoScreenMsg, setPromoScreenMsg] = useState('');
   const [availablePromos, setAvailablePromos] = useState<any[]>([]);
+
+  // ── Who's riding — defaults to the account holder; "someone else" carries
+  // a name + phone through to booking so the driver can identify/reach the
+  // actual rider instead of the person who booked. Reset per booking. ──────
+  const [rideForSelf, setRideForSelf] = useState(true);
+  const [riderName, setRiderName]     = useState('');
+  const [riderPhone, setRiderPhone]   = useState('');
 
   // ── Active ride ─────────────────────────────────────────────────────────
   const [rideData, setRideData] = useState<any>(null);
@@ -1734,6 +1745,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         discount: promoDiscount, promo_code: promoDiscount > 0 ? promoCode : null,
         route_polyline: route?.polyline ?? null, route_type: route?.routeType ?? null,
         advance,
+        rider_name:  !rideForSelf ? riderName.trim()  : null,
+        rider_phone: !rideForSelf ? riderPhone.trim() : null,
       });
       if (data.restricted) { setResult('🚫 ' + (data.error || 'Account on hold — contact support')); return; }
       if (data._error || data.error) { setResult('❌ ' + (data.message || data.error || 'Booking failed')); return; }
@@ -1742,6 +1755,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         try { await apiPost('/api/promo/apply', { code: promoCode, phone, ride_id: data.ride_id, discount: promoDiscount }); } catch (_e) {}
       }
       setRideData({ ...data, discount: data.discount ?? promoDiscount ?? 0, platform_fee: data.platform_fee ?? 2 }); setScreen('matching'); setResult(''); setAltSuggest(null);
+      setRideForSelf(true); setRiderName(''); setRiderPhone(''); // reset for next booking
       AsyncStorage.setItem('activeStdRideId', String(data.ride_id)).catch(() => {});
       // Save fare to route history (for "last time ₹XX" display on BookingScreen)
       try {
@@ -2213,6 +2227,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     promoCode, setPromoCode, promoDiscount, setPromoDiscount,
     promoScreenCode, setPromoScreenCode, promoScreenMsg, setPromoScreenMsg,
     availablePromos, setAvailablePromos,
+    rideForSelf, setRideForSelf, riderName, setRiderName, riderPhone, setRiderPhone,
     rideData, setRideData, altSuggest, setAltSuggest,
     switchingVehicle, setSwitchingVehicle, driverLoc, setDriverLoc,
     driverEta, setDriverEta, driverDist, setDriverDist,

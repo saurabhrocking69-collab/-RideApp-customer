@@ -1,4 +1,4 @@
-import { ActivityIndicator, Animated, Easing, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, StatusBar, StyleSheet, TextInput, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Easing, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, StatusBar, StyleSheet, TextInput, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { SchedulePickerSheet, ScheduleResult } from '../components/SchedulePickerSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -86,6 +86,7 @@ export function BookingScreen() {
     availablePromos, setAvailablePromos,
     scheduleRide,
     scheduleIntent, setScheduleIntent,
+    rideForSelf, setRideForSelf, riderName, setRiderName, riderPhone, setRiderPhone,
   } = useApp() as any;
 
   const selRide   = RIDES.find(r => r.id === rideType);
@@ -325,6 +326,10 @@ export function BookingScreen() {
   }, [routeOptions?.fastest.polyline, routeOptions?.shortest?.polyline, rideType, routeChoiceEligible]);
 
   const handleBook = () => {
+    if (!rideForSelf && (!riderName.trim() || riderPhone.length !== 10)) {
+      Alert.alert('Who\'s riding?', 'Enter their name and a 10-digit phone number so the driver knows who to look for.');
+      return;
+    }
     const eta = driverEta[rideType];
     if (eta && eta.dist_km > 5) { setWaitConfirmed(false); setShowWaitModal(true); return; }
     // Pass the customer's chosen route so the fare, map, and driver navigation
@@ -917,6 +922,69 @@ export function BookingScreen() {
                 padding: 18,
                 paddingBottom: hasDropDown ? 12 : 18,
               }}>
+                {/* ── Who's riding — defaults to "Myself"; picking "Someone else"
+                       reveals a quick name+phone so the driver knows who to look
+                       for at pickup and can reach them directly. Shown first,
+                       before pickup/drop, since it's the first real decision
+                       in booking a ride for anyone but yourself. ── */}
+                <View style={{ marginBottom: 14 }}>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => setRideForSelf(true)}
+                      style={{
+                        flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        paddingVertical: 10, borderRadius: R.full,
+                        backgroundColor: rideForSelf ? C.pinkGlass : C.glassMid,
+                        borderWidth: 1.5, borderColor: rideForSelf ? C.pink : C.glassBorder,
+                      }}>
+                      <Ionicons name="person" size={14} color={rideForSelf ? C.pink : C.textMuted} />
+                      <Text style={{ fontSize: 12.5, fontWeight: '800', color: rideForSelf ? C.pink : C.textMuted }}>For Myself</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => setRideForSelf(false)}
+                      style={{
+                        flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        paddingVertical: 10, borderRadius: R.full,
+                        backgroundColor: !rideForSelf ? C.pinkGlass : C.glassMid,
+                        borderWidth: 1.5, borderColor: !rideForSelf ? C.pink : C.glassBorder,
+                      }}>
+                      <Ionicons name="people" size={14} color={!rideForSelf ? C.pink : C.textMuted} />
+                      <Text style={{ fontSize: 12.5, fontWeight: '800', color: !rideForSelf ? C.pink : C.textMuted }}>For Someone Else</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {!rideForSelf && (
+                    <View style={{ marginTop: 10 }}>
+                      <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <TextInput
+                          style={{ flex: 1, backgroundColor: C.glassMid, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13.5, color: C.text, borderWidth: 1, borderColor: C.glassBorder }}
+                          placeholder="Their name"
+                          placeholderTextColor={C.textDim}
+                          value={riderName}
+                          onChangeText={setRiderName}
+                        />
+                        <TextInput
+                          style={{ flex: 1, backgroundColor: C.glassMid, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13.5, color: C.text, borderWidth: 1, borderColor: C.glassBorder }}
+                          placeholder="Their 10-digit phone"
+                          placeholderTextColor={C.textDim}
+                          keyboardType="number-pad"
+                          maxLength={10}
+                          value={riderPhone}
+                          onChangeText={(v: string) => setRiderPhone(v.replace(/[^0-9]/g, ''))}
+                        />
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 8, paddingHorizontal: 2 }}>
+                        <Ionicons name="information-circle" size={14} color={C.textMuted} style={{ marginTop: 1 }} />
+                        <Text style={{ flex: 1, fontSize: 11, color: C.textMuted, lineHeight: 15 }}>
+                          You'll still get all ride updates and pay from your account — we just share these details with the driver so they know who to look for and can call them directly if needed.
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+
                 {/* ── Quick access — Home / Office. These are DESTINATION shortcuts, so
                        they (and the rest of the drop step below) only appear once
                        pickup is actually chosen — until then this is a dedicated
