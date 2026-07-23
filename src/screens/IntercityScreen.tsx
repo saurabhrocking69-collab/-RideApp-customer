@@ -356,9 +356,9 @@ export function IntercityScreen() {
           onPress={() => { if (validateTimes()) setShowReview(true); }}
           disabled={loading || estLoading || !selOpt}
           style={{
-            backgroundColor: loading || estLoading || !selOpt ? '#9CA3AF' : BLUE,
+            backgroundColor: loading || estLoading || !selOpt ? '#9CA3AF' : C.pink,
             borderRadius: 16, paddingVertical: 16, alignItems: 'center',
-            elevation: 6, shadowColor: BLUE, shadowOpacity: 0.35, shadowRadius: 12,
+            elevation: 6, shadowColor: C.pink, shadowOpacity: 0.35, shadowRadius: 12,
           }}
         >
           {loading ? (
@@ -487,9 +487,9 @@ export function IntercityScreen() {
                 disabled={loading || !selOpt}
                 onPress={handleBook}
                 style={{
-                  backgroundColor: loading || !selOpt ? '#9CA3AF' : BLUE,
+                  backgroundColor: loading || !selOpt ? '#9CA3AF' : C.pink,
                   borderRadius: 16, paddingVertical: 16, alignItems: 'center',
-                  elevation: 6, shadowColor: BLUE, shadowOpacity: 0.35, shadowRadius: 12,
+                  elevation: 6, shadowColor: C.pink, shadowOpacity: 0.35, shadowRadius: 12,
                 }}
               >
                 {loading ? (
