@@ -1199,7 +1199,7 @@ function HomeTab() {
 
               {/* Auto card */}
               <Bouncy onPress={() => { setRideType('auto'); setScreen('booking'); }} style={{ flex: 1 }}>
-                <View style={{ borderRadius: 22, backgroundColor: '#5B21B6', overflow: 'hidden', minHeight: CARD_H, justifyContent: 'space-between', ...SHADOW.md }}>
+                <View style={{ borderRadius: 22, backgroundColor: '#6D5A8C', overflow: 'hidden', minHeight: CARD_H, justifyContent: 'space-between', ...SHADOW.md }}>
                   <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', backgroundColor: 'rgba(255,255,255,0.09)', borderTopLeftRadius: 22, borderTopRightRadius: 22 }} />
                   <View style={{ position: 'absolute', top: -22, right: -22, width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.07)' }} />
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start', paddingTop: 9, paddingHorizontal: 9 }}>
@@ -1222,7 +1222,7 @@ function HomeTab() {
 
               {/* Bike card — animated */}
               <Bouncy onPress={() => { setRideType('bike'); setScreen('booking'); }} style={{ flex: 1 }}>
-                <View style={{ borderRadius: 22, backgroundColor: '#15803D', overflow: 'hidden', minHeight: CARD_H, justifyContent: 'space-between', ...SHADOW.md }}>
+                <View style={{ borderRadius: 22, backgroundColor: '#3E7A50', overflow: 'hidden', minHeight: CARD_H, justifyContent: 'space-between', ...SHADOW.md }}>
                   <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', backgroundColor: 'rgba(255,255,255,0.09)', borderTopLeftRadius: 22, borderTopRightRadius: 22 }} />
                   <View style={{ position: 'absolute', top: -22, right: -22, width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.07)' }} />
                   <View style={{ alignItems: 'flex-end', padding: 9 }}>
@@ -1251,7 +1251,7 @@ function HomeTab() {
 
               {/* Car card */}
               <Bouncy onPress={() => { setRideType('car'); setScreen('booking'); }} style={{ flex: 1 }}>
-                <View style={{ borderRadius: 22, backgroundColor: '#1D4ED8', overflow: 'hidden', minHeight: CARD_H, justifyContent: 'space-between', ...SHADOW.md }}>
+                <View style={{ borderRadius: 22, backgroundColor: '#4D63A3', overflow: 'hidden', minHeight: CARD_H, justifyContent: 'space-between', ...SHADOW.md }}>
                   <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', backgroundColor: 'rgba(255,255,255,0.09)', borderTopLeftRadius: 22, borderTopRightRadius: 22 }} />
                   <View style={{ position: 'absolute', top: -22, right: -22, width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.07)' }} />
                   <View style={{ position: 'absolute', bottom: -14, left: -14, width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(147,197,253,0.12)' }} />
@@ -1277,7 +1277,7 @@ function HomeTab() {
                 setHPickupSugg([]); setHDropSugg([]); setHRoundTrip(false); setHStayHours(1);
                 setHourlyBooking(null); setScreen('hourly');
               }}>
-                <View style={{ borderRadius: 22, backgroundColor: '#B45309', overflow: 'hidden', minHeight: CARD_H, justifyContent: 'space-between', ...SHADOW.md }}>
+                <View style={{ borderRadius: 22, backgroundColor: '#A6784A', overflow: 'hidden', minHeight: CARD_H, justifyContent: 'space-between', ...SHADOW.md }}>
                   <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', backgroundColor: 'rgba(255,255,255,0.09)', borderTopLeftRadius: 22, borderTopRightRadius: 22 }} />
                   <View style={{ position: 'absolute', top: -22, right: -22, width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.07)' }} />
                   <View style={{ position: 'absolute', bottom: -14, left: -14, width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(251,191,36,0.16)' }} />
@@ -1311,9 +1311,9 @@ function HomeTab() {
               const bikeC = nearbyDriversData.filter((d: any) => ['bike','green_bike'].includes(d.vehicleType)).length;
               const carC  = nearbyDriversData.filter((d: any) => ['car','luxury'].includes(d.vehicleType)).length;
               const pills = [
-                { key: 'auto', emoji: '🛺', label: 'Auto', count: autoC, color: '#5B21B6', bg: 'rgba(91,33,182,0.10)', border: 'rgba(91,33,182,0.28)' },
-                { key: 'bike', emoji: '🏍️', label: 'Bike', count: bikeC, color: '#15803D', bg: 'rgba(21,128,61,0.10)', border: 'rgba(21,128,61,0.28)' },
-                { key: 'car',  emoji: '🚗', label: 'Car',  count: carC,  color: '#1D4ED8', bg: 'rgba(29,78,216,0.10)', border: 'rgba(29,78,216,0.28)' },
+                { key: 'auto', emoji: '🛺', label: 'Auto', count: autoC, color: '#6D5A8C', bg: 'rgba(109,90,140,0.10)', border: 'rgba(109,90,140,0.28)' },
+                { key: 'bike', emoji: '🏍️', label: 'Bike', count: bikeC, color: '#3E7A50', bg: 'rgba(62,122,80,0.10)', border: 'rgba(62,122,80,0.28)' },
+                { key: 'car',  emoji: '🚗', label: 'Car',  count: carC,  color: '#4D63A3', bg: 'rgba(77,99,163,0.10)', border: 'rgba(77,99,163,0.28)' },
               ].filter(p => p.count > 0);
               if (!pills.length) return null;
               return (
