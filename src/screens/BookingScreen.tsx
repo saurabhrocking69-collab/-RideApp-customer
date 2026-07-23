@@ -838,29 +838,34 @@ export function BookingScreen() {
             ? Math.max(...availablePromos.map((p: any) => parseFloat(String(p.max_discount)) || 0))
             : 0;
           const applied = promoDiscount > 0;
+          // Unapplied state uses a light lemon-yellow background, so text/icons
+          // switch to a dark tone here for contrast (white was for the pink bg).
+          const fg      = applied ? '#fff' : '#3D2E00';
+          const fgDim   = applied ? 'rgba(255,255,255,0.78)' : 'rgba(61,46,0,0.72)';
+          const chipBg  = applied ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.08)';
           return (
             <TouchableOpacity
               activeOpacity={0.88}
               onPress={() => { setCouponError(''); setShowCouponModal(true); }}
               style={{
                 flexDirection: 'row', alignItems: 'center',
-                backgroundColor: applied ? '#16A34A' : '#FF2D78',
-                paddingVertical: 11, paddingHorizontal: 18, gap: 11,
+                backgroundColor: applied ? '#16A34A' : '#FFEB3B',
+                paddingVertical: 7, paddingHorizontal: 18, gap: 9,
               }}>
               {/* Icon bubble */}
               <View style={{
-                width: 32, height: 32, borderRadius: 11,
-                backgroundColor: 'rgba(255,255,255,0.22)',
+                width: 26, height: 26, borderRadius: 9,
+                backgroundColor: chipBg,
                 alignItems: 'center', justifyContent: 'center',
               }}>
                 <Ionicons
                   name={applied ? 'checkmark-circle' : 'pricetag'}
-                  size={16} color="#fff"
+                  size={14} color={fg}
                 />
               </View>
               {/* Text block */}
               <View style={{ flex: 1 }}>
-                <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12, letterSpacing: 0.1 }}>
+                <Text style={{ color: fg, fontWeight: '900', fontSize: 12, letterSpacing: 0.1 }}>
                   {applied
                     ? `${promoCode} Applied — ₹${promoDiscount} saved on this ride!`
                     : availablePromos.length > 0
@@ -868,16 +873,16 @@ export function BookingScreen() {
                       : 'Have a coupon? Apply & save now!'}
                 </Text>
                 {!applied && (
-                  <Text style={{ color: 'rgba(255,255,255,0.78)', fontSize: 10, marginTop: 1, fontWeight: '600' }}>
+                  <Text style={{ color: fgDim, fontSize: 10, marginTop: 1, fontWeight: '600' }}>
                     {availablePromos.length > 0 ? 'Tap to see & apply offers' : 'Enter code in fare section below'}
                   </Text>
                 )}
               </View>
               <View style={{
-                backgroundColor: 'rgba(255,255,255,0.22)',
+                backgroundColor: chipBg,
                 borderRadius: 20, paddingHorizontal: 8, paddingVertical: 4,
               }}>
-                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>
+                <Text style={{ color: fg, fontSize: 10, fontWeight: '900' }}>
                   {applied ? 'Change' : 'Apply'}
                 </Text>
               </View>
