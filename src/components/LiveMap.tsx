@@ -244,7 +244,7 @@ function YouMarker() {
         shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 6, shadowOffset: { width: 0, height: 2 },
       }}>
         <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#3B82F6' }} />
-        <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#1a1a1a', letterSpacing: 0.2 }}>Currently here</Text>
+        <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#1a1a1a', letterSpacing: 0.2 }}>Currently You at</Text>
       </View>
       <View style={{
         width: 14, height: 14, borderRadius: 7,
@@ -553,6 +553,14 @@ export const LiveMap = memo(function LiveMap({
       if (pickupCoords) coords.push({ latitude: pickupCoords.lat, longitude: pickupCoords.lng });
       if (dropCoords)   coords.push({ latitude: dropCoords.lat,   longitude: dropCoords.lng   });
       if (driverLat != null && driverLng != null) coords.push({ latitude: driverLat, longitude: driverLng });
+      // On the editor page (pickup chosen, drop not yet) keep the user's
+      // actual GPS position in frame alongside the selected pickup pin —
+      // without this, the camera jumped to frame ONLY the pickup pin the
+      // moment it was chosen, and "where am I" vs "where am I pickup up
+      // from" were never visible together.
+      if (mode === 'booking' && pickupCoords && !dropCoords && userLat != null) {
+        coords.push({ latitude: userLat, longitude: userLng! });
+      }
       if (!coords.length && userLat != null) coords.push({ latitude: userLat!, longitude: userLng! });
     }
     if (coords.length > 0) {
@@ -561,7 +569,7 @@ export const LiveMap = memo(function LiveMap({
         animated: true,
       });
     }
-  }, [pickupCoords?.lat, pickupCoords?.lng, dropCoords?.lat, dropCoords?.lng, driverLat, driverLng, followDriver, fitKey]);
+  }, [pickupCoords?.lat, pickupCoords?.lng, dropCoords?.lat, dropCoords?.lng, driverLat, driverLng, followDriver, fitKey, userLat, userLng, mode]);
 
   const recenter = () => {
     if (!mapRef.current) return;
