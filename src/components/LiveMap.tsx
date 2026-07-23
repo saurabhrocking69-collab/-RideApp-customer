@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, memo } from 'react';
 import { Animated, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import MapView, { Marker, Polyline, Circle, AnimatedRegion, PROVIDER_GOOGLE } from 'react-native-maps';
+import Svg, { Path, Rect, Ellipse } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { MAPS_KEY } from '../constants';
 import { C } from '../styles';
@@ -101,36 +102,95 @@ function interpolateRoute(
   return coords[coords.length - 1];
 }
 
-// ── Vehicle icons ─────────────────────────────────────────────────────────────
-const VEHICLE_ICONS: Record<string, string> = {
-  bike: '🏍️', green_bike: '⚡', auto: '🛺', electric_auto: '🌿',
-  eriksha: '🛵', car: '🚕', luxury: '🚙',
-};
+// ── Top-down vehicle silhouettes — drawn nose-up (0° = north), rotated to
+// heading at render time. No badge/circle frame — just the vehicle + a soft
+// grounding shadow, like a real overhead view. One shape per vehicle family,
+// recolored per type instead of drawing 7 separate vector sets. ──────────────
+function CarShape({ body, roof }: { body: string; roof: string }) {
+  return (
+    <Svg width={34} height={58} viewBox="0 0 34 58">
+      <Rect x="3" y="3" width="28" height="52" rx="11" fill={body} stroke="#fff" strokeWidth="1.5" />
+      <Rect x="7" y="9" width="20" height="10" rx="4" fill="#CFE9FF" opacity={0.9} />
+      <Rect x="6" y="20" width="22" height="17" rx="6" fill={roof} opacity={0.92} />
+      <Rect x="8" y="39" width="18" height="9" rx="4" fill="#CFE9FF" opacity={0.7} />
+      <Rect x="-1" y="15" width="5" height="7" rx="2.2" fill={roof} />
+      <Rect x="30" y="15" width="5" height="7" rx="2.2" fill={roof} />
+    </Svg>
+  );
+}
+function BikeShape({ body, rider }: { body: string; rider: string }) {
+  return (
+    <Svg width={20} height={46} viewBox="0 0 20 46">
+      <Ellipse cx="10" cy="7" rx="4" ry="6" fill="#1F2937" />
+      <Rect x="8" y="9" width="4" height="28" rx="2" fill={body} />
+      <Ellipse cx="10" cy="20" rx="7" ry="7.5" fill={rider} stroke="#fff" strokeWidth="1.2" />
+      <Ellipse cx="10" cy="39" rx="4" ry="6" fill="#1F2937" />
+    </Svg>
+  );
+}
+function AutoShape({ body, roof }: { body: string; roof: string }) {
+  return (
+    <Svg width={30} height={42} viewBox="0 0 30 42">
+      <Ellipse cx="4"  cy="33" rx="3.4" ry="5" fill="#1F2937" />
+      <Ellipse cx="26" cy="33" rx="3.4" ry="5" fill="#1F2937" />
+      <Path d="M6,37 L24,37 L21,10 Q15,4 9,10 Z" fill={body} stroke="#1F2937" strokeWidth="1" />
+      <Path d="M9,12 Q15,7 21,12 L20,19 L10,19 Z" fill={roof} opacity={0.88} />
+      <Ellipse cx="15" cy="6" rx="3" ry="4.2" fill="#1F2937" />
+    </Svg>
+  );
+}
 
-// ── Assigned driver marker (large, branded, with bearing arrow) ───────────────
+// Per-vehicle-type color + shape pairing — real-world liveries where they
+// exist (yellow/black auto, green e-auto) so the type reads at a glance.
+const VEHICLE_VISUALS: Record<string, { Shape: typeof CarShape | typeof BikeShape | typeof AutoShape; props: any }> = {
+  bike:          { Shape: BikeShape, props: { body: '#374151', rider: '#EF4444' } },
+  green_bike:    { Shape: BikeShape, props: { body: '#166534', rider: '#22C55E' } },
+  auto:          { Shape: AutoShape, props: { body: '#FBBF24', roof: '#1F2937' } },
+  electric_auto: { Shape: AutoShape, props: { body: '#22C55E', roof: '#14532D' } },
+  eriksha:       { Shape: AutoShape, props: { body: '#06B6D4', roof: '#164E63' } },
+  car:           { Shape: CarShape,  props: { body: '#4D63A3', roof: '#2C3E6B' } },
+  luxury:        { Shape: CarShape,  props: { body: '#374151', roof: '#111827' } },
+};
+function vehicleVisual(vehicleType: string) {
+  return VEHICLE_VISUALS[vehicleType] || VEHICLE_VISUALS.car;
+}
+
+// ── Assigned driver marker — real top-down vehicle, rotated to heading,
+// no circle frame. Ground shadow gives it depth like it's sitting on the map. ──
 function DriverMarker({ vehicleType, heading }: { vehicleType: string; heading: number }) {
-  const icon = VEHICLE_ICONS[vehicleType] || '🚕';
+  const { Shape, props } = vehicleVisual(vehicleType);
+  // Smooth the rotation itself (not just position) — a hard snap to the new
+  // heading every GPS tick reads as jumpy; tween it so the vehicle visibly
+  // "turns" like it would on a real road.
+  const rotate = useRef(new Animated.Value(heading)).current;
+  const prevHeading = useRef(heading);
+  useEffect(() => {
+    // Take the shorter turning direction across the 0/360 wrap instead of
+    // always spinning forward (e.g. 350°→10° should turn +20°, not -340°).
+    let delta = heading - prevHeading.current;
+    delta = ((delta + 180) % 360 + 360) % 360 - 180;
+    const target = prevHeading.current + delta;
+    prevHeading.current = target;
+    Animated.timing(rotate, { toValue: target, duration: 500, useNativeDriver: true }).start();
+  }, [heading]);
   return (
     <View style={styles.driverOuter}>
-      {/* Direction arrow ring */}
-      <View style={[styles.bearingArrow, { transform: [{ rotate: `${heading}deg` }] }]}>
-        <View style={styles.bearingTip} />
-      </View>
-      <View style={styles.driverInner}>
-        <Text style={{ fontSize: 20 }}>{icon}</Text>
-      </View>
+      <View style={styles.driverShadow} />
+      <Animated.View style={{ transform: [{ rotate: rotate.interpolate({ inputRange: [-360, 360], outputRange: ['-360deg', '360deg'] }) }] }}>
+        <Shape {...props} />
+      </Animated.View>
     </View>
   );
 }
 
-// ── Nearby ghost driver (smaller, semi-transparent) ───────────────────────────
+// ── Nearby ghost driver — same top-down shape, smaller + faded, no rotation
+// tracking (ambient "drivers are around here" markers, not en route to you). ──
 function NearbyDriverMarker({ vehicleType }: { vehicleType: string }) {
-  const icon = VEHICLE_ICONS[vehicleType] || '🚕';
+  const { Shape, props } = vehicleVisual(vehicleType);
   return (
     <View style={styles.nearbyOuter}>
-      <View style={styles.nearbyPing} />
-      <View style={styles.nearbyInner}>
-        <Text style={{ fontSize: 13 }}>{icon}</Text>
+      <View style={{ transform: [{ scale: 0.52 }], opacity: 0.82 }}>
+        <Shape {...props} />
       </View>
     </View>
   );
@@ -907,12 +967,17 @@ export const LiveMap = memo(function LiveMap({
           </Marker>
         )}
 
-        {/* Animated driver marker */}
+        {/* Animated driver marker — tracksViewChanges MUST stay true here: this
+            marker's vehicle icon rotates continuously (heading changes every
+            GPS tick), and react-native-maps snapshots a marker's children into
+            a static native bitmap once tracksViewChanges is false, so the
+            rotation would silently stop updating on Android. Safe to leave on
+            since there's only ever one assigned-driver marker on screen. */}
         {driverLat != null && driverLng != null && (
           <Marker.Animated
             coordinate={driverRegion as any}
             anchor={{ x: 0.5, y: 0.5 }}
-            tracksViewChanges={false}
+            tracksViewChanges={true}
           >
             <DriverMarker vehicleType={vehicleType} heading={heading} />
           </Marker.Animated>
@@ -1032,36 +1097,16 @@ const MAP_STYLE = [
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  // Driver marker — large circle with bearing ring
-  driverOuter: { alignItems: 'center', justifyContent: 'center', width: 54, height: 54 },
-  bearingArrow: {
-    position: 'absolute', width: 54, height: 54, alignItems: 'center',
-  },
-  bearingTip: {
-    width: 0, height: 0,
-    borderLeftWidth: 5, borderRightWidth: 5, borderBottomWidth: 10,
-    borderLeftColor: 'transparent', borderRightColor: 'transparent',
-    borderBottomColor: C.pink,
-    marginTop: 0,
-  },
-  driverInner: {
-    width: 42, height: 42, borderRadius: 21,
-    backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center',
-    elevation: 8, shadowColor: C.pink, shadowOpacity: 0.55, shadowRadius: 10,
-    borderWidth: 2.5, borderColor: '#fff',
+  // Driver marker — real top-down vehicle shape, no circle frame, just a
+  // grounding shadow so it reads as sitting on the map surface.
+  driverOuter: { alignItems: 'center', justifyContent: 'center', width: 40, height: 58 },
+  driverShadow: {
+    position: 'absolute', bottom: 2, width: 26, height: 10, borderRadius: 13,
+    backgroundColor: 'rgba(0,0,0,0.28)',
   },
 
-  // Nearby driver — ghost style
-  nearbyOuter: { alignItems: 'center', justifyContent: 'center', width: 36, height: 36 },
-  nearbyPing: {
-    position: 'absolute', width: 36, height: 36, borderRadius: 18,
-    backgroundColor: 'rgba(255,45,120,0.12)', borderWidth: 1.5, borderColor: 'rgba(255,45,120,0.30)',
-  },
-  nearbyInner: {
-    width: 26, height: 26, borderRadius: 13,
-    backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
-    elevation: 3, borderWidth: 1.5, borderColor: 'rgba(255,45,120,0.35)',
-  },
+  // Nearby driver — same shapes, smaller + faded (ambient, not en route)
+  nearbyOuter: { alignItems: 'center', justifyContent: 'center', width: 24, height: 32 },
 
   // Pickup — green ring + white center dot
   pickupGlow: {
