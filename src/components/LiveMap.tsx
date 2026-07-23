@@ -137,11 +137,17 @@ function NearbyDriverMarker({ vehicleType }: { vehicleType: string }) {
 }
 
 // ── Address tag — floats above a pin without shifting its anchor point.
-// position:absolute keeps it out of the layout box react-native-maps
-// measures for anchoring, so the pin still points at the exact coordinate. ──
+// Deliberately NORMAL FLOW, not position:absolute — react-native-maps turns
+// a Marker's children into a native bitmap by measuring/snapshotting the
+// child view's own layout bounds, and content positioned outside that via
+// position:absolute (particularly on Android) gets clipped out of the
+// snapshot instead of floating over it like it would in plain RN. Stacking
+// the label in-flow above the pin keeps it inside the measured bounds, and
+// the Marker's `anchor` prop (set at each call site below) is adjusted to
+// compensate so the pin itself still points at the exact coordinate. ──
 function PinLabel({ text, accent }: { text: string; accent: string }) {
   return (
-    <View style={{ position: 'absolute', bottom: '100%', alignSelf: 'center', alignItems: 'center' }}>
+    <View style={{ alignItems: 'center' }}>
       {/* Frosted-glass area-name tag — short locality name, not the full address */}
       <View style={{
         flexDirection: 'row', alignItems: 'center', gap: 5,
@@ -846,7 +852,13 @@ export const LiveMap = memo(function LiveMap({
         {pickupCoords && (
           <Marker
             coordinate={{ latitude: pickupCoords.lat, longitude: pickupCoords.lng }}
-            anchor={{ x: 0.5, y: 0.5 }}
+            // With a label stacked in-flow above the pin, the true circle is no
+            // longer at the vertical center of the whole rendered view — it's
+            // at the very bottom of it. Anchor at the bottom in that case so
+            // the pin (not empty space where the old absolute-positioned label
+            // used to float) still points at the exact coordinate; falls back
+            // to true center when there's no label to stack above it.
+            anchor={{ x: 0.5, y: pickupLabel ? 1 : 0.5 }}
             // tracksViewChanges=false caches the marker's native snapshot after
             // its first paint — if the label text wasn't ready on that very
             // first render (or changes later), it silently never appears.
