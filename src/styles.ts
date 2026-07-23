@@ -9,7 +9,8 @@ import { Platform, StatusBar, StyleSheet } from 'react-native';
 // ── Color Tokens ──────────────────────────────────────────────────────────────
 export const C = {
   // Brand
-  pink:    '#FF2D78',   // Sppero primary — energetic, Indian
+  pink:     '#FF2D78',   // Sppero primary — energetic, Indian
+  pinkDark: '#921C48',   // Deep wine-pink — headers on safety/in-ride screens
   plum:    '#2E1461',   // Premium depth — headers, hero sections, driver card BGs
   saffron: '#FF7A00',   // Indian warmth — buddy, special moments, commission
   green:   '#059669',   // Rupee green — success, money, completed

@@ -193,7 +193,7 @@ export function InRideScreen() {
 
       {/* ── Compact header ── */}
       <View style={{
-        backgroundColor: C.night,
+        backgroundColor: C.pinkDark,
         paddingTop: Platform.OS === 'android' ? 44 : 52,
         paddingBottom: 14, paddingHorizontal: SP.md,
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -505,23 +505,26 @@ export function InRideScreen() {
             </View>
           )}
 
-          {/* ── Emergency: end trip & report (advance held for admin review) ── */}
+          {/* ── Emergency: end trip & report (advance held for admin review) ──
+              Saffron, not red — this is a "trip went wrong, end + report" action,
+              not a life-threatening emergency. Keeping it visually distinct from
+              SOS above avoids the two reading as equally urgent/alarming. ── */}
           <TouchableOpacity
             activeOpacity={0.82}
             onPress={promptReportCancel}
             style={{
-              backgroundColor: C.redGlass, borderRadius: 14,
+              backgroundColor: C.saffGlass, borderRadius: 14,
               paddingVertical: 12, paddingHorizontal: 16, marginBottom: 10,
               flexDirection: 'row', alignItems: 'center', gap: 10,
-              borderWidth: 1, borderColor: C.red,
+              borderWidth: 1, borderColor: C.saffron,
             }}
           >
-            <Ionicons name="alert-circle" size={18} color={C.red} />
+            <Ionicons name="alert-circle" size={18} color={C.saffron} />
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 13, color: C.red, fontWeight: '900' }}>Emergency — End Trip & Report</Text>
+              <Text style={{ fontSize: 13, color: C.saffron, fontWeight: '900' }}>Emergency — End Trip & Report</Text>
               <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 1 }}>Advance held · refund decided within 2 days</Text>
             </View>
-            <Ionicons name="chevron-forward" size={15} color={C.red} />
+            <Ionicons name="chevron-forward" size={15} color={C.saffron} />
           </TouchableOpacity>
 
           {/* ── Share tracking ── */}
