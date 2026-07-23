@@ -175,7 +175,7 @@ function BikeShape({ tankLight, tankDark, frame }: { tankLight: string; tankDark
     </Svg>
   );
 }
-function AutoShape({ bodyLight, bodyDark, roof }: { bodyLight: string; bodyDark: string; roof: string }) {
+function AutoShape({ bodyLight, bodyDark, roof, electric }: { bodyLight: string; bodyDark: string; roof: string; electric?: boolean }) {
   const gid = 'at' + bodyDark.replace('#', '');
   return (
     <Svg width={36} height={50} viewBox="0 0 36 50">
@@ -202,20 +202,98 @@ function AutoShape({ bodyLight, bodyDark, roof }: { bodyLight: string; bodyDark:
       <Ellipse cx="18" cy="7.5" rx="3.4" ry="4.8" fill="#111827" />
       {/* Headlight */}
       <Ellipse cx="18" cy="4" rx="2" ry="1.6" fill="#FEF9C3" stroke="#F5D90A" strokeWidth="0.5" />
+      {/* Electric badge — auto-rickshaws look the same whether petrol or
+          electric in real life, so a lightning bolt is the honest way to
+          tell an e-auto apart on the map instead of inventing a fake shape. */}
+      {electric && (
+        <Path d="M19.5,29 L16,35.5 L18.4,35.5 L17.5,41 L21.5,33.7 L19,33.7 Z" fill="#FDE047" stroke="#CA8A04" strokeWidth="0.4" />
+      )}
+    </Svg>
+  );
+}
+function ScooterShape({ bodyLight, bodyDark, frame }: { bodyLight: string; bodyDark: string; frame: string }) {
+  // Electric scooters (Ather/Ola S1/TVS iQube-style) — no exposed fuel tank
+  // or engine block, so this is a genuinely different silhouette from
+  // BikeShape, not just a recolor: rounded cowl + flat step-through floor.
+  const gid = 'sc' + bodyDark.replace('#', '');
+  return (
+    <Svg width={28} height={58} viewBox="0 0 28 58">
+      <Defs>
+        <LinearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={bodyLight} />
+          <Stop offset="1" stopColor={bodyDark} />
+        </LinearGradient>
+      </Defs>
+      {/* Front wheel */}
+      <Ellipse cx="14" cy="8" rx="4.2" ry="6.2" fill="#111827" />
+      <Ellipse cx="14" cy="8" rx="1.9" ry="3"   fill="#4B5563" />
+      {/* Handlebar + mirrors */}
+      <Rect x="1" y="10.5" width="26" height="2.8" rx="1.4" fill="#1F2937" />
+      <SvgCircle cx="2.4"  cy="9" r="1.9" fill="#1F2937" />
+      <SvgCircle cx="25.6" cy="9" r="1.9" fill="#1F2937" />
+      {/* Sleek rounded front cowl (LED headlight look, not a fork+headlamp) */}
+      <Ellipse cx="14" cy="18" rx="5" ry="5.4" fill={`url(#${gid})`} stroke="#fff" strokeWidth="1" />
+      <Ellipse cx="14" cy="16.6" rx="2.2" ry="1.8" fill="#E0F2FE" />
+      {/* Flat step-through floor panel — the signature "no engine bulge"
+          scooter cue, replacing the petrol bike's teardrop tank. */}
+      <Rect x="10.5" y="24" width="7" height="14" rx="3" fill={`url(#${gid})`} opacity={0.92} />
+      {/* Lightning bolt — electric badge */}
+      <Path d="M14.5,26.5 L11.5,32 L13.6,32 L12.8,36.5 L16.3,30.2 L14.1,30.2 Z" fill="#FDE047" stroke="#CA8A04" strokeWidth="0.4" />
+      {/* Seat */}
+      <Rect x="9.5" y="39" width="9" height="10" rx="3.4" fill={frame} />
+      {/* Rear fender */}
+      <Path d="M8,45 Q14,42 20,45" stroke={frame} strokeWidth="1.8" fill="none" strokeLinecap="round" />
+      {/* Rear wheel */}
+      <Ellipse cx="14" cy="50" rx="4.6" ry="6.8" fill="#111827" />
+      <Ellipse cx="14" cy="50" rx="2.1" ry="3.2" fill="#4B5563" />
+    </Svg>
+  );
+}
+function ERikshaShape({ bodyLight, bodyDark, roof }: { bodyLight: string; bodyDark: string; roof: string }) {
+  // E-rickshaws ("toto") are visibly boxier than a put-put auto-rickshaw —
+  // flat roof instead of a curved canopy, wider flat-sided cabin, a bench
+  // visible at the back. Its own shape, not an AutoShape recolor.
+  const gid = 'er' + bodyDark.replace('#', '');
+  return (
+    <Svg width={34} height={46} viewBox="0 0 34 46">
+      <Defs>
+        <LinearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={bodyLight} />
+          <Stop offset="1" stopColor={bodyDark} />
+        </LinearGradient>
+      </Defs>
+      {/* Rear wheels — wide stance */}
+      <Ellipse cx="4"  cy="36" rx="3.6" ry="5.4" fill="#111827" />
+      <Ellipse cx="30" cy="36" rx="3.6" ry="5.4" fill="#111827" />
+      {/* Boxy cabin — flat sides, minimal taper (vs. auto's curved/tapered
+          shape) */}
+      <Path d="M5,40 L29,40 L28,12 Q28,8 24,8 L10,8 Q6,8 6,12 Z" fill={`url(#${gid})`} stroke="#1F2937" strokeWidth="1.2" />
+      {/* Flat roof — the key visual cue that reads "e-rickshaw" not "auto" */}
+      <Rect x="7" y="9" width="20" height="4" rx="1.5" fill={roof} opacity={0.95} />
+      {/* Windscreen */}
+      <Path d="M9,14 L25,14 L24,20 L10,20 Z" fill="#BFE3FF" opacity={0.85} />
+      {/* Passenger bench hint (wide open back, e-rickshaws seat 3+ side by side) */}
+      <Rect x="8" y="30" width="18" height="4" rx="2" fill="rgba(0,0,0,0.12)" />
+      {/* Front wheel */}
+      <Ellipse cx="17" cy="7" rx="3" ry="4" fill="#111827" />
+      {/* Headlight */}
+      <Ellipse cx="17" cy="4" rx="1.8" ry="1.4" fill="#FEF9C3" stroke="#F5D90A" strokeWidth="0.5" />
+      {/* Electric badge */}
+      <Path d="M18,22 L15,27.5 L17.2,27.5 L16.4,32 L19.9,25.7 L17.7,25.7 Z" fill="#FDE047" stroke="#CA8A04" strokeWidth="0.4" />
     </Svg>
   );
 }
 
 // Per-vehicle-type color + shape pairing — real-world liveries where they
 // exist (yellow/black auto, green e-auto) so the type reads at a glance.
-const VEHICLE_VISUALS: Record<string, { Shape: typeof CarShape | typeof BikeShape | typeof AutoShape; props: any }> = {
-  bike:          { Shape: BikeShape, props: { tankLight: '#F87171', tankDark: '#DC2626', frame: '#1F2937' } },
-  green_bike:    { Shape: BikeShape, props: { tankLight: '#4ADE80', tankDark: '#15803D', frame: '#14532D' } },
-  auto:          { Shape: AutoShape, props: { bodyLight: '#FDE68A', bodyDark: '#D97706', roof: '#1F2937' } },
-  electric_auto: { Shape: AutoShape, props: { bodyLight: '#86EFAC', bodyDark: '#16A34A', roof: '#14532D' } },
-  eriksha:       { Shape: AutoShape, props: { bodyLight: '#67E8F9', bodyDark: '#0891B2', roof: '#164E63' } },
-  car:           { Shape: CarShape,  props: { bodyLight: '#8DA2D0', bodyDark: '#2C3E6B', roof: '#1E293B' } },
-  luxury:        { Shape: CarShape,  props: { bodyLight: '#6B7280', bodyDark: '#111827', roof: '#000000' } },
+const VEHICLE_VISUALS: Record<string, { Shape: typeof CarShape | typeof BikeShape | typeof AutoShape | typeof ScooterShape | typeof ERikshaShape; props: any }> = {
+  bike:          { Shape: BikeShape,    props: { tankLight: '#F87171', tankDark: '#DC2626', frame: '#1F2937' } },
+  green_bike:    { Shape: ScooterShape, props: { bodyLight: '#4ADE80', bodyDark: '#15803D', frame: '#14532D' } },
+  auto:          { Shape: AutoShape,    props: { bodyLight: '#FDE68A', bodyDark: '#D97706', roof: '#1F2937' } },
+  electric_auto: { Shape: AutoShape,    props: { bodyLight: '#86EFAC', bodyDark: '#16A34A', roof: '#14532D', electric: true } },
+  eriksha:       { Shape: ERikshaShape, props: { bodyLight: '#67E8F9', bodyDark: '#0891B2', roof: '#164E63' } },
+  car:           { Shape: CarShape,     props: { bodyLight: '#8DA2D0', bodyDark: '#2C3E6B', roof: '#1E293B' } },
+  luxury:        { Shape: CarShape,     props: { bodyLight: '#6B7280', bodyDark: '#111827', roof: '#000000' } },
 };
 function vehicleVisual(vehicleType: string) {
   return VEHICLE_VISUALS[vehicleType] || VEHICLE_VISUALS.car;
