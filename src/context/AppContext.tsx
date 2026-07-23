@@ -404,6 +404,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [rideData, setRideData] = useState<any>(null);
   const rideDataRef = useRef<any>(null);
   useEffect(() => { rideDataRef.current = rideData; }, [rideData]);
+  const screenRef = useRef<Screen>('splash');
+  useEffect(() => { screenRef.current = screen; }, [screen]);
   const payingRef = useRef(false);
   const [altSuggest, setAltSuggest] = useState<any>(null);
   const [switchingVehicle, setSwitchingVehicle] = useState(false);
@@ -817,6 +819,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(iv);
   }, [rideData?.ride_id, screen]);
 
+  // Payment-confirmed polling fallback — every 8s while sitting on the pay-now
+  // screen. The socket event + reconnect reconciliation are the fast paths;
+  // this is the last-resort catch-all for the rare case neither fires (e.g.
+  // the confirm landed in a room-join race) so the screen never gets stuck.
+  useEffect(() => {
+    const rideId = rideData?.ride_id;
+    if (!rideId || screen !== 'payment') return;
+    const poll = async () => {
+      const ok = await reconcilePaymentConfirmed(rideId);
+      if (ok && screenRef.current === 'payment') setScreen('postride');
+    };
+    const iv = setInterval(poll, 8000);
+    return () => clearInterval(iv);
+  }, [rideData?.ride_id, screen]);
+
   // Resend timer
   useEffect(() => {
     if (screen !== 'otp') return;
@@ -1023,6 +1040,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     s.on('connect', () => {
       if (activeHourlyIdRef.current) s.emit('joinHourly', { bookingId: activeHourlyIdRef.current });
       if (activeRideIdRef.current) s.emit('joinRide', { rideId: activeRideIdRef.current });
+      // Catch a "payment confirmed" event that fired while this exact socket
+      // was mid-reconnect (app stayed foregrounded the whole time, so the
+      // AppState resume reconciliation never ran) — rejoining the room only
+      // gets us future events, not ones we already missed during the gap.
+      if (activeRideIdRef.current) {
+        reconcilePaymentConfirmed(activeRideIdRef.current).then(ok => {
+          if (ok && screenRef.current === 'payment') setScreen('postride');
+        });
+      }
     });
 
     s.on('hourlyExtensionResult', (data: any) => {
