@@ -63,6 +63,7 @@ export function BookingScreen() {
   const drawerCompact = Math.round(winH * 0.40); // route confirmed — map gets more room to breathe, drawer is a compact summary
   const drawerInputH  = Math.round(winH * 0.80); // searching / editing — near-full-page like Maps' search sheet
   const drawerBrowse  = Math.round(winH * 0.72); // expanded on tap — clearer contrast against compact
+  const drawerMax     = Math.round(winH * 0.94); // keyboard actively up (typing/browsing suggestions) — maximize so the suggestion list never gets clipped; the floating back button is hidden in this state too so there's nothing for the drawer's glass edge to ghost through
   const {
     screen, setScreen,
     pickup, setPickup, drop, setDrop,
@@ -431,6 +432,29 @@ export function BookingScreen() {
     }).catch(() => {});
   }, []);
 
+  // Auto-prefill pickup via GPS on mount instead of waiting for the user to
+  // tap "use my location" — only when permission is ALREADY granted (a plain
+  // status check, not a request), so a first-time user never gets ambushed
+  // by a permission dialog they didn't ask for; that case still falls back
+  // to the manual GPS-button flow. The user still reviews/edits it — this
+  // only removes the "tap a button, wait" step for the common repeat-visit case.
+  useEffect(() => {
+    if (pickup || pickupCoords) return;
+    (async () => {
+      const { status } = await Location.getForegroundPermissionsAsync().catch(() => ({ status: 'undetermined' } as any));
+      if (status !== 'granted') return;
+      const cached = await Location.getLastKnownPositionAsync({}).catch(() => null);
+      if (!cached || pickup || pickupCoords) return;
+      const { latitude, longitude } = cached.coords;
+      setUserCoords({ latitude, longitude });
+      const addr = await reverseGeocode(latitude, longitude);
+      if (pickup || pickupCoords) return; // user started typing while this resolved
+      setPickup(addr);
+      setPickupCoords({ lat: latitude, lng: longitude });
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── Drop map picker ───────────────────────────────────────────────────────────
   const [dropPickerOpen, setDropPickerOpen]     = useState(false);
   const [dropPickerLoading, setDropPickerLoading] = useState(false);
@@ -446,10 +470,17 @@ export function BookingScreen() {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') { setPickerLoading(false); return; }
 
-      // Warm up userCoords immediately with any cached position — walk line shows right away
+      // Open the picker on a cached fix immediately — a live GPS lock can
+      // take 5-7s in practice (far more than the "~1-3s" a Balanced-accuracy
+      // fix is supposed to take), and there's no reason to make the user
+      // stare at "Finding your location…" for all of that just to see the
+      // map. The pin corrects itself in the background once the live fix
+      // resolves (below), same as it would if they nudged it themselves.
       const cached = await Location.getLastKnownPositionAsync({}).catch(() => null);
       if (cached) {
         setUserCoords({ latitude: cached.coords.latitude, longitude: cached.coords.longitude });
+        setPickerCoords({ lat: cached.coords.latitude, lng: cached.coords.longitude });
+        setPickerLoading(false);
       }
 
       // Balanced = network + GPS, resolves in ~1–3s on any device (High can hang 30s+ indoors)
@@ -633,11 +664,12 @@ export function BookingScreen() {
 
   const drawerHeightAnim = useRef(new Animated.Value(drawerInputH)).current;
   useEffect(() => {
-    const target = !bothSet || inputFocused ? drawerInputH
+    const target = keyboardShown                ? drawerMax
+      : !bothSet || inputFocused ? drawerInputH
       : drawerExpanded                       ? drawerBrowse
       : drawerCompact;
     Animated.spring(drawerHeightAnim, { toValue: target, friction: 8, tension: 85, useNativeDriver: false }).start();
-  }, [bothSet, inputFocused, drawerExpanded, drawerInputH, drawerBrowse, drawerCompact]);
+  }, [bothSet, inputFocused, drawerExpanded, drawerInputH, drawerBrowse, drawerCompact, drawerMax, keyboardShown]);
 
   // ── fitKey — re-triggers fitToCoordinates on route/map changes ───────────
   const [fitKey, setFitKey] = useState(0);
@@ -695,7 +727,11 @@ export function BookingScreen() {
           pickupLabel={shortAreaLabel(pickup)}
           dropLabel={shortAreaLabel(drop)}
         />
-        {/* Floating back button */}
+        {/* Floating back button — hidden while the keyboard is up, since the
+             drawer maximizes to ~94% of the screen in that state (full-page
+             suggestions) and would otherwise ghost through this button's
+             position at the very top of the map sliver that's left. */}
+        {!keyboardShown && (
         <TouchableOpacity
           activeOpacity={0.85}
           onPress={() => { setScreen('home'); setPickupSugg([]); setDropSugg([]); setEta(''); setPromoCode(''); setPromoDiscount(0); setInstantApplied(false); setShowPromoInput(false); }}
@@ -712,6 +748,7 @@ export function BookingScreen() {
           }}>
           <Ionicons name="arrow-back" size={21} color={C.plum} />
         </TouchableOpacity>
+        )}
 
         {/* Edit + save — floating over the map once both points are confirmed.
              Replaces the old tappable FROM/TO card in the drawer: the
