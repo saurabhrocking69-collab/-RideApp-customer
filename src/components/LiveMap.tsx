@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState, memo } from 'react';
 import { Animated, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import MapView, { Marker, Polyline, Circle, AnimatedRegion, PROVIDER_GOOGLE } from 'react-native-maps';
-import Svg, { Path, Rect, Ellipse } from 'react-native-svg';
+import Svg, { Path, Rect, Ellipse, Circle as SvgCircle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { MAPS_KEY } from '../constants';
 import { C } from '../styles';
@@ -104,38 +104,104 @@ function interpolateRoute(
 
 // ── Top-down vehicle silhouettes — drawn nose-up (0° = north), rotated to
 // heading at render time. No badge/circle frame — just the vehicle + a soft
-// grounding shadow, like a real overhead view. One shape per vehicle family,
-// recolored per type instead of drawing 7 separate vector sets. ──────────────
-function CarShape({ body, roof }: { body: string; roof: string }) {
+// grounding shadow, like a real overhead view. Detailed enough to actually
+// read as "car" / "bike" / "auto" at a glance (glossy gradient body, lights,
+// mirrors) — a flat silhouette alone was too abstract to recognize. ─────────
+function CarShape({ bodyLight, bodyDark, roof }: { bodyLight: string; bodyDark: string; roof: string }) {
+  const gid = 'car' + bodyDark.replace('#', '');
   return (
-    <Svg width={34} height={58} viewBox="0 0 34 58">
-      <Rect x="3" y="3" width="28" height="52" rx="11" fill={body} stroke="#fff" strokeWidth="1.5" />
-      <Rect x="7" y="9" width="20" height="10" rx="4" fill="#CFE9FF" opacity={0.9} />
-      <Rect x="6" y="20" width="22" height="17" rx="6" fill={roof} opacity={0.92} />
-      <Rect x="8" y="39" width="18" height="9" rx="4" fill="#CFE9FF" opacity={0.7} />
-      <Rect x="-1" y="15" width="5" height="7" rx="2.2" fill={roof} />
-      <Rect x="30" y="15" width="5" height="7" rx="2.2" fill={roof} />
+    <Svg width={38} height={66} viewBox="0 0 38 66">
+      <Defs>
+        <LinearGradient id={gid} x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0" stopColor={bodyLight} />
+          <Stop offset="1" stopColor={bodyDark} />
+        </LinearGradient>
+      </Defs>
+      {/* Body — rounded, tapered hood */}
+      <Path d="M19,2 C9,2 4,7 4,15 L4,51 C4,59 9,64 19,64 C29,64 34,59 34,51 L34,15 C34,7 29,2 19,2 Z" fill={`url(#${gid})`} stroke="#fff" strokeWidth="1.5" />
+      {/* Hood gloss highlight */}
+      <Path d="M19,4 C11,4 7,7.5 6,14 L32,14 C31,7.5 27,4 19,4 Z" fill="rgba(255,255,255,0.28)" />
+      {/* Front windshield — trapezoid, wide at hood */}
+      <Path d="M8,16 L30,16 L26,26 L12,26 Z" fill="#BFE3FF" opacity={0.92} />
+      <Path d="M8,16 L30,16 L26,26 L12,26 Z" fill="none" stroke="#8FC7F2" strokeWidth="0.6" opacity={0.5} />
+      {/* Roof */}
+      <Rect x="8" y="27" width="22" height="18" rx="5" fill={roof} opacity={0.96} />
+      <Rect x="16" y="30" width="6" height="12" rx="3" fill="rgba(255,255,255,0.10)" />
+      {/* Rear windshield */}
+      <Path d="M12,46 L26,46 L30,55 L8,55 Z" fill="#BFE3FF" opacity={0.75} />
+      {/* Headlights */}
+      <Ellipse cx="9"  cy="7" rx="2.2" ry="2.8" fill="#FEF9C3" stroke="#F5D90A" strokeWidth="0.5" />
+      <Ellipse cx="29" cy="7" rx="2.2" ry="2.8" fill="#FEF9C3" stroke="#F5D90A" strokeWidth="0.5" />
+      {/* Taillights */}
+      <Ellipse cx="9"  cy="61" rx="2" ry="2.4" fill="#FCA5A5" stroke="#EF4444" strokeWidth="0.5" />
+      <Ellipse cx="29" cy="61" rx="2" ry="2.4" fill="#FCA5A5" stroke="#EF4444" strokeWidth="0.5" />
+      {/* Side mirrors */}
+      <Path d="M1,21 L5,20 L5,26 L1,25 Z" fill={roof} />
+      <Path d="M37,21 L33,20 L33,26 L37,25 Z" fill={roof} />
     </Svg>
   );
 }
-function BikeShape({ body, rider }: { body: string; rider: string }) {
+function BikeShape({ tankLight, tankDark, frame }: { tankLight: string; tankDark: string; frame: string }) {
+  const gid = 'bk' + tankDark.replace('#', '');
   return (
-    <Svg width={20} height={46} viewBox="0 0 20 46">
-      <Ellipse cx="10" cy="7" rx="4" ry="6" fill="#1F2937" />
-      <Rect x="8" y="9" width="4" height="28" rx="2" fill={body} />
-      <Ellipse cx="10" cy="20" rx="7" ry="7.5" fill={rider} stroke="#fff" strokeWidth="1.2" />
-      <Ellipse cx="10" cy="39" rx="4" ry="6" fill="#1F2937" />
+    <Svg width={28} height={58} viewBox="0 0 28 58">
+      <Defs>
+        <LinearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={tankLight} />
+          <Stop offset="1" stopColor={tankDark} />
+        </LinearGradient>
+      </Defs>
+      {/* Front wheel */}
+      <Ellipse cx="14" cy="8"  rx="4.4" ry="6.6" fill="#111827" />
+      <Ellipse cx="14" cy="8"  rx="2"   ry="3.2" fill="#4B5563" />
+      {/* Handlebar — wide, the unmistakable two-wheeler cue */}
+      <Rect x="0.5" y="11" width="27" height="3" rx="1.5" fill="#1F2937" />
+      {/* Mirrors on the bar ends */}
+      <SvgCircle cx="2"  cy="9.4" r="2.1" fill="#1F2937" />
+      <SvgCircle cx="26" cy="9.4" r="2.1" fill="#1F2937" />
+      {/* Headlight, mounted just behind the bar */}
+      <Ellipse cx="14" cy="17.5" rx="3.2" ry="2.8" fill={frame} />
+      <Ellipse cx="14" cy="17"   rx="1.5" ry="1.3" fill="#FEF9C3" />
+      {/* Fuel tank — glossy teardrop */}
+      <Path d="M14,21 C21,21 22,27 19.5,32 C17.7,36.5 10.3,36.5 8.5,32 C6,27 7,21 14,21 Z" fill={`url(#${gid})`} stroke="#fff" strokeWidth="1" />
+      <Path d="M10.5,24.5 C9.3,27.5 9.3,30 10.5,32" stroke="rgba(255,255,255,0.5)" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+      {/* Seat */}
+      <Rect x="10" y="37" width="8" height="11" rx="3.2" fill={frame} />
+      {/* Rear fender */}
+      <Path d="M8,44 Q14,40.5 20,44" stroke={frame} strokeWidth="1.8" fill="none" strokeLinecap="round" />
+      {/* Rear wheel */}
+      <Ellipse cx="14" cy="50" rx="4.8" ry="7.2" fill="#111827" />
+      <Ellipse cx="14" cy="50" rx="2.2" ry="3.4" fill="#4B5563" />
     </Svg>
   );
 }
-function AutoShape({ body, roof }: { body: string; roof: string }) {
+function AutoShape({ bodyLight, bodyDark, roof }: { bodyLight: string; bodyDark: string; roof: string }) {
+  const gid = 'at' + bodyDark.replace('#', '');
   return (
-    <Svg width={30} height={42} viewBox="0 0 30 42">
-      <Ellipse cx="4"  cy="33" rx="3.4" ry="5" fill="#1F2937" />
-      <Ellipse cx="26" cy="33" rx="3.4" ry="5" fill="#1F2937" />
-      <Path d="M6,37 L24,37 L21,10 Q15,4 9,10 Z" fill={body} stroke="#1F2937" strokeWidth="1" />
-      <Path d="M9,12 Q15,7 21,12 L20,19 L10,19 Z" fill={roof} opacity={0.88} />
-      <Ellipse cx="15" cy="6" rx="3" ry="4.2" fill="#1F2937" />
+    <Svg width={36} height={50} viewBox="0 0 36 50">
+      <Defs>
+        <LinearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={bodyLight} />
+          <Stop offset="1" stopColor={bodyDark} />
+        </LinearGradient>
+      </Defs>
+      {/* Rear wheels */}
+      <Ellipse cx="5"  cy="40" rx="3.8" ry="5.6" fill="#111827" />
+      <Ellipse cx="31" cy="40" rx="3.8" ry="5.6" fill="#111827" />
+      {/* Cabin — wide rear tapering to a single front wheel, the classic
+          3-wheeler silhouette that's unmistakable even simplified. */}
+      <Path d="M6,44 L30,44 L26,13 Q18,4 10,13 Z" fill={`url(#${gid})`} stroke="#1F2937" strokeWidth="1.2" />
+      <Path d="M10,14 Q18,6 26,14" stroke="rgba(255,255,255,0.4)" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+      {/* Roof canopy */}
+      <Path d="M9.5,15 Q18,7 26.5,15 L25,24 L11,24 Z" fill={roof} opacity={0.96} />
+      <Path d="M12,14.2 Q18,9.5 24,14.2" stroke="rgba(255,255,255,0.3)" strokeWidth="1" fill="none" />
+      {/* Side pillars */}
+      <Rect x="8.5"  y="15" width="1.8" height="9.5" fill="#111827" opacity={0.55} />
+      <Rect x="25.7" y="15" width="1.8" height="9.5" fill="#111827" opacity={0.55} />
+      {/* Front wheel */}
+      <Ellipse cx="18" cy="7.5" rx="3.4" ry="4.8" fill="#111827" />
+      {/* Headlight */}
+      <Ellipse cx="18" cy="4" rx="2" ry="1.6" fill="#FEF9C3" stroke="#F5D90A" strokeWidth="0.5" />
     </Svg>
   );
 }
@@ -143,13 +209,13 @@ function AutoShape({ body, roof }: { body: string; roof: string }) {
 // Per-vehicle-type color + shape pairing — real-world liveries where they
 // exist (yellow/black auto, green e-auto) so the type reads at a glance.
 const VEHICLE_VISUALS: Record<string, { Shape: typeof CarShape | typeof BikeShape | typeof AutoShape; props: any }> = {
-  bike:          { Shape: BikeShape, props: { body: '#374151', rider: '#EF4444' } },
-  green_bike:    { Shape: BikeShape, props: { body: '#166534', rider: '#22C55E' } },
-  auto:          { Shape: AutoShape, props: { body: '#FBBF24', roof: '#1F2937' } },
-  electric_auto: { Shape: AutoShape, props: { body: '#22C55E', roof: '#14532D' } },
-  eriksha:       { Shape: AutoShape, props: { body: '#06B6D4', roof: '#164E63' } },
-  car:           { Shape: CarShape,  props: { body: '#4D63A3', roof: '#2C3E6B' } },
-  luxury:        { Shape: CarShape,  props: { body: '#374151', roof: '#111827' } },
+  bike:          { Shape: BikeShape, props: { tankLight: '#F87171', tankDark: '#DC2626', frame: '#1F2937' } },
+  green_bike:    { Shape: BikeShape, props: { tankLight: '#4ADE80', tankDark: '#15803D', frame: '#14532D' } },
+  auto:          { Shape: AutoShape, props: { bodyLight: '#FDE68A', bodyDark: '#D97706', roof: '#1F2937' } },
+  electric_auto: { Shape: AutoShape, props: { bodyLight: '#86EFAC', bodyDark: '#16A34A', roof: '#14532D' } },
+  eriksha:       { Shape: AutoShape, props: { bodyLight: '#67E8F9', bodyDark: '#0891B2', roof: '#164E63' } },
+  car:           { Shape: CarShape,  props: { bodyLight: '#8DA2D0', bodyDark: '#2C3E6B', roof: '#1E293B' } },
+  luxury:        { Shape: CarShape,  props: { bodyLight: '#6B7280', bodyDark: '#111827', roof: '#000000' } },
 };
 function vehicleVisual(vehicleType: string) {
   return VEHICLE_VISUALS[vehicleType] || VEHICLE_VISUALS.car;
@@ -1099,14 +1165,14 @@ const MAP_STYLE = [
 const styles = StyleSheet.create({
   // Driver marker — real top-down vehicle shape, no circle frame, just a
   // grounding shadow so it reads as sitting on the map surface.
-  driverOuter: { alignItems: 'center', justifyContent: 'center', width: 40, height: 58 },
+  driverOuter: { alignItems: 'center', justifyContent: 'center', width: 44, height: 70 },
   driverShadow: {
-    position: 'absolute', bottom: 2, width: 26, height: 10, borderRadius: 13,
+    position: 'absolute', bottom: 2, width: 30, height: 11, borderRadius: 15,
     backgroundColor: 'rgba(0,0,0,0.28)',
   },
 
   // Nearby driver — same shapes, smaller + faded (ambient, not en route)
-  nearbyOuter: { alignItems: 'center', justifyContent: 'center', width: 24, height: 32 },
+  nearbyOuter: { alignItems: 'center', justifyContent: 'center', width: 24, height: 38 },
 
   // Pickup — green ring + white center dot
   pickupGlow: {
