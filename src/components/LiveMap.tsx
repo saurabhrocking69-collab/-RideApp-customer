@@ -208,9 +208,15 @@ function AutoShape({ bodyLight, bodyDark, roof, electric }: { bodyLight: string;
           <Stop offset="1" stopColor={bodyDark} />
         </LinearGradient>
       </Defs>
-      {/* Rear wheels */}
+      {/* Rear wheels — with rim highlight like the two-wheelers, instead of
+          a flat solid disc */}
       <Ellipse cx="5"  cy="40" rx="3.8" ry="5.6" fill="#111827" />
+      <Ellipse cx="5"  cy="40" rx="1.7" ry="2.6" fill="#4B5563" />
       <Ellipse cx="31" cy="40" rx="3.8" ry="5.6" fill="#111827" />
+      <Ellipse cx="31" cy="40" rx="1.7" ry="2.6" fill="#4B5563" />
+      {/* Mudguard arcs over the rear wheels */}
+      <Path d="M2,36 Q5,33 8,36"  stroke="#1F2937" strokeWidth="1.4" fill="none" strokeLinecap="round" opacity={0.7} />
+      <Path d="M28,36 Q31,33 34,36" stroke="#1F2937" strokeWidth="1.4" fill="none" strokeLinecap="round" opacity={0.7} />
       {/* Cabin — wide rear tapering to a single front wheel, the classic
           3-wheeler silhouette that's unmistakable even simplified. */}
       <Path d="M6,44 L30,44 L26,13 Q18,4 10,13 Z" fill={`url(#${gid})`} stroke="#1F2937" strokeWidth="1.2" />
@@ -221,10 +227,20 @@ function AutoShape({ bodyLight, bodyDark, roof, electric }: { bodyLight: string;
       {/* Side pillars */}
       <Rect x="8.5"  y="15" width="1.8" height="9.5" fill="#111827" opacity={0.55} />
       <Rect x="25.7" y="15" width="1.8" height="9.5" fill="#111827" opacity={0.55} />
-      {/* Front wheel */}
+      {/* Front wheel — with rim highlight */}
       <Ellipse cx="18" cy="7.5" rx="3.4" ry="4.8" fill="#111827" />
+      <Ellipse cx="18" cy="7.5" rx="1.5" ry="2.2" fill="#4B5563" />
       {/* Headlight */}
       <Ellipse cx="18" cy="4" rx="2" ry="1.6" fill="#FEF9C3" stroke="#F5D90A" strokeWidth="0.5" />
+      {/* Slight side-angle shading down the cabin's right edge — applies to
+          both petrol and electric, unlike the badge/stripe below. */}
+      <Rect x="24.5" y="16" width="2" height="15" fill="rgba(0,0,0,0.15)" />
+      {/* Exhaust pipe — petrol-only detail, doubles as a quiet visual cue
+          telling it apart from the electric version even without the badge.
+          Sits under the rear of the cabin, clear of both rear wheels. */}
+      {!electric && (
+        <Rect x="21.5" y="43" width="2.4" height="5" rx="1.2" fill="#374151" opacity={0.85} />
+      )}
       {/* Electric badge — auto-rickshaws look the same whether petrol or
           electric in real life, so a lightning bolt is the honest way to
           tell an e-auto apart on the map instead of inventing a fake shape. */}
@@ -233,8 +249,6 @@ function AutoShape({ bodyLight, bodyDark, roof, electric }: { bodyLight: string;
           <Path d="M19.5,29 L16,35.5 L18.4,35.5 L17.5,41 L21.5,33.7 L19,33.7 Z" fill="#FDE047" stroke="#CA8A04" strokeWidth="0.4" />
           {/* Brand pink livery stripe across the cabin */}
           <Rect x="7.5" y="26" width="21" height="2.1" rx="1" fill={C.pink} opacity={0.88} />
-          {/* Slight side-angle shading down the cabin's right edge */}
-          <Rect x="24.5" y="16" width="2" height="15" fill="rgba(0,0,0,0.15)" />
         </>
       )}
     </Svg>
