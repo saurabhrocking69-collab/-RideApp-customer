@@ -89,6 +89,11 @@ export function BookingScreen() {
     rideForSelf, setRideForSelf, riderName, setRiderName, riderPhone, setRiderPhone,
   } = useApp() as any;
 
+  // Defensive reset: this screen shares "who's riding" state with IntercityScreen.
+  // If a user started filling it in there (or here) and navigated away without
+  // booking, don't let it silently carry over into the next trip.
+  useEffect(() => { setRideForSelf(true); setRiderName(''); setRiderPhone(''); }, []);
+
   const selRide   = RIDES.find(r => r.id === rideType);
   const cardAnims = useRef<Record<string, Animated.Value>>(
     Object.fromEntries(RIDES.map((r: any) => [r.id, new Animated.Value(1)]))

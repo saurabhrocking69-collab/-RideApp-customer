@@ -1826,10 +1826,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return_at:    p.returnAt || null,
         discount: 0, promo_code: null,
         advance,
+        rider_name:  !rideForSelf ? riderName.trim()  : null,
+        rider_phone: !rideForSelf ? riderPhone.trim() : null,
       });
       if (data.restricted) { Alert.alert('Account on hold', data.error || 'Contact support: help@sppero.in'); return null; }
       if (data._error || data.error) { Alert.alert('Could not book', data.error || data.message || 'Please try again'); return null; }
       if (!data.ride_id) { Alert.alert('Could not book', 'Please try again'); return null; }
+
+      setRideForSelf(true); setRiderName(''); setRiderPhone('');
 
       if (data.status === 'scheduled') {
         setScreen('scheduled-rides');

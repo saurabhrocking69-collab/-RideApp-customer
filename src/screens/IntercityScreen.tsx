@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
-  ActivityIndicator, Alert, Modal, ScrollView, Text, TouchableOpacity, View,
+  ActivityIndicator, Alert, Modal, ScrollView, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,7 +33,13 @@ export function IntercityScreen() {
   const insets = useSafeAreaInsets();
   const {
     setScreen, pickup, drop, intercityRoute, bookIntercity, loading,
+    rideForSelf, setRideForSelf, riderName, setRiderName, riderPhone, setRiderPhone,
   } = useApp() as any;
+
+  // Defensive reset: this screen shares "who's riding" state with BookingScreen.
+  // If a user started filling it in there (or here) and navigated away without
+  // booking, don't let it silently carry over into the next trip.
+  useEffect(() => { setRideForSelf(true); setRiderName(''); setRiderPhone(''); }, []);
 
   const [tripKind, setTripKind]   = useState<TripKind>('oneway');
   const [leaveMode, setLeaveMode] = useState<'now' | 'later'>('now');
@@ -96,6 +102,10 @@ export function IntercityScreen() {
   const handleBook = async () => {
     if (loading) return;
     if (!validateTimes()) return;
+    if (!rideForSelf && (!riderName.trim() || riderPhone.length !== 10)) {
+      Alert.alert('Who\'s riding?', 'Enter their name and a 10-digit phone number so the driver knows who to look for.');
+      return;
+    }
     await bookIntercity({
       vehicleType: selVehicle,
       tripKind,
@@ -424,6 +434,67 @@ export function IntercityScreen() {
                       <Text style={{ fontSize: 12, fontWeight: '800', color: C.text }}>{v}</Text>
                     </View>
                   ))}
+                </View>
+
+                {/* Who's riding — defaults to "Myself"; picking "Someone else" reveals
+                    a quick name+phone so the driver knows who to look for at pickup. */}
+                <View style={{ backgroundColor: '#fff', borderRadius: 14, borderWidth: 1, borderColor: C.glassBorder, padding: 14 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '900', color: C.text, marginBottom: 10 }}>Who's riding?</Text>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => setRideForSelf(true)}
+                      style={{
+                        flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        paddingVertical: 10, borderRadius: 999,
+                        backgroundColor: rideForSelf ? C.yellowGlass : C.glassMid,
+                        borderWidth: 1.5, borderColor: rideForSelf ? C.yellow : C.glassBorder,
+                      }}>
+                      <Ionicons name="person" size={14} color={rideForSelf ? C.yellow : C.textMuted} />
+                      <Text style={{ fontSize: 12.5, fontWeight: '800', color: rideForSelf ? C.yellow : C.textMuted }}>For Myself</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => setRideForSelf(false)}
+                      style={{
+                        flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        paddingVertical: 10, borderRadius: 999,
+                        backgroundColor: !rideForSelf ? C.yellowGlass : C.glassMid,
+                        borderWidth: 1.5, borderColor: !rideForSelf ? C.yellow : C.glassBorder,
+                      }}>
+                      <Ionicons name="people" size={14} color={!rideForSelf ? C.yellow : C.textMuted} />
+                      <Text style={{ fontSize: 12.5, fontWeight: '800', color: !rideForSelf ? C.yellow : C.textMuted }}>For Someone Else</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {!rideForSelf && (
+                    <View style={{ marginTop: 10 }}>
+                      <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <TextInput
+                          style={{ flex: 1, backgroundColor: C.glassMid, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13.5, color: C.text, borderWidth: 1, borderColor: C.glassBorder }}
+                          placeholder="Their name"
+                          placeholderTextColor={C.textDim}
+                          value={riderName}
+                          onChangeText={setRiderName}
+                        />
+                        <TextInput
+                          style={{ flex: 1, backgroundColor: C.glassMid, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13.5, color: C.text, borderWidth: 1, borderColor: C.glassBorder }}
+                          placeholder="Their 10-digit phone"
+                          placeholderTextColor={C.textDim}
+                          keyboardType="number-pad"
+                          maxLength={10}
+                          value={riderPhone}
+                          onChangeText={(v: string) => setRiderPhone(v.replace(/[^0-9]/g, ''))}
+                        />
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 8, paddingHorizontal: 2 }}>
+                        <Ionicons name="information-circle" size={14} color={C.textMuted} style={{ marginTop: 1 }} />
+                        <Text style={{ flex: 1, fontSize: 11, color: C.textMuted, lineHeight: 15 }}>
+                          You'll still get all ride updates and pay from your account — we just share these details with the driver so they know who to look for and can call them directly if needed.
+                        </Text>
+                      </View>
+                    </View>
+                  )}
                 </View>
 
                 {/* Fare breakdown */}
