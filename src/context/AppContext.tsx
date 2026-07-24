@@ -2019,12 +2019,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         discount:       payload.discount,
         promo_code:     payload.promoCode,
         scheduled_at:   payload.scheduledAt,
+        // Same "who's riding" state bookRide() reads — scheduling for later
+        // shouldn't silently drop it just because it's a different endpoint.
+        rider_name:  !rideForSelf ? riderName.trim()  : null,
+        rider_phone: !rideForSelf ? riderPhone.trim() : null,
       });
       if (data?.error || data?._error) {
         Alert.alert('Could not schedule', data.error || 'Please try again');
         return;
       }
       setScreen('scheduled-rides');
+      setRideForSelf(true); setRiderName(''); setRiderPhone(''); // reset for next booking
       Alert.alert(
         '📅 Ride Scheduled!',
         `Your ${payload.rideType} is booked for ${new Date(payload.scheduledAt).toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })}. We'll match a driver 15 mins before.`,

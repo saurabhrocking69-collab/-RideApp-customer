@@ -191,6 +191,10 @@ export function BookingScreen() {
 
   const handleScheduleRide = useCallback(async () => {
     if (!pickup || !drop || !pickupCoords || !dropCoords) return;
+    if (!rideForSelf && (!riderName.trim() || riderPhone.length !== 10)) {
+      Alert.alert('Who\'s riding?', 'Enter their name and a 10-digit phone number so the driver knows who to look for.');
+      return;
+    }
     const _est2 = fareEstimates[rideType];
     await scheduleRide({
       pickup, drop,
@@ -206,7 +210,7 @@ export function BookingScreen() {
       scheduledAt: scheduledAt!.iso,
     });
     setScheduledAt(null);
-  }, [pickup, drop, rideType, pickupCoords, dropCoords, fareEstimates, promoDiscount, promoCode, scheduledAt, scheduleRide]);
+  }, [pickup, drop, rideType, pickupCoords, dropCoords, fareEstimates, promoDiscount, promoCode, scheduledAt, scheduleRide, rideForSelf, riderName, riderPhone]);
   // Load fare history for current pickup+drop+rideType combo
   useEffect(() => {
     if (!pickup || !drop) { setFareHistoryEntry(null); return; }
