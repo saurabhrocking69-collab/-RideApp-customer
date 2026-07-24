@@ -343,7 +343,10 @@ const VEHICLE_VISUALS: Record<string, { Shape: typeof CarShape | typeof BikeShap
   car:           { Shape: CarShape,     props: { bodyLight: '#8DA2D0', bodyDark: '#2C3E6B', roof: '#1E293B' } },
   luxury:        { Shape: CarShape,     props: { bodyLight: '#6B7280', bodyDark: '#111827', roof: '#000000' } },
 };
-function vehicleVisual(vehicleType: string) {
+// Exported so other screens (matching, driver cards, "switch vehicle"
+// pickers) can render the same real vehicle models instead of emoji —
+// one source of truth for what each vehicle type looks like.
+export function vehicleVisual(vehicleType: string) {
   return VEHICLE_VISUALS[vehicleType] || VEHICLE_VISUALS.car;
 }
 

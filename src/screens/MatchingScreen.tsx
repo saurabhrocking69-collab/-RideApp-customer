@@ -6,7 +6,7 @@ import { Storage as AsyncStorage } from '../storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { Bouncy, GlassPanel, PulseView, SlideUp } from '../components/ui';
-import { LiveMap } from '../components/LiveMap';
+import { LiveMap, vehicleVisual } from '../components/LiveMap';
 import { s, C, T, SP, R, SHADOW } from '../styles';
 import { apiPost } from '../../api';
 import { API } from '../constants';
@@ -83,9 +83,20 @@ const VEHICLE_LABELS: Record<string, string> = {
   bike: 'Bike', auto: 'Auto', car: 'Car', eriksha: 'E-Riksha',
   green_bike: 'Green Bike', electric_auto: 'Electric Auto', luxury: 'Luxury',
 };
-const V_ICONS: Record<string, string> = {
-  auto: '🛺', car: '🚕', bike: '🏍️', eriksha: '🛵', luxury: '🚙', green_bike: '⚡', electric_auto: '🌿',
-};
+// ── Real vehicle model (same top-down art as the map marker), scaled to
+// fit a box instead of the flat emoji this screen used before. 70 is a
+// rough max-dimension baseline (car's SVG is the tallest at 66) so every
+// shape lands safely inside `size` without per-shape scale tuning. ─────────
+function VehicleGlyph({ vehicleType, size = 40, rotateDeg = 0 }: { vehicleType: string; size?: number; rotateDeg?: number }) {
+  const { Shape, props } = vehicleVisual(vehicleType);
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ transform: [{ rotate: `${rotateDeg}deg` }, { scale: size / 70 }] }}>
+        <Shape {...props} />
+      </View>
+    </View>
+  );
+}
 
 // ── Status pill — compact rotating chip between drag handle and ETA hero ─────
 function BuddyMessages({ visible }: { visible: boolean }) {
@@ -1127,7 +1138,7 @@ export function MatchingScreen() {
                   }}>
                     {rideData.driver.vehicle_photo
                       ? <Image source={{ uri: rideData.driver.vehicle_photo }} style={{ width: 82, height: 62 }} resizeMode="cover" />
-                      : <Text style={{ fontSize: 28 }}>🚗</Text>
+                      : <VehicleGlyph vehicleType={rideType} size={58} rotateDeg={90} />
                     }
                   </View>
                 </View>
@@ -1270,7 +1281,7 @@ export function MatchingScreen() {
                     shadowColor: noDriverFinal ? C.red : C.pink,
                     shadowOpacity: 0.5, shadowRadius: 18,
                   }}>
-                    <Text style={{ fontSize: 38 }}>{V_ICONS[rideType] || '🚗'}</Text>
+                    <VehicleGlyph vehicleType={rideType} size={54} />
                   </View>
                 </View>
 
@@ -1352,7 +1363,7 @@ export function MatchingScreen() {
                       {altSuggest.alternatives.map((alt: string) => (
                         <Bouncy key={alt} onPress={() => switchVehicle(alt)} disabled={switchingVehicle}
                           style={{ backgroundColor: switchingVehicle ? C.glass : C.pink, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Text style={{ fontSize: 14 }}>{V_ICONS[alt] || '🚗'}</Text>
+                          <VehicleGlyph vehicleType={alt} size={20} />
                           <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>{VEHICLE_LABELS[alt] || alt}</Text>
                         </Bouncy>
                       ))}
@@ -1383,7 +1394,7 @@ export function MatchingScreen() {
                           {noDriverFinal.alternatives.map((alt: string) => (
                             <Bouncy key={alt} onPress={() => { setNoDriverFinal(null); switchVehicle(alt); }} disabled={switchingVehicle}
                               style={{ backgroundColor: switchingVehicle ? C.glass : C.pink, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                              <Text style={{ fontSize: 14 }}>{V_ICONS[alt] || '🚗'}</Text>
+                              <VehicleGlyph vehicleType={alt} size={20} />
                               <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>{VEHICLE_LABELS[alt] || alt}</Text>
                             </Bouncy>
                           ))}
