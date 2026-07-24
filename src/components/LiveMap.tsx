@@ -154,21 +154,26 @@ function BikeShape({ tankLight, tankDark, frame }: { tankLight: string; tankDark
       {/* Front wheel */}
       <Ellipse cx="14" cy="8"  rx="4.4" ry="6.6" fill="#111827" />
       <Ellipse cx="14" cy="8"  rx="2"   ry="3.2" fill="#4B5563" />
-      {/* Handlebar — wide, the unmistakable two-wheeler cue */}
-      <Rect x="0.5" y="11" width="27" height="3" rx="1.5" fill="#1F2937" />
+      {/* Handlebar — wide, the unmistakable two-wheeler cue — brand dark pink */}
+      <Rect x="0.5" y="11" width="27" height="3" rx="1.5" fill={C.pinkDark} />
       {/* Mirrors on the bar ends */}
-      <SvgCircle cx="2"  cy="9.4" r="2.1" fill="#1F2937" />
-      <SvgCircle cx="26" cy="9.4" r="2.1" fill="#1F2937" />
+      <SvgCircle cx="2"  cy="9.4" r="2.1" fill={C.pinkDark} />
+      <SvgCircle cx="26" cy="9.4" r="2.1" fill={C.pinkDark} />
       {/* Headlight, mounted just behind the bar */}
       <Ellipse cx="14" cy="17.5" rx="3.2" ry="2.8" fill={frame} />
       <Ellipse cx="14" cy="17"   rx="1.5" ry="1.3" fill="#FEF9C3" />
       {/* Fuel tank — glossy teardrop */}
       <Path d="M14,21 C21,21 22,27 19.5,32 C17.7,36.5 10.3,36.5 8.5,32 C6,27 7,21 14,21 Z" fill={`url(#${gid})`} stroke="#fff" strokeWidth="1" />
       <Path d="M10.5,24.5 C9.3,27.5 9.3,30 10.5,32" stroke="rgba(255,255,255,0.5)" strokeWidth="1.4" fill="none" strokeLinecap="round" />
-      {/* Seat */}
-      <Rect x="10" y="37" width="8" height="11" rx="3.2" fill={frame} />
+      {/* Slight side-angle shading — a shadow sliver down the right edge of
+          the tank/seat so the icon reads with a touch of 3D tilt instead of
+          a flat cutout, like it's lit from the left. */}
+      <Path d="M18,23 C19.4,27 19,30.8 17.6,34 L16,33.4 C17.2,30.2 17.5,26.8 16.3,23.6 Z" fill="rgba(0,0,0,0.16)" />
+      {/* Seat — longer two-up seat, brand plum */}
+      <Rect x="10" y="33" width="8" height="16" rx="3.4" fill={C.plum} />
+      <Rect x="15.4" y="34" width="2" height="14" rx="1" fill="rgba(0,0,0,0.16)" />
       {/* Rear fender */}
-      <Path d="M8,44 Q14,40.5 20,44" stroke={frame} strokeWidth="1.8" fill="none" strokeLinecap="round" />
+      <Path d="M8,48 Q14,45 20,48" stroke={frame} strokeWidth="1.8" fill="none" strokeLinecap="round" />
       {/* Rear wheel */}
       <Ellipse cx="14" cy="50" rx="4.8" ry="7.2" fill="#111827" />
       <Ellipse cx="14" cy="50" rx="2.2" ry="3.4" fill="#4B5563" />
@@ -206,7 +211,13 @@ function AutoShape({ bodyLight, bodyDark, roof, electric }: { bodyLight: string;
           electric in real life, so a lightning bolt is the honest way to
           tell an e-auto apart on the map instead of inventing a fake shape. */}
       {electric && (
-        <Path d="M19.5,29 L16,35.5 L18.4,35.5 L17.5,41 L21.5,33.7 L19,33.7 Z" fill="#FDE047" stroke="#CA8A04" strokeWidth="0.4" />
+        <>
+          <Path d="M19.5,29 L16,35.5 L18.4,35.5 L17.5,41 L21.5,33.7 L19,33.7 Z" fill="#FDE047" stroke="#CA8A04" strokeWidth="0.4" />
+          {/* Brand pink livery stripe across the cabin */}
+          <Rect x="7.5" y="26" width="21" height="2.1" rx="1" fill={C.pink} opacity={0.88} />
+          {/* Slight side-angle shading down the cabin's right edge */}
+          <Rect x="24.5" y="16" width="2" height="15" fill="rgba(0,0,0,0.15)" />
+        </>
       )}
     </Svg>
   );
@@ -272,14 +283,19 @@ function ERikshaShape({ bodyLight, bodyDark, roof }: { bodyLight: string; bodyDa
       <Rect x="7" y="9" width="20" height="4" rx="1.5" fill={roof} opacity={0.95} />
       {/* Windscreen */}
       <Path d="M9,14 L25,14 L24,20 L10,20 Z" fill="#BFE3FF" opacity={0.85} />
+      {/* Brand pink livery stripe across the cabin */}
+      <Rect x="6.5" y="24" width="21" height="2.2" rx="1" fill={C.pink} opacity={0.88} />
       {/* Passenger bench hint (wide open back, e-rickshaws seat 3+ side by side) */}
       <Rect x="8" y="30" width="18" height="4" rx="2" fill="rgba(0,0,0,0.12)" />
+      {/* Slight side-angle shading down the cabin's right edge */}
+      <Rect x="26" y="20" width="2.1" height="18" fill="rgba(0,0,0,0.14)" />
       {/* Front wheel */}
       <Ellipse cx="17" cy="7" rx="3" ry="4" fill="#111827" />
       {/* Headlight */}
       <Ellipse cx="17" cy="4" rx="1.8" ry="1.4" fill="#FEF9C3" stroke="#F5D90A" strokeWidth="0.5" />
-      {/* Electric badge */}
-      <Path d="M18,22 L15,27.5 L17.2,27.5 L16.4,32 L19.9,25.7 L17.7,25.7 Z" fill="#FDE047" stroke="#CA8A04" strokeWidth="0.4" />
+      {/* Electric badge — sits in the gap between the brand stripe and the
+          passenger bench so it doesn't collide with either. */}
+      <Path d="M18,27 L15,31.5 L17.1,31.5 L16.4,35.5 L19.6,30 L17.5,30 Z" fill="#FDE047" stroke="#CA8A04" strokeWidth="0.4" />
     </Svg>
   );
 }
