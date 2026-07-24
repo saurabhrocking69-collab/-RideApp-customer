@@ -117,6 +117,13 @@ function CarShape({ bodyLight, bodyDark, roof }: { bodyLight: string; bodyDark: 
           <Stop offset="1" stopColor={bodyDark} />
         </LinearGradient>
       </Defs>
+      {/* Wheel-arch shadows — drawn first so the body covers their inner
+          half and only a dark sliver peeks past each corner, hinting at
+          tires under the bodywork instead of a perfectly smooth silhouette. */}
+      <Ellipse cx="4"  cy="18" rx="2.6" ry="4.2" fill="#111827" opacity={0.35} />
+      <Ellipse cx="34" cy="18" rx="2.6" ry="4.2" fill="#111827" opacity={0.35} />
+      <Ellipse cx="4"  cy="48" rx="2.6" ry="4.2" fill="#111827" opacity={0.35} />
+      <Ellipse cx="34" cy="48" rx="2.6" ry="4.2" fill="#111827" opacity={0.35} />
       {/* Body — rounded, tapered hood */}
       <Path d="M19,2 C9,2 4,7 4,15 L4,51 C4,59 9,64 19,64 C29,64 34,59 34,51 L34,15 C34,7 29,2 19,2 Z" fill={`url(#${gid})`} stroke="#fff" strokeWidth="1.5" />
       {/* Hood gloss highlight */}
@@ -124,9 +131,17 @@ function CarShape({ bodyLight, bodyDark, roof }: { bodyLight: string; bodyDark: 
       {/* Front windshield — trapezoid, wide at hood */}
       <Path d="M8,16 L30,16 L26,26 L12,26 Z" fill="#BFE3FF" opacity={0.92} />
       <Path d="M8,16 L30,16 L26,26 L12,26 Z" fill="none" stroke="#8FC7F2" strokeWidth="0.6" opacity={0.5} />
-      {/* Roof */}
+      {/* Wiper hint */}
+      <Path d="M13,24.5 L25,24.5" stroke="#6B93B8" strokeWidth="0.6" opacity={0.5} />
+      {/* Roof — thin brand pink trim along the edge, a subtle "ours" touch
+          instead of a plain border (cars don't get a full livery stripe
+          like the 3-wheelers — that would look pasted-on, not premium). */}
       <Rect x="8" y="27" width="22" height="18" rx="5" fill={roof} opacity={0.96} />
+      <Rect x="8" y="27" width="22" height="18" rx="5" fill="none" stroke={C.pink} strokeWidth="0.9" opacity={0.55} />
       <Rect x="16" y="30" width="6" height="12" rx="3" fill="rgba(255,255,255,0.10)" />
+      {/* Door-line creases */}
+      <Path d="M6,30 L6,42"   stroke="rgba(0,0,0,0.18)" strokeWidth="0.8" />
+      <Path d="M32,30 L32,42" stroke="rgba(0,0,0,0.18)" strokeWidth="0.8" />
       {/* Rear windshield */}
       <Path d="M12,46 L26,46 L30,55 L8,55 Z" fill="#BFE3FF" opacity={0.75} />
       {/* Headlights */}
@@ -138,6 +153,9 @@ function CarShape({ bodyLight, bodyDark, roof }: { bodyLight: string; bodyDark: 
       {/* Side mirrors */}
       <Path d="M1,21 L5,20 L5,26 L1,25 Z" fill={roof} />
       <Path d="M37,21 L33,20 L33,26 L37,25 Z" fill={roof} />
+      {/* Slight side-angle shading — shadow sliver down the roof/rear right
+          edge, matching the depth treatment on the other vehicle icons. */}
+      <Path d="M33,28 C34.3,36 34.3,43 33,50 L31,49.3 C32.2,43 32.2,36 31,28.6 Z" fill="rgba(0,0,0,0.14)" />
     </Svg>
   );
 }
