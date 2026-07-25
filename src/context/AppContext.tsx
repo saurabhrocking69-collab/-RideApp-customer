@@ -79,6 +79,7 @@ interface AppContextType {
   drop: string; setDrop: (d: string) => void;
   pickupCoords: Coords; setPickupCoords: (c: Coords) => void;
   dropCoords: Coords; setDropCoords: (c: Coords) => void;
+  resetBookingState: () => void;
   rideType: string; setRideType: (t: string) => void;
   pickupSugg: any[]; setPickupSugg: (s: any[]) => void;
   dropSugg: any[]; setDropSugg: (s: any[]) => void;
@@ -405,6 +406,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [promoScreenMsg, setPromoScreenMsg] = useState('');
   const [availablePromos, setAvailablePromos] = useState<any[]>([]);
 
+  // Ride-specific booking state (pickup/drop/coords/fare/promo) lives in this
+  // Provider, which never unmounts — so it must be explicitly cleared on ride
+  // completion/cancellation, or it silently bleeds into the next booking
+  // attempt (stale pins/route on the map, stale fare, stale promo discount).
+  // Deliberately does NOT reset rideType (vehicle selection) — that's a sticky
+  // user preference across bookings, not stale ride data.
+  const resetBookingState = () => {
+    setPickup(''); setDrop('');
+    setPickupCoords(null); setDropCoords(null);
+    setFareEstimates({}); setEta('');
+    setPromoCode(''); setPromoDiscount(0); setShowPromoInput(false); setInstantApplied(false);
+  };
+
   // ── Who's riding — defaults to the account holder; "someone else" carries
   // a name + phone through to booking so the driver can identify/reach the
   // actual rider instead of the person who booked. Reset per booking. ──────
@@ -704,6 +718,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const data    = content.data as any;
       if (data?.type === 'ride_cancelled') {
         setDriverCancelPopup(true);
+        setRideData(null);
+        resetBookingState();
       }
       // Silently adopt the ride into live tracking (rideData + socket room)
       // so the Live tab reflects a match/arrival even if the user never taps
@@ -741,7 +757,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setScreen('inride');
       }
       else if (data.type === 'trip_completed')                     setScreen('payment');
-      else if (data.type === 'ride_cancelled')                     { setScreen('home'); setDriverCancelPopup(true); }
+      else if (data.type === 'ride_cancelled')                     { setScreen('home'); setDriverCancelPopup(true); setRideData(null); resetBookingState(); }
       else if (data.type === 'no_driver_found')                    setScreen('home');
       else if (data.type === 'extension_accepted')                 { if (rideId) await adoptActiveRide(rideId); setScreen('matching'); }
       else if (data.type === 'scheduled_confirmed')                setScreen('scheduled-rides');
@@ -1130,6 +1146,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         notifyPaymentReceivedInApp(rideDataRef.current?.fare);
         AsyncStorage.removeItem('activeStdRideId').catch(() => {});
         s.emit('leaveRide', { rideId: data.ride_id }); // leave room so old events can't leak again
+        // Clear booking-form state now (not just on rating-modal dismiss) — rideData
+        // itself is untouched, PostRideScreen's receipt reads from that, not this.
+        resetBookingState();
       }
     });
     s.on('rideUpdate', (data: any) => {
@@ -1213,6 +1232,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
         setScreen((cur: Screen) => (cur === 'payment' || cur === 'postride') ? cur : 'payment');
         loadWallet(phoneRef.current || userPhone);
+        resetBookingState();
       }
       if (st === 'buddy_declined') { buddyWaitingRef.current = false; setBuddyWaiting(false); setBuddyBookMsg('⚠️ Buddy did not accept. Searching other drivers...'); }
       if (st === 'cancelled') {
@@ -1220,7 +1240,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.removeItem('activeStdRideId').catch(() => {});
         ride.clearRide();
         setRideData(null); setAltSuggest(null); setDriverLoc(null); setServerSurgeOffer(null); setNoDriverFinal(null);
-        setPickup(''); setDrop(''); setPickupCoords(null); setDropCoords(null); setEta('');
+        resetBookingState();
         buddyWaitingRef.current = false; setBuddyWaiting(false); setBuddyBookMsg('');
         s.emit('leaveRide', { rideId: data.rideId });
         setScreen('home'); setResult('❌ Ride cancelled');
@@ -1254,7 +1274,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.removeItem('activeStdRideId').catch(() => {});
         ride.clearRide();
         setRideData(null); setAltSuggest(null); setDriverLoc(null); setServerSurgeOffer(null); setNoDriverFinal(null);
-        setPickup(''); setDrop(''); setPickupCoords(null); setDropCoords(null); setEta('');
+        resetBookingState();
         s.emit('leaveRide', { rideId: data.rideId });
         if (buddyWaitingRef.current) {
           buddyWaitingRef.current = false; setBuddyWaiting(false);
@@ -2230,6 +2250,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     splashLogo, splashScale, splashTag, splashFade, splashDone,
     onboardFade, onboardSlide, loginHeroAnim, loginCardAnim,
     pickup, setPickup, drop, setDrop, pickupCoords, setPickupCoords, dropCoords, setDropCoords,
+    resetBookingState,
     rideType, setRideType, pickupSugg, setPickupSugg, dropSugg, setDropSugg, dropHistory,
     appConfig,
     fareEstimates, setFareEstimates, fareLoading, eta, setEta, userCoords, setUserCoords,

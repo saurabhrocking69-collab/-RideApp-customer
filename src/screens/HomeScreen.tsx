@@ -2517,8 +2517,7 @@ function RatingModal() {
     tip, setTip,
     starAnims, animateStar,
     pickup, drop,
-    setPickup, setDrop, setEta,
-    setPromoDiscount, setPromoCode,
+    resetBookingState,
     setDriverLoc, setDriverEta, setDriverDist,
     setUnreadChat, setCashbackEarned,
     setScratchCard, setScratched,
@@ -2556,8 +2555,8 @@ function RatingModal() {
     setShowRatingModal(false);
     setRideData(null);
     setRating(0); setReview(''); setTip(0);
-    setPickup(''); setDrop(''); setEta('');
-    setPromoDiscount(0); setPromoCode(''); setUnreadChat(0);
+    resetBookingState();
+    setUnreadChat(0);
     setDriverLoc(null); setDriverEta(''); setDriverDist('');
     setCashbackEarned([]);
     ride.clearRide();
