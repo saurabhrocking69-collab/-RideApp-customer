@@ -325,7 +325,7 @@ const BANNER_CARDS = [
     id: 'referral',
     bg: [C.pink, '#c2185b'],
     badge: '🎁 REFER & EARN',
-    title: '₹50 + ₹50 Reward',
+    title: '₹10 + ₹10 Reward',
     sub: 'Invite a friend, both get cash!',
     cta: '🔗 Invite Friends →',
     emoji: '🤝',
@@ -1366,7 +1366,7 @@ function HomeTab() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 12, fontWeight: '900', color: '#fff' }}>Refer & Earn</Text>
-                  <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.72)', marginTop: 2 }}>₹50 for you + friend</Text>
+                  <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.72)', marginTop: 2 }}>₹10 for you + friend</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.35)" />
               </TouchableOpacity>
@@ -2466,7 +2466,7 @@ function ProfileTab() {
 
           <Text style={{ fontSize: 11, fontWeight: '800', color: C.textDim, letterSpacing: 1.2, marginBottom: 8, paddingHorizontal: 2 }}>OFFERS & REWARDS</Text>
           {menuSection([
-            { label: 'Refer & Earn',     sub: 'Invite friends, earn ₹50 each', icon: 'gift-outline',     color: C.pink,   bg: C.pinkGlass,   border: C.pinkBorder,   onPress: () => { loadReferral(); setScreen('referral'); } },
+            { label: 'Refer & Earn',     sub: 'Invite friends, earn ₹10 each', icon: 'gift-outline',     color: C.pink,   bg: C.pinkGlass,   border: C.pinkBorder,   onPress: () => { loadReferral(); setScreen('referral'); } },
             { label: 'Cashback Rewards', sub: 'Earn cashback on every ride',   icon: 'cash-outline',     color: C.green,  bg: C.greenGlass,  border: C.greenBorder,  onPress: () => setScreen('rewards') },
             { label: 'Promo Codes',      sub: 'Apply discount codes',          icon: 'pricetag-outline', color: '#F59E0B', bg: C.yellowGlass, border: C.yellowBorder, onPress: () => { setPromoScreenCode(''); setPromoScreenMsg(''); setScreen('promo'); } },
           ])}

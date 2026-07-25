@@ -2200,7 +2200,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
   const shareReferral = async () => {
     if (!referralData?.code) return;
-    try { await Share.share({ message: `🚖 Join Sppero and get ₹50! Use my referral code: ${referralData.code}` }); } catch (_e) {}
+    try { await Share.share({ message: `🚖 Join Sppero and get ₹10! Use my referral code: ${referralData.code}` }); } catch (_e) {}
   };
   const savePlace = async (label: string) => {
     if (!pickup) { setResult('❌ Set a location first'); return; }

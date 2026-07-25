@@ -24,8 +24,8 @@ export function ReferralScreen() {
       <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 30 }}>
         <View style={{ backgroundColor: C.bgCard, borderRadius: 20, padding: 24, alignItems: 'center', marginBottom: 16, borderWidth: 1, borderColor: C.glassBorder, elevation: 4 }}>
           <Text style={{ fontSize: 52 }}>🎁</Text>
-          <Text style={{ color: C.text, fontSize: 20, fontWeight: '900', marginTop: 8 }}>Both of you get ₹50!</Text>
-          <Text style={{ color: C.textMuted, fontSize: 13, marginTop: 6, textAlign: 'center' }}>Share your code. When a friend completes 3 rides, both get ₹50 in wallet!</Text>
+          <Text style={{ color: C.text, fontSize: 20, fontWeight: '900', marginTop: 8 }}>Both of you get ₹10!</Text>
+          <Text style={{ color: C.textMuted, fontSize: 13, marginTop: 6, textAlign: 'center' }}>Share your code. When a friend completes 3 rides, both get ₹10 in wallet!</Text>
         </View>
         <View style={{ backgroundColor: C.glass, borderRadius: 18, padding: 20, marginBottom: 16, alignItems: 'center', elevation: 2, borderWidth: 1.5, borderColor: C.pinkBorder }}>
           <Text style={{ fontSize: 12, color: C.textDim, letterSpacing: 1 }}>YOUR REFERRAL CODE</Text>
