@@ -13,6 +13,7 @@ import type { ToastNotif } from '../components/NotificationToast';
 import { useRideStore } from '../../store';
 import { API, MAPS_KEY, RIDES, DEFAULT_HOURLY_PACKAGES } from '../constants';
 import { Screen, Tab, Coords, HourlyStep, ExtendStep, WalletTxnTab } from '../types';
+import { shortRideId } from '../rideId';
 
 let RazorpayCheckout: any = null;
 try { const _m = require('react-native-razorpay'); RazorpayCheckout = _m?.default || _m || null; } catch (_e) {}
@@ -2153,7 +2154,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ? `https://maps.google.com/?q=${userCoords.latitude},${userCoords.longitude}`
         : '';
       const driverPart = rideData
-        ? `\nDriver: ${rideData.driver_name || 'Unknown'} | Vehicle: ${rideData.vehicle_no || 'Unknown'} | Ride #${rideData.ride_id}`
+        ? `\nDriver: ${rideData.driver_name || 'Unknown'} | Vehicle: ${rideData.vehicle_no || 'Unknown'} | Ride ${shortRideId(rideData.ride_id)}`
         : '';
       const message = `🆘 EMERGENCY — I need immediate help!\nI am on a Sppero ride.${driverPart}\n📍 My current location:\n${locUrl}\n\nPlease call me or alert the police (100).`;
       const encoded = encodeURIComponent(message);

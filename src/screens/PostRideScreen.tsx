@@ -7,6 +7,7 @@ import { Bouncy, Confetti, CountUp, DotBG, FadeIn, ScreenIn, TripSteps } from '.
 import { IlluRideComplete } from '../components/Illustrations';
 import { s, C, T, SP, R, SHADOW } from '../styles';
 import { apiGet, apiPost } from '../../api';
+import { shortRideId } from '../rideId';
 
 export function PostRideScreen() {
   const { bottom: bottomInset } = useSafeAreaInsets();
@@ -113,7 +114,7 @@ export function PostRideScreen() {
     return 'Cash';
   };
 
-  const billId = '#SP' + String(rideData?.ride_id || '').slice(-8).toUpperCase();
+  const billId = shortRideId(rideData?.ride_id);
   const nowStr = new Date().toLocaleString('en-IN', {
     day: '2-digit', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit', hour12: true,

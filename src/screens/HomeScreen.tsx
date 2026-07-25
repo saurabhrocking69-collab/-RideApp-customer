@@ -9,6 +9,7 @@ import { useRideStore } from '../../store';
 import { useApp } from '../context/AppContext';
 import { Bouncy, GlassPanel, PulseView, SlideUp, CountUp, EmptyAnim, GlowPulse, ShineCard, FadeIn, SkeletonBox } from '../components/ui';
 import { s, C, T, SP, R, SHADOW } from '../styles';
+import { shortRideId } from '../rideId';
 import { MAPS_KEY, API } from '../constants';
 import { useNearbyDrivers } from '../offline';
 import { NotifBell, NotificationCenter, getUnreadCount } from '../components/NotificationCenter';
@@ -1878,7 +1879,7 @@ function HistoryTab() {
   const fareNum   = Math.round(parseFloat(String(ride?.fare ?? 0).replace(/[^0-9.]/g, '')) || 0);
   const gst       = Math.round((fareNum * 5 / 105) * 100) / 100;
   const base      = Math.round((fareNum - gst) * 100) / 100;
-  const rideId    = '#SP' + String(ride?.id || '').slice(-8).toUpperCase();
+  const rideId    = shortRideId(ride?.id);
   const dateStr   = ride ? new Date(ride.created_at).toLocaleString('en-IN', {
     day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true,
   }) : '';

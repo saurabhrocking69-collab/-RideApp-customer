@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { apiGet } from '../../api';
 import { C } from '../styles';
+import { shortRideId } from '../rideId';
 
 const AMBER    = '#F59E0B';
 const AMBER_BG = '#FFFBEB';
@@ -327,7 +328,7 @@ export function ScheduledRideDetailScreen() {
             ADDRESS DETAILS
           </Text>
           <Text style={{ fontSize: 10, color: C.textDim, marginBottom: 8 }}>
-            Ride ID #{ride.id}
+            Ride ID {shortRideId(ride.id)}
           </Text>
           <View style={{ gap: 8 }}>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
