@@ -79,7 +79,7 @@ export function BookingScreen() {
     showPromoInput, setShowPromoInput,
     result, loading,
     lastFetchKey,
-    searchPlaces, geocodePlace, useMyLocation, swapLocations, applyPromo, bookRide,
+    searchPlaces, searchNearbyCategory, geocodePlace, useMyLocation, swapLocations, applyPromo, bookRide,
     dropHistory,
     userCoords, setUserCoords,
     phone,
@@ -968,6 +968,36 @@ export function BookingScreen() {
                       <Text style={{ fontSize: 13, fontWeight: '700', color: C.textMuted }}>Add Office</Text>
                     </TouchableOpacity>
                   )}
+                </ScrollView>
+                )}
+
+                {/* ── "Near me" category search — Hospital/Hotel/Police/... near pickup ── */}
+                {!!pickupCoords && (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 12 }}>
+                  {([
+                    { icon: '🏥', label: 'Hospital',    q: 'Hospital' },
+                    { icon: '🏨', label: 'Hotel',       q: 'Hotel' },
+                    { icon: '👮', label: 'Police',      q: 'Police Station' },
+                    { icon: '🏛️', label: 'Tourist',     q: 'Tourist Place' },
+                    { icon: '🏧', label: 'ATM',         q: 'ATM' },
+                    { icon: '⛽', label: 'Petrol Pump', q: 'Petrol Pump' },
+                    { icon: '🚉', label: 'Railway',     q: 'Railway Station' },
+                    { icon: '🚌', label: 'Bus Stand',   q: 'Bus Stand' },
+                    { icon: '🛍️', label: 'Mall',        q: 'Shopping Mall' },
+                  ]).map(cat => (
+                    <TouchableOpacity
+                      key={cat.label}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        setDrop(cat.label + ' near me');
+                        setDropCoords(null); setFareEstimates({}); setEta(''); lastFetchKey.current = '';
+                        searchNearbyCategory(cat.q, 'drop');
+                      }}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.glassMid, borderRadius: R.full, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: C.glassBorder }}>
+                      <Text style={{ fontSize: 14 }}>{cat.icon}</Text>
+                      <Text style={{ fontSize: 12.5, fontWeight: '700', color: C.text }}>{cat.label}</Text>
+                    </TouchableOpacity>
+                  ))}
                 </ScrollView>
                 )}
 

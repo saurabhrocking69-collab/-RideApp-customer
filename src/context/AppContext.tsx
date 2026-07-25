@@ -239,6 +239,7 @@ interface AppContextType {
   surgeFareNow: (amount: number) => Promise<void>;
   switchVehicle: (newType: string) => Promise<void>;
   searchPlaces: (text: string, type: 'pickup'|'drop') => void;
+  searchNearbyCategory: (category: string, type: 'pickup'|'drop') => void;
   geocodePlace: (address: string, type: 'pickup'|'drop') => Promise<void>;
   swapLocations: () => void;
   fetchEtaByCoords: (pc: any, dc: any) => Promise<void>;
@@ -1613,7 +1614,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               ? { lat: (userCoords as any).latitude ?? (userCoords as any).lat, lng: (userCoords as any).longitude ?? (userCoords as any).lng }
               : null);
         const originParam = originCoords?.lat != null ? `&origin=${originCoords.lat},${originCoords.lng}` : '';
-        const res = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${MAPS_KEY}&components=country:in&location=26.8467,80.9462&radius=50000${originParam}`);
+        const biasCenter = originCoords?.lat != null ? `${originCoords.lat},${originCoords.lng}` : '26.8467,80.9462';
+        const res = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&key=${MAPS_KEY}&components=country:in&location=${biasCenter}&radius=50000${originParam}`);
         const data = await res.json();
         const sugg = data.predictions?.map((p: any) => ({
           id:         p.place_id,
@@ -1625,6 +1627,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         type === 'pickup' ? setPickupSugg(sugg) : setDropSugg(sugg);
       } catch (_e) {}
     }, 400);
+  };
+
+  // "Near me" category search (Hospital, Hotel, Police Station, ...) — reuses the
+  // same Autocomplete endpoint as searchPlaces (no separate Nearby Search billing),
+  // just biased tightly to the actual pickup/user location with strictbounds so
+  // results stay genuinely close instead of the loose 50km relevance bias above.
+  const searchNearbyCategory = (category: string, type: 'pickup' | 'drop') => {
+    const originCoords = type === 'drop'
+      ? (pickupCoords || (userCoords
+          ? { lat: (userCoords as any).latitude ?? (userCoords as any).lat, lng: (userCoords as any).longitude ?? (userCoords as any).lng }
+          : null))
+      : (userCoords
+          ? { lat: (userCoords as any).latitude ?? (userCoords as any).lat, lng: (userCoords as any).longitude ?? (userCoords as any).lng }
+          : null);
+    if (!originCoords?.lat) return;
+    (async () => {
+      try {
+        const res = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(category)}&key=${MAPS_KEY}&components=country:in&location=${originCoords.lat},${originCoords.lng}&radius=6000&strictbounds=true&origin=${originCoords.lat},${originCoords.lng}`);
+        const data = await res.json();
+        const sugg = data.predictions?.map((p: any) => ({
+          id:         p.place_id,
+          text:       p.description,
+          main:       p.structured_formatting?.main_text      || p.description.split(',')[0],
+          secondary:  p.structured_formatting?.secondary_text || p.description.split(',').slice(1).join(',').trim(),
+          distance_m: p.distance_meters ?? null,
+        })) || [];
+        type === 'pickup' ? setPickupSugg(sugg) : setDropSugg(sugg);
+      } catch (_e) {}
+    })();
   };
 
   const geocodePlace = async (address: string, type: 'pickup' | 'drop') => {
@@ -2302,7 +2333,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     socketRef, phoneRef, pickupDebounceRef, dropDebounceRef, hPickupDebounceRef, hDropDebounceRef, buddyPUDebRef, buddyDRDebRef,
     sendOtp, verifyOtp, completeOnboarding, handleOtpChange, handleOtpKeyPress,
     connectSocket, joinRideSocket, joinHourlySocket, adoptActiveRide,
-    bookRide, surgeFareNow, switchVehicle, searchPlaces, geocodePlace, swapLocations,
+    bookRide, surgeFareNow, switchVehicle, searchPlaces, searchNearbyCategory, geocodePlace, swapLocations,
     fetchEtaByCoords, loadFareEstimates, applyPromo, useMyLocation, calcDriverEta,
     handlePayment, payWithWallet, createScratchCard, scratchNow, addMoney, openRazorpayTopup,
     loadHistory, loadWallet, loadWalletDetail, loadLoyalty, loadOffers, loadHourlyPackages,
