@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ScrollView, StyleSheet, View, Text, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, Animated, Easing, Share, Dimensions } from 'react-native';
+import { ScrollView, FlatList, StyleSheet, View, Text, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, Animated, Easing, Share, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Storage as AsyncStorage } from '../storage';
@@ -1961,35 +1961,41 @@ _GST is included in the fare._
         </Text>
       </View>
 
-      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 14, paddingBottom: 100 }}>
-        {/* Scratch card — shown in Trips tab after a completed ride */}
-        {scratchCard && (
-          <Animated.View style={{ transform: [{ scale: scratched ? 1 : scratchAnim }], marginBottom: 14 }}>
-            <TouchableOpacity activeOpacity={0.85} onPress={scratchNow}
-              style={[s.scratchCard, { backgroundColor: scratched ? C.greenGlass : C.yellow, borderWidth: 2, borderColor: scratched ? C.greenBorder : C.yellow, borderRadius: 20 }]}>
-              {scratched ? (
-                <FadeIn style={{ alignItems: 'center' }}>
-                  <Text style={{ fontSize: 40 }}>🎉</Text>
-                  <Text style={{ fontSize: 14, color: C.textMuted, marginTop: 6 }}>You got a reward!</Text>
-                  <Text style={{ fontSize: 42, fontWeight: '900', color: C.green, marginTop: 4 }}>₹{scratchCard.reward}</Text>
-                  <Text style={{ fontSize: 12, color: C.green, marginTop: 4, fontWeight: '700' }}>✅ Added to your wallet!</Text>
-                </FadeIn>
-              ) : (
-                <View style={{ alignItems: 'center' }}>
-                  <Text style={{ fontSize: 40 }}>🎟️</Text>
-                  <Text style={{ fontSize: 18, fontWeight: '900', color: C.text, marginTop: 6 }}>Scratch Card Won!</Text>
-                  <Text style={{ fontSize: 13, color: 'rgba(0,0,0,0.7)', marginTop: 4 }}>👆 Tap to scratch & reveal your reward</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </Animated.View>
-        )}
-
-        {histLoading
-          ? [1, 2, 3, 4].map(i => <SkeletonTripCard key={i} />)
-          : historyRides.length === 0
-          ? <EmptyAnim icon="🚖" title="No trips yet" sub="Book your first ride and see your history here!" />
-          : historyRides.map((h: any, i: number) => {
+      <FlatList
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ padding: 14, paddingBottom: 100 }}
+        data={histLoading ? [] : historyRides}
+        keyExtractor={(h: any, i: number) => String(h.id ?? i)}
+        ListHeaderComponent={
+          scratchCard ? (
+            <Animated.View style={{ transform: [{ scale: scratched ? 1 : scratchAnim }], marginBottom: 14 }}>
+              <TouchableOpacity activeOpacity={0.85} onPress={scratchNow}
+                style={[s.scratchCard, { backgroundColor: scratched ? C.greenGlass : C.yellow, borderWidth: 2, borderColor: scratched ? C.greenBorder : C.yellow, borderRadius: 20 }]}>
+                {scratched ? (
+                  <FadeIn style={{ alignItems: 'center' }}>
+                    <Text style={{ fontSize: 40 }}>🎉</Text>
+                    <Text style={{ fontSize: 14, color: C.textMuted, marginTop: 6 }}>You got a reward!</Text>
+                    <Text style={{ fontSize: 42, fontWeight: '900', color: C.green, marginTop: 4 }}>₹{scratchCard.reward}</Text>
+                    <Text style={{ fontSize: 12, color: C.green, marginTop: 4, fontWeight: '700' }}>✅ Added to your wallet!</Text>
+                  </FadeIn>
+                ) : (
+                  <View style={{ alignItems: 'center' }}>
+                    <Text style={{ fontSize: 40 }}>🎟️</Text>
+                    <Text style={{ fontSize: 18, fontWeight: '900', color: C.text, marginTop: 6 }}>Scratch Card Won!</Text>
+                    <Text style={{ fontSize: 13, color: 'rgba(0,0,0,0.7)', marginTop: 4 }}>👆 Tap to scratch & reveal your reward</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </Animated.View>
+          ) : null
+        }
+        ListEmptyComponent={
+          histLoading
+            ? <>{[1, 2, 3, 4].map(i => <SkeletonTripCard key={i} />)}</>
+            : <EmptyAnim icon="🚖" title="No trips yet" sub="Book your first ride and see your history here!" />
+        }
+        renderItem={({ item: h }: { item: any }) => {
             const pickup    = h.pickup?.trim()        || null;
             const drop      = h.drop_location?.trim() || null;
             const shortPick = pickup ? pickup.split(',')[0] : null;
@@ -2002,7 +2008,7 @@ _GST is included in the fare._
             const timeStr = dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
             const dateStr = dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
             return (
-              <TouchableOpacity key={i} activeOpacity={0.80} onPress={() => openDetail(h)}
+              <TouchableOpacity activeOpacity={0.80} onPress={() => openDetail(h)}
                 style={{ backgroundColor: C.bgCard, borderRadius: 20, marginBottom: 12, borderWidth: 1, borderColor: C.glassBorder, overflow: 'hidden', elevation: 3, shadowColor: sc, shadowOpacity: 0.12, shadowRadius: 8 }}>
 
                 {/* Top accent bar */}
@@ -2100,9 +2106,8 @@ _GST is included in the fare._
                 </View>
               </TouchableOpacity>
             );
-          })
-        }
-      </ScrollView>
+        }}
+      />
       <View style={s.navFloat}><NavBar /></View>
 
       {/* ── Rich Trip Detail Modal ──────────────────────────────────────── */}

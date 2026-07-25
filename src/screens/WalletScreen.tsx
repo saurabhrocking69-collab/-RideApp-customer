@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Dimensions, Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Dimensions, FlatList, Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { CountUp, DotBG, FadeIn, ScreenIn, ShineCard, SkeletonBox } from '../components/ui';
@@ -97,7 +97,39 @@ export function WalletScreen() {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 36 }}>
+      <FlatList
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 36 }}
+        data={txnsLoading ? [] : filteredTxns}
+        keyExtractor={(t: any, i: number) => String(t.id ?? i)}
+        ListEmptyComponent={
+          txnsLoading ? (
+            <View style={{ marginHorizontal: 16 }}>
+              {[1, 2, 3, 4, 5].map(i => <SkeletonWalletTxn key={i} />)}
+            </View>
+          ) : (
+            <View style={{ alignItems: 'center', padding: 40 }}>
+              <Text style={{ fontSize: 40 }}>💸</Text>
+              <Text style={{ color: C.textDim, marginTop: 10, fontSize: 14 }}>No transactions found</Text>
+            </View>
+          )
+        }
+        renderItem={({ item: t }: { item: any }) => (
+          <View style={{ marginHorizontal: 16, flexDirection: 'row', alignItems: 'center', backgroundColor: C.glass, borderRadius: 16, padding: 14, marginBottom: 8, elevation: 2, borderWidth: 1, borderColor: C.glassBorder }}>
+            <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: t.type === 'credit' ? C.greenGlass : C.redGlass, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1.5, borderColor: t.type === 'credit' ? C.greenBorder : C.redBorder }}>
+              <Text style={{ fontSize: 18, color: t.type === 'credit' ? C.green : C.red, fontWeight: '900' }}>{t.type === 'credit' ? '↓' : '↑'}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, color: C.text, fontWeight: '700' }} numberOfLines={1}>{friendlyTxnLabel(t)}</Text>
+              <Text style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>{fmtDate(t.created_at)}</Text>
+            </View>
+            <Text style={{ fontSize: 16, fontWeight: '900', color: t.type === 'credit' ? C.green : C.red }}>
+              {t.type === 'credit' ? '+' : '–'}₹{parseFloat(t.amount).toFixed(0)}
+            </Text>
+          </View>
+        )}
+        ListHeaderComponent={
+        <>
 
         {/* ── Balance card ── */}
         <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
@@ -201,32 +233,10 @@ export function WalletScreen() {
             </TouchableOpacity>
           ))}
         </View>
-
-        {/* ── Transactions ── */}
-        <View style={{ marginHorizontal: 16, marginTop: 12 }}>
-          {txnsLoading ? (
-            [1, 2, 3, 4, 5].map(i => <SkeletonWalletTxn key={i} />)
-          ) : filteredTxns.length === 0 ? (
-            <View style={{ alignItems: 'center', padding: 40 }}>
-              <Text style={{ fontSize: 40 }}>💸</Text>
-              <Text style={{ color: C.textDim, marginTop: 10, fontSize: 14 }}>No transactions found</Text>
-            </View>
-          ) : filteredTxns.map((t: any, i: number) => (
-            <View key={t.id || i} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: C.glass, borderRadius: 16, padding: 14, marginBottom: 8, elevation: 2, borderWidth: 1, borderColor: C.glassBorder }}>
-              <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: t.type === 'credit' ? C.greenGlass : C.redGlass, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1.5, borderColor: t.type === 'credit' ? C.greenBorder : C.redBorder }}>
-                <Text style={{ fontSize: 18, color: t.type === 'credit' ? C.green : C.red, fontWeight: '900' }}>{t.type === 'credit' ? '↓' : '↑'}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, color: C.text, fontWeight: '700' }} numberOfLines={1}>{friendlyTxnLabel(t)}</Text>
-                <Text style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>{fmtDate(t.created_at)}</Text>
-              </View>
-              <Text style={{ fontSize: 16, fontWeight: '900', color: t.type === 'credit' ? C.green : C.red }}>
-                {t.type === 'credit' ? '+' : '–'}₹{parseFloat(t.amount).toFixed(0)}
-              </Text>
-            </View>
-          ))}
-        </View>
-      </ScrollView>
+        <View style={{ height: 12 }} />
+        </>
+        }
+      />
     </ScreenIn>
   );
 }
