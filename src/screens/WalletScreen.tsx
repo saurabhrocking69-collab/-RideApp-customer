@@ -59,6 +59,18 @@ export function WalletScreen() {
     catch { return d; }
   };
 
+  // Strips internal/technical leakage (raw payment IDs, "(webhook – ...)" notes) out of
+  // whatever description the backend sent — covers old rows too, not just new ones.
+  const friendlyTxnLabel = (t: any): string => {
+    const raw = (t.description || '').trim();
+    if (!raw) return t.type === 'credit' ? 'Credited' : 'Debited';
+    const clean = raw
+      .replace(/\s*\(webhook[^)]*\)/i, '')
+      .replace(/\s*\(pay_[a-zA-Z0-9]+\)/i, '')
+      .trim();
+    return clean || (t.type === 'credit' ? 'Credited' : 'Debited');
+  };
+
   const quickAmounts = [100, 200, 500, 1000, 2000];
 
   return (
@@ -205,7 +217,7 @@ export function WalletScreen() {
                 <Text style={{ fontSize: 18, color: t.type === 'credit' ? C.green : C.red, fontWeight: '900' }}>{t.type === 'credit' ? '↓' : '↑'}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, color: C.text, fontWeight: '700' }} numberOfLines={1}>{t.description || (t.type === 'credit' ? 'Credited' : 'Debited')}</Text>
+                <Text style={{ fontSize: 13, color: C.text, fontWeight: '700' }} numberOfLines={1}>{friendlyTxnLabel(t)}</Text>
                 <Text style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>{fmtDate(t.created_at)}</Text>
               </View>
               <Text style={{ fontSize: 16, fontWeight: '900', color: t.type === 'credit' ? C.green : C.red }}>
