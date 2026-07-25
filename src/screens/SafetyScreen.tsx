@@ -6,12 +6,13 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Storage as AsyncStorage } from '../storage';
 import { useApp } from '../context/AppContext';
-import { DotBG, ScreenIn } from '../components/ui';
-import { s, C } from '../styles';
+import { DotBG, ScreenIn, FadeIn, Bouncy } from '../components/ui';
+import { apiGet, apiPost } from '../../api';
+import { s, C, T, R, SP, SHADOW } from '../styles';
 
-const CONTACTS_KEY = 'sppero_emergency_contacts';
+const CONTACTS_CACHE_KEY = 'sppero_emergency_contacts';
 
-type Contact = { name: string; phone: string };
+type Contact = { id?: number; name: string; phone: string };
 
 // ── Hold-to-SOS button: press 2 s → triggers ─────────────────────────────────
 function HoldSOSButton({ onActivate }: { onActivate: () => void }) {
@@ -63,18 +64,18 @@ function HoldSOSButton({ onActivate }: { onActivate: () => void }) {
         onPressIn={startHold}
         onPressOut={cancelHold}
         style={{
-          width: 130, height: 130, borderRadius: 65,
-          backgroundColor: holding ? 'rgba(239,68,68,0.15)' : C.redGlass,
+          width: 138, height: 138, borderRadius: R.full,
+          backgroundColor: holding ? 'rgba(239,68,68,0.16)' : C.redGlass,
           alignItems: 'center', justifyContent: 'center',
           borderWidth: 3, borderColor: holding ? C.red : C.redBorder,
-          elevation: 10, shadowColor: C.red, shadowOpacity: 0.45, shadowRadius: 16,
+          ...SHADOW.lg, shadowColor: C.red, shadowOpacity: 0.4,
         }}>
         <Animated.View style={{
-          position: 'absolute', inset: 0, borderRadius: 65,
+          position: 'absolute', inset: 0, borderRadius: R.full,
           borderWidth: 4, borderColor: arcColor,
         }} />
-        <Ionicons name="warning" size={38} color={C.red} />
-        <Text style={{ color: C.red, fontWeight: '900', fontSize: 13, marginTop: 4 }}>
+        <Ionicons name="warning" size={40} color={C.red} />
+        <Text style={{ color: C.red, fontWeight: '900', fontSize: 13, marginTop: 5 }}>
           {holding ? `${2 - seconds}s...` : 'Hold for SOS'}
         </Text>
       </TouchableOpacity>
@@ -89,29 +90,29 @@ function ContactRow({ contact, onDelete, onCall, onWhatsApp }: {
 }) {
   return (
     <View style={{
-      backgroundColor: C.glass, borderRadius: 16, padding: 14,
-      marginBottom: 10, borderWidth: 1, borderColor: C.glassBorder,
-      flexDirection: 'row', alignItems: 'center', gap: 10,
-      elevation: 2, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6,
+      backgroundColor: C.bgCard, borderRadius: R.md, padding: SP.md,
+      marginBottom: SP.sm, borderWidth: 1, borderColor: C.glassBorder,
+      flexDirection: 'row', alignItems: 'center', gap: SP.sm,
+      ...SHADOW.sm,
     }}>
       <View style={{
-        width: 42, height: 42, borderRadius: 21,
+        width: 42, height: 42, borderRadius: R.full,
         backgroundColor: C.purpleGlass, alignItems: 'center', justifyContent: 'center',
         borderWidth: 1.5, borderColor: C.purpleBorder,
       }}>
-        <Text style={{ fontSize: 18 }}>👤</Text>
+        <Ionicons name="person" size={18} color={C.purple} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 14, fontWeight: '800', color: C.text }}>{contact.name}</Text>
-        <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 1 }}>{contact.phone}</Text>
+        <Text style={{ ...T.bodyBold, color: C.text }}>{contact.name}</Text>
+        <Text style={{ ...T.caption, color: C.textMuted, marginTop: 1 }}>{contact.phone}</Text>
       </View>
-      <TouchableOpacity onPress={onCall} style={{ padding: 8 }}>
+      <TouchableOpacity onPress={onCall} style={{ padding: 8 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
         <Ionicons name="call" size={18} color={C.green} />
       </TouchableOpacity>
-      <TouchableOpacity onPress={onWhatsApp} style={{ padding: 8 }}>
+      <TouchableOpacity onPress={onWhatsApp} style={{ padding: 8 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
         <Ionicons name="logo-whatsapp" size={18} color="#25D366" />
       </TouchableOpacity>
-      <TouchableOpacity onPress={onDelete} style={{ padding: 8 }}>
+      <TouchableOpacity onPress={onDelete} style={{ padding: 8 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
         <Ionicons name="trash-outline" size={18} color={C.red} />
       </TouchableOpacity>
     </View>
@@ -119,38 +120,53 @@ function ContactRow({ contact, onDelete, onCall, onWhatsApp }: {
 }
 
 export function SafetyScreen() {
-  const { setScreen, setTab, triggerSOS, userCoords } = useApp();
+  const { setScreen, setTab, triggerSOS, userCoords, phone } = useApp();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [showAdd, setShowAdd]   = useState(false);
   const [newName, setNewName]   = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [sosTriggered, setSosTriggered] = useState(false);
+  const [savingContact, setSavingContact] = useState(false);
 
-  useEffect(() => { loadContacts(); }, []);
-
-  const loadContacts = async () => {
-    const raw = await AsyncStorage.getItem(CONTACTS_KEY);
-    if (raw) setContacts(JSON.parse(raw));
-  };
-
-  const saveContacts = async (list: Contact[]) => {
-    setContacts(list);
-    await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(list));
-  };
+  // Show whatever's cached locally instantly, then refresh from the backend —
+  // contacts now live server-side so they survive a reinstall/new device,
+  // the local cache is just for instant paint on this screen.
+  useEffect(() => {
+    (async () => {
+      const raw = await AsyncStorage.getItem(CONTACTS_CACHE_KEY);
+      if (raw) { try { setContacts(JSON.parse(raw)); } catch {} }
+      if (phone) {
+        const d = await apiGet(`/api/emergency-contacts?phone=${phone}`);
+        if (d?.contacts) {
+          const list: Contact[] = d.contacts.map((c: any) => ({ id: c.id, name: c.name, phone: c.contact_phone }));
+          setContacts(list);
+          AsyncStorage.setItem(CONTACTS_CACHE_KEY, JSON.stringify(list)).catch(() => {});
+        }
+      }
+    })();
+  }, [phone]);
 
   const addContact = async () => {
     if (!newName.trim() || !newPhone.trim()) { Alert.alert('', 'Name and number are required'); return; }
     const cleaned = newPhone.replace(/\D/g, '');
     if (cleaned.length < 10) { Alert.alert('', 'Enter a valid mobile number'); return; }
     if (contacts.length >= 3) { Alert.alert('', 'Maximum 3 contacts allowed'); return; }
-    const list = [...contacts, { name: newName.trim(), phone: cleaned }];
-    await saveContacts(list);
+    setSavingContact(true);
+    const d = await apiPost('/api/emergency-contacts/save', { phone, name: newName.trim(), contact_phone: cleaned });
+    setSavingContact(false);
+    if (d?._error || d?.error) { Alert.alert('Could not save', d.error || 'Please try again'); return; }
+    const list = [...contacts, { id: d.contact?.id, name: newName.trim(), phone: cleaned }];
+    setContacts(list);
+    AsyncStorage.setItem(CONTACTS_CACHE_KEY, JSON.stringify(list)).catch(() => {});
     setNewName(''); setNewPhone(''); setShowAdd(false);
   };
 
   const deleteContact = async (i: number) => {
+    const target = contacts[i];
     const list = contacts.filter((_, idx) => idx !== i);
-    await saveContacts(list);
+    setContacts(list);
+    AsyncStorage.setItem(CONTACTS_CACHE_KEY, JSON.stringify(list)).catch(() => {});
+    if (target?.id) apiPost('/api/emergency-contacts/delete', { id: target.id }).catch(() => {});
   };
 
   const handleSOS = async () => {
@@ -169,11 +185,11 @@ export function SafetyScreen() {
   };
 
   const emergencyNumbers = [
-    { label: '🚓 Police',             number: '100',  textColor: '#1565C0', bg: 'rgba(21,101,192,0.08)',  border: 'rgba(21,101,192,0.2)'  },
-    { label: '🚑 Ambulance',          number: '108',  textColor: C.red,    bg: C.redGlass,               border: C.redBorder              },
-    { label: '🚒 Fire Brigade',       number: '101',  textColor: '#E64A19', bg: 'rgba(230,74,25,0.08)',  border: 'rgba(230,74,25,0.22)'   },
-    { label: '👩 Women Helpline',     number: '1091', textColor: C.purple,  bg: C.purpleGlass,            border: C.purpleBorder           },
-    { label: '📞 National Emergency', number: '112',  textColor: C.green,   bg: C.greenGlass,             border: C.greenBorder            },
+    { label: 'Police',             icon: 'shield',       number: '100',  textColor: '#1565C0', bg: 'rgba(21,101,192,0.08)',  border: 'rgba(21,101,192,0.2)'  },
+    { label: 'Ambulance',          icon: 'medical',       number: '108',  textColor: C.red,    bg: C.redGlass,               border: C.redBorder              },
+    { label: 'Fire Brigade',       icon: 'flame',         number: '101',  textColor: '#E64A19', bg: 'rgba(230,74,25,0.08)',  border: 'rgba(230,74,25,0.22)'   },
+    { label: 'Women Helpline',     icon: 'woman',         number: '1091', textColor: C.purple,  bg: C.purpleGlass,            border: C.purpleBorder           },
+    { label: 'National Emergency', icon: 'call',          number: '112',  textColor: C.green,   bg: C.greenGlass,             border: C.greenBorder            },
   ];
 
   return (
@@ -187,147 +203,172 @@ export function SafetyScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: SP.md, paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
 
         {/* ── SOS Hero ── */}
-        <View style={{
-          backgroundColor: sosTriggered ? 'rgba(239,68,68,0.18)' : C.redGlass,
-          borderRadius: 28, padding: 24, alignItems: 'center', marginBottom: 20,
-          elevation: 8, borderWidth: 2,
-          borderColor: sosTriggered ? C.red : C.redBorder,
-          shadowColor: C.red, shadowOpacity: 0.35, shadowRadius: 16,
-        }}>
-          <Text style={{ color: C.red, fontSize: 20, fontWeight: '900', marginBottom: 4 }}>
-            🆘 Emergency SOS
-          </Text>
-          <Text style={{ color: C.textMuted, fontSize: 12, textAlign: 'center', marginBottom: 22 }}>
-            {contacts.length > 0
-              ? `${contacts.length} emergency contact${contacts.length > 1 ? 's' : ''} set — hold 2 seconds to activate`
-              : 'Add emergency contacts below first'}
-          </Text>
-          <HoldSOSButton onActivate={handleSOS} />
-          {sosTriggered && (
-            <View style={{ marginTop: 16, backgroundColor: C.red, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 10 }}>
-              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 13 }}>🆘 Alert sent! Police: 100</Text>
-            </View>
-          )}
-        </View>
+        <FadeIn>
+          <View style={{
+            backgroundColor: sosTriggered ? 'rgba(239,68,68,0.18)' : C.redGlass,
+            borderRadius: R.xl, padding: SP.lg, alignItems: 'center', marginBottom: SP.lg,
+            borderWidth: 2, borderColor: sosTriggered ? C.red : C.redBorder,
+            ...SHADOW.lg, shadowColor: C.red, shadowOpacity: 0.35,
+          }}>
+            <Text style={{ color: C.red, ...T.title, marginBottom: 4 }}>
+              🆘 Emergency SOS
+            </Text>
+            <Text style={{ color: C.textMuted, ...T.caption, textAlign: 'center', marginBottom: SP.lg, textTransform: 'none', letterSpacing: 0 }}>
+              {contacts.length > 0
+                ? `${contacts.length} emergency contact${contacts.length > 1 ? 's' : ''} set — hold 2 seconds to activate`
+                : 'Add emergency contacts below first'}
+            </Text>
+            <HoldSOSButton onActivate={handleSOS} />
+            {sosTriggered && (
+              <View style={{ marginTop: SP.md, backgroundColor: C.red, borderRadius: R.sm, paddingHorizontal: 20, paddingVertical: 10 }}>
+                <Text style={{ color: '#fff', fontWeight: '900', fontSize: 13 }}>🆘 Alert sent! Police: 100</Text>
+              </View>
+            )}
+          </View>
+        </FadeIn>
 
         {/* ── Emergency Contacts ── */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <Text style={{ fontSize: 13, fontWeight: '800', color: C.textMuted, letterSpacing: 1 }}>
-            EMERGENCY CONTACTS ({contacts.length}/3)
-          </Text>
-          {contacts.length < 3 && (
-            <TouchableOpacity onPress={() => setShowAdd(p => !p)} style={{
-              backgroundColor: C.pink, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6,
-              flexDirection: 'row', alignItems: 'center', gap: 4,
+        <FadeIn delay={80}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SP.sm }}>
+            <Text style={{ ...T.label, color: C.textMuted }}>
+              EMERGENCY CONTACTS ({contacts.length}/3)
+            </Text>
+            {contacts.length < 3 && (
+              <Bouncy onPress={() => setShowAdd(p => !p)}>
+                <View style={{
+                  backgroundColor: C.pink, borderRadius: R.full, paddingHorizontal: 14, paddingVertical: 6,
+                  flexDirection: 'row', alignItems: 'center', gap: 4,
+                }}>
+                  <Ionicons name={showAdd ? 'close' : 'add'} size={14} color="#fff" />
+                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>{showAdd ? 'Cancel' : 'Add'}</Text>
+                </View>
+              </Bouncy>
+            )}
+          </View>
+
+          {contacts.length === 0 && !showAdd && (
+            <TouchableOpacity onPress={() => setShowAdd(true)} style={{
+              backgroundColor: C.pinkGlass, borderRadius: R.md, padding: SP.lg,
+              alignItems: 'center', marginBottom: SP.sm, borderWidth: 1.5,
+              borderColor: C.pinkBorder, borderStyle: 'dashed',
             }}>
-              <Ionicons name={showAdd ? 'close' : 'add'} size={14} color="#fff" />
-              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>{showAdd ? 'Cancel' : 'Add'}</Text>
+              <Ionicons name="person-add" size={28} color={C.pink} />
+              <Text style={{ color: C.pink, fontWeight: '800', fontSize: 14, marginTop: 8 }}>Add Emergency Contact</Text>
+              <Text style={{ color: C.textMuted, ...T.caption, marginTop: 4, textAlign: 'center', textTransform: 'none', letterSpacing: 0 }}>
+                They'll receive a WhatsApp & your location when you trigger SOS
+              </Text>
             </TouchableOpacity>
           )}
-        </View>
 
-        {contacts.length === 0 && !showAdd && (
-          <TouchableOpacity onPress={() => setShowAdd(true)} style={{
-            backgroundColor: C.pinkGlass, borderRadius: 16, padding: 20,
-            alignItems: 'center', marginBottom: 12, borderWidth: 1.5,
-            borderColor: C.pinkBorder, borderStyle: 'dashed',
-          }}>
-            <Ionicons name="person-add" size={28} color={C.pink} />
-            <Text style={{ color: C.pink, fontWeight: '800', fontSize: 14, marginTop: 8 }}>Add Emergency Contact</Text>
-            <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 4, textAlign: 'center' }}>
-              They'll receive a WhatsApp & your location when you trigger SOS
-            </Text>
-          </TouchableOpacity>
-        )}
-
-        {showAdd && (
-          <View style={{
-            backgroundColor: C.glass, borderRadius: 20, padding: 16,
-            marginBottom: 14, borderWidth: 1, borderColor: C.glassBorder,
-            elevation: 4, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8,
-          }}>
-            <Text style={{ fontSize: 14, fontWeight: '800', color: C.text, marginBottom: 12 }}>➕ New Contact</Text>
-            <TextInput
-              value={newName} onChangeText={setNewName}
-              placeholder="Name (e.g. Mom, Brother)" placeholderTextColor={C.textDim}
-              style={{
-                backgroundColor: C.glassMid, borderRadius: 12, padding: 13,
-                fontSize: 14, color: C.text, marginBottom: 10,
-                borderWidth: 1, borderColor: C.glassBorder,
-              }} />
-            <TextInput
-              value={newPhone} onChangeText={setNewPhone}
-              placeholder="Mobile number (10 digits)" placeholderTextColor={C.textDim}
-              keyboardType="phone-pad" maxLength={13}
-              style={{
-                backgroundColor: C.glassMid, borderRadius: 12, padding: 13,
-                fontSize: 14, color: C.text, marginBottom: 14,
-                borderWidth: 1, borderColor: C.glassBorder,
-              }} />
-            <TouchableOpacity onPress={addContact} style={{
-              backgroundColor: C.pink, borderRadius: 14, padding: 14,
-              alignItems: 'center', elevation: 4, shadowColor: C.pink, shadowOpacity: 0.4, shadowRadius: 8,
+          {showAdd && (
+            <View style={{
+              backgroundColor: C.bgCard, borderRadius: R.md, padding: SP.md,
+              marginBottom: SP.md, borderWidth: 1, borderColor: C.glassBorder,
+              ...SHADOW.sm,
             }}>
-              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>Save Contact</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+              <Text style={{ ...T.bodyBold, color: C.text, marginBottom: SP.sm }}>➕ New Contact</Text>
+              <TextInput
+                value={newName} onChangeText={setNewName}
+                placeholder="Name (e.g. Mom, Brother)" placeholderTextColor={C.textDim}
+                style={{
+                  backgroundColor: C.glassMid, borderRadius: R.sm, padding: 13,
+                  fontSize: 14, color: C.text, marginBottom: SP.sm,
+                  borderWidth: 1, borderColor: C.glassBorder,
+                }} />
+              <TextInput
+                value={newPhone} onChangeText={setNewPhone}
+                placeholder="Mobile number (10 digits)" placeholderTextColor={C.textDim}
+                keyboardType="phone-pad" maxLength={13}
+                style={{
+                  backgroundColor: C.glassMid, borderRadius: R.sm, padding: 13,
+                  fontSize: 14, color: C.text, marginBottom: SP.md,
+                  borderWidth: 1, borderColor: C.glassBorder,
+                }} />
+              <Bouncy onPress={savingContact ? undefined : addContact}>
+                <View style={{
+                  backgroundColor: C.pink, borderRadius: R.sm, padding: 14,
+                  alignItems: 'center', ...SHADOW.pink,
+                  opacity: savingContact ? 0.7 : 1,
+                }}>
+                  <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>{savingContact ? 'Saving…' : 'Save Contact'}</Text>
+                </View>
+              </Bouncy>
+            </View>
+          )}
 
-        {contacts.map((c, i) => (
-          <ContactRow
-            key={i} contact={c}
-            onDelete={() => deleteContact(i)}
-            onCall={() => callContact(c)}
-            onWhatsApp={() => whatsappContact(c)}
-          />
-        ))}
+          {contacts.map((c, i) => (
+            <ContactRow
+              key={c.id ?? i} contact={c}
+              onDelete={() => deleteContact(i)}
+              onCall={() => callContact(c)}
+              onWhatsApp={() => whatsappContact(c)}
+            />
+          ))}
+        </FadeIn>
 
         {/* ── Emergency Numbers ── */}
-        <Text style={{ fontSize: 13, fontWeight: '800', color: C.textMuted, letterSpacing: 1, marginTop: 8, marginBottom: 12 }}>
-          HELPLINE NUMBERS
-        </Text>
-        {emergencyNumbers.map((item, i) => (
-          <TouchableOpacity key={i} onPress={() => Linking.openURL(`tel:${item.number}`)}
-            style={{
-              backgroundColor: item.bg, borderRadius: 16, padding: 14, marginBottom: 10,
-              flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-              elevation: 2, borderWidth: 1, borderColor: item.border,
-            }}>
-            <View>
-              <Text style={{ fontSize: 14, fontWeight: '700', color: C.text }}>{item.label}</Text>
-              <Text style={{ fontSize: 24, fontWeight: '900', color: item.textColor, marginTop: 2 }}>{item.number}</Text>
-            </View>
-            <View style={{ backgroundColor: item.textColor, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10 }}>
-              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 13 }}>📞 Call</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+        <FadeIn delay={160}>
+          <Text style={{ ...T.label, color: C.textMuted, marginTop: SP.sm, marginBottom: SP.sm }}>
+            HELPLINE NUMBERS
+          </Text>
+          {emergencyNumbers.map((item, i) => (
+            <Bouncy key={i} onPress={() => Linking.openURL(`tel:${item.number}`)}>
+              <View
+                style={{
+                  backgroundColor: item.bg, borderRadius: R.md, padding: SP.md, marginBottom: SP.sm,
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                  borderWidth: 1, borderColor: item.border,
+                }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <View style={{
+                    width: 38, height: 38, borderRadius: R.full,
+                    backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
+                    borderWidth: 1, borderColor: item.border,
+                  }}>
+                    <Ionicons name={item.icon as any} size={18} color={item.textColor} />
+                  </View>
+                  <View>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: C.text }}>{item.label}</Text>
+                    <Text style={{ fontSize: 22, fontWeight: '900', color: item.textColor, marginTop: 2 }}>{item.number}</Text>
+                  </View>
+                </View>
+                <View style={{ backgroundColor: item.textColor, borderRadius: R.sm, paddingHorizontal: 16, paddingVertical: 10 }}>
+                  <Text style={{ color: '#fff', fontWeight: '900', fontSize: 13 }}>📞 Call</Text>
+                </View>
+              </View>
+            </Bouncy>
+          ))}
+        </FadeIn>
 
         {/* ── Safety Tips ── */}
-        <Text style={{ fontSize: 13, fontWeight: '800', color: C.textMuted, letterSpacing: 1, marginTop: 8, marginBottom: 12 }}>
-          SAFETY TIPS
-        </Text>
-        <View style={{
-          backgroundColor: C.glass, borderRadius: 20, overflow: 'hidden',
-          elevation: 2, borderWidth: 1, borderColor: C.glassBorder,
-        }}>
-          {[
-            '✅ Verify driver name and vehicle number before boarding',
-            '✅ Share your location with family — send Live Location on WhatsApp',
-            '✅ At night, prefer the back seat for added safety',
-            '✅ Do not pay before the trip is complete',
-            '✅ If anything feels wrong — hold SOS, alert fires in 2 seconds',
-          ].map((tip, i, arr) => (
-            <Text key={i} style={{
-              fontSize: 13, color: C.textMuted, padding: 14,
-              borderBottomWidth: i < arr.length - 1 ? 1 : 0, borderBottomColor: C.glassBorder,
-              lineHeight: 20,
-            }}>{tip}</Text>
-          ))}
-        </View>
+        <FadeIn delay={240}>
+          <Text style={{ ...T.label, color: C.textMuted, marginTop: SP.sm, marginBottom: SP.sm }}>
+            SAFETY TIPS
+          </Text>
+          <View style={{
+            backgroundColor: C.bgCard, borderRadius: R.md, overflow: 'hidden',
+            borderWidth: 1, borderColor: C.glassBorder, ...SHADOW.sm,
+          }}>
+            {[
+              'Verify driver name and vehicle number before boarding',
+              'Share your location with family — send Live Location on WhatsApp',
+              'At night, prefer the back seat for added safety',
+              'Do not pay before the trip is complete',
+              'If anything feels wrong — hold SOS, alert fires in 2 seconds',
+            ].map((tip, i, arr) => (
+              <View key={i} style={{
+                flexDirection: 'row', gap: 10, padding: 14,
+                borderBottomWidth: i < arr.length - 1 ? 1 : 0, borderBottomColor: C.glassBorder,
+              }}>
+                <Ionicons name="checkmark-circle" size={16} color={C.green} style={{ marginTop: 1 }} />
+                <Text style={{ flex: 1, fontSize: 13, color: C.textMuted, lineHeight: 20 }}>{tip}</Text>
+              </View>
+            ))}
+          </View>
+        </FadeIn>
       </ScrollView>
     </ScreenIn>
   );

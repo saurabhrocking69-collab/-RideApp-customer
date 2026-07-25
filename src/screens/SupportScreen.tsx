@@ -1,20 +1,26 @@
-import { ScrollView, View, Text, TouchableOpacity, Linking } from 'react-native';
+import { useState } from 'react';
+import { LayoutAnimation, Platform, ScrollView, UIManager, View, Text, TouchableOpacity, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
-import { DotBG, ScreenIn } from '../components/ui';
-import { s, C } from '../styles';
+import { DotBG, ScreenIn, FadeIn, Bouncy } from '../components/ui';
+import { s, C, T, R, SP, SHADOW } from '../styles';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export function SupportScreen() {
-  const {
-    setScreen, setTab,
-  } = useApp();
+  const { setScreen, setTab } = useApp();
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
 
+  // TODO: swap in the real support number/WhatsApp/email before launch —
+  // these are still placeholder values.
   const supportOptions = [
-    { icon: '🎫', label: 'Raise a Ticket', sub: 'Report an issue formally', color: C.pink, bg: C.pinkGlass, border: C.pinkBorder, action: () => setScreen('ticket-new') },
-    { icon: '📋', label: 'My Tickets', sub: 'Track existing issues', color: '#3B82F6', bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.25)', action: () => setScreen('tickets') },
-    { icon: '💬', label: 'WhatsApp', sub: 'Fastest response', color: '#25D366', bg: 'rgba(37,211,102,0.12)', border: 'rgba(37,211,102,0.35)', action: () => Linking.openURL('https://wa.me/919999999999?text=Hi%20Sppero%20Support') },
-    { icon: '📞', label: 'Helpline Call', sub: '24/7 available', color: C.purple, bg: C.glassMid, border: C.glassBorder, action: () => Linking.openURL('tel:9999999999') },
-    { icon: '📧', label: 'Email Support', sub: 'Response in 24 hrs', color: C.pink, bg: C.pinkGlass, border: C.pinkBorder, action: () => Linking.openURL('mailto:support@sppero.com') },
+    { icon: 'ticket',           label: 'Raise a Ticket', sub: 'Report an issue formally', color: C.pink,   bg: C.pinkGlass,               border: C.pinkBorder,               action: () => setScreen('ticket-new') },
+    { icon: 'list',             label: 'My Tickets',     sub: 'Track existing issues',    color: '#3B82F6', bg: 'rgba(59,130,246,0.08)',  border: 'rgba(59,130,246,0.25)',    action: () => setScreen('tickets') },
+    { icon: 'logo-whatsapp',    label: 'WhatsApp',       sub: 'Fastest response',         color: '#25D366', bg: 'rgba(37,211,102,0.12)',  border: 'rgba(37,211,102,0.35)',    action: () => Linking.openURL('https://wa.me/919999999999?text=Hi%20Sppero%20Support') },
+    { icon: 'call',             label: 'Helpline Call',  sub: '24/7 available',           color: C.purple,  bg: C.glassMid,                border: C.glassBorder,              action: () => Linking.openURL('tel:9999999999') },
+    { icon: 'mail',             label: 'Email Support',  sub: 'Response in 24 hrs',        color: C.pink,   bg: C.pinkGlass,               border: C.pinkBorder,               action: () => Linking.openURL('mailto:support@sppero.com') },
   ];
 
   const faqs = [
@@ -25,6 +31,11 @@ export function SupportScreen() {
     ['How do I delete my account?', 'Email support@sppero.com — it will be deleted within 7 days.'],
   ];
 
+  const toggleFaq = (i: number) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setOpenFaq(p => (p === i ? null : i));
+  };
+
   return (
     <ScreenIn style={s.screen}>
       <DotBG />
@@ -33,34 +44,81 @@ export function SupportScreen() {
         <Text style={s.topTitle}>📞 Support</Text>
         <View style={{ width: 40 }} />
       </View>
-      <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 40 }}>
-        <View style={{ backgroundColor: C.bgCard, borderRadius: 22, padding: 20, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor: C.glassBorder, elevation: 4 }}>
-          <Text style={{ fontSize: 36, marginBottom: 8 }}>🎧</Text>
-          <Text style={{ color: C.text, fontSize: 18, fontWeight: '900' }}>Sppero Support</Text>
-          <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 4, textAlign: 'center' }}>Contact us for 24/7 help</Text>
-        </View>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: SP.md, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
 
-        {supportOptions.map((item, i) => (
-          <TouchableOpacity key={i} onPress={item.action}
-            style={{ backgroundColor: item.bg, borderRadius: 18, padding: 18, marginBottom: 12, flexDirection: 'row', alignItems: 'center', elevation: 2, borderWidth: 1, borderColor: item.border }}>
-            <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: `${item.color}22`, alignItems: 'center', justifyContent: 'center', marginRight: 16, borderWidth: 1, borderColor: item.border }}>
-              <Text style={{ fontSize: 24 }}>{item.icon}</Text>
+        <FadeIn>
+          <View style={{
+            backgroundColor: C.bgCard, borderRadius: R.xl, padding: SP.lg, marginBottom: SP.md,
+            alignItems: 'center', borderWidth: 1, borderColor: C.glassBorder, ...SHADOW.md,
+          }}>
+            <View style={{
+              width: 60, height: 60, borderRadius: R.full, backgroundColor: C.pinkGlass,
+              alignItems: 'center', justifyContent: 'center', marginBottom: SP.sm,
+              borderWidth: 1.5, borderColor: C.pinkBorder,
+            }}>
+              <Ionicons name="headset" size={28} color={C.pink} />
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>{item.label}</Text>
-              <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>{item.sub}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={C.textDim} />
-          </TouchableOpacity>
-        ))}
-
-        <Text style={{ fontSize: 13, fontWeight: '800', color: C.textMuted, letterSpacing: 1, marginTop: 8, marginBottom: 10 }}>FREQUENTLY ASKED QUESTIONS</Text>
-        {faqs.map(([q, a], i) => (
-          <View key={i} style={{ backgroundColor: C.glass, borderRadius: 16, padding: 16, marginBottom: 10, elevation: 1, borderWidth: 1, borderColor: C.glassBorder }}>
-            <Text style={{ fontSize: 13, fontWeight: '800', color: C.text, marginBottom: 6 }}>❓ {q}</Text>
-            <Text style={{ fontSize: 12, color: C.textMuted, lineHeight: 18 }}>{a}</Text>
+            <Text style={{ color: C.text, ...T.title }}>Sppero Support</Text>
+            <Text style={{ color: C.textMuted, ...T.caption, marginTop: 4, textAlign: 'center', textTransform: 'none', letterSpacing: 0 }}>
+              Contact us for 24/7 help
+            </Text>
           </View>
-        ))}
+        </FadeIn>
+
+        <FadeIn delay={60}>
+          {supportOptions.map((item, i) => (
+            <Bouncy key={i} onPress={item.action}>
+              <View style={{
+                backgroundColor: item.bg, borderRadius: R.md, padding: SP.md, marginBottom: SP.sm,
+                flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: item.border,
+              }}>
+                <View style={{
+                  width: 48, height: 48, borderRadius: R.full, backgroundColor: `${item.color}1F`,
+                  alignItems: 'center', justifyContent: 'center', marginRight: SP.md,
+                  borderWidth: 1, borderColor: item.border,
+                }}>
+                  <Ionicons name={item.icon as any} size={22} color={item.color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ ...T.bodyBold, color: C.text }}>{item.label}</Text>
+                  <Text style={{ ...T.caption, color: C.textMuted, marginTop: 2, textTransform: 'none', letterSpacing: 0 }}>{item.sub}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={C.textDim} />
+              </View>
+            </Bouncy>
+          ))}
+        </FadeIn>
+
+        <FadeIn delay={120}>
+          <Text style={{ ...T.label, color: C.textMuted, marginTop: SP.sm, marginBottom: SP.sm }}>
+            FREQUENTLY ASKED QUESTIONS
+          </Text>
+          <View style={{
+            backgroundColor: C.bgCard, borderRadius: R.md, overflow: 'hidden',
+            borderWidth: 1, borderColor: C.glassBorder, ...SHADOW.sm,
+          }}>
+            {faqs.map(([q, a], i) => {
+              const open = openFaq === i;
+              return (
+                <View key={i} style={{ borderBottomWidth: i < faqs.length - 1 ? 1 : 0, borderBottomColor: C.glassBorder }}>
+                  <TouchableOpacity
+                    onPress={() => toggleFaq(i)}
+                    activeOpacity={0.7}
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: SP.md, gap: SP.sm }}
+                  >
+                    <Text style={{ flex: 1, ...T.bodyBold, fontSize: 13, color: C.text }}>{q}</Text>
+                    <Ionicons name={open ? 'remove-circle' : 'add-circle'} size={20} color={open ? C.pink : C.textDim} />
+                  </TouchableOpacity>
+                  {open && (
+                    <Text style={{ fontSize: 12, color: C.textMuted, lineHeight: 18, paddingHorizontal: SP.md, paddingBottom: SP.md }}>
+                      {a}
+                    </Text>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        </FadeIn>
       </ScrollView>
     </ScreenIn>
   );
