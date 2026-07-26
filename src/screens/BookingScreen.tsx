@@ -932,46 +932,6 @@ export function BookingScreen() {
                 padding: 18,
                 paddingBottom: hasDropDown ? 12 : 18,
               }}>
-                {/* ── Quick access — Home / Office. These are DESTINATION shortcuts, so
-                       they (and the rest of the drop step below) only appear once
-                       pickup is actually chosen — until then this is a dedicated
-                       full-height/width pickup search, no other step competing
-                       for space, per the "one step at a time" ask. ── */}
-                {!!pickupCoords && (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 12 }}>
-                  {savedPlaces.home ? (
-                    <TouchableOpacity
-                      onPress={() => selectSaved(savedPlaces.home!)}
-                      style={{ flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: C.glassMid, borderRadius: R.full, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: C.glassBorder }}>
-                      <Text style={{ fontSize: 15 }}>🏠</Text>
-                      <Text style={{ fontSize: 13.5, fontWeight: '800', color: C.text }}>Home</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity
-                      onPress={() => { setSaveTarget(null); setShowSavePicker(true); }}
-                      style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: R.full, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: C.glassBorder, borderStyle: 'dashed' }}>
-                      <Ionicons name="add" size={15} color={C.textMuted} />
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: C.textMuted }}>Add Home</Text>
-                    </TouchableOpacity>
-                  )}
-                  {savedPlaces.office ? (
-                    <TouchableOpacity
-                      onPress={() => selectSaved(savedPlaces.office!)}
-                      style={{ flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: C.glassMid, borderRadius: R.full, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: C.glassBorder }}>
-                      <Text style={{ fontSize: 15 }}>🏢</Text>
-                      <Text style={{ fontSize: 13.5, fontWeight: '800', color: C.text }}>Office</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity
-                      onPress={() => { setSaveTarget(null); setShowSavePicker(true); }}
-                      style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: R.full, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: C.glassBorder, borderStyle: 'dashed' }}>
-                      <Ionicons name="add" size={15} color={C.textMuted} />
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: C.textMuted }}>Add Office</Text>
-                    </TouchableOpacity>
-                  )}
-                </ScrollView>
-                )}
-
                 {/* ── "Near me" category search — Hospital/Hotel/Police/... near pickup ── */}
                 {!!pickupCoords && (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 12 }}>
@@ -1212,13 +1172,53 @@ export function BookingScreen() {
 
                   {showDropHist && (
                     <>
-                      {/* ── Recent destinations (max 3) — Home/Office are always-visible chips above now ── */}
+                      {/* ── Recent-destinations header row doubles as the Home/Office
+                             quick-access slot — same line, spare space on the right,
+                             instead of a whole separate row above the input. ── */}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 6, gap: 6 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          {dropHistory.length > 0 && (
+                            <>
+                              <Ionicons name="time" size={12} color={C.textMuted} />
+                              <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: '900', letterSpacing: 1.2 }}>RECENT</Text>
+                            </>
+                          )}
+                        </View>
+                        <View style={{ flexDirection: 'row', gap: 6 }}>
+                          {savedPlaces.home ? (
+                            <TouchableOpacity
+                              onPress={() => selectSaved(savedPlaces.home!)}
+                              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.glassMid, borderRadius: R.full, paddingHorizontal: 9, paddingVertical: 5, borderWidth: 1, borderColor: C.glassBorder }}>
+                              <Text style={{ fontSize: 12 }}>🏠</Text>
+                              <Text style={{ fontSize: 11, fontWeight: '800', color: C.text }}>Home</Text>
+                            </TouchableOpacity>
+                          ) : (
+                            <TouchableOpacity
+                              onPress={() => { setSaveTarget(null); setShowSavePicker(true); }}
+                              style={{ flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: R.full, paddingHorizontal: 9, paddingVertical: 5, borderWidth: 1, borderColor: C.glassBorder, borderStyle: 'dashed' }}>
+                              <Ionicons name="add" size={12} color={C.textMuted} />
+                              <Text style={{ fontSize: 10.5, fontWeight: '700', color: C.textMuted }}>Home</Text>
+                            </TouchableOpacity>
+                          )}
+                          {savedPlaces.office ? (
+                            <TouchableOpacity
+                              onPress={() => selectSaved(savedPlaces.office!)}
+                              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.glassMid, borderRadius: R.full, paddingHorizontal: 9, paddingVertical: 5, borderWidth: 1, borderColor: C.glassBorder }}>
+                              <Text style={{ fontSize: 12 }}>🏢</Text>
+                              <Text style={{ fontSize: 11, fontWeight: '800', color: C.text }}>Office</Text>
+                            </TouchableOpacity>
+                          ) : (
+                            <TouchableOpacity
+                              onPress={() => { setSaveTarget(null); setShowSavePicker(true); }}
+                              style={{ flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: R.full, paddingHorizontal: 9, paddingVertical: 5, borderWidth: 1, borderColor: C.glassBorder, borderStyle: 'dashed' }}>
+                              <Ionicons name="add" size={12} color={C.textMuted} />
+                              <Text style={{ fontSize: 10.5, fontWeight: '700', color: C.textMuted }}>Office</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      </View>
                       {dropHistory.length > 0 && (
                         <>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 6, gap: 6 }}>
-                            <Ionicons name="time" size={12} color={C.textMuted} />
-                            <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: '900', letterSpacing: 1.2 }}>RECENT</Text>
-                          </View>
                           {dropHistory.slice(0, 3).map((h, i) => (
                             <TouchableOpacity key={i}
                               activeOpacity={0.75}
