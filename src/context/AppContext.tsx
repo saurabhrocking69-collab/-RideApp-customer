@@ -239,7 +239,7 @@ interface AppContextType {
   surgeFareNow: (amount: number) => Promise<void>;
   switchVehicle: (newType: string) => Promise<void>;
   searchPlaces: (text: string, type: 'pickup'|'drop') => void;
-  searchNearbyCategory: (category: string, type: 'pickup'|'drop') => void;
+  searchNearbyCategory: (category: string | string[], type: 'pickup'|'drop') => void;
   geocodePlace: (address: string, type: 'pickup'|'drop') => Promise<void>;
   swapLocations: () => void;
   fetchEtaByCoords: (pc: any, dc: any) => Promise<void>;
@@ -1633,7 +1633,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // same Autocomplete endpoint as searchPlaces (no separate Nearby Search billing),
   // just biased tightly to the actual pickup/user location with strictbounds so
   // results stay genuinely close instead of the loose 50km relevance bias above.
-  const searchNearbyCategory = (category: string, type: 'pickup' | 'drop') => {
+  //
+  // Accepts multiple query variants per category because Autocomplete matches
+  // literal name text, not a place "type" — e.g. Indian police stations are
+  // almost always named "Thana" on Maps, not "Police Station", so a single
+  // English query can silently miss the actual nearest match. Variants are
+  // queried in parallel and merged, deduped by place_id, sorted by distance.
+  const searchNearbyCategory = (category: string | string[], type: 'pickup' | 'drop') => {
     const originCoords = type === 'drop'
       ? (pickupCoords || (userCoords
           ? { lat: (userCoords as any).latitude ?? (userCoords as any).lat, lng: (userCoords as any).longitude ?? (userCoords as any).lng }
@@ -1642,18 +1648,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           ? { lat: (userCoords as any).latitude ?? (userCoords as any).lat, lng: (userCoords as any).longitude ?? (userCoords as any).lng }
           : null);
     if (!originCoords?.lat) return;
+    const variants = Array.isArray(category) ? category : [category];
     (async () => {
       try {
-        const res = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(category)}&key=${MAPS_KEY}&components=country:in&location=${originCoords.lat},${originCoords.lng}&radius=6000&strictbounds=true&origin=${originCoords.lat},${originCoords.lng}`);
-        const data = await res.json();
-        const sugg = data.predictions?.map((p: any) => ({
-          id:         p.place_id,
-          text:       p.description,
-          main:       p.structured_formatting?.main_text      || p.description.split(',')[0],
-          secondary:  p.structured_formatting?.secondary_text || p.description.split(',').slice(1).join(',').trim(),
-          distance_m: p.distance_meters ?? null,
-        })) || [];
-        type === 'pickup' ? setPickupSugg(sugg) : setDropSugg(sugg);
+        const results = await Promise.all(variants.map(v =>
+          fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(v)}&key=${MAPS_KEY}&components=country:in&location=${originCoords.lat},${originCoords.lng}&radius=6000&strictbounds=true&origin=${originCoords.lat},${originCoords.lng}`)
+            .then(r => r.json()).catch(() => ({ predictions: [] }))
+        ));
+        const seen = new Set<string>();
+        const merged = results
+          .flatMap(data => data.predictions || [])
+          .filter((p: any) => (p.place_id && !seen.has(p.place_id)) ? (seen.add(p.place_id), true) : false)
+          .sort((a: any, b: any) => (a.distance_meters ?? Infinity) - (b.distance_meters ?? Infinity))
+          .slice(0, 8)
+          .map((p: any) => ({
+            id:         p.place_id,
+            text:       p.description,
+            main:       p.structured_formatting?.main_text      || p.description.split(',')[0],
+            secondary:  p.structured_formatting?.secondary_text || p.description.split(',').slice(1).join(',').trim(),
+            distance_m: p.distance_meters ?? null,
+          }));
+        type === 'pickup' ? setPickupSugg(merged) : setDropSugg(merged);
       } catch (_e) {}
     })();
   };

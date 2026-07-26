@@ -975,15 +975,21 @@ export function BookingScreen() {
                 {!!pickupCoords && (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 12 }}>
                   {([
-                    { icon: '🏥', label: 'Hospital',    q: 'Hospital' },
-                    { icon: '🏨', label: 'Hotel',       q: 'Hotel' },
-                    { icon: '👮', label: 'Police',      q: 'Police Station' },
-                    { icon: '🏛️', label: 'Tourist',     q: 'Tourist Place' },
-                    { icon: '🏧', label: 'ATM',         q: 'ATM' },
-                    { icon: '⛽', label: 'Petrol Pump', q: 'Petrol Pump' },
-                    { icon: '🚉', label: 'Railway',     q: 'Railway Station' },
-                    { icon: '🚌', label: 'Bus Stand',   q: 'Bus Stand' },
-                    { icon: '🛍️', label: 'Mall',        q: 'Shopping Mall' },
+                    { icon: '🏥', label: 'Hospital',    q: 'Hospital' as string | string[] },
+                    { icon: '🏨', label: 'Hotel',       q: 'Hotel' as string | string[] },
+                    // Indian police stations are almost always named "Thana" on Maps,
+                    // not "Police Station" — query both so the actual nearest match
+                    // (whichever way it's named) is never silently missed.
+                    { icon: '👮', label: 'Police',      q: ['Police Station', 'Thana'] as string | string[] },
+                    // "Tourist Place"/"Attraction"/"Monument" all return zero results —
+                    // nothing is literally named that. "Park" is the closest generic
+                    // term that reliably matches real nearby leisure/tourist spots.
+                    { icon: '🏛️', label: 'Tourist',     q: 'Park' as string | string[] },
+                    { icon: '🏧', label: 'ATM',         q: 'ATM Bank' as string | string[] },
+                    { icon: '⛽', label: 'Petrol Pump', q: 'Petrol Pump' as string | string[] },
+                    { icon: '🚉', label: 'Railway',     q: 'Railway Station' as string | string[] },
+                    { icon: '🚌', label: 'Bus Stand',   q: 'Bus Stop' as string | string[] },
+                    { icon: '🛍️', label: 'Mall',        q: 'Mall' as string | string[] },
                   ]).map(cat => (
                     <TouchableOpacity
                       key={cat.label}
