@@ -802,10 +802,10 @@ function PulseDot() {
   return (
     <View style={{ width: 10, height: 10, alignItems: 'center', justifyContent: 'center' }}>
       <Animated.View style={{ position: 'absolute', width: 10, height: 10, borderRadius: 5,
-        borderWidth: 1.5, borderColor: C.green, transform: [{ scale: r1 }], opacity: o1 }} />
+        borderWidth: 1.5, borderColor: C.yellow, transform: [{ scale: r1 }], opacity: o1 }} />
       <Animated.View style={{ position: 'absolute', width: 10, height: 10, borderRadius: 5,
-        borderWidth: 1, borderColor: C.green, transform: [{ scale: r2 }], opacity: o2 }} />
-      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.green }} />
+        borderWidth: 1, borderColor: C.yellow, transform: [{ scale: r2 }], opacity: o2 }} />
+      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.yellow }} />
     </View>
   );
 }
