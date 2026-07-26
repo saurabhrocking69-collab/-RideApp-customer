@@ -890,8 +890,6 @@ function HomeTab() {
     screen,
     userCoords,
     setRideType,
-    setDropCoords, setFareEstimates, setEta, lastFetchKey, searchNearbyCategory,
-    pickupCoords, useMyLocation,
   } = useApp();
 
   // Buddy Fund
@@ -1133,36 +1131,24 @@ function HomeTab() {
           </TouchableOpacity>
         </View>
 
-        {/* 2a. ── "New in the city?" quick nearby-places list — one tap sets the
-               drop location to that category and jumps straight into booking
-               with results already loading. Stacked one-by-one under the
-               search box so it reads as a discovery list, not a chip row. ── */}
-        <View style={{ marginHorizontal: 16, marginTop: 12, backgroundColor: C.bgCard, borderRadius: 18, borderWidth: 1, borderColor: C.glassBorder, overflow: 'hidden', ...SHADOW.sm }}>
-          <View style={{ paddingHorizontal: 14, paddingTop: 12, paddingBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        {/* 2a. ── "New in the city?" info hint — plain text only, no tap
+               action. The real one-tap category search lives inside the
+               booking screen's own drop-search step; this is just a hint
+               so people know it exists, not a duplicate entry point. ── */}
+        <View style={{ marginHorizontal: 16, marginTop: 12, backgroundColor: C.bgCard, borderRadius: 18, borderWidth: 1, borderColor: C.glassBorder, overflow: 'hidden', ...SHADOW.sm, paddingHorizontal: 14, paddingVertical: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
             <Ionicons name="compass-outline" size={13} color={C.textMuted} />
-            <Text style={{ fontSize: 10, fontWeight: '900', color: C.textDim, letterSpacing: 1.2 }}>NEW IN THE CITY? QUICK SEARCH</Text>
+            <Text style={{ fontSize: 10, fontWeight: '900', color: C.textDim, letterSpacing: 1.2 }}>NEW IN THE CITY?</Text>
           </View>
-          {NEARBY_CATEGORIES.map((cat, i) => (
-            <TouchableOpacity
-              key={cat.label}
-              activeOpacity={0.75}
-              onPress={() => {
-                setDrop(cat.label + ' near me');
-                setDropCoords(null); setFareEstimates({}); setEta(''); lastFetchKey.current = '';
-                searchNearbyCategory(cat.q, 'drop');
-                // Booking screen's suggestion dropdown only renders once pickup is
-                // set — resolve it now (usually near-instant from cached GPS) so
-                // the list is actually visible the moment the screen opens, not
-                // just sitting in state waiting for a second manual action.
-                if (!pickupCoords) useMyLocation();
-                setScreen('booking');
-              }}
-              style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: C.glassBorder }}>
-              <Text style={{ fontSize: 17, marginRight: 12 }}>{cat.icon}</Text>
-              <Text style={{ flex: 1, fontSize: 13.5, fontWeight: '700', color: C.text }}>Near {cat.label}</Text>
-              <Ionicons name="chevron-forward" size={15} color={C.textDim} />
-            </TouchableOpacity>
-          ))}
+          <Text style={{ fontSize: 12.5, color: C.textMuted, lineHeight: 19 }}>
+            You can search{' '}
+            {NEARBY_CATEGORIES.map((cat, i) => (
+              <Text key={cat.label} style={{ fontWeight: '700', color: C.text }}>
+                {cat.icon} {cat.label}{i < NEARBY_CATEGORIES.length - 1 ? ', ' : ' '}
+              </Text>
+            ))}
+            near you right from the drop location box.
+          </Text>
         </View>
 
         {/* 2b. ── Live city pulse ticker ── */}
