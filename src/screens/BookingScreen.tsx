@@ -13,6 +13,7 @@ import { s, C, T, R, SP, SHADOW } from '../styles';
 import { RIDES, MAPS_KEY } from '../constants';
 import { apiGet, apiPost, externalGet } from '../../api';
 import { useNearbyDrivers } from '../offline';
+import { NEARBY_CATEGORIES } from '../nearbyCategories';
 
 // Reverted the local neutral-accent shadow tried earlier: on real-device
 // testing, every C.pink/C.plum/C.purple use in this file turned out to be
@@ -974,23 +975,7 @@ export function BookingScreen() {
                 {/* ── "Near me" category search — Hospital/Hotel/Police/... near pickup ── */}
                 {!!pickupCoords && (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 12 }}>
-                  {([
-                    { icon: '🏥', label: 'Hospital',    q: 'Hospital' as string | string[] },
-                    { icon: '🏨', label: 'Hotel',       q: 'Hotel' as string | string[] },
-                    // Indian police stations are almost always named "Thana" on Maps,
-                    // not "Police Station" — query both so the actual nearest match
-                    // (whichever way it's named) is never silently missed.
-                    { icon: '👮', label: 'Police',      q: ['Police Station', 'Thana'] as string | string[] },
-                    // "Tourist Place"/"Attraction"/"Monument" all return zero results —
-                    // nothing is literally named that. "Park" is the closest generic
-                    // term that reliably matches real nearby leisure/tourist spots.
-                    { icon: '🏛️', label: 'Tourist',     q: 'Park' as string | string[] },
-                    { icon: '🏧', label: 'ATM',         q: 'ATM Bank' as string | string[] },
-                    { icon: '⛽', label: 'Petrol Pump', q: 'Petrol Pump' as string | string[] },
-                    { icon: '🚉', label: 'Railway',     q: 'Railway Station' as string | string[] },
-                    { icon: '🚌', label: 'Bus Stand',   q: 'Bus Stop' as string | string[] },
-                    { icon: '🛍️', label: 'Mall',        q: 'Mall' as string | string[] },
-                  ]).map(cat => (
+                  {NEARBY_CATEGORIES.map(cat => (
                     <TouchableOpacity
                       key={cat.label}
                       onPress={() => {
@@ -1001,7 +986,7 @@ export function BookingScreen() {
                       }}
                       style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.glassMid, borderRadius: R.full, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: C.glassBorder }}>
                       <Text style={{ fontSize: 14 }}>{cat.icon}</Text>
-                      <Text style={{ fontSize: 12.5, fontWeight: '700', color: C.text }}>{cat.label}</Text>
+                      <Text style={{ fontSize: 12.5, fontWeight: '700', color: C.text }}>{cat.shortLabel}</Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>

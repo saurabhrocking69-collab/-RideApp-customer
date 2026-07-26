@@ -14,6 +14,7 @@ import { MAPS_KEY, API } from '../constants';
 import { useNearbyDrivers } from '../offline';
 import { NotifBell, NotificationCenter, getUnreadCount } from '../components/NotificationCenter';
 import { FeatureIllustrationBanner, IlluFamily3, BikeScene } from '../components/Illustrations';
+import { NEARBY_CATEGORIES } from '../nearbyCategories';
 
 
 function NavBar() {
@@ -889,6 +890,8 @@ function HomeTab() {
     screen,
     userCoords,
     setRideType,
+    setDropCoords, setFareEstimates, setEta, lastFetchKey, searchNearbyCategory,
+    pickupCoords, useMyLocation,
   } = useApp();
 
   // Buddy Fund
@@ -1128,6 +1131,38 @@ function HomeTab() {
               <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900', letterSpacing: 0.5 }}>Go</Text>
             </View>
           </TouchableOpacity>
+        </View>
+
+        {/* 2a. ── "New in the city?" quick nearby-places list — one tap sets the
+               drop location to that category and jumps straight into booking
+               with results already loading. Stacked one-by-one under the
+               search box so it reads as a discovery list, not a chip row. ── */}
+        <View style={{ marginHorizontal: 16, marginTop: 12, backgroundColor: C.bgCard, borderRadius: 18, borderWidth: 1, borderColor: C.glassBorder, overflow: 'hidden', ...SHADOW.sm }}>
+          <View style={{ paddingHorizontal: 14, paddingTop: 12, paddingBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="compass-outline" size={13} color={C.textMuted} />
+            <Text style={{ fontSize: 10, fontWeight: '900', color: C.textDim, letterSpacing: 1.2 }}>NEW IN THE CITY? QUICK SEARCH</Text>
+          </View>
+          {NEARBY_CATEGORIES.map((cat, i) => (
+            <TouchableOpacity
+              key={cat.label}
+              activeOpacity={0.75}
+              onPress={() => {
+                setDrop(cat.label + ' near me');
+                setDropCoords(null); setFareEstimates({}); setEta(''); lastFetchKey.current = '';
+                searchNearbyCategory(cat.q, 'drop');
+                // Booking screen's suggestion dropdown only renders once pickup is
+                // set — resolve it now (usually near-instant from cached GPS) so
+                // the list is actually visible the moment the screen opens, not
+                // just sitting in state waiting for a second manual action.
+                if (!pickupCoords) useMyLocation();
+                setScreen('booking');
+              }}
+              style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: C.glassBorder }}>
+              <Text style={{ fontSize: 17, marginRight: 12 }}>{cat.icon}</Text>
+              <Text style={{ flex: 1, fontSize: 13.5, fontWeight: '700', color: C.text }}>Near {cat.label}</Text>
+              <Ionicons name="chevron-forward" size={15} color={C.textDim} />
+            </TouchableOpacity>
+          ))}
         </View>
 
         {/* 2b. ── Live city pulse ticker ── */}
