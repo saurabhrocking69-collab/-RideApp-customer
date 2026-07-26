@@ -239,7 +239,7 @@ interface AppContextType {
   surgeFareNow: (amount: number) => Promise<void>;
   switchVehicle: (newType: string) => Promise<void>;
   searchPlaces: (text: string, type: 'pickup'|'drop') => void;
-  searchNearbyCategory: (category: string | string[], type: 'pickup'|'drop') => void;
+  searchNearbyCategory: (category: string | string[], type: 'pickup'|'drop', wideSearch?: boolean) => void;
   geocodePlace: (address: string, type: 'pickup'|'drop') => Promise<void>;
   swapLocations: () => void;
   fetchEtaByCoords: (pc: any, dc: any) => Promise<void>;
@@ -1639,7 +1639,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // almost always named "Thana" on Maps, not "Police Station", so a single
   // English query can silently miss the actual nearest match. Variants are
   // queried in parallel and merged, deduped by place_id, sorted by distance.
-  const searchNearbyCategory = (category: string | string[], type: 'pickup' | 'drop') => {
+  const searchNearbyCategory = (category: string | string[], type: 'pickup' | 'drop', wideSearch?: boolean) => {
     const originCoords = type === 'drop'
       ? (pickupCoords || (userCoords
           ? { lat: (userCoords as any).latitude ?? (userCoords as any).lat, lng: (userCoords as any).longitude ?? (userCoords as any).lng }
@@ -1649,25 +1649,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           : null);
     if (!originCoords?.lat) return;
     const variants = Array.isArray(category) ? category : [category];
+    const fetchAtRadius = async (radiusM: number) => {
+      const results = await Promise.all(variants.map(v =>
+        fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(v)}&key=${MAPS_KEY}&components=country:in&location=${originCoords.lat},${originCoords.lng}&radius=${radiusM}&strictbounds=true&origin=${originCoords.lat},${originCoords.lng}`)
+          .then(r => r.json()).catch(() => ({ predictions: [] }))
+      ));
+      const seen = new Set<string>();
+      return results
+        .flatMap(data => data.predictions || [])
+        .filter((p: any) => (p.place_id && !seen.has(p.place_id)) ? (seen.add(p.place_id), true) : false)
+        .sort((a: any, b: any) => (a.distance_meters ?? Infinity) - (b.distance_meters ?? Infinity));
+    };
     (async () => {
       try {
-        const results = await Promise.all(variants.map(v =>
-          fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(v)}&key=${MAPS_KEY}&components=country:in&location=${originCoords.lat},${originCoords.lng}&radius=6000&strictbounds=true&origin=${originCoords.lat},${originCoords.lng}`)
-            .then(r => r.json()).catch(() => ({ predictions: [] }))
-        ));
-        const seen = new Set<string>();
-        const merged = results
-          .flatMap(data => data.predictions || [])
-          .filter((p: any) => (p.place_id && !seen.has(p.place_id)) ? (seen.add(p.place_id), true) : false)
-          .sort((a: any, b: any) => (a.distance_meters ?? Infinity) - (b.distance_meters ?? Infinity))
-          .slice(0, 8)
-          .map((p: any) => ({
-            id:         p.place_id,
-            text:       p.description,
-            main:       p.structured_formatting?.main_text      || p.description.split(',')[0],
-            secondary:  p.structured_formatting?.secondary_text || p.description.split(',').slice(1).join(',').trim(),
-            distance_m: p.distance_meters ?? null,
-          }));
+        // Sparse categories (malls, tourist spots) can genuinely have nothing
+        // within a tight radius — widen the search step by step instead of
+        // showing "no results" when a real match just exists further out.
+        const radii = wideSearch ? [6000, 15000, 30000] : [6000];
+        let raw: any[] = [];
+        for (const radiusM of radii) {
+          raw = await fetchAtRadius(radiusM);
+          if (raw.length >= 3) break;
+        }
+        const merged = raw.slice(0, 8).map((p: any) => ({
+          id:         p.place_id,
+          text:       p.description,
+          main:       p.structured_formatting?.main_text      || p.description.split(',')[0],
+          secondary:  p.structured_formatting?.secondary_text || p.description.split(',').slice(1).join(',').trim(),
+          distance_m: p.distance_meters ?? null,
+        }));
         type === 'pickup' ? setPickupSugg(merged) : setDropSugg(merged);
       } catch (_e) {}
     })();

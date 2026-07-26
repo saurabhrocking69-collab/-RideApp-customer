@@ -982,7 +982,7 @@ export function BookingScreen() {
                         Keyboard.dismiss();
                         setDrop(cat.label + ' near me');
                         setDropCoords(null); setFareEstimates({}); setEta(''); lastFetchKey.current = '';
-                        searchNearbyCategory(cat.q, 'drop');
+                        searchNearbyCategory(cat.q, 'drop', cat.wideSearch);
                       }}
                       style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.glassMid, borderRadius: R.full, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: C.glassBorder }}>
                       <Text style={{ fontSize: 14 }}>{cat.icon}</Text>

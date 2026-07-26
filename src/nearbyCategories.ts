@@ -10,16 +10,20 @@ export interface NearbyCategory {
   label: string;      // full label — "Near {label}" on Home
   shortLabel: string;  // compact label — fits the booking screen's chip row
   q: string | string[];
+  // Sparse categories (malls, tourist spots) can genuinely have zero real
+  // matches within a tight radius — for these, searchNearbyCategory retries
+  // at progressively wider radii (up to 30km) instead of giving up at 6km.
+  wideSearch?: boolean;
 }
 
 export const NEARBY_CATEGORIES: NearbyCategory[] = [
   { icon: '🏥', label: 'Hospital',       shortLabel: 'Hospital',    q: 'Hospital' },
-  { icon: '🏨', label: 'Hotel',          shortLabel: 'Hotel',       q: 'Hotel' },
+  { icon: '🏨', label: 'Hotel',          shortLabel: 'Hotel',       q: ['Hotel', 'Guest House'] },
   { icon: '👮', label: 'Police Station', shortLabel: 'Police',      q: ['Police Station', 'Thana'] },
-  { icon: '🏛️', label: 'Tourist Place',  shortLabel: 'Tourist',     q: 'Park' },
+  { icon: '🏛️', label: 'Tourist Place',  shortLabel: 'Tourist',     q: 'Park', wideSearch: true },
   { icon: '🏧', label: 'ATM',            shortLabel: 'ATM',         q: 'ATM Bank' },
   { icon: '⛽', label: 'Petrol Pump',    shortLabel: 'Petrol Pump', q: 'Petrol Pump' },
   { icon: '🚉', label: 'Railway Station', shortLabel: 'Railway',    q: 'Railway Station' },
   { icon: '🚌', label: 'Bus Stand',      shortLabel: 'Bus Stand',   q: 'Bus Stop' },
-  { icon: '🛍️', label: 'Mall',           shortLabel: 'Mall',        q: 'Mall' },
+  { icon: '🛍️', label: 'Mall',           shortLabel: 'Mall',        q: 'Mall', wideSearch: true },
 ];
