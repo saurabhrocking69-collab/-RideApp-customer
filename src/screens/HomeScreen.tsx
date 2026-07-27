@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ScrollView, FlatList, StyleSheet, View, Text, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, Animated, Easing, Share, Dimensions } from 'react-native';
+import { ScrollView, FlatList, StyleSheet, View, Text, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, Animated, Easing, Share, Dimensions, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Storage as AsyncStorage } from '../storage';
@@ -2520,6 +2520,13 @@ function ProfileTab() {
             { label: 'Support',             sub: '24/7 help',                   icon: 'call-outline',             color: C.green,    bg: C.greenGlass,  border: C.greenBorder,  onPress: () => setScreen('support') },
             { label: 'Notifications',       sub: 'All ride alerts enabled',     icon: 'notifications-outline',   color: C.pink,     bg: C.pinkGlass,   border: C.pinkBorder,   onPress: () => Alert.alert('🔔 Notifications', 'All ride notifications, wallet alerts and offers are automatically enabled.') },
             { label: 'Cancellation Policy', sub: 'Cancel rules and fees',       icon: 'receipt-outline',          color: C.textMuted, bg: C.glassMid,  border: C.glassBorder,  onPress: () => setScreen('policy') },
+          ])}
+
+          {/* ── Legal ────────────────────────────────────────────────────── */}
+          <Text style={{ fontSize: 11, fontWeight: '800', color: C.textDim, letterSpacing: 1.2, marginBottom: 8, paddingHorizontal: 2 }}>LEGAL</Text>
+          {menuSection([
+            { label: 'Privacy Policy',      sub: 'How we handle your data',    icon: 'lock-closed-outline',      color: C.textMuted, bg: C.glassMid,  border: C.glassBorder,  onPress: () => Linking.openURL('https://api.sppero.com/privacy') },
+            { label: 'Terms of Service',    sub: 'Platform terms of use',      icon: 'document-text-outline',    color: C.textMuted, bg: C.glassMid,  border: C.glassBorder,  onPress: () => Linking.openURL('https://api.sppero.com/terms') },
           ])}
 
           {/* ── Log out ──────────────────────────────────────────────────── */}

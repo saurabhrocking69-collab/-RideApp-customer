@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { ScrollView, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Animated, useWindowDimensions } from 'react-native';
+import { ScrollView, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Animated, useWindowDimensions, Linking } from 'react-native';
 import Svg, { Rect, Path, Circle, Ellipse, Defs, LinearGradient, RadialGradient, Stop, G, Polygon, Line, Text as SvgText } from 'react-native-svg';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
@@ -539,9 +539,9 @@ export function LoginScreen() {
 
           <Text style={{ fontSize: 10.5, color: '#8A94B0', textAlign: 'center', lineHeight: 18 }}>
             By continuing you agree to our{' '}
-            <Text style={{ color: C.pink, fontWeight: '600' }}>Terms of Service</Text>
+            <Text style={{ color: C.pink, fontWeight: '600' }} onPress={() => Linking.openURL('https://api.sppero.com/terms')}>Terms of Service</Text>
             {' '}and{' '}
-            <Text style={{ color: C.pink, fontWeight: '600' }}>Privacy Policy</Text>
+            <Text style={{ color: C.pink, fontWeight: '600' }} onPress={() => Linking.openURL('https://api.sppero.com/privacy')}>Privacy Policy</Text>
           </Text>
         </Animated.View>
 
