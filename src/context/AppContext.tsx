@@ -239,7 +239,7 @@ interface AppContextType {
   surgeFareNow: (amount: number) => Promise<void>;
   switchVehicle: (newType: string) => Promise<void>;
   searchPlaces: (text: string, type: 'pickup'|'drop') => void;
-  searchNearbyCategory: (category: string | string[], type: 'pickup'|'drop', wideSearch?: boolean) => void;
+  searchNearbyCategory: (category: string | string[], type: 'pickup'|'drop', wideSearch?: boolean, rejectTypes?: string[]) => void;
   geocodePlace: (address: string, type: 'pickup'|'drop') => Promise<void>;
   swapLocations: () => void;
   fetchEtaByCoords: (pc: any, dc: any) => Promise<void>;
@@ -1639,7 +1639,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // almost always named "Thana" on Maps, not "Police Station", so a single
   // English query can silently miss the actual nearest match. Variants are
   // queried in parallel and merged, deduped by place_id, sorted by distance.
-  const searchNearbyCategory = (category: string | string[], type: 'pickup' | 'drop', wideSearch?: boolean) => {
+  const searchNearbyCategory = (category: string | string[], type: 'pickup' | 'drop', wideSearch?: boolean, rejectTypes?: string[]) => {
     const originCoords = type === 'drop'
       ? (pickupCoords || (userCoords
           ? { lat: (userCoords as any).latitude ?? (userCoords as any).lat, lng: (userCoords as any).longitude ?? (userCoords as any).lng }
@@ -1658,6 +1658,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return results
         .flatMap(data => data.predictions || [])
         .filter((p: any) => (p.place_id && !seen.has(p.place_id)) ? (seen.add(p.place_id), true) : false)
+        // Autocomplete matches literal name text, not place type — e.g. "Mall"
+        // prefix-matches "Mallikaarujana Temple" or "Mall Hospital". Each
+        // prediction still carries its real Google-assigned `types`, so drop
+        // the obviously wrong-category ones (no extra API call/cost).
+        .filter((p: any) => !rejectTypes || !(p.types || []).some((t: string) => rejectTypes.includes(t)))
         .sort((a: any, b: any) => (a.distance_meters ?? Infinity) - (b.distance_meters ?? Infinity));
     };
     (async () => {
