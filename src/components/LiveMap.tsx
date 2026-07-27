@@ -159,45 +159,6 @@ function CarShape({ bodyLight, bodyDark, roof }: { bodyLight: string; bodyDark: 
     </Svg>
   );
 }
-function BikeShape({ tankLight, tankDark, frame }: { tankLight: string; tankDark: string; frame: string }) {
-  const gid = 'bk' + tankDark.replace('#', '');
-  return (
-    <Svg width={28} height={58} viewBox="0 0 28 58">
-      <Defs>
-        <LinearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={tankLight} />
-          <Stop offset="1" stopColor={tankDark} />
-        </LinearGradient>
-      </Defs>
-      {/* Front wheel */}
-      <Ellipse cx="14" cy="8"  rx="4.4" ry="6.6" fill="#111827" />
-      <Ellipse cx="14" cy="8"  rx="2"   ry="3.2" fill="#4B5563" />
-      {/* Handlebar — wide, the unmistakable two-wheeler cue — brand dark pink */}
-      <Rect x="0.5" y="11" width="27" height="3" rx="1.5" fill={C.pinkDark} />
-      {/* Mirrors on the bar ends */}
-      <SvgCircle cx="2"  cy="9.4" r="2.1" fill={C.pinkDark} />
-      <SvgCircle cx="26" cy="9.4" r="2.1" fill={C.pinkDark} />
-      {/* Headlight, mounted just behind the bar */}
-      <Ellipse cx="14" cy="17.5" rx="3.2" ry="2.8" fill={frame} />
-      <Ellipse cx="14" cy="17"   rx="1.5" ry="1.3" fill="#FEF9C3" />
-      {/* Fuel tank — glossy teardrop */}
-      <Path d="M14,21 C21,21 22,27 19.5,32 C17.7,36.5 10.3,36.5 8.5,32 C6,27 7,21 14,21 Z" fill={`url(#${gid})`} stroke="#fff" strokeWidth="1" />
-      <Path d="M10.5,24.5 C9.3,27.5 9.3,30 10.5,32" stroke="rgba(255,255,255,0.5)" strokeWidth="1.4" fill="none" strokeLinecap="round" />
-      {/* Slight side-angle shading — a shadow sliver down the right edge of
-          the tank/seat so the icon reads with a touch of 3D tilt instead of
-          a flat cutout, like it's lit from the left. */}
-      <Path d="M18,23 C19.4,27 19,30.8 17.6,34 L16,33.4 C17.2,30.2 17.5,26.8 16.3,23.6 Z" fill="rgba(0,0,0,0.16)" />
-      {/* Seat — longer two-up seat, brand plum */}
-      <Rect x="10" y="33" width="8" height="16" rx="3.4" fill={C.plum} />
-      <Rect x="15.4" y="34" width="2" height="14" rx="1" fill="rgba(0,0,0,0.16)" />
-      {/* Rear fender */}
-      <Path d="M8,48 Q14,45 20,48" stroke={frame} strokeWidth="1.8" fill="none" strokeLinecap="round" />
-      {/* Rear wheel */}
-      <Ellipse cx="14" cy="50" rx="4.8" ry="7.2" fill="#111827" />
-      <Ellipse cx="14" cy="50" rx="2.2" ry="3.4" fill="#4B5563" />
-    </Svg>
-  );
-}
 function AutoShape({ bodyLight, bodyDark, roof, electric }: { bodyLight: string; bodyDark: string; roof: string; electric?: boolean }) {
   const gid = 'at' + bodyDark.replace('#', '');
   return (
@@ -254,10 +215,11 @@ function AutoShape({ bodyLight, bodyDark, roof, electric }: { bodyLight: string;
     </Svg>
   );
 }
-function ScooterShape({ bodyLight, bodyDark, frame }: { bodyLight: string; bodyDark: string; frame: string }) {
-  // Electric scooters (Ather/Ola S1/TVS iQube-style) — no exposed fuel tank
-  // or engine block, so this is a genuinely different silhouette from
-  // BikeShape, not just a recolor: rounded cowl + flat step-through floor.
+function ScooterShape({ bodyLight, bodyDark, frame, electric }: { bodyLight: string; bodyDark: string; frame: string; electric?: boolean }) {
+  // Scooter-style silhouette (Activa/Jupiter/Ather-style) — no exposed fuel
+  // tank or engine block, just a rounded cowl + flat step-through floor.
+  // Used for both regular "Bike" (petrol) and "Green Bike" (electric) — the
+  // lightning bolt badge is the only thing that tells them apart.
   const gid = 'sc' + bodyDark.replace('#', '');
   return (
     <Svg width={28} height={58} viewBox="0 0 28 58">
@@ -280,8 +242,10 @@ function ScooterShape({ bodyLight, bodyDark, frame }: { bodyLight: string; bodyD
       {/* Flat step-through floor panel — the signature "no engine bulge"
           scooter cue, replacing the petrol bike's teardrop tank. */}
       <Rect x="10.5" y="24" width="7" height="14" rx="3" fill={`url(#${gid})`} opacity={0.92} />
-      {/* Lightning bolt — electric badge */}
-      <Path d="M14.5,26.5 L11.5,32 L13.6,32 L12.8,36.5 L16.3,30.2 L14.1,30.2 Z" fill="#FDE047" stroke="#CA8A04" strokeWidth="0.4" />
+      {/* Lightning bolt — electric badge, only for the electric variant */}
+      {electric && (
+        <Path d="M14.5,26.5 L11.5,32 L13.6,32 L12.8,36.5 L16.3,30.2 L14.1,30.2 Z" fill="#FDE047" stroke="#CA8A04" strokeWidth="0.4" />
+      )}
       {/* Seat */}
       <Rect x="9.5" y="39" width="9" height="10" rx="3.4" fill={frame} />
       {/* Rear fender */}
@@ -334,9 +298,9 @@ function ERikshaShape({ bodyLight, bodyDark, roof }: { bodyLight: string; bodyDa
 
 // Per-vehicle-type color + shape pairing — real-world liveries where they
 // exist (yellow/black auto, green e-auto) so the type reads at a glance.
-const VEHICLE_VISUALS: Record<string, { Shape: typeof CarShape | typeof BikeShape | typeof AutoShape | typeof ScooterShape | typeof ERikshaShape; props: any }> = {
-  bike:          { Shape: BikeShape,    props: { tankLight: '#F87171', tankDark: '#DC2626', frame: '#1F2937' } },
-  green_bike:    { Shape: ScooterShape, props: { bodyLight: '#4ADE80', bodyDark: '#15803D', frame: '#14532D' } },
+const VEHICLE_VISUALS: Record<string, { Shape: typeof CarShape | typeof AutoShape | typeof ScooterShape | typeof ERikshaShape; props: any }> = {
+  bike:          { Shape: ScooterShape, props: { bodyLight: '#F87171', bodyDark: '#DC2626', frame: '#1F2937', electric: false } },
+  green_bike:    { Shape: ScooterShape, props: { bodyLight: '#4ADE80', bodyDark: '#15803D', frame: '#14532D', electric: true } },
   auto:          { Shape: AutoShape,    props: { bodyLight: '#FDE68A', bodyDark: '#D97706', roof: '#1F2937' } },
   electric_auto: { Shape: AutoShape,    props: { bodyLight: '#86EFAC', bodyDark: '#16A34A', roof: '#14532D', electric: true } },
   eriksha:       { Shape: ERikshaShape, props: { bodyLight: '#67E8F9', bodyDark: '#0891B2', roof: '#164E63' } },
