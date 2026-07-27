@@ -47,7 +47,10 @@ function computeBearing(fromLat: number, fromLng: number, toLat: number, toLng: 
   return { bearing, ...DIRS[Math.round(bearing / 45) % 8] };
 }
 
-// ── Countdown timer for "retry after" ──────────────────────────────────────
+// ── Countdown timer for "retry after" — tapping retries immediately at any
+// time (the countdown is just when the app will *auto*-retry on its own),
+// so this always renders as an active pink button, never a greyed-out
+// disabled-looking one, to avoid implying the customer must wait it out.
 function RetryTimer({ seconds, onRetry }: { seconds: number; onRetry: () => void }) {
   const [remaining, setRemaining] = useState(seconds);
   useEffect(() => {
@@ -61,18 +64,18 @@ function RetryTimer({ seconds, onRetry }: { seconds: number; onRetry: () => void
     <View style={{ alignItems: 'center', gap: 10 }}>
       {remaining > 0 && (
         <Text style={{ color: C.textMuted, fontSize: 13 }}>
-          {mins > 0 ? `${mins} min ` : ''}{secs}s until retry
+          Auto-retry in {mins > 0 ? `${mins} min ` : ''}{secs}s — or tap below to retry now
         </Text>
       )}
       <Bouncy
         onPress={onRetry}
         style={{
-          backgroundColor: remaining > 0 ? C.glass : C.pink,
+          backgroundColor: C.pink,
           borderRadius: 14, paddingHorizontal: 28, paddingVertical: 12,
-          borderWidth: 1, borderColor: remaining > 0 ? C.glassBorder : C.pink,
+          borderWidth: 1, borderColor: C.pink,
         }}>
-        <Text style={{ color: remaining > 0 ? C.textDim : '#fff', fontWeight: '900', fontSize: 14 }}>
-          {remaining > 0 ? `🔄 ${mins > 0 ? `${mins}m ` : ''}${secs}s to retry` : '🔄 Retry Now'}
+        <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>
+          🔄 Retry Now
         </Text>
       </Bouncy>
     </View>
@@ -1410,6 +1413,15 @@ export function MatchingScreen() {
                         seconds={noDriverFinal.retry_after_sec}
                         onRetry={() => { setNoDriverFinal(null); setServerSurgeOffer(null); if (rideData?.ride_id) bookRide(); }}
                       />
+                      {/* The search has already stopped server-side at this point (the
+                          ride is auto-cancelled once no driver is found), so this just
+                          takes the customer home — same action as the header back
+                          button already does here, just visible without scrolling. */}
+                      <Bouncy
+                        onPress={() => setScreen('home')}
+                        style={{ marginTop: 10, paddingHorizontal: 24, paddingVertical: 10 }}>
+                        <Text style={{ color: C.textMuted, fontWeight: '700', fontSize: 13 }}>✕ Cancel</Text>
+                      </Bouncy>
                     </View>
                   </View>
                 </SlideUp>
