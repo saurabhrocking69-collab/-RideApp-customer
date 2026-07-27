@@ -234,6 +234,7 @@ interface AppContextType {
   connectSocket: (phone: string) => void;
   joinRideSocket: (rideId: string | number) => void;
   joinHourlySocket: (bookingId: string | number) => void;
+  adoptActiveRide: (rideId: string | number) => Promise<boolean>;
   // Functions — booking
   bookRide: (route?: { distanceKm: number; durationMin: number; polyline: string; routeType: string }) => Promise<void>;
   surgeFareNow: (amount: number) => Promise<void>;
@@ -821,6 +822,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (!id) return;
           reconcilePaymentConfirmed(id).then(ok => { if (ok && screen === 'payment') setScreen('postride'); });
         }).catch(() => {});
+        // Re-sync an already-tracked standard ride against the server on every
+        // resume, not just at cold start. A socket 'rideUpdate' (matched/
+        // arrived) missed entirely while backgrounded — or a stray/stale event
+        // received earlier — otherwise leaves rideData.driver/status wrong
+        // indefinitely, since nothing else here re-checks a ride that's
+        // already being tracked (the scheduled-ride block above only fires
+        // when there's NO ride_id at all). adoptActiveRide re-fetches the true
+        // status and safely no-ops if the ride's already in a terminal state.
+        if (rideDataRef.current?.ride_id && !['completed', 'cancelled'].includes(rideDataRef.current?.status)) {
+          adoptActiveRide(rideDataRef.current.ride_id).catch(() => {});
+        }
       }
     });
     return () => sub.remove();

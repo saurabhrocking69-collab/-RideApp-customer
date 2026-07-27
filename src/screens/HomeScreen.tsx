@@ -1637,7 +1637,7 @@ function LiveTab() {
     pickup, drop,
     setScreen, setTab,
     callDriver, initiateCall,
-    rideIcon,
+    rideIcon, adoptActiveRide,
   } = useApp();
   const ride = useRideStore();
 
@@ -1731,6 +1731,13 @@ function LiveTab() {
               ) : null}
               <Bouncy
                 onPress={() => {
+                  // Re-sync against the server before opening the full screen —
+                  // rideData can be a couple of steps behind if a socket update
+                  // was missed while backgrounded, which otherwise shows a
+                  // stale "still searching" view for an already-matched ride.
+                  if (rideData?.ride_id && (stdStatus === 'matched' || stdStatus === 'arrived')) {
+                    adoptActiveRide(rideData.ride_id).catch(() => {});
+                  }
                   if (stdStatus === 'completed') setScreen('payment');
                   else if (stdStatus === 'started') setScreen('inride');
                   else setScreen('matching');
