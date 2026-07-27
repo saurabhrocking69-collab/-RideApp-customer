@@ -8,7 +8,15 @@ import { useApp } from '../context/AppContext';
 import { Bouncy, GlassPanel, PulseView, SlideUp } from '../components/ui';
 import { LiveMap, vehicleVisual } from '../components/LiveMap';
 import { s, C, T, SP, R, SHADOW } from '../styles';
-import { apiPost } from '../../api';
+import { apiPost, apiAuthPost } from '../../api';
+
+// cancel-smart now verifies the caller against the ride's actual passenger/
+// driver server-side (middleware/userAuth.js) — send the logged-in token
+// instead of just a bare apiPost, or every cancel would 401.
+async function authRideCancel(body: any) {
+  const token = await AsyncStorage.getItem('userToken').catch(() => null);
+  return apiAuthPost('/api/rides/cancel-smart', body, token || '');
+}
 import { API } from '../constants';
 import { ARDriverFinder } from '../components/ARDriverFinder';
 import { IlluNoDriver, IlluCancel } from '../components/Illustrations';
@@ -1446,7 +1454,7 @@ export function MatchingScreen() {
                   </Bouncy>
                   <Bouncy onPress={async () => {
                     if (rideData?.ride_id) {
-                      try { await apiPost('/api/rides/cancel-smart', { ride_id: rideData.ride_id, cancelled_by: 'customer', reason: 'Retry' }); } catch (_e) {}
+                      try { await authRideCancel({ ride_id: rideData.ride_id, cancelled_by: 'customer', reason: 'Retry' }); } catch (_e) {}
                     }
                     setRideData(null); bookRide();
                   }} style={{
@@ -1490,7 +1498,7 @@ function CancelModal() {
 
   const doCancel = async (reason: string) => {
     if (rideData?.ride_id) {
-      const cd = await apiPost('/api/rides/cancel-smart', { ride_id: rideData.ride_id, cancelled_by: 'customer', reason, phone: phone || '9999999999' });
+      const cd = await authRideCancel({ ride_id: rideData.ride_id, cancelled_by: 'customer', reason, phone: phone || '9999999999' });
       if (cd._error) setResult('❌ ' + cd.message);
       else setResult(cd.penalty > 0 ? `⚠️ ${cd.message}` : `✅ ${cd.message}`);
       ride.clearRide();

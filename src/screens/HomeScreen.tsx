@@ -2538,7 +2538,7 @@ function ProfileTab() {
 
           {/* ── Log out ──────────────────────────────────────────────────── */}
           <Bouncy style={s.logoutBtn} onPress={async () => {
-            await AsyncStorage.removeItem('userPhone'); await AsyncStorage.removeItem('userName');
+            await AsyncStorage.removeItem('userPhone'); await AsyncStorage.removeItem('userName'); await AsyncStorage.removeItem('userToken');
             setScreen('login'); setTab('home'); setPhone(''); setOtp(''); setOtpDigits(['','','','','','']);
             setUserName(''); setGender(''); setWalletBalance(0);
           }}>

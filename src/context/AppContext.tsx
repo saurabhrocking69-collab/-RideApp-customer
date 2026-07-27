@@ -6,7 +6,7 @@ import * as Location from 'expo-location';
 import * as Clipboard from 'expo-clipboard';
 import * as Notifications from 'expo-notifications';
 import { io, Socket } from 'socket.io-client';
-import { apiGet, apiPost, externalGet } from '../../api';
+import { apiGet, apiPost, apiAuthPost, externalGet } from '../../api';
 import { saveNotification } from '../components/NotificationCenter';
 import { C } from '../styles';
 import type { ToastNotif } from '../components/NotificationToast';
@@ -1797,6 +1797,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (_e) { setResult('❌ Error'); }
   };
 
+  // Ride-mutation endpoints (book/cancel/switch-vehicle/etc.) now verify the
+  // caller's identity server-side against this token, not just whatever
+  // phone is typed into the request body — see middleware/userAuth.js.
+  const authRidePost = async (path: string, body: any) => {
+    const token = await AsyncStorage.getItem('userToken').catch(() => null);
+    return apiAuthPost(path, body, token || '');
+  };
+
   const bookRide = async (route?: { distanceKm: number; durationMin: number; polyline: string; routeType: string }) => {
     if (!pickup || !drop) { setResult('❌ Enter pickup and drop locations'); return; }
     // High-value city ride (>₹3000, rare — surge/long trip): collect the 1/3
@@ -1832,7 +1840,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (loc) { dropLat = loc.lat; dropLng = loc.lng; setDropCoords({ lat: dropLat, lng: dropLng }); }
         } catch (_e) {}
       }
-      const data = await apiPost('/api/rides/book', {
+      const data = await authRidePost('/api/rides/book', {
         passenger_phone: phone || '9999999999', pickup, drop_location: drop, ride_type: rideType, distance: distanceKm,
         duration_min: durationMin,
         pickup_lat: pickupCoords?.lat, pickup_lng: pickupCoords?.lng, drop_lat: dropLat, drop_lng: dropLng,
@@ -1974,7 +1982,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!rideData?.ride_id || switchingVehicle) return;
     setSwitchingVehicle(true);
     try {
-      const res = await apiPost('/api/rides/switch-vehicle', { ride_id: rideData.ride_id, new_vehicle_type: newType });
+      const res = await authRidePost('/api/rides/switch-vehicle', { ride_id: rideData.ride_id, new_vehicle_type: newType });
       if (res._error) { setResult('❌ ' + res.message); return; }
       setAltSuggest(null);
       setRideData((p: any) => p ? { ...p, ride_type: newType, fare: res.new_fare } : p);
@@ -2225,7 +2233,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const rideId = rideData?.ride_id;
     if (!rideId) return;
     try {
-      const res = await apiPost('/api/rides/report-cancel', { ride_id: rideId, phone: phone || '9999999999', reason });
+      const res = await authRidePost('/api/rides/report-cancel', { ride_id: rideId, phone: phone || '9999999999', reason });
       if (res?.success) {
         Alert.alert('🛡️ Report Submitted', res.message || 'Your report is under review. Any refund will be decided within 2 days.', [{ text: 'OK' }]);
         try { ride.stopPolling(); } catch (_e) {}
