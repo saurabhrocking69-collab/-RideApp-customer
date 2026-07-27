@@ -1131,24 +1131,30 @@ function HomeTab() {
           </TouchableOpacity>
         </View>
 
-        {/* 2a. ── "New in the city?" info hint — plain text only, no tap
+        {/* 2a. ── "New in the city?" info hint — plain display, no tap
                action. The real one-tap category search lives inside the
                booking screen's own drop-search step; this is just a hint
-               so people know it exists, not a duplicate entry point. ── */}
-        <View style={{ marginHorizontal: 16, marginTop: 12, backgroundColor: C.bgCard, borderRadius: 18, borderWidth: 1, borderColor: C.glassBorder, overflow: 'hidden', ...SHADOW.sm, paddingHorizontal: 14, paddingVertical: 12 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-            <Ionicons name="compass-outline" size={13} color={C.textMuted} />
-            <Text style={{ fontSize: 10, fontWeight: '900', color: C.textDim, letterSpacing: 1.2 }}>NEW IN THE CITY?</Text>
+               so people know it exists, not a duplicate entry point.
+               Shown as a scannable chip strip (matches the booking screen's
+               own category chips) instead of a run-on sentence. ── */}
+        <View style={{ marginHorizontal: 16, marginTop: 12, backgroundColor: C.bgCard, borderRadius: 18, borderWidth: 1, borderColor: C.glassBorder, overflow: 'hidden', ...SHADOW.sm, paddingHorizontal: 14, paddingVertical: 14 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 3 }}>
+            <View style={{ width: 22, height: 22, borderRadius: 7, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.pinkBorder }}>
+              <Ionicons name="compass-outline" size={12} color={C.pink} />
+            </View>
+            <Text style={{ fontSize: 12.5, fontWeight: '900', color: C.text }}>New in the city?</Text>
           </View>
-          <Text style={{ fontSize: 12.5, color: C.textMuted, lineHeight: 19 }}>
-            You can search{' '}
-            {NEARBY_CATEGORIES.map((cat, i) => (
-              <Text key={cat.label} style={{ fontWeight: '700', color: C.text }}>
-                {cat.icon} {cat.label}{i < NEARBY_CATEGORIES.length - 1 ? ', ' : ' '}
-              </Text>
-            ))}
-            near you right from the drop location box.
+          <Text style={{ fontSize: 11.5, color: C.textMuted, lineHeight: 16, marginBottom: 11 }}>
+            Search these near you right from the drop location box
           </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            {NEARBY_CATEGORIES.map(cat => (
+              <View key={cat.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.glassMid, borderRadius: R.full, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, borderColor: C.glassBorder }}>
+                <Text style={{ fontSize: 13 }}>{cat.icon}</Text>
+                <Text style={{ fontSize: 11.5, fontWeight: '700', color: C.text }}>{cat.shortLabel}</Text>
+              </View>
+            ))}
+          </ScrollView>
         </View>
 
         {/* 2b. ── Live city pulse ticker ── */}
