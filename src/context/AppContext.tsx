@@ -1825,7 +1825,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         rider_name:  !rideForSelf ? riderName.trim()  : null,
         rider_phone: !rideForSelf ? riderPhone.trim() : null,
       });
-      if (data.restricted) { setResult('🚫 ' + (data.error || 'Account on hold — contact support')); return; }
+      if (data.restricted) {
+        // Dedicated global toast (rendered once at the app root, auto-dismisses)
+        // instead of the generic `result` string — that's read independently by
+        // several screens' own banners, so setting it here made this warning
+        // "leak" onto whatever screen the customer navigated to next, not just
+        // the booking screen where the block actually happened.
+        setNotifToast({ id: 'restricted-' + Date.now(), title: '🚫 Account On Hold', body: data.error || 'Contact support: help@sppero.in', type: 'account_restricted', ts: Date.now() });
+        return;
+      }
       if (data._error || data.error) { setResult('❌ ' + (data.message || data.error || 'Booking failed')); return; }
       if (!data.ride_id) { setResult('❌ Booking failed — please try again'); return; }
       if (promoDiscount > 0 && data.ride_id) {
