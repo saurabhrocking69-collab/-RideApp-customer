@@ -15,21 +15,25 @@ export interface NearbyCategory {
   // at progressively wider radii (up to 30km) instead of giving up at 6km.
   wideSearch?: boolean;
   // Autocomplete matches literal name text, not a place "type" — a "Mall"
-  // query prefix-matches "Mallikaarujana Temple" or "Mall Hospital" even
-  // though Google's own place data types neither as a shopping mall. Each
-  // prediction still carries its real `types` array, so we drop obviously
-  // wrong-category matches client-side (no extra API calls/billing).
-  rejectTypes?: string[];
+  // query prefix-matches "Mallpur" (a locality) or "Mall Avenue" (a road),
+  // and a "Park" query matches "Parking No. 5" (a parking lot) — none of
+  // which Google itself types as a real mall/tourist spot. Many of these
+  // false positives only carry generic types (establishment,
+  // point_of_interest) with no specific "wrong" type to reject, so an
+  // allow-list (keep only if genuinely typed as the right category) is the
+  // only thing that actually filters them — a deny-list can't catch a
+  // prediction that has no specific type to deny in the first place.
+  acceptTypes?: string[];
 }
 
 export const NEARBY_CATEGORIES: NearbyCategory[] = [
   { icon: '🏥', label: 'Hospital',       shortLabel: 'Hospital',    q: 'Hospital' },
   { icon: '🏨', label: 'Hotel',          shortLabel: 'Hotel',       q: ['Hotel', 'Guest House'] },
   { icon: '👮', label: 'Police Station', shortLabel: 'Police',      q: ['Police Station', 'Thana'] },
-  { icon: '🏛️', label: 'Tourist Place',  shortLabel: 'Tourist',     q: 'Park', wideSearch: true, rejectTypes: ['lodging', 'route', 'premise', 'real_estate_agency', 'school', 'hospital'] },
+  { icon: '🏛️', label: 'Tourist Place',  shortLabel: 'Tourist',     q: 'Park', wideSearch: true, acceptTypes: ['tourist_attraction', 'park', 'museum', 'hindu_temple', 'place_of_worship', 'natural_feature', 'zoo', 'amusement_park', 'art_gallery'] },
   { icon: '🏧', label: 'ATM',            shortLabel: 'ATM',         q: 'ATM Bank' },
   { icon: '⛽', label: 'Petrol Pump',    shortLabel: 'Petrol Pump', q: 'Petrol Pump' },
   { icon: '🚉', label: 'Railway Station', shortLabel: 'Railway',    q: 'Railway Station' },
   { icon: '🚌', label: 'Bus Stand',      shortLabel: 'Bus Stand',   q: 'Bus Stop' },
-  { icon: '🛍️', label: 'Mall',           shortLabel: 'Mall',        q: 'Mall', wideSearch: true, rejectTypes: ['hospital', 'health', 'doctor', 'pharmacy', 'police', 'place_of_worship', 'hindu_temple', 'mosque', 'church', 'lodging', 'school', 'university', 'route'] },
+  { icon: '🛍️', label: 'Mall',           shortLabel: 'Mall',        q: 'Mall', wideSearch: true, acceptTypes: ['shopping_mall'] },
 ];
