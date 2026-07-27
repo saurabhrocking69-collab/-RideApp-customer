@@ -1983,7 +1983,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSwitchingVehicle(true);
     try {
       const res = await authRidePost('/api/rides/switch-vehicle', { ride_id: rideData.ride_id, new_vehicle_type: newType });
-      if (res._error) { setResult('❌ ' + res.message); return; }
+      if (res._error || !res.success) { setResult('❌ ' + (res.message || 'Switch failed')); return; }
       setAltSuggest(null);
       setRideData((p: any) => p ? { ...p, ride_type: newType, fare: res.new_fare } : p);
       setResult(`🔄 Searching for ${newType.toUpperCase()} driver...`);
