@@ -1484,6 +1484,7 @@ function CancelModal() {
     setShowCancelModal, setScreen,
     resetBookingState,
     setAltSuggest, setDriverLoc, setResult,
+    loadWallet,
   } = useApp();
 
   const { useRideStore } = require('../../store');
@@ -1500,7 +1501,12 @@ function CancelModal() {
     if (rideData?.ride_id) {
       const cd = await authRideCancel({ ride_id: rideData.ride_id, cancelled_by: 'customer', reason, phone: phone || '9999999999' });
       if (cd._error) setResult('❌ ' + cd.message);
-      else setResult(cd.penalty > 0 ? `⚠️ ${cd.message}` : `✅ ${cd.message}`);
+      else {
+        setResult(cd.penalty > 0 ? `⚠️ ${cd.message}` : `✅ ${cd.message}`);
+        // Penalty is charged straight to the wallet server-side now — refresh
+        // so the balance shown in-app reflects it immediately.
+        if (cd.penalty > 0) loadWallet(phone || '9999999999').catch(() => {});
+      }
       ride.clearRide();
       AsyncStorage.removeItem('activeStdRideId').catch(() => {});
     }
