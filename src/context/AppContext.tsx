@@ -240,7 +240,7 @@ interface AppContextType {
   surgeFareNow: (amount: number) => Promise<void>;
   switchVehicle: (newType: string) => Promise<void>;
   searchPlaces: (text: string, type: 'pickup'|'drop') => void;
-  searchNearbyCategory: (category: string | string[], type: 'pickup'|'drop', wideSearch?: boolean, acceptTypes?: string[]) => void;
+  searchNearbyCategory: (category: string | string[], type: 'pickup'|'drop', wideSearch?: boolean, acceptTypes?: string[], rejectTypes?: string[]) => void;
   geocodePlace: (address: string, type: 'pickup'|'drop') => Promise<void>;
   swapLocations: () => void;
   fetchEtaByCoords: (pc: any, dc: any) => Promise<void>;
@@ -1651,7 +1651,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // almost always named "Thana" on Maps, not "Police Station", so a single
   // English query can silently miss the actual nearest match. Variants are
   // queried in parallel and merged, deduped by place_id, sorted by distance.
-  const searchNearbyCategory = (category: string | string[], type: 'pickup' | 'drop', wideSearch?: boolean, acceptTypes?: string[]) => {
+  const searchNearbyCategory = (category: string | string[], type: 'pickup' | 'drop', wideSearch?: boolean, acceptTypes?: string[], rejectTypes?: string[]) => {
     const originCoords = type === 'drop'
       ? (pickupCoords || (userCoords
           ? { lat: (userCoords as any).latitude ?? (userCoords as any).lat, lng: (userCoords as any).longitude ?? (userCoords as any).lng }
@@ -1670,14 +1670,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return results
         .flatMap(data => data.predictions || [])
         .filter((p: any) => (p.place_id && !seen.has(p.place_id)) ? (seen.add(p.place_id), true) : false)
-        // Autocomplete matches literal name text, not place type — e.g. "Mall"
-        // prefix-matches "Mallpur"/"Mall Avenue" and "Park" prefix-matches
-        // "Parking No. 5". Many of these false positives only carry generic
-        // types (establishment, point_of_interest) with nothing specific to
-        // reject, so keep only predictions that are actually typed as the
-        // right category — no extra API call/cost, just reading `types`
-        // Autocomplete already returns per-prediction.
-        .filter((p: any) => !acceptTypes || (p.types || []).some((t: string) => acceptTypes.includes(t)))
         .sort((a: any, b: any) => (a.distance_meters ?? Infinity) - (b.distance_meters ?? Infinity));
     };
     (async () => {
@@ -1686,12 +1678,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // within a tight radius — widen the search step by step instead of
         // showing "no results" when a real match just exists further out.
         const radii = wideSearch ? [6000, 15000, 30000] : [6000];
-        let raw: any[] = [];
+        let strict: any[] = [];
+        let loose: any[] = [];
         for (const radiusM of radii) {
-          raw = await fetchAtRadius(radiusM);
-          if (raw.length >= 3) break;
+          const raw = await fetchAtRadius(radiusM);
+          // Autocomplete matches literal name text, not place type — e.g.
+          // "Mall" prefix-matches "Mallpur"/"Mall Avenue" and "Park" prefix-
+          // matches "Parking No. 5". Two-tier: strict = genuinely typed as
+          // the right category (best quality); loose = just not a confirmed-
+          // wrong category (temple/hospital/parking/lodging/route etc — some
+          // false positives only carry generic establishment/point_of_interest
+          // types with nothing specific to reject either way, so loose keeps
+          // those too). Real named malls/parks often don't start with the
+          // query word at all, so strict can legitimately stay empty even at
+          // 30km — loose is the fallback so the customer sees *something*
+          // plausible instead of a dead "no results" screen.
+          strict = raw.filter((p: any) => !acceptTypes || (p.types || []).some((t: string) => acceptTypes.includes(t)));
+          loose  = raw.filter((p: any) => !rejectTypes || !(p.types || []).some((t: string) => rejectTypes.includes(t)));
+          if (strict.length >= 3) break;
         }
-        const merged = raw.slice(0, 8).map((p: any) => ({
+        const best = strict.length > 0 ? strict : loose;
+        const merged = best.slice(0, 8).map((p: any) => ({
           id:         p.place_id,
           text:       p.description,
           main:       p.structured_formatting?.main_text      || p.description.split(',')[0],
