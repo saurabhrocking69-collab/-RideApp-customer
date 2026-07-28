@@ -106,7 +106,7 @@ export function ParcelScreen() {
     if (!pickup || !pickupCoords) { Alert.alert('Pickup needed', 'Enter or select a pickup address'); return; }
     if (!drop || !dropCoords) { Alert.alert('Drop needed', "Enter or select the receiver's address"); return; }
     if (!riderName.trim()) { Alert.alert("Receiver's name needed", "Enter who's receiving the package"); return; }
-    if (riderPhone.length !== 10) { Alert.alert("Receiver's phone needed", "Enter a valid 10-digit phone number — we'll text them the delivery OTP"); return; }
+    if (riderPhone.length !== 10) { Alert.alert("Receiver's phone needed", "Enter a valid 10-digit phone number"); return; }
     if (!selVehicle || !distanceKm) { Alert.alert('Almost there', 'Pick a delivery vehicle'); return; }
     if (hasCod && (!codAmount || parseFloat(codAmount) <= 0)) { Alert.alert('COD amount', 'Enter the amount to collect, or turn off Cash on Delivery'); return; }
 
@@ -231,7 +231,7 @@ export function ParcelScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 8 }}>
             <Ionicons name="information-circle" size={13} color={C.textMuted} style={{ marginTop: 1 }} />
             <Text style={{ flex: 1, fontSize: 10.5, color: C.textMuted, lineHeight: 14 }}>
-              We'll text them a delivery OTP — they hand it to the driver to confirm the package reached the right person.
+Once your driver is matched, you'll get a delivery OTP — share it with them yourself, and they hand it to the driver to confirm the package reached the right person.
             </Text>
           </View>
         </View>

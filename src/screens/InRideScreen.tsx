@@ -355,10 +355,9 @@ export function InRideScreen() {
             )}
           </View>
 
-          {/* ── Parcel delivery OTP — package is en route, receiver needs
-                 this code to hand to the driver at drop. The receiver was
-                 already texted this OTP directly at pickup time (they're not
-                 an app user), this card is a backup / forward-again option. ── */}
+          {/* ── Parcel delivery OTP — package is en route. Also shown earlier
+                 in MatchingScreen once matched; repeated here since the trip
+                 can run long and the sender may not have shared it yet. ── */}
           {rideData?.is_parcel && rideData?.deliveryOtp ? (
             <View style={{
               backgroundColor: C.plumGlass, borderRadius: R.md, padding: 14,
@@ -384,11 +383,11 @@ export function InRideScreen() {
                   }}
                   style={{ backgroundColor: C.plum, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, alignItems: 'center' }}>
                   <Ionicons name="share-social-outline" size={16} color="#fff" />
-                  <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800', marginTop: 2 }}>Forward</Text>
+                  <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800', marginTop: 2 }}>Share</Text>
                 </TouchableOpacity>
               </View>
               <Text style={{ fontSize: 10.5, color: C.textMuted, marginTop: 8, lineHeight: 14 }}>
-                {rideData.receiver_name ? `Already texted to ${rideData.receiver_name}` : 'Already texted to the receiver'} — forward again if they didn't get it.
+                Share this with {rideData.receiver_name || 'the receiver'} so they can hand it to the driver on arrival.
               </Text>
             </View>
           ) : null}

@@ -1092,6 +1092,43 @@ export function MatchingScreen() {
                 </View>
               ) : null}
 
+              {/* ══ DELIVERY OTP — parcel only. Shown as soon as a driver is
+                   matched, not just once picked up, since the sender is the
+                   one responsible for getting this to the receiver and
+                   should be able to start sharing it right away. Shared
+                   manually (WhatsApp/call/text — whatever the sender
+                   prefers) instead of an automatic SMS, which depended on
+                   Fast2SMS actually delivering and added a failure point
+                   for no real benefit — the sender is already right here. ══ */}
+              {rideData?.is_parcel && rideData?.deliveryOtp ? (
+                <View style={{ marginHorizontal: 20, marginTop: 8, backgroundColor: C.plumGlass, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1, borderColor: C.plumBorder }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <Ionicons name="lock-closed-outline" size={14} color={C.plum} />
+                    <Text style={{ fontSize: 10, fontWeight: '900', color: C.textDim, letterSpacing: 1.5 }}>DELIVERY OTP</Text>
+                    <View style={{ flex: 1 }} />
+                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                      {String(rideData.deliveryOtp).split('').slice(0, 4).map((d: string, i: number) => (
+                        <View key={i} style={{ width: 32, height: 38, borderRadius: 9, backgroundColor: '#fff', borderWidth: 1.5, borderColor: C.plumBorder, alignItems: 'center', justifyContent: 'center' }}>
+                          <Text style={{ fontSize: 18, fontWeight: '900', color: C.plum }}>{d}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      const msg = `📦 Sppero delivery OTP: ${rideData.deliveryOtp}\n\nGive this code to the delivery partner when your package arrives.`;
+                      Share.share({ message: msg }).catch(() => Linking.openURL(`https://wa.me/?text=${encodeURIComponent(msg)}`));
+                    }}
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 10, backgroundColor: C.plum, borderRadius: 10, paddingVertical: 9 }}>
+                    <Ionicons name="share-social-outline" size={14} color="#fff" />
+                    <Text style={{ color: '#fff', fontSize: 12, fontWeight: '800' }}>
+                      Share with {rideData.receiver_name || 'receiver'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+
               {/* ══ DRIVER CARD — avatar + info + chat/call ══ */}
               <View style={{ marginHorizontal: 20, marginTop: 14, backgroundColor: C.bgCard, borderRadius: 20, borderWidth: 1, borderColor: C.glassBorder, overflow: 'hidden', elevation: 4, shadowColor: '#000', shadowOpacity: 0.10, shadowRadius: 14 }}>
                 {/* Driver info row */}
