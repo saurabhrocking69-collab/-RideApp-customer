@@ -346,9 +346,12 @@ export function FeatureIllustrationBanner() {
             Auto · Bike · Car · E-Rickshaw
           </Text>
         </View>
-        {/* Right: floating mini auto */}
-        <Animated.View style={{ transform: [{ translateY: floatY }] }}>
-          <MiniAutoSvg />
+        {/* Right: floating mini fleet — scooter tucked in front of the auto */}
+        <Animated.View style={{ transform: [{ translateY: floatY }], flexDirection: 'row', alignItems: 'flex-end' }}>
+          <View style={{ marginRight: -20, marginBottom: 2 }}>
+            <MiniScooterSvg width={46} height={70} />
+          </View>
+          <MiniAutoSvg width={104} height={83} />
         </Animated.View>
       </View>
 
@@ -803,9 +806,9 @@ export function IlluRideComplete({ width = 220, height = 150 }: { width?: number
   );
 }
 
-function MiniAutoSvg() {
+function MiniAutoSvg({ width = 120, height = 96 }: { width?: number; height?: number }) {
   return (
-    <Svg width="120" height="96" viewBox="0 0 120 96">
+    <Svg width={width} height={height} viewBox="0 0 120 96">
       <Defs>
         <LinearGradient id="ma_bd" x1="0" y1="0" x2="0" y2="1">
           <Stop offset="0%"   stopColor="#FFAB36" />
@@ -851,6 +854,11 @@ function MiniAutoSvg() {
       {/* Windshield frame */}
       <Path d="M15,22 L15,42 L90,42 L90,22 Z" fill="none" stroke="rgba(255,140,0,0.4)" strokeWidth="1.2" />
 
+      {/* Driver-side rear-view mirror — single mirror, matches real Indian autos */}
+      <Path d="M90,21 L94,18" stroke="#1F2937" strokeWidth="1.3" strokeLinecap="round" />
+      <Ellipse cx="95.5" cy="17" rx="2.3" ry="1.7" fill="#1F2937" />
+      <Ellipse cx="95.5" cy="17" rx="1.2" ry="0.8" fill="#BFE3FF" opacity={0.8} />
+
       {/* ── Driver ── */}
       <Circle cx="24" cy="34" r="6" fill={SKIN_M} />
       {/* Driver hair */}
@@ -893,10 +901,97 @@ function MiniAutoSvg() {
       <Line x1="80" y1="82" x2="86" y2="82" stroke="rgba(255,255,255,0.45)" strokeWidth="1.3" />
       <Line x1="98" y1="82" x2="104" y2="82" stroke="rgba(255,255,255,0.45)" strokeWidth="1.3" />
 
+      {/* Front mudguard lip over the nose wheel — real autos have this */}
+      <Path d="M82,74 Q92,66 102,74" stroke="#1F2937" strokeWidth="2" fill="none" strokeLinecap="round" opacity={0.6} />
+
       {/* Speed lines (trailing from rear) */}
       <Line x1="0" y1="46" x2="7"  y2="46" stroke="#FFAB36" strokeWidth="2.5" strokeOpacity="0.70" strokeLinecap="round" />
       <Line x1="0" y1="55" x2="7"  y2="55" stroke="#FFAB36" strokeWidth="2"   strokeOpacity="0.48" strokeLinecap="round" />
       <Line x1="0" y1="63" x2="7"  y2="63" stroke="#FFAB36" strokeWidth="1.5" strokeOpacity="0.32" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+/* Side-view scooter + helmeted rider — companion to MiniAutoSvg in the Home
+   hero card, so "Auto · Bike · Car · E-Rickshaw" actually shows more than
+   one vehicle. Flat step-through floor + rounded cowl (Activa/Jupiter
+   style), matching the real top-down ScooterShape used on the live map. */
+function MiniScooterSvg({ width = 60, height = 92 }: { width?: number; height?: number }) {
+  return (
+    <Svg width={width} height={height} viewBox="0 0 60 92">
+      <Defs>
+        <LinearGradient id="ms_bd" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0%"   stopColor="#FB8DA6" />
+          <Stop offset="100%" stopColor="#DB1B5C" />
+        </LinearGradient>
+      </Defs>
+
+      {/* Shadow */}
+      <Ellipse cx="30" cy="88" rx="25" ry="4" fill="rgba(0,0,0,0.20)" />
+
+      {/* Speed lines (trailing from rear-left, same direction of travel as the auto) */}
+      <Line x1="0" y1="54" x2="6" y2="54" stroke="#FB8DA6" strokeWidth="2.2" strokeOpacity="0.65" strokeLinecap="round" />
+      <Line x1="0" y1="62" x2="6" y2="62" stroke="#FB8DA6" strokeWidth="1.8" strokeOpacity="0.45" strokeLinecap="round" />
+      <Line x1="0" y1="70" x2="6" y2="70" stroke="#FB8DA6" strokeWidth="1.4" strokeOpacity="0.30" strokeLinecap="round" />
+
+      {/* Rear mudguard */}
+      <Path d="M4,72 Q13,65 22,72" stroke="#1F2937" strokeWidth="1.6" fill="none" strokeLinecap="round" opacity={0.65} />
+
+      {/* Rear wheel */}
+      <Circle cx="13" cy="78" r="11"  fill="#1A1A30" />
+      <Circle cx="13" cy="78" r="7"   fill="#26264A" />
+      <Circle cx="13" cy="78" r="2.6" fill="#7080A8" />
+      <Line x1="13" y1="67" x2="13" y2="72" stroke="rgba(255,255,255,0.4)" strokeWidth="1.2" />
+      <Line x1="13" y1="84" x2="13" y2="89" stroke="rgba(255,255,255,0.4)" strokeWidth="1.2" />
+      <Line x1="2"  y1="78" x2="7"  y2="78" stroke="rgba(255,255,255,0.4)" strokeWidth="1.2" />
+      <Line x1="19" y1="78" x2="24" y2="78" stroke="rgba(255,255,255,0.4)" strokeWidth="1.2" />
+
+      {/* Front wheel */}
+      <Circle cx="46" cy="78" r="10"  fill="#1A1A30" />
+      <Circle cx="46" cy="78" r="6.4" fill="#26264A" />
+      <Circle cx="46" cy="78" r="2.3" fill="#7080A8" />
+      <Line x1="46" y1="68"   x2="46" y2="72.5" stroke="rgba(255,255,255,0.4)" strokeWidth="1.1" />
+      <Line x1="46" y1="83.5" x2="46" y2="88"   stroke="rgba(255,255,255,0.4)" strokeWidth="1.1" />
+      <Line x1="36" y1="78" x2="40.5" y2="78" stroke="rgba(255,255,255,0.4)" strokeWidth="1.1" />
+      <Line x1="51.5" y1="78" x2="56" y2="78" stroke="rgba(255,255,255,0.4)" strokeWidth="1.1" />
+
+      {/* Step-through floor — flat panel between the wheels, the scooter's
+          signature "no engine bulge" cue */}
+      <Path d="M15,68 L44,68 L44,74 Q44,77 41,77 L18,77 Q15,77 15,74 Z" fill="url(#ms_bd)" opacity={0.94} />
+
+      {/* Rear body hump under the seat */}
+      <Path d="M8,68 Q8,56 20,54 L30,54 L30,68 Z" fill="url(#ms_bd)" />
+
+      {/* Seat */}
+      <Path d="M9,54 Q9,49 16,48 L29,48 Q33,48 33,52 L33,56 L9,56 Z" fill="#1F2937" />
+
+      {/* Front leg-shield rising to the headlamp cowl */}
+      <Path d="M30,68 L30,50 Q30,40 40,38 Q49,37 50,46 L50,68 Z" fill="url(#ms_bd)" />
+      <Path d="M32,64 L32,52 Q32,44 39,41" stroke="rgba(255,255,255,0.30)" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+
+      {/* Rounded LED headlamp cowl */}
+      <Ellipse cx="44" cy="36" rx="8.5" ry="8" fill="url(#ms_bd)" stroke="#fff" strokeWidth="1" />
+      <Ellipse cx="44" cy="36" rx="4"   ry="3.6" fill="#FFE87A" />
+      <Ellipse cx="44" cy="36" rx="2"   ry="1.8" fill="#FFFBB0" />
+
+      {/* Handlebar + mirror */}
+      <Rect x="34" y="26.5" width="18" height="2.6" rx="1.3" fill="#1F2937" transform="rotate(-8 43 28)" />
+      <Circle cx="35" cy="23.5" r="2.1" fill="#1F2937" />
+
+      {/* ── Rider ── */}
+      {/* Torso, leaning slightly forward toward the handlebar */}
+      <Path d="M22,52 Q22,40 33,36 L38,42 Q30,45 29,54 Z" fill={SHIRT} />
+      {/* Arm reaching to the handlebar */}
+      <Path d="M33,38 Q38,33 37,27" stroke={SHIRTD} strokeWidth="3.4" fill="none" strokeLinecap="round" />
+      {/* Head */}
+      <Circle cx="30" cy="30" r="6" fill={SKIN_M} />
+      {/* Half-face helmet — a quiet nod to the "Safety First" card below */}
+      <Path d="M23.5,29.5 Q23.2,20 30,20 Q36.8,20 36.5,29.5 Q35.5,25 30,25 Q24.5,25 23.5,29.5 Z" fill="#1F2937" />
+      <Path d="M23.8,28 Q30,23.6 36.2,28" stroke={PINK} strokeWidth="1.4" fill="none" strokeLinecap="round" />
+      <Path d="M25,32 Q30,35.5 35,32" stroke="#1F2937" strokeWidth="1.3" fill="none" strokeLinecap="round" />
+
+      {/* Sppero brand strip on the floor panel */}
+      <Rect x="17" y="70.5" width="25" height="3.4" rx="1.7" fill="#FF2D78" fillOpacity="0.9" />
     </Svg>
   );
 }
