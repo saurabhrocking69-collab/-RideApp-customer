@@ -56,6 +56,7 @@ interface AppContextType {
   setIntercityRoute: (v: { km: number; durationMin: number } | null) => void;
   bookIntercity: (p: { vehicleType: 'car' | 'luxury'; tripKind: 'oneway' | 'round'; fare?: number; scheduledAt?: string | null; returnAt?: string | null }) => Promise<any>;
   bookParcel: (p: { vehicleType: string; packageSize: 'small' | 'medium' | 'large'; distanceKm: number; fare?: number; codAmount?: number | null; packageNote?: string }) => Promise<any>;
+  parcelEstimate: (distanceKm: number, packageSize: 'small' | 'medium' | 'large') => Promise<any>;
   // Auth
   phone: string; setPhone: (p: string) => void;
   otp: string; setOtp: (o: string) => void;
@@ -1994,7 +1995,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     setLoading(true); setPaymentDone(false);
     try {
-      const data = await apiPost('/api/parcel/book', {
+      const data = await authRidePost('/api/parcel/book', {
         passenger_phone: phone || '9999999999',
         pickup, drop_location: drop,
         vehicle_type: p.vehicleType,
@@ -2025,6 +2026,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return data;
     } catch { Alert.alert('Could not book', 'Network error — please try again'); return null; }
     finally { setLoading(false); }
+  };
+
+  // Fare preview doesn't mutate anything, but still needs the caller's
+  // identity verified — same userAuth middleware as /api/parcel/book.
+  const parcelEstimate = async (distanceKm: number, packageSize: 'small' | 'medium' | 'large') => {
+    return authRidePost('/api/parcel/estimate', { distance: distanceKm, package_size: packageSize });
   };
 
   const surgeFareNow = async (amount: number) => {
@@ -2392,7 +2399,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ═══════════════════════════════════════════════════════════════════════
   const value: AppContextType = {
     screen, setScreen, tab, setTab, scheduleIntent, setScheduleIntent,
-    intercityRoute, setIntercityRoute, bookIntercity, bookParcel,
+    intercityRoute, setIntercityRoute, bookIntercity, bookParcel, parcelEstimate,
     phone, setPhone, otp, setOtp, otpSent, setOtpSent, otpDigits, setOtpDigits,
     resendTimer, setResendTimer, canResend, setCanResend, otpRefs, otpShakeAnim, otpSuccessAnim,
     userName, setUserName, gender, setGender,

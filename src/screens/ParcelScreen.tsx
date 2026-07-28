@@ -5,7 +5,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
-import { apiPost } from '../../api';
 import { MAPS_KEY } from '../constants';
 import { C } from '../styles';
 
@@ -32,7 +31,7 @@ type EstOption = { vehicle_type: string; fare: number; base_fare: number; dist_f
 export function ParcelScreen() {
   const insets = useSafeAreaInsets();
   const {
-    setScreen, phone, loading, bookParcel,
+    setScreen, loading, bookParcel, parcelEstimate,
     pickup, setPickup, drop, setDrop,
     pickupCoords, setPickupCoords, dropCoords, setDropCoords,
     pickupSugg, setPickupSugg, dropSugg, setDropSugg,
@@ -83,7 +82,7 @@ export function ParcelScreen() {
     if (!distanceKm) { setOptions([]); return; }
     setEstLoading(true);
     try {
-      const r = await apiPost('/api/parcel/estimate', { distance: distanceKm, package_size: packageSize });
+      const r = await parcelEstimate(distanceKm, packageSize);
       const opts: EstOption[] = r?.options || [];
       setOptions(opts);
       setSelVehicle(prev => opts.some(o => o.vehicle_type === prev) ? prev : (opts[0]?.vehicle_type || null));
