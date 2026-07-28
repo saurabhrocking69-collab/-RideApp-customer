@@ -13,7 +13,7 @@ import { shortRideId } from '../rideId';
 import { MAPS_KEY, API } from '../constants';
 import { useNearbyDrivers } from '../offline';
 import { NotifBell, NotificationCenter, getUnreadCount } from '../components/NotificationCenter';
-import { IlluFamily3, BikeScene } from '../components/Illustrations';
+import { FeatureIllustrationBanner, IlluFamily3, BikeScene } from '../components/Illustrations';
 import { NEARBY_CATEGORIES } from '../nearbyCategories';
 
 
@@ -1400,8 +1400,13 @@ function HomeTab() {
             </View>
           </SlideUp>
 
-          {/* 5b. ── Driver Buddy Fund banner ── */}
+          {/* 5b. ── Feature illustration banner ── */}
           <SlideUp delay={20}>
+            <FeatureIllustrationBanner />
+          </SlideUp>
+
+          {/* 5c. ── Driver Buddy Fund banner ── */}
+          <SlideUp delay={40}>
             <BuddyFundBanner onPress={() => setShowBuddyFund(true)} stats={buddyFundStats} />
           </SlideUp>
 

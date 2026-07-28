@@ -302,6 +302,109 @@ export function IlluCancel({ width = 200, height = 128 }: { width?: number; heig
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   FeatureIllustrationBanner  — HomeScreen feature section
+   Wide hero card + two feature cards below
+═══════════════════════════════════════════════════════════════ */
+export function FeatureIllustrationBanner() {
+  const floatY = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatY, { toValue: -7, duration: 1300, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(floatY, { toValue: 0,  duration: 1300, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
+  return (
+    <View style={{ gap: 10, marginBottom: 14 }}>
+
+      {/* ── Hero card: "Get a ride in 3 min" ── */}
+      <View style={{
+        borderRadius: 22,
+        backgroundColor: PLUM,
+        overflow: 'hidden',
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingLeft: 18,
+        paddingRight: 8,
+        paddingVertical: 16,
+        minHeight: 100,
+      }}>
+        {/* Left: text */}
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+            <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: GREEN }} />
+            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>
+              LIVE DRIVERS NEARBY
+            </Text>
+          </View>
+          <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900', lineHeight: 26 }}>
+            Get a ride{'\n'}in 3 minutes
+          </Text>
+          <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, marginTop: 6 }}>
+            Auto · Bike · Car · E-Rickshaw
+          </Text>
+        </View>
+        {/* Right: floating mini auto */}
+        <Animated.View style={{ transform: [{ translateY: floatY }] }}>
+          <MiniAutoSvg />
+        </Animated.View>
+      </View>
+
+      {/* ── Two feature cards ── */}
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        {/* Safety card */}
+        <View style={{
+          flex: 1, borderRadius: 20, padding: 16,
+          backgroundColor: GREEN, minHeight: 128, overflow: 'hidden',
+        }}>
+          <View style={{ position: 'absolute', top: -18, right: -18, width: 70, height: 70,
+            borderRadius: 35, backgroundColor: 'rgba(255,255,255,0.10)' }} />
+          {/* Family illustration bottom-right */}
+          <View style={{ position: 'absolute', bottom: -2, right: -8, opacity: 0.88 }}>
+            <IlluFamily3 width={80} height={50} />
+          </View>
+          <View style={{ position: 'absolute', top: 10, right: 10,
+            backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 20,
+            paddingHorizontal: 7, paddingVertical: 3 }}>
+            <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>INSURED</Text>
+          </View>
+          <Text style={{ fontSize: 24, marginBottom: 6 }}>🛡️</Text>
+          <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900', lineHeight: 17 }}>
+            Safety First
+          </Text>
+          <Text style={{ color: 'rgba(255,255,255,0.78)', fontSize: 10, marginTop: 4, lineHeight: 14 }}>
+            Live tracking &{'\n'}family alerts
+          </Text>
+        </View>
+
+        {/* Buddy card */}
+        <View style={{
+          flex: 1, borderRadius: 20, padding: 16,
+          backgroundColor: PINK, minHeight: 110, overflow: 'hidden',
+        }}>
+          <View style={{ position: 'absolute', top: -18, right: -18, width: 70, height: 70,
+            borderRadius: 35, backgroundColor: 'rgba(255,255,255,0.10)' }} />
+          <Text style={{ fontSize: 28, marginBottom: 8 }}>⭐</Text>
+          <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900', lineHeight: 17 }}>
+            Sppero Buddy
+          </Text>
+          <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 10, marginTop: 4, lineHeight: 14 }}>
+            Your personal trusted driver, always available
+          </Text>
+          <View style={{ position: 'absolute', top: 10, right: 10,
+            backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 20,
+            paddingHorizontal: 7, paddingVertical: 3 }}>
+            <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>POPULAR</Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
    IlluFamily3  — 88×56  (fits inside home screen cards)
    Mom (bindi, kurta) · Child (center, short) · Dad (shirt)
    Used in Auto card + Safety feature card
@@ -700,3 +803,100 @@ export function IlluRideComplete({ width = 220, height = 150 }: { width?: number
   );
 }
 
+function MiniAutoSvg() {
+  return (
+    <Svg width="120" height="96" viewBox="0 0 120 96">
+      <Defs>
+        <LinearGradient id="ma_bd" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0%"   stopColor="#FFAB36" />
+          <Stop offset="100%" stopColor="#D85A00" />
+        </LinearGradient>
+        <LinearGradient id="ma_rf" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0%"   stopColor="#FF7A00" />
+          <Stop offset="100%" stopColor="#B34500" />
+        </LinearGradient>
+        <LinearGradient id="ma_gl" x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0%"   stopColor="#C6E8FF" stopOpacity="0.95" />
+          <Stop offset="100%" stopColor="#A8D8F8" stopOpacity="0.75" />
+        </LinearGradient>
+      </Defs>
+
+      {/* Shadow */}
+      <Ellipse cx="60" cy="88" rx="50" ry="7" fill="rgba(0,0,0,0.20)" />
+
+      {/* ── Rear chassis / lower body ── */}
+      <Path d="M8,80 L8,50 Q8,42 16,42 L38,42 L38,80 Z" fill="url(#ma_bd)" />
+      {/* Main passenger cabin body */}
+      <Path d="M38,42 L38,80 L94,80 L94,56 Q94,48 86,48 L38,48 Z" fill="url(#ma_bd)" />
+      {/* Front nose/fairing */}
+      <Path d="M94,48 Q108,44 112,54 L112,72 Q112,80 104,80 L94,80 L94,48 Z" fill="url(#ma_bd)" />
+
+      {/* ── Roof canopy — the signature auto-rickshaw rounded top ── */}
+      <Path d="M8,24 Q10,14 38,12 Q68,10 94,12 Q110,14 112,24 L108,28 Q92,22 38,22 Q16,24 10,28 Z" fill="url(#ma_rf)" />
+      {/* Roof ridge highlight */}
+      <Path d="M14,22 Q54,16 94,18 Q104,19 108,22" stroke="rgba(255,200,100,0.45)" strokeWidth="2" fill="none" />
+      {/* Roof front overhang curve */}
+      <Path d="M108,24 Q114,28 114,38" stroke="url(#ma_rf)" strokeWidth="6" fill="none" strokeLinecap="round" />
+
+      {/* ── Rear upright post ── */}
+      <Rect x="10" y="22" width="5" height="22" rx="2.5" fill="rgba(0,0,0,0.28)" />
+
+      {/* ── A-pillar (driver/front divider) ── */}
+      <Rect x="90" y="22" width="5" height="26" rx="2.5" fill="rgba(0,0,0,0.32)" />
+
+      {/* ── Windshield glass (entire cabin face) ── */}
+      <Path d="M15,22 L15,42 L90,42 L90,22 Z" fill="url(#ma_gl)" />
+      {/* Windshield top glare */}
+      <Rect x="17" y="23" width="22" height="3" rx="1.5" fill="rgba(255,255,255,0.55)" />
+      {/* Windshield frame */}
+      <Path d="M15,22 L15,42 L90,42 L90,22 Z" fill="none" stroke="rgba(255,140,0,0.4)" strokeWidth="1.2" />
+
+      {/* ── Driver ── */}
+      <Circle cx="24" cy="34" r="6" fill={SKIN_M} />
+      {/* Driver hair */}
+      <Path d="M18,30 Q18,24 24,24 Q30,24 30,30 Q28,26 24,26 Q20,26 18,30 Z" fill={HAIR} />
+      {/* Driver shirt */}
+      <Path d="M16,40 Q16,36 24,34 Q32,36 32,40 Z" fill="#2563EB" />
+
+      {/* ── Passenger ── */}
+      <Circle cx="60" cy="34" r="5.5" fill={SKIN_L} />
+      <Path d="M54.5,30 Q54.5,25 60,25 Q65.5,25 65.5,30 Q63,27 60,27 Q57,27 54.5,30 Z" fill={HAIR} />
+      {/* Saree/kurta hint */}
+      <Path d="M53,40 Q53,37 60,35 Q67,37 67,40 Z" fill={KURTA} />
+
+      {/* ── Sppero brand strip ── */}
+      <Rect x="8" y="74" width="86" height="5" rx="2.5" fill="#FF2D78" fillOpacity="0.90" />
+
+      {/* ── Front headlight ── */}
+      <Ellipse cx="114" cy="58" rx="5.5" ry="7.5" fill="#FFE87A" />
+      <Ellipse cx="114" cy="58" rx="3.5" ry="5"   fill="#FFFBB0" />
+      <Ellipse cx="114" cy="58" rx="5.5" ry="7.5" fill="none" stroke="rgba(255,220,50,0.6)" strokeWidth="1" />
+
+      {/* ── Front grille/bumper ── */}
+      <Path d="M110,72 L114,72 L114,78 Q112,80 108,80 Z" fill="rgba(0,0,0,0.55)" />
+
+      {/* ── Rear wheel (left) ── */}
+      <Circle cx="26" cy="82" r="13"  fill="#1A1A30" />
+      <Circle cx="26" cy="82" r="9"   fill="#26264A" />
+      <Circle cx="26" cy="82" r="3.5" fill="#7080A8" />
+      <Line x1="26" y1="69" x2="26" y2="75" stroke="rgba(255,255,255,0.45)" strokeWidth="1.3" />
+      <Line x1="26" y1="89" x2="26" y2="95" stroke="rgba(255,255,255,0.45)" strokeWidth="1.3" />
+      <Line x1="13" y1="82" x2="19" y2="82" stroke="rgba(255,255,255,0.45)" strokeWidth="1.3" />
+      <Line x1="33" y1="82" x2="39" y2="82" stroke="rgba(255,255,255,0.45)" strokeWidth="1.3" />
+
+      {/* ── Front wheel (right) ── */}
+      <Circle cx="92" cy="82" r="12"  fill="#1A1A30" />
+      <Circle cx="92" cy="82" r="8"   fill="#26264A" />
+      <Circle cx="92" cy="82" r="3"   fill="#7080A8" />
+      <Line x1="92" y1="70" x2="92" y2="76" stroke="rgba(255,255,255,0.45)" strokeWidth="1.3" />
+      <Line x1="92" y1="88" x2="92" y2="94" stroke="rgba(255,255,255,0.45)" strokeWidth="1.3" />
+      <Line x1="80" y1="82" x2="86" y2="82" stroke="rgba(255,255,255,0.45)" strokeWidth="1.3" />
+      <Line x1="98" y1="82" x2="104" y2="82" stroke="rgba(255,255,255,0.45)" strokeWidth="1.3" />
+
+      {/* Speed lines (trailing from rear) */}
+      <Line x1="0" y1="46" x2="7"  y2="46" stroke="#FFAB36" strokeWidth="2.5" strokeOpacity="0.70" strokeLinecap="round" />
+      <Line x1="0" y1="55" x2="7"  y2="55" stroke="#FFAB36" strokeWidth="2"   strokeOpacity="0.48" strokeLinecap="round" />
+      <Line x1="0" y1="63" x2="7"  y2="63" stroke="#FFAB36" strokeWidth="1.5" strokeOpacity="0.32" strokeLinecap="round" />
+    </Svg>
+  );
+}
