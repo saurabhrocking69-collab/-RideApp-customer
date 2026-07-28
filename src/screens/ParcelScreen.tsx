@@ -21,9 +21,9 @@ const VEHICLE_LABEL: Record<string, string> = {
 
 type PackageSize = 'small' | 'medium' | 'large';
 const SIZE_INFO: { key: PackageSize; label: string; desc: string; icon: string }[] = [
-  { key: 'small',  label: 'Small',  desc: 'Fits in a bag',        icon: '👜' },
-  { key: 'medium', label: 'Medium', desc: 'A box',                icon: '📦' },
-  { key: 'large',  label: 'Large',  desc: "Won't fit on a bike",  icon: '🗄️' },
+  { key: 'small',  label: 'Small',  desc: 'Fits in a bag · up to 2 kg',        icon: '👜' },
+  { key: 'medium', label: 'Medium', desc: 'A box · up to 10 kg',               icon: '📦' },
+  { key: 'large',  label: 'Large',  desc: "Won't fit on a bike · up to 25 kg", icon: '🗄️' },
 ];
 
 type EstOption = { vehicle_type: string; fare: number; base_fare: number; dist_fare: number; per_km_rate: number; surcharge: number };

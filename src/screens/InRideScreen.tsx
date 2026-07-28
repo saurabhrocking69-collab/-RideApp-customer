@@ -207,7 +207,7 @@ export function InRideScreen() {
             <Text style={{ fontSize: 17 }}>{vEmoji}</Text>
           </View>
           <View>
-            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>Ride In Progress</Text>
+            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>{rideData?.is_parcel ? 'Delivery In Progress' : 'Ride In Progress'}</Text>
             <Text style={{ color: 'rgba(255,255,255,0.48)', fontSize: 11, marginTop: 1, textTransform: 'capitalize' }}>
               {vType}
             </Text>
@@ -277,7 +277,7 @@ export function InRideScreen() {
                 <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: C.green }} />
               </PulseView>
               <Text style={{ color: C.textMuted, fontSize: 12, fontWeight: '600' }}>
-                Reaching drop location in
+                {rideData?.is_parcel ? `Reaching ${rideData?.receiver_name || 'the receiver'} in` : 'Reaching drop location in'}
               </Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -412,7 +412,7 @@ export function InRideScreen() {
                   color: C.textMuted, fontSize: 12, fontWeight: '700',
                   marginBottom: 9, letterSpacing: 0.2,
                 }}>
-                  Any issues with your ride?
+                  {rideData?.is_parcel ? 'Any issues with this delivery?' : 'Any issues with your ride?'}
                 </Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <View style={{ flexDirection: 'row', gap: 8 }}>

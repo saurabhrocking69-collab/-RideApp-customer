@@ -173,7 +173,7 @@ _GST is included in the fare — not charged separately._
               </View>
             )}
             <View style={{ alignItems: 'flex-start' }}>
-              <Text style={{ fontSize: 24, fontWeight: '900', color: '#fff' }}>{paymentDone ? 'Payment Done!' : 'Trip Complete! 🎉'}</Text>
+              <Text style={{ fontSize: 24, fontWeight: '900', color: '#fff' }}>{paymentDone ? 'Payment Done!' : (rideData?.is_parcel ? 'Delivered! 🎉' : 'Trip Complete! 🎉')}</Text>
               {rideData?.driver?.name ? (
                 <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 2 }}>
                   Driver: {rideData.driver.name}

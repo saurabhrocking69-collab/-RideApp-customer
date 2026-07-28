@@ -225,7 +225,7 @@ export function PaymentScreen() {
           <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 16 }}>
             <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#fff' }} />
-              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900', letterSpacing: 2 }}>SPPERO · TRIP COMPLETE</Text>
+              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900', letterSpacing: 2 }}>SPPERO · {rideData?.is_parcel ? 'DELIVERY COMPLETE' : 'TRIP COMPLETE'}</Text>
               <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#fff' }} />
             </View>
           </View>
@@ -458,21 +458,37 @@ export function PaymentScreen() {
             </View>
           </Bouncy>
 
-          {/* ── Cash ── */}
-          <Bouncy onPress={payWithCash} style={{ opacity: cashConfirming ? 0.6 : 1, marginBottom: 10 }}>
-            <View style={{ borderRadius: R.md, padding: SP.md, flexDirection: 'row', alignItems: 'center', backgroundColor: C.glassMid, borderWidth: 1.5, borderColor: C.glassBorder, ...SHADOW.sm }}>
-              <View style={{ width: 48, height: 48, borderRadius: R.sm, backgroundColor: C.greenGlass, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1.5, borderColor: C.greenBorder }}>
+          {/* ── Cash — not offered for parcels. The sender pays, but it's the
+                 receiver (not the sender) who's actually with the driver at
+                 drop, so there's no one there to hand cash over. ── */}
+          {rideData?.is_parcel ? (
+            <View style={{ borderRadius: R.md, padding: SP.md, flexDirection: 'row', alignItems: 'center', backgroundColor: C.glassMid, borderWidth: 1.5, borderColor: C.glassBorder, marginBottom: 10, opacity: 0.6 }}>
+              <View style={{ width: 48, height: 48, borderRadius: R.sm, backgroundColor: C.glassHigh, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1.5, borderColor: C.glassBorder }}>
                 <Text style={{ fontSize: 22 }}>💵</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ ...T.bodyBold, color: C.text, marginBottom: 2 }}>Cash</Text>
+                <Text style={{ ...T.bodyBold, color: C.textDim, marginBottom: 2 }}>Cash — not available</Text>
                 <Text style={{ ...T.caption, color: C.textDim }}>
-                  {cashConfirming ? '⏳ Confirming...' : `Give ₹${fareNum} cash to driver`}
+                  You won't be with the driver when it's delivered — pay online instead
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={C.textDim} />
             </View>
-          </Bouncy>
+          ) : (
+            <Bouncy onPress={payWithCash} style={{ opacity: cashConfirming ? 0.6 : 1, marginBottom: 10 }}>
+              <View style={{ borderRadius: R.md, padding: SP.md, flexDirection: 'row', alignItems: 'center', backgroundColor: C.glassMid, borderWidth: 1.5, borderColor: C.glassBorder, ...SHADOW.sm }}>
+                <View style={{ width: 48, height: 48, borderRadius: R.sm, backgroundColor: C.greenGlass, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1.5, borderColor: C.greenBorder }}>
+                  <Text style={{ fontSize: 22 }}>💵</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ ...T.bodyBold, color: C.text, marginBottom: 2 }}>Cash</Text>
+                  <Text style={{ ...T.caption, color: C.textDim }}>
+                    {cashConfirming ? '⏳ Confirming...' : `Give ₹${fareNum} cash to driver`}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={C.textDim} />
+              </View>
+            </Bouncy>
+          )}
 
           {result ? <Text style={[s.err, { marginTop: 6 }]}>{result}</Text> : null}
 

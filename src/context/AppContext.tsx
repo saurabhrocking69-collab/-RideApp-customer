@@ -347,6 +347,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               setRideData((p: any) => p ? {
                 ...p,
                 startOtp: d.ride.start_otp || p?.startOtp,
+                deliveryOtp: d.ride.delivery_otp || p?.deliveryOtp,
                 fare: d.ride.fare || p?.fare,
                 distance: d.ride.distance || p?.distance,
                 driver: {
@@ -649,6 +650,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                   ...ride,
                   ride_id:  ride.ride_id ?? ride.id,
                   startOtp: st === 'started' ? '' : (ride.start_otp || ''),
+                  deliveryOtp: ride.delivery_otp || '',
                   driver,
                 });
 
@@ -1195,6 +1197,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                     ...p,
                     status: st,
                     startOtp: d.ride.start_otp || p?.startOtp,
+                    deliveryOtp: d.ride.delivery_otp || p?.deliveryOtp,
                     fare: d.ride.fare || p?.fare,
                     discount: d.ride.discount ?? p?.discount ?? 0,
                     net_fare: d.ride.net_fare ?? p?.net_fare,
@@ -1368,6 +1371,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ...ride,
         ride_id:  ride.ride_id ?? ride.id,
         startOtp: st === 'started' ? '' : (ride.start_otp || ''),
+        deliveryOtp: ride.delivery_otp || '',
         driver,
       });
 
