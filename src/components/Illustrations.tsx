@@ -355,52 +355,35 @@ export function FeatureIllustrationBanner() {
         </Animated.View>
       </View>
 
-      {/* ── Two feature cards ── */}
-      <View style={{ flexDirection: 'row', gap: 10 }}>
-        {/* Safety card */}
-        <View style={{
-          flex: 1, borderRadius: 20, padding: 16,
-          backgroundColor: GREEN, minHeight: 128, overflow: 'hidden',
-        }}>
-          <View style={{ position: 'absolute', top: -18, right: -18, width: 70, height: 70,
-            borderRadius: 35, backgroundColor: 'rgba(255,255,255,0.10)' }} />
-          {/* Family illustration bottom-right */}
-          <View style={{ position: 'absolute', bottom: -2, right: -8, opacity: 0.88 }}>
-            <IlluFamily3 width={80} height={50} />
-          </View>
-          <View style={{ position: 'absolute', top: 10, right: 10,
-            backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 20,
-            paddingHorizontal: 7, paddingVertical: 3 }}>
-            <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>INSURED</Text>
-          </View>
-          <Text style={{ fontSize: 24, marginBottom: 6 }}>🛡️</Text>
-          <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900', lineHeight: 17 }}>
-            Safety First
-          </Text>
-          <Text style={{ color: 'rgba(255,255,255,0.78)', fontSize: 10, marginTop: 4, lineHeight: 14 }}>
-            Live tracking &{'\n'}family alerts
-          </Text>
+      {/* ── Safety card — full width. The Buddy panel that used to sit next
+             to this was dropped: Sppero Buddy already gets its own full
+             card lower on the Home screen, so this hero only needed to
+             carry the one thing nothing else on the screen says. ── */}
+      <View style={{
+        borderRadius: 20, padding: 16,
+        backgroundColor: GREEN, minHeight: 92, overflow: 'hidden',
+        flexDirection: 'row', alignItems: 'center',
+      }}>
+        <View style={{ position: 'absolute', top: -18, right: -18, width: 70, height: 70,
+          borderRadius: 35, backgroundColor: 'rgba(255,255,255,0.10)' }} />
+        {/* Family illustration bottom-right */}
+        <View style={{ position: 'absolute', bottom: -2, right: -8, opacity: 0.88 }}>
+          <IlluFamily3 width={80} height={50} />
         </View>
-
-        {/* Buddy card */}
-        <View style={{
-          flex: 1, borderRadius: 20, padding: 16,
-          backgroundColor: PINK, minHeight: 110, overflow: 'hidden',
-        }}>
-          <View style={{ position: 'absolute', top: -18, right: -18, width: 70, height: 70,
-            borderRadius: 35, backgroundColor: 'rgba(255,255,255,0.10)' }} />
-          <Text style={{ fontSize: 28, marginBottom: 8 }}>⭐</Text>
-          <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900', lineHeight: 17 }}>
-            Sppero Buddy
-          </Text>
-          <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 10, marginTop: 4, lineHeight: 14 }}>
-            Your personal trusted driver, always available
-          </Text>
-          <View style={{ position: 'absolute', top: 10, right: 10,
-            backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 20,
-            paddingHorizontal: 7, paddingVertical: 3 }}>
-            <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>POPULAR</Text>
+        <Text style={{ fontSize: 28, marginRight: 12 }}>🛡️</Text>
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '900', lineHeight: 18 }}>
+              Safety First
+            </Text>
+            <View style={{ backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 20,
+              paddingHorizontal: 7, paddingVertical: 2 }}>
+              <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>INSURED</Text>
+            </View>
           </View>
+          <Text style={{ color: 'rgba(255,255,255,0.78)', fontSize: 10.5, marginTop: 3, lineHeight: 14 }}>
+            Live tracking & family alerts, every ride
+          </Text>
         </View>
       </View>
     </View>

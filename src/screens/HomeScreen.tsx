@@ -919,6 +919,11 @@ function HomeTab() {
   const userLng = (userCoords as any)?.longitude || (userCoords as any)?.lng;
   const { data: nearbyDriversData } = useNearbyDrivers(userLat, userLng);
   const nearbyCount = Array.isArray(nearbyDriversData) ? nearbyDriversData.length : 0;
+  // Per-type live counts — feed the small "N nearby" line on each vehicle
+  // grid card instead of a separate "Live Availability" pill row.
+  const liveAutoCount = Array.isArray(nearbyDriversData) ? nearbyDriversData.filter((d: any) => ['auto','electric_auto','eriksha'].includes(d.vehicleType)).length : 0;
+  const liveBikeCount = Array.isArray(nearbyDriversData) ? nearbyDriversData.filter((d: any) => ['bike','green_bike'].includes(d.vehicleType)).length : 0;
+  const liveCarCount  = Array.isArray(nearbyDriversData) ? nearbyDriversData.filter((d: any) => ['car','luxury'].includes(d.vehicleType)).length : 0;
 
   // Search box micro-animation: pulsing pink border glow (native driver, smooth)
   const searchGlowOpacity = useRef(new Animated.Value(0.18)).current;
@@ -1070,9 +1075,78 @@ function HomeTab() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: 90 }}
       >
-        {/* 1. ── Vehicle quick-select chips — FIRST ── */}
+        {/* 0. ── Active ride / hourly banner — pre-empts the booking pitch
+               entirely when one is running. Shown immediately, not gated
+               behind the 550ms homeReady skeleton delay below, since ride
+               status is more urgent than a nice loading feel. ── */}
+        {rideData?.ride_id && !paymentDone && storeStatus !== 'completed' && (
+          <SlideUp delay={0}>
+            <TouchableOpacity
+              onPress={() => {
+                if (storeStatus === 'started') setScreen('inride');
+                else setScreen('matching');
+              }}
+              style={{ marginHorizontal: 16, marginTop: 10, backgroundColor: C.bgCard, borderRadius: 18, padding: 14, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: C.pinkBorder, ...SHADOW.md }}>
+              <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1, borderColor: C.pinkBorder }}>
+                <Ionicons name={storeStatus === 'started' ? 'navigate-outline' : 'car-outline'} size={22} color={C.pink} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: C.text, fontWeight: '800', fontSize: 15 }}>
+                  {storeStatus === 'started' ? 'Ride In Progress' : 'Looking for Driver'}
+                </Text>
+                <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>{drop ? `To ${drop}` : 'Tap to view ride status'}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={C.pink} />
+            </TouchableOpacity>
+          </SlideUp>
+        )}
+
+        {hourlyBooking && ['pending','matched','active'].includes(hourlyBooking.status) && (
+          <SlideUp delay={0}>
+            <TouchableOpacity onPress={() => setScreen('hourly')} style={{ marginHorizontal: 16, marginTop: 10, backgroundColor: C.bgCard, borderRadius: 18, padding: 14, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: C.purpleBorder, ...SHADOW.md }}>
+              <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: C.purpleGlass, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1, borderColor: C.purpleBorder }}>
+                <Ionicons name="time-outline" size={22} color={C.purple} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: C.text, fontWeight: '800', fontSize: 15 }}>Active Hourly Ride</Text>
+                <Text style={{ color: C.textMuted, fontSize: 12 }}>Tap to resume your hourly ride</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={C.purple} />
+            </TouchableOpacity>
+          </SlideUp>
+        )}
+
+        {/* 1. ── Hero action unit: search bar (the one primary "start a
+               ride" ask) with the vehicle chips grouped tightly beneath it
+               as a secondary shortcut for people who already know what
+               they want — one visual unit instead of two competing blocks. ── */}
+        <View style={{ marginHorizontal: 16, marginTop: 10, position: 'relative' }}>
+          {/* Animated glowing border ring (native driver, opacity only) */}
+          <Animated.View pointerEvents="none" style={{
+            position: 'absolute', top: -2, left: -2, right: -2, bottom: -2,
+            borderRadius: 22, borderWidth: 2.5, borderColor: C.pink,
+            opacity: searchGlowOpacity,
+          }} />
+          <TouchableOpacity onPress={() => setScreen('booking')} activeOpacity={0.88} style={{
+            backgroundColor: C.bgCard,
+            borderRadius: 20, paddingVertical: 15, paddingHorizontal: 18,
+            flexDirection: 'row', alignItems: 'center', gap: 12,
+            ...SHADOW.lg,
+            borderWidth: 1.5, borderColor: 'rgba(233,69,96,0.18)',
+            zIndex: 10,
+          }}>
+            <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.pinkBorder }}>
+              <Ionicons name="search" size={16} color={C.pink} />
+            </View>
+            <Text style={{ flex: 1, fontSize: 15, color: C.textMuted, fontWeight: '500' }}>Where are you going?</Text>
+            <View style={{ backgroundColor: C.pink, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8, ...SHADOW.pink }}>
+              <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900', letterSpacing: 0.5 }}>Go</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
         <ScrollView horizontal showsHorizontalScrollIndicator={false}
-          style={{ marginTop: 10 }}
+          style={{ marginTop: 8 }}
           contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
           {([
             { id: 'auto',   icon: 'car-outline' as const,        label: 'Auto',    hourly: false },
@@ -1105,96 +1179,11 @@ function HomeTab() {
           ))}
         </ScrollView>
 
-        {/* 2. ── Search bar with micro-animation — BELOW CHIPS ── */}
-        <View style={{ marginHorizontal: 16, marginTop: 12, position: 'relative' }}>
-          {/* Animated glowing border ring (native driver, opacity only) */}
-          <Animated.View pointerEvents="none" style={{
-            position: 'absolute', top: -2, left: -2, right: -2, bottom: -2,
-            borderRadius: 22, borderWidth: 2.5, borderColor: C.pink,
-            opacity: searchGlowOpacity,
-          }} />
-          <TouchableOpacity onPress={() => setScreen('booking')} activeOpacity={0.88} style={{
-            backgroundColor: C.bgCard,
-            borderRadius: 20, paddingVertical: 15, paddingHorizontal: 18,
-            flexDirection: 'row', alignItems: 'center', gap: 12,
-            ...SHADOW.lg,
-            borderWidth: 1.5, borderColor: 'rgba(233,69,96,0.18)',
-            zIndex: 10,
-          }}>
-            <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.pinkBorder }}>
-              <Ionicons name="search" size={16} color={C.pink} />
-            </View>
-            <Text style={{ flex: 1, fontSize: 15, color: C.textMuted, fontWeight: '500' }}>Where are you going?</Text>
-            <View style={{ backgroundColor: C.pink, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8, ...SHADOW.pink }}>
-              <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900', letterSpacing: 0.5 }}>Go</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        {/* 2a. ── "New in the city?" info hint — plain display, no tap
-               action. The real one-tap category search lives inside the
-               booking screen's own drop-search step; this is just a hint
-               so people know it exists, not a duplicate entry point.
-               Shown as a scannable chip strip (matches the booking screen's
-               own category chips) instead of a run-on sentence. ── */}
-        <View style={{ marginHorizontal: 16, marginTop: 12, backgroundColor: C.bgCard, borderRadius: 18, borderWidth: 1, borderColor: C.glassBorder, overflow: 'hidden', ...SHADOW.sm, paddingHorizontal: 14, paddingVertical: 14 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 3 }}>
-            <View style={{ width: 22, height: 22, borderRadius: 7, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.pinkBorder }}>
-              <Ionicons name="compass-outline" size={12} color={C.pink} />
-            </View>
-            <Text style={{ fontSize: 12.5, fontWeight: '900', color: C.text }}>New in the city?</Text>
-          </View>
-          <Text style={{ fontSize: 11.5, color: C.textMuted, lineHeight: 16, marginBottom: 11 }}>
-            Search these near you right from the drop location box
-          </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-            {NEARBY_CATEGORIES.map(cat => (
-              <View key={cat.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.glassMid, borderRadius: R.full, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, borderColor: C.glassBorder }}>
-                <Text style={{ fontSize: 13 }}>{cat.icon}</Text>
-                <Text style={{ fontSize: 11.5, fontWeight: '700', color: C.text }}>{cat.shortLabel}</Text>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* 2b. ── Live city pulse ticker ── */}
-        <View style={{
-          marginHorizontal: 16, marginTop: 10,
-          height: 30, borderRadius: 10, overflow: 'hidden',
-          backgroundColor: 'rgba(46,20,97,0.05)',
-          borderWidth: 1, borderColor: 'rgba(46,20,97,0.10)',
-          justifyContent: 'center',
-        }}>
-          <Animated.View style={{ flexDirection: 'row', alignItems: 'center', transform: [{ translateX: tickerAnim }] }}>
-            {([
-              { dot: '#059669', text: `${nearbyCount > 0 ? nearbyCount + ' drivers near you' : 'Drivers active near you'}` },
-              { dot: C.pink,    text: 'Avg 4 min pickup time' },
-              { dot: C.yellow,  text: '4.8 avg driver rating' },
-              { dot: C.mint,    text: '2,500+ drivers earning daily' },
-              { dot: C.purple,  text: "India's only Buddy system" },
-              { dot: C.pink,    text: 'Made in India 🇮🇳' },
-              { dot: '#059669', text: 'Every ride tracked & safe' },
-              { dot: C.yellow,  text: 'Cash · UPI · Wallet accepted' },
-            ].concat([
-              { dot: '#059669', text: `${nearbyCount > 0 ? nearbyCount + ' drivers near you' : 'Drivers active near you'}` },
-              { dot: C.pink,    text: 'Avg 4 min pickup time' },
-              { dot: C.yellow,  text: '4.8 avg driver rating' },
-              { dot: C.mint,    text: '2,500+ drivers earning daily' },
-              { dot: C.purple,  text: "India's only Buddy system" },
-              { dot: C.pink,    text: 'Made in India 🇮🇳' },
-              { dot: '#059669', text: 'Every ride tracked & safe' },
-              { dot: C.yellow,  text: 'Cash · UPI · Wallet accepted' },
-            ])).map((item, i) => (
-              <View key={i} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18 }}>
-                <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: item.dot, marginRight: 7 }} />
-                <Text style={{ color: C.textMuted, fontSize: 11.5, fontWeight: '600', letterSpacing: 0.2 }}>{item.text}</Text>
-              </View>
-            ))}
-          </Animated.View>
-        </View>
-
-        {/* 3. ── Smart "Drivers nearby" CTA ── */}
-        {nearbyCount > 0 && (
+        {/* 2. ── Adaptive status strip — one slot instead of two. When
+               drivers are actually near you it's worth a real CTA; when
+               they're not (or the count hasn't loaded yet) it falls back
+               to the ambient trust ticker instead of stacking both. ── */}
+        {nearbyCount > 0 ? (
           <TouchableOpacity onPress={() => setScreen('booking')} activeOpacity={0.9}
             style={{ marginHorizontal: 16, marginTop: 10 }}>
             <View style={{ backgroundColor: 'rgba(5,150,105,0.15)', borderWidth: 1.5, borderColor: 'rgba(5,150,105,0.35)', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -1212,13 +1201,51 @@ function HomeTab() {
               </View>
             </View>
           </TouchableOpacity>
+        ) : (
+          <View style={{
+            marginHorizontal: 16, marginTop: 10,
+            height: 30, borderRadius: 10, overflow: 'hidden',
+            backgroundColor: 'rgba(46,20,97,0.05)',
+            borderWidth: 1, borderColor: 'rgba(46,20,97,0.10)',
+            justifyContent: 'center',
+          }}>
+            <Animated.View style={{ flexDirection: 'row', alignItems: 'center', transform: [{ translateX: tickerAnim }] }}>
+              {([
+                { dot: '#059669', text: 'Drivers active near you' },
+                { dot: C.pink,    text: 'Avg 4 min pickup time' },
+                { dot: C.yellow,  text: '4.8 avg driver rating' },
+                { dot: C.mint,    text: '2,500+ drivers earning daily' },
+                { dot: C.purple,  text: "India's only Buddy system" },
+                { dot: C.pink,    text: 'Made in India 🇮🇳' },
+                { dot: '#059669', text: 'Every ride tracked & safe' },
+                { dot: C.yellow,  text: 'Cash · UPI · Wallet accepted' },
+              ].concat([
+                { dot: '#059669', text: 'Drivers active near you' },
+                { dot: C.pink,    text: 'Avg 4 min pickup time' },
+                { dot: C.yellow,  text: '4.8 avg driver rating' },
+                { dot: C.mint,    text: '2,500+ drivers earning daily' },
+                { dot: C.purple,  text: "India's only Buddy system" },
+                { dot: C.pink,    text: 'Made in India 🇮🇳' },
+                { dot: '#059669', text: 'Every ride tracked & safe' },
+                { dot: C.yellow,  text: 'Cash · UPI · Wallet accepted' },
+              ])).map((item, i) => (
+                <View key={i} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18 }}>
+                  <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: item.dot, marginRight: 7 }} />
+                  <Text style={{ color: C.textMuted, fontSize: 11.5, fontWeight: '600', letterSpacing: 0.2 }}>{item.text}</Text>
+                </View>
+              ))}
+            </Animated.View>
+          </View>
         )}
 
         {/* ── Content area ── */}
         {!homeReady ? <HomeSkeletonLoader /> : (
         <View style={{ paddingHorizontal: 8, paddingTop: 14 }}>
 
-          {/* 5. ── Book Your Ride — illustrated vehicle grid ── */}
+          {/* 5. ── Book Your Ride — illustrated vehicle grid. Live counts
+                 (previously a separate "Live Availability" pill row below
+                 the grid, repeating the same three numbers) now live on
+                 the cards themselves. ── */}
           <SlideUp delay={0}>
             <Text style={{ fontSize: 10, fontWeight: '900', color: C.textDim, letterSpacing: 1.4, marginBottom: 10 }}>BOOK YOUR RIDE</Text>
 
@@ -1244,6 +1271,12 @@ function HomeTab() {
                       <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#A78BFA' }} />
                       <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 9, fontWeight: '700' }}>Drivers available</Text>
                     </View>
+                    {liveAutoCount > 0 && (
+                      <View style={{ marginTop: 3, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#22C55E' }} />
+                        <Text style={{ color: '#6EE7B7', fontSize: 9, fontWeight: '800' }}>{liveAutoCount} nearby now</Text>
+                      </View>
+                    )}
                   </View>
                 </View>
               </Bouncy>
@@ -1269,6 +1302,12 @@ function HomeTab() {
                       <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#6EE7B7' }} />
                       <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 9, fontWeight: '700' }}>Fastest option</Text>
                     </View>
+                    {liveBikeCount > 0 && (
+                      <View style={{ marginTop: 3, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#22C55E' }} />
+                        <Text style={{ color: '#A7F3D0', fontSize: 9, fontWeight: '800' }}>{liveBikeCount} nearby now</Text>
+                      </View>
+                    )}
                   </View>
                 </View>
               </Bouncy>
@@ -1294,7 +1333,12 @@ function HomeTab() {
                       <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#93C5FD' }} />
                       <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 9, fontWeight: '700' }}>4.8★ avg driver</Text>
                     </View>
-                    <View style={{ height: 13 }} />
+                    {liveCarCount > 0 && (
+                      <View style={{ marginTop: 3, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#22C55E' }} />
+                        <Text style={{ color: '#BFDBFE', fontSize: 9, fontWeight: '800' }}>{liveCarCount} nearby now</Text>
+                      </View>
+                    )}
                   </View>
                 </View>
               </Bouncy>
@@ -1333,71 +1377,23 @@ function HomeTab() {
               </Bouncy>
             </View>
 
-            {/* Live availability by vehicle type — tap pill to pre-select and open booking */}
-            {Array.isArray(nearbyDriversData) && nearbyDriversData.length > 0 && (() => {
-              const autoC = nearbyDriversData.filter((d: any) => ['auto','electric_auto','eriksha'].includes(d.vehicleType)).length;
-              const bikeC = nearbyDriversData.filter((d: any) => ['bike','green_bike'].includes(d.vehicleType)).length;
-              const carC  = nearbyDriversData.filter((d: any) => ['car','luxury'].includes(d.vehicleType)).length;
-              const pills = [
-                { key: 'auto', emoji: '🛺', label: 'Auto', count: autoC, color: '#6D5A8C', bg: 'rgba(109,90,140,0.10)', border: 'rgba(109,90,140,0.28)' },
-                { key: 'bike', emoji: '🏍️', label: 'Bike', count: bikeC, color: '#3E7A50', bg: 'rgba(62,122,80,0.10)', border: 'rgba(62,122,80,0.28)' },
-                { key: 'car',  emoji: '🚗', label: 'Car',  count: carC,  color: '#4D63A3', bg: 'rgba(77,99,163,0.10)', border: 'rgba(77,99,163,0.28)' },
-              ].filter(p => p.count > 0);
-              if (!pills.length) return null;
-              return (
-                <View style={{ marginBottom: 14 }}>
-                  <Text style={{ fontSize: 9, fontWeight: '900', color: C.textDim, letterSpacing: 1.2, marginBottom: 8 }}>LIVE AVAILABILITY</Text>
-                  <View style={{ flexDirection: 'row', gap: 8 }}>
-                    {pills.map(p => (
-                      <TouchableOpacity key={p.key} activeOpacity={0.78}
-                        onPress={() => { setRideType(p.key); setScreen('booking'); }}
-                        style={{ flex: 1, backgroundColor: p.bg, borderWidth: 1.5, borderColor: p.border, borderRadius: 16, paddingVertical: 12, alignItems: 'center', gap: 2 }}>
-                        <Text style={{ fontSize: 22 }}>{p.emoji}</Text>
-                        <Text style={{ fontSize: 18, fontWeight: '900', color: p.color, lineHeight: 22 }}>{p.count}</Text>
-                        <Text style={{ fontSize: 9, fontWeight: '800', color: p.color, opacity: 0.75, letterSpacing: 0.8 }}>{p.label.toUpperCase()}</Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 1 }}>
-                          <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#22C55E' }} />
-                          <Text style={{ fontSize: 8, color: '#22C55E', fontWeight: '800' }}>LIVE</Text>
-                        </View>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-              );
-            })()}
-
-            {/* Service strip — Buddy + Refer (plain TouchableOpacity so flex:1 works in the row) */}
-            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
-              <TouchableOpacity
-                activeOpacity={0.82}
-                onPress={() => favouriteBuddy ? setShowBuddyBook(true) : setTab('history')}
-                style={{ flex: 1, backgroundColor: '#2E1461', borderRadius: 18, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, ...SHADOW.md }}>
-                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.22)' }}>
-                  <Ionicons name="person-circle-outline" size={24} color="#fff" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '900', color: '#fff' }}>Sppero Buddy</Text>
-                  <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.62)', marginTop: 2 }} numberOfLines={1}>
-                    {favouriteBuddy ? `${favouriteBuddy.driver_name} · ${favouriteBuddy.is_online ? '🟢 Online' : '⚫ Offline'}` : 'Your trusted driver'}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.35)" />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                activeOpacity={0.82}
-                onPress={() => { loadReferral(); setScreen('referral'); }}
-                style={{ flex: 1, backgroundColor: '#FF2D78', borderRadius: 18, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, ...SHADOW.md }}>
-                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.28)' }}>
-                  <Ionicons name="gift-outline" size={24} color="#fff" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '900', color: '#fff' }}>Refer & Earn</Text>
-                  <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.72)', marginTop: 2 }}>₹10 for you + friend</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.35)" />
-              </TouchableOpacity>
-            </View>
+            {/* Refer & Earn — the Buddy half of this row moved out; Sppero
+                Buddy now has exactly one home on this screen instead of
+                three (this compact card, the hero banner panel, and the
+                detailed card/intro below). */}
+            <TouchableOpacity
+              activeOpacity={0.82}
+              onPress={() => { loadReferral(); setScreen('referral'); }}
+              style={{ backgroundColor: '#FF2D78', borderRadius: 18, padding: 14, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 12, ...SHADOW.md }}>
+              <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.28)' }}>
+                <Ionicons name="gift-outline" size={24} color="#fff" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 12, fontWeight: '900', color: '#fff' }}>Refer & Earn</Text>
+                <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.72)', marginTop: 2 }}>₹10 for you + friend</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.35)" />
+            </TouchableOpacity>
           </SlideUp>
 
           {/* 5b. ── Feature illustration banner ── */}
@@ -1451,6 +1447,35 @@ function HomeTab() {
               </ShineCard>
             </SlideUp>
           )}
+
+          {/* 6b. ── "New in the city?" info hint — plain display, no tap
+                 action. The real one-tap category search lives inside the
+                 booking screen's own drop-search step; this is just a hint
+                 so people know it exists, not a duplicate entry point.
+                 Onboarding info, not a primary action — moved below the
+                 booking/trust content instead of competing with it above
+                 the fold. ── */}
+          <SlideUp delay={70}>
+            <View style={{ backgroundColor: C.bgCard, borderRadius: 18, marginBottom: 14, borderWidth: 1, borderColor: C.glassBorder, overflow: 'hidden', ...SHADOW.sm, paddingHorizontal: 14, paddingVertical: 14 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 3 }}>
+                <View style={{ width: 22, height: 22, borderRadius: 7, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.pinkBorder }}>
+                  <Ionicons name="compass-outline" size={12} color={C.pink} />
+                </View>
+                <Text style={{ fontSize: 12.5, fontWeight: '900', color: C.text }}>New in the city?</Text>
+              </View>
+              <Text style={{ fontSize: 11.5, color: C.textMuted, lineHeight: 16, marginBottom: 11 }}>
+                Search these near you right from the drop location box
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                {NEARBY_CATEGORIES.map(cat => (
+                  <View key={cat.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.glassMid, borderRadius: R.full, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, borderColor: C.glassBorder }}>
+                    <Text style={{ fontSize: 13 }}>{cat.icon}</Text>
+                    <Text style={{ fontSize: 11.5, fontWeight: '700', color: C.text }}>{cat.shortLabel}</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          </SlideUp>
 
           {/* 7. ── Recent routes — 2 trips, above footer, pickup→dotted→drop design ── */}
           {historyRides.length > 0 && (() => {
@@ -1534,45 +1559,7 @@ function HomeTab() {
             </SlideUp>
           ))}
 
-          {/* 9. ── Active ride banners ── */}
-          {rideData?.ride_id && !paymentDone && storeStatus !== 'completed' && (
-            <SlideUp delay={0}>
-              <TouchableOpacity
-                onPress={() => {
-                  if (storeStatus === 'started') setScreen('inride');
-                  else setScreen('matching');
-                }}
-                style={{ backgroundColor: C.bgCard, borderRadius: 18, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: C.pinkBorder, ...SHADOW.md }}>
-                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1, borderColor: C.pinkBorder }}>
-                  <Ionicons name={storeStatus === 'started' ? 'navigate-outline' : 'car-outline'} size={22} color={C.pink} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: C.text, fontWeight: '800', fontSize: 15 }}>
-                    {storeStatus === 'started' ? 'Ride In Progress' : 'Looking for Driver'}
-                  </Text>
-                  <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>{drop ? `To ${drop}` : 'Tap to view ride status'}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={C.pink} />
-              </TouchableOpacity>
-            </SlideUp>
-          )}
-
-          {hourlyBooking && ['pending','matched','active'].includes(hourlyBooking.status) && (
-            <SlideUp delay={0}>
-              <TouchableOpacity onPress={() => setScreen('hourly')} style={{ backgroundColor: C.bgCard, borderRadius: 18, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: C.purpleBorder, ...SHADOW.md }}>
-                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: C.purpleGlass, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1, borderColor: C.purpleBorder }}>
-                  <Ionicons name="time-outline" size={22} color={C.purple} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: C.text, fontWeight: '800', fontSize: 15 }}>Active Hourly Ride</Text>
-                  <Text style={{ color: C.textMuted, fontSize: 12 }}>Tap to resume your hourly ride</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={C.purple} />
-              </TouchableOpacity>
-            </SlideUp>
-          )}
-
-          {/* 10. ── Sppero Buddy intro (if no buddy set) ── */}
+          {/* 9. ── Sppero Buddy intro (if no buddy set) ── */}
           {!favouriteBuddy && (
             <SlideUp delay={120}>
               <TouchableOpacity activeOpacity={0.93} onPress={() => setTab('history')}
