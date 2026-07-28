@@ -1264,7 +1264,9 @@ function HomeTab() {
                   <View style={{ alignItems: 'center' }}>
                     <IlluFamily3 width={100} height={54} />
                   </View>
-                  <View style={{ paddingHorizontal: 13, paddingTop: 6, paddingBottom: 13 }}>
+                  {/* Frosted-glass info shelf — translucent white over the
+                      vehicle color instead of text sitting flat on it */}
+                  <View style={{ paddingHorizontal: 13, paddingTop: 9, paddingBottom: 13, backgroundColor: 'rgba(255,255,255,0.13)', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.24)' }}>
                     <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900', letterSpacing: -0.4 }}>Auto</Text>
                     <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, marginTop: 2 }}>₹30+ · ~3 min ETA</Text>
                     <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
@@ -1287,7 +1289,7 @@ function HomeTab() {
                   <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', backgroundColor: 'rgba(255,255,255,0.09)', borderTopLeftRadius: 22, borderTopRightRadius: 22 }} />
                   <View style={{ position: 'absolute', top: -22, right: -22, width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.07)' }} />
                   <View style={{ alignItems: 'flex-end', padding: 9 }}>
-                    <View style={{ backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 7, paddingHorizontal: 7, paddingVertical: 3 }}>
+                    <View style={{ backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 7, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(255,255,255,0.32)' }}>
                       <Text style={{ color: 'rgba(255,255,255,0.88)', fontSize: 9, fontWeight: '800' }}>FASTEST</Text>
                     </View>
                   </View>
@@ -1295,7 +1297,7 @@ function HomeTab() {
                   <View style={{ alignItems: 'center', marginTop: 2, marginBottom: 2 }}>
                     <BikeScene width={Math.min(160, Math.floor((SCREEN_W - 26) / 2) - 4)} height={88} />
                   </View>
-                  <View style={{ paddingHorizontal: 13, paddingBottom: 13 }}>
+                  <View style={{ paddingHorizontal: 13, paddingTop: 9, paddingBottom: 13, backgroundColor: 'rgba(255,255,255,0.13)', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.24)' }}>
                     <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900', letterSpacing: -0.4 }}>Bike</Text>
                     <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, marginTop: 2 }}>₹20+ · Beat traffic</Text>
                     <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
@@ -1324,9 +1326,11 @@ function HomeTab() {
                   <View style={{ position: 'absolute', bottom: -14, left: -14, width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(147,197,253,0.12)' }} />
                   <View style={{ alignItems: 'center', paddingTop: 14, paddingBottom: 6 }}>
                     <Text style={{ fontSize: 54, lineHeight: 62 }}>🚗</Text>
-                    <Text style={{ color: 'rgba(255,255,255,0.40)', fontSize: 9, fontWeight: '800', letterSpacing: 0.8, marginTop: 5 }}>4-SEATER · AC</Text>
+                    <View style={{ marginTop: 6, backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: 7, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(255,255,255,0.26)' }}>
+                      <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 9, fontWeight: '800', letterSpacing: 0.8 }}>4-SEATER · AC</Text>
+                    </View>
                   </View>
-                  <View style={{ padding: 13, paddingTop: 6 }}>
+                  <View style={{ padding: 13, paddingTop: 9, backgroundColor: 'rgba(255,255,255,0.13)', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.24)' }}>
                     <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900', letterSpacing: -0.4 }}>Car</Text>
                     <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, marginTop: 2 }}>₹80+ · AC comfort</Text>
                     <View style={{ marginTop: 9, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
@@ -1364,7 +1368,7 @@ function HomeTab() {
                       ))}
                     </View>
                   </View>
-                  <View style={{ padding: 13, paddingTop: 6 }}>
+                  <View style={{ padding: 13, paddingTop: 9, backgroundColor: 'rgba(255,255,255,0.13)', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.24)' }}>
                     <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900', letterSpacing: -0.4 }}>By Hour</Text>
                     <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, marginTop: 2 }}>₹120+ · 2h–Full Day</Text>
                     <View style={{ marginTop: 9, flexDirection: 'row', alignItems: 'center', gap: 5 }}>

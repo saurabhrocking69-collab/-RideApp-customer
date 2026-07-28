@@ -376,8 +376,8 @@ export function FeatureIllustrationBanner() {
             <Text style={{ color: '#fff', fontSize: 14, fontWeight: '900', lineHeight: 18 }}>
               Safety First
             </Text>
-            <View style={{ backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: 20,
-              paddingHorizontal: 7, paddingVertical: 2 }}>
+            <View style={{ backgroundColor: 'rgba(255,255,255,0.20)', borderRadius: 20,
+              paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: 'rgba(255,255,255,0.34)' }}>
               <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>INSURED</Text>
             </View>
           </View>
