@@ -355,6 +355,44 @@ export function InRideScreen() {
             )}
           </View>
 
+          {/* ── Parcel delivery OTP — package is en route, receiver needs
+                 this code to hand to the driver at drop. The receiver was
+                 already texted this OTP directly at pickup time (they're not
+                 an app user), this card is a backup / forward-again option. ── */}
+          {rideData?.is_parcel && rideData?.deliveryOtp ? (
+            <View style={{
+              backgroundColor: C.plumGlass, borderRadius: R.md, padding: 14,
+              marginBottom: 10, borderWidth: 1.5, borderColor: C.plumBorder,
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                <Ionicons name="lock-closed-outline" size={14} color={C.plum} />
+                <Text style={{ fontSize: 11, fontWeight: '900', color: C.textDim, letterSpacing: 1.2 }}>DELIVERY OTP</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View style={{ flexDirection: 'row', gap: 6 }}>
+                  {String(rideData.deliveryOtp).split('').slice(0, 4).map((d: string, i: number) => (
+                    <View key={i} style={{ width: 36, height: 44, borderRadius: 10, backgroundColor: '#fff', borderWidth: 1.5, borderColor: C.plumBorder, alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ fontSize: 20, fontWeight: '900', color: C.plum }}>{d}</Text>
+                    </View>
+                  ))}
+                </View>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    const msg = `📦 Sppero delivery OTP: ${rideData.deliveryOtp}\n\nGive this code to the delivery partner when your package arrives.`;
+                    Share.share({ message: msg }).catch(() => Linking.openURL(`https://wa.me/?text=${encodeURIComponent(msg)}`));
+                  }}
+                  style={{ backgroundColor: C.plum, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, alignItems: 'center' }}>
+                  <Ionicons name="share-social-outline" size={16} color="#fff" />
+                  <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800', marginTop: 2 }}>Forward</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={{ fontSize: 10.5, color: C.textMuted, marginTop: 8, lineHeight: 14 }}>
+                {rideData.receiver_name ? `Already texted to ${rideData.receiver_name}` : 'Already texted to the receiver'} — forward again if they didn't get it.
+              </Text>
+            </View>
+          ) : null}
+
           {/* ── Issue chips ── */}
           <View style={{ marginBottom: 14 }}>
             {issueReported ? (

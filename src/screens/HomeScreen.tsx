@@ -1149,34 +1149,42 @@ function HomeTab() {
           style={{ marginTop: 8 }}
           contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
           {([
-            { id: 'auto',   icon: 'car-outline' as const,        label: 'Auto',    hourly: false },
-            { id: 'bike',   icon: 'bicycle-outline' as const,    label: 'Bike',    hourly: false },
-            { id: 'car',    icon: 'car-sport-outline' as const,  label: 'Car',     hourly: false },
-            { id: 'luxury', icon: 'diamond-outline' as const,    label: 'Luxury',  hourly: false },
-            { id: 'hourly', icon: 'time-outline' as const,       label: 'By Hour', hourly: true  },
-          ]).map(v => (
-            <TouchableOpacity key={v.id}
-              onPress={() => {
-                if (v.hourly) {
-                  setHourlyStep('book'); setHPickup(''); setHDrop(''); setHPickupCoords(null); setHDropCoords(null);
-                  setHPickupSugg([]); setHDropSugg([]); setHRoundTrip(false); setHStayHours(1);
-                  setHourlyBooking(null); setScreen('hourly');
-                } else {
-                  setRideType(v.id); setScreen('booking');
-                }
-              }}
-              style={{
-                alignItems: 'center', paddingHorizontal: 18, paddingVertical: 12,
-                backgroundColor: C.bgCard, borderRadius: 16,
-                borderWidth: 1.5, borderColor: v.hourly ? C.purpleBorder : C.glassBorder,
-                ...SHADOW.sm,
-              }}>
-              <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: v.hourly ? C.purpleGlass : C.plumGlass, alignItems: 'center', justifyContent: 'center', marginBottom: 6, borderWidth: 1, borderColor: v.hourly ? C.purpleBorder : C.plumBorder }}>
-                <Ionicons name={v.icon} size={20} color={v.hourly ? C.purple : C.plum} />
-              </View>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: v.hourly ? C.purple : C.plum }}>{v.label}</Text>
-            </TouchableOpacity>
-          ))}
+            { id: 'auto',   icon: 'car-outline' as const,        label: 'Auto',    mode: 'ride' as const },
+            { id: 'bike',   icon: 'bicycle-outline' as const,    label: 'Bike',    mode: 'ride' as const },
+            { id: 'car',    icon: 'car-sport-outline' as const,  label: 'Car',     mode: 'ride' as const },
+            { id: 'luxury', icon: 'diamond-outline' as const,    label: 'Luxury',  mode: 'ride' as const },
+            { id: 'hourly', icon: 'time-outline' as const,       label: 'By Hour', mode: 'hourly' as const },
+            { id: 'parcel', icon: 'cube-outline' as const,       label: 'Parcel',  mode: 'parcel' as const },
+          ]).map(v => {
+            const accent = v.mode === 'hourly' ? C.purple : v.mode === 'parcel' ? C.pink : C.plum;
+            const accentGlass  = v.mode === 'hourly' ? C.purpleGlass  : v.mode === 'parcel' ? C.pinkGlass  : C.plumGlass;
+            const accentBorder = v.mode === 'hourly' ? C.purpleBorder : v.mode === 'parcel' ? C.pinkBorder : C.plumBorder;
+            return (
+              <TouchableOpacity key={v.id}
+                onPress={() => {
+                  if (v.mode === 'hourly') {
+                    setHourlyStep('book'); setHPickup(''); setHDrop(''); setHPickupCoords(null); setHDropCoords(null);
+                    setHPickupSugg([]); setHDropSugg([]); setHRoundTrip(false); setHStayHours(1);
+                    setHourlyBooking(null); setScreen('hourly');
+                  } else if (v.mode === 'parcel') {
+                    setScreen('parcel');
+                  } else {
+                    setRideType(v.id); setScreen('booking');
+                  }
+                }}
+                style={{
+                  alignItems: 'center', paddingHorizontal: 18, paddingVertical: 12,
+                  backgroundColor: C.bgCard, borderRadius: 16,
+                  borderWidth: 1.5, borderColor: v.mode === 'ride' ? C.glassBorder : accentBorder,
+                  ...SHADOW.sm,
+                }}>
+                <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: accentGlass, alignItems: 'center', justifyContent: 'center', marginBottom: 6, borderWidth: 1, borderColor: accentBorder }}>
+                  <Ionicons name={v.icon} size={20} color={accent} />
+                </View>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: accent }}>{v.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
 
         {/* 2. ── Adaptive status strip — one slot instead of two. When

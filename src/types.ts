@@ -5,7 +5,7 @@ export type Screen =
   | 'wallet' | 'hourly-info' | 'promo' | 'support' | 'safety'
   | 'rewards' | 'budget' | 'surge' | 'insights' | 'tier'
   | 'tickets' | 'ticket-new' | 'fare-rates'
-  | 'scheduled-rides' | 'scheduled-detail' | 'intercity';
+  | 'scheduled-rides' | 'scheduled-detail' | 'intercity' | 'parcel';
 
 export type Tab = 'home' | 'live' | 'history' | 'profile';
 

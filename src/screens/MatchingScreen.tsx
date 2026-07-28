@@ -1080,7 +1080,7 @@ export function MatchingScreen() {
               {rideData.startOtp ? (
                 <View style={{ marginHorizontal: 20, marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.glassMid, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 11, borderWidth: 1, borderColor: C.plumBorder }}>
                   <Ionicons name="lock-closed-outline" size={14} color={C.plum} />
-                  <Text style={{ fontSize: 10, fontWeight: '900', color: C.textDim, letterSpacing: 1.5 }}>RIDE PIN</Text>
+                  <Text style={{ fontSize: 10, fontWeight: '900', color: C.textDim, letterSpacing: 1.5 }}>{rideData?.is_parcel ? 'PICKUP PIN' : 'RIDE PIN'}</Text>
                   <View style={{ flex: 1 }} />
                   <View style={{ flexDirection: 'row', gap: 6 }}>
                     {String(rideData.startOtp).split('').slice(0, 4).map((d, i) => (

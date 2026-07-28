@@ -55,6 +55,7 @@ interface AppContextType {
   intercityRoute: { km: number; durationMin: number } | null;
   setIntercityRoute: (v: { km: number; durationMin: number } | null) => void;
   bookIntercity: (p: { vehicleType: 'car' | 'luxury'; tripKind: 'oneway' | 'round'; fare?: number; scheduledAt?: string | null; returnAt?: string | null }) => Promise<any>;
+  bookParcel: (p: { vehicleType: string; packageSize: 'small' | 'medium' | 'large'; distanceKm: number; fare?: number; codAmount?: number | null; packageNote?: string }) => Promise<any>;
   // Auth
   phone: string; setPhone: (p: string) => void;
   otp: string; setOtp: (o: string) => void;
@@ -1178,7 +1179,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
         }
         if (data.driver) {
-          setRideData((p: any) => p ? { ...p, status: st, startOtp: data.start_otp || p?.startOtp, driver: data.driver } : p);
+          setRideData((p: any) => p ? { ...p, status: st, startOtp: data.start_otp || p?.startOtp, deliveryOtp: data.delivery_otp || p?.deliveryOtp, driver: data.driver } : p);
           useRideStore.setState({ rideStatus: st, startOtp: data.start_otp || '' });
         } else {
           // Driver info not in socket payload — fetch from API immediately
@@ -1985,6 +1986,47 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     finally { setLoading(false); }
   };
 
+  const bookParcel = async (p: { vehicleType: string; packageSize: 'small' | 'medium' | 'large'; distanceKm: number; fare?: number; codAmount?: number | null; packageNote?: string }) => {
+    if (!pickup || !drop) { Alert.alert('Missing addresses', 'Please enter both the pickup and drop-off address'); return null; }
+    if (!riderName.trim() || riderPhone.length !== 10) {
+      Alert.alert("Receiver's details needed", "Enter the receiver's name and a 10-digit phone number so we can text them the delivery OTP.");
+      return null;
+    }
+    setLoading(true); setPaymentDone(false);
+    try {
+      const data = await apiPost('/api/parcel/book', {
+        passenger_phone: phone || '9999999999',
+        pickup, drop_location: drop,
+        vehicle_type: p.vehicleType,
+        package_size: p.packageSize,
+        package_note: p.packageNote || null,
+        cod_amount: p.codAmount || null,
+        distance: p.distanceKm,
+        pickup_lat: pickupCoords?.lat, pickup_lng: pickupCoords?.lng,
+        drop_lat:   dropCoords?.lat,   drop_lng:   dropCoords?.lng,
+        discount: 0, promo_code: null,
+        receiver_name:  riderName.trim(),
+        receiver_phone: riderPhone.trim(),
+      });
+      if (data.restricted) { Alert.alert('Account on hold', data.error || 'Contact support: help@sppero.com'); return null; }
+      if (data._error || data.error) { Alert.alert('Could not book', data.error || data.message || 'Please try again'); return null; }
+      if (!data.ride_id) { Alert.alert('Could not book', 'Please try again'); return null; }
+
+      setRiderName(''); setRiderPhone('');
+
+      // Same live-matching flow as a standard ride — parcels track through
+      // the shared MatchingScreen, not a separate status/screen.
+      setRideData({ ...data, discount: 0, platform_fee: 0 });
+      setScreen('matching'); setResult(''); setAltSuggest(null);
+      AsyncStorage.setItem('activeStdRideId', String(data.ride_id)).catch(() => {});
+      joinRideSocket(data.ride_id);
+      ride.setRide(data); ride.startPolling(phone || '9999999999');
+      setBookTime(Date.now()); setCancelTimer(60); setSurgeCount(0); setSurgeFare(''); setSearchElapsed(0);
+      return data;
+    } catch { Alert.alert('Could not book', 'Network error — please try again'); return null; }
+    finally { setLoading(false); }
+  };
+
   const surgeFareNow = async (amount: number) => {
     if (!rideData?.ride_id || surging) return;
     setSurging(true);
@@ -2350,7 +2392,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ═══════════════════════════════════════════════════════════════════════
   const value: AppContextType = {
     screen, setScreen, tab, setTab, scheduleIntent, setScheduleIntent,
-    intercityRoute, setIntercityRoute, bookIntercity,
+    intercityRoute, setIntercityRoute, bookIntercity, bookParcel,
     phone, setPhone, otp, setOtp, otpSent, setOtpSent, otpDigits, setOtpDigits,
     resendTimer, setResendTimer, canResend, setCanResend, otpRefs, otpShakeAnim, otpSuccessAnim,
     userName, setUserName, gender, setGender,
