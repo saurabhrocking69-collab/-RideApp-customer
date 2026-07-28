@@ -1874,7 +1874,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // several screens' own banners, so setting it here made this warning
         // "leak" onto whatever screen the customer navigated to next, not just
         // the booking screen where the block actually happened.
-        setNotifToast({ id: 'restricted-' + Date.now(), title: '🚫 Account On Hold', body: data.error || 'Contact support: help@sppero.in', type: 'account_restricted', ts: Date.now() });
+        setNotifToast({ id: 'restricted-' + Date.now(), title: '🚫 Account On Hold', body: data.error || 'Contact support: help@sppero.com', type: 'account_restricted', ts: Date.now() });
         return;
       }
       if (data._error || data.error) { setResult('❌ ' + (data.message || data.error || 'Booking failed')); return; }
@@ -1957,7 +1957,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         rider_name:  !rideForSelf ? riderName.trim()  : null,
         rider_phone: !rideForSelf ? riderPhone.trim() : null,
       });
-      if (data.restricted) { Alert.alert('Account on hold', data.error || 'Contact support: help@sppero.in'); return null; }
+      if (data.restricted) { Alert.alert('Account on hold', data.error || 'Contact support: help@sppero.com'); return null; }
       if (data._error || data.error) { Alert.alert('Could not book', data.error || data.message || 'Please try again'); return null; }
       if (!data.ride_id) { Alert.alert('Could not book', 'Please try again'); return null; }
 
