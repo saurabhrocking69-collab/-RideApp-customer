@@ -240,7 +240,7 @@ interface AppContextType {
   surgeFareNow: (amount: number) => Promise<void>;
   switchVehicle: (newType: string) => Promise<void>;
   searchPlaces: (text: string, type: 'pickup'|'drop') => void;
-  searchNearbyCategory: (category: string | string[], type: 'pickup'|'drop', wideSearch?: boolean, acceptTypes?: string[], rejectTypes?: string[]) => void;
+  searchNearbyCategory: (category: string | string[], type: 'pickup'|'drop', wideSearch?: boolean, acceptTypes?: string[], rejectTypes?: string[], rejectNamePrefixes?: string[]) => void;
   geocodePlace: (address: string, type: 'pickup'|'drop') => Promise<void>;
   swapLocations: () => void;
   fetchEtaByCoords: (pc: any, dc: any) => Promise<void>;
@@ -1651,7 +1651,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // almost always named "Thana" on Maps, not "Police Station", so a single
   // English query can silently miss the actual nearest match. Variants are
   // queried in parallel and merged, deduped by place_id, sorted by distance.
-  const searchNearbyCategory = (category: string | string[], type: 'pickup' | 'drop', wideSearch?: boolean, acceptTypes?: string[], rejectTypes?: string[]) => {
+  const searchNearbyCategory = (category: string | string[], type: 'pickup' | 'drop', wideSearch?: boolean, acceptTypes?: string[], rejectTypes?: string[], rejectNamePrefixes?: string[]) => {
     const originCoords = type === 'drop'
       ? (pickupCoords || (userCoords
           ? { lat: (userCoords as any).latitude ?? (userCoords as any).lat, lng: (userCoords as any).longitude ?? (userCoords as any).lng }
@@ -1694,7 +1694,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           // 30km — loose is the fallback so the customer sees *something*
           // plausible instead of a dead "no results" screen.
           strict = raw.filter((p: any) => !acceptTypes || (p.types || []).some((t: string) => acceptTypes.includes(t)));
-          loose  = raw.filter((p: any) => !rejectTypes || !(p.types || []).some((t: string) => rejectTypes.includes(t)));
+          loose  = raw.filter((p: any) => {
+            if (rejectTypes && (p.types || []).some((t: string) => rejectTypes.includes(t))) return false;
+            // Backstop for false positives with no specific type to reject by
+            // (e.g. "Parking No. 5" is only ever typed as generic
+            // establishment/point_of_interest) — match on name instead.
+            const name = (p.structured_formatting?.main_text || p.description || '').toLowerCase();
+            if (rejectNamePrefixes && rejectNamePrefixes.some(prefix => name.startsWith(prefix.toLowerCase()))) return false;
+            return true;
+          });
           if (strict.length >= 3) break;
         }
         const best = strict.length > 0 ? strict : loose;

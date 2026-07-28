@@ -26,6 +26,13 @@ export interface NearbyCategory {
   // sees *something* plausible instead of a dead "no results" screen.
   acceptTypes?: string[];
   rejectTypes?: string[];
+  // Type-based rejection can't catch everything — "Parking No. 5" is typed
+  // only as generic establishment/point_of_interest (no specific "parking"
+  // type Google actually assigns), so it sails through any type-based
+  // deny-list untouched. Verified live: this is a real, current false
+  // positive for "Park", not a hypothetical. Matched case-insensitively
+  // against the prediction's main name text.
+  rejectNamePrefixes?: string[];
 }
 
 export const NEARBY_CATEGORIES: NearbyCategory[] = [
@@ -34,7 +41,8 @@ export const NEARBY_CATEGORIES: NearbyCategory[] = [
   { icon: '👮', label: 'Police Station', shortLabel: 'Police',      q: ['Police Station', 'Thana'] },
   { icon: '🏛️', label: 'Tourist Place',  shortLabel: 'Tourist',     q: 'Park', wideSearch: true,
     acceptTypes: ['tourist_attraction', 'park', 'museum', 'hindu_temple', 'place_of_worship', 'natural_feature', 'zoo', 'amusement_park', 'art_gallery'],
-    rejectTypes: ['lodging', 'route', 'premise', 'real_estate_agency', 'school', 'hospital', 'parking'] },
+    rejectTypes: ['lodging', 'route', 'premise', 'real_estate_agency', 'school', 'hospital', 'parking'],
+    rejectNamePrefixes: ['parking'] },
   { icon: '🏧', label: 'ATM',            shortLabel: 'ATM',         q: 'ATM Bank' },
   { icon: '⛽', label: 'Petrol Pump',    shortLabel: 'Petrol Pump', q: 'Petrol Pump' },
   { icon: '🚉', label: 'Railway Station', shortLabel: 'Railway',    q: 'Railway Station' },
