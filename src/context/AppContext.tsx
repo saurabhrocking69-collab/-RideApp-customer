@@ -58,6 +58,7 @@ interface AppContextType {
   bookParcel: (p: { vehicleType: string; packageSize: 'small' | 'medium' | 'large'; distanceKm: number; fare: number; packageNote?: string }) => Promise<any>;
   parcelEstimate: (distanceKm: number, packageSize: 'small' | 'medium' | 'large') => Promise<any>;
   reportParcelNotDelivered: (rideId: string | number, reason: string) => Promise<any>;
+  returnDecision: (rideId: string | number, decision: 'retry' | 'return') => Promise<any>;
   // Auth
   phone: string; setPhone: (p: string) => void;
   otp: string; setOtp: (o: string) => void;
@@ -349,6 +350,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 ...p,
                 startOtp: d.ride.start_otp || p?.startOtp,
                 deliveryOtp: d.ride.delivery_otp || p?.deliveryOtp,
+                returnOtp: d.ride.return_otp || p?.returnOtp,
+                returnStatus: d.ride.return_status ?? p?.returnStatus,
+                deliveryFailReason: d.ride.delivery_fail_reason ?? p?.deliveryFailReason,
                 fare: d.ride.fare || p?.fare,
                 distance: d.ride.distance || p?.distance,
                 driver: {
@@ -655,6 +659,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                   ride_id:  ride.ride_id ?? ride.id,
                   startOtp: st === 'started' ? '' : (ride.start_otp || ''),
                   deliveryOtp: ride.delivery_otp || '',
+                  returnOtp: ride.return_otp || '',
+                  returnStatus: ride.return_status || null,
+                  deliveryFailReason: ride.delivery_fail_reason || null,
                   driver,
                 });
 
@@ -1164,6 +1171,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setChatMsgs((prev: any[]) => [...prev, msg]);
       setUnreadChat((prev: number) => prev + 1);
     });
+    // Driver couldn't complete a parcel delivery (receiver unreachable/
+    // refused) — sender needs to decide whether to get the package back.
+    s.on('returnDecisionNeeded', (data: any) => {
+      if (data.ride_id && rideDataRef.current?.ride_id &&
+          String(data.ride_id) !== String(rideDataRef.current.ride_id)) return;
+      setRideData((p: any) => p ? { ...p, returnStatus: 'pending_decision', deliveryFailReason: data.reason || null } : p);
+    });
     s.on('paymentConfirmed', (data: any) => {
       // Guard: ignore events for old/different ride rooms we haven't left yet
       if (data.ride_id && rideDataRef.current?.ride_id &&
@@ -1210,6 +1224,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                     status: st,
                     startOtp: d.ride.start_otp || p?.startOtp,
                     deliveryOtp: d.ride.delivery_otp || p?.deliveryOtp,
+                    returnOtp: d.ride.return_otp || p?.returnOtp,
+                    returnStatus: d.ride.return_status ?? p?.returnStatus,
+                    deliveryFailReason: d.ride.delivery_fail_reason ?? p?.deliveryFailReason,
                     fare: d.ride.fare || p?.fare,
                     discount: d.ride.discount ?? p?.discount ?? 0,
                     net_fare: d.ride.net_fare ?? p?.net_fare,
@@ -1258,7 +1275,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         useRideStore.setState({ rideStatus: 'completed' });
         // Update rideData with net fare from server (already discount-applied)
         if (data.fare != null) {
-          setRideData((p: any) => p ? { ...p, status: 'completed', net_fare: data.fare, discount: data.discount ?? p?.discount ?? 0 } : p);
+          setRideData((p: any) => p ? { ...p, status: 'completed', net_fare: data.fare, discount: data.discount ?? p?.discount ?? 0, returnStatus: data.return_status ?? p?.returnStatus } : p);
         }
         // Parcel: already paid at booking (escrow) — nothing to pay, skip
         // straight to postride instead of the payment screen.
@@ -1387,6 +1404,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ride_id:  ride.ride_id ?? ride.id,
         startOtp: st === 'started' ? '' : (ride.start_otp || ''),
         deliveryOtp: ride.delivery_otp || '',
+        returnOtp: ride.return_otp || '',
+        returnStatus: ride.return_status || null,
+        deliveryFailReason: ride.delivery_fail_reason || null,
         driver,
       });
 
@@ -2079,6 +2099,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return authRidePost('/api/parcel/estimate', { distance: distanceKm, package_size: packageSize });
   };
 
+  // Sender decides what happens after a flagged delivery failure —
+  // 'retry' lets the driver try reaching the receiver again, 'return' has
+  // the driver bring the package back (partial refund, OTP-verified hand-back).
+  const returnDecision = async (rideId: string | number, decision: 'retry' | 'return') => {
+    const data = await authRidePost('/api/parcel/return-decision', { ride_id: rideId, decision });
+    if (data?.success) {
+      setRideData((p: any) => p ? {
+        ...p,
+        returnStatus: decision === 'retry' ? null : 'accepted',
+        returnOtp: decision === 'return' ? data.return_otp : p?.returnOtp,
+      } : p);
+    }
+    return data;
+  };
+
   // Sender reports a completed delivery as never having reached the
   // receiver — opens a review with Sppero's team (money's already been
   // released to the driver by this point, so this doesn't undo anything by
@@ -2452,7 +2487,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ═══════════════════════════════════════════════════════════════════════
   const value: AppContextType = {
     screen, setScreen, tab, setTab, scheduleIntent, setScheduleIntent,
-    intercityRoute, setIntercityRoute, bookIntercity, bookParcel, parcelEstimate, reportParcelNotDelivered,
+    intercityRoute, setIntercityRoute, bookIntercity, bookParcel, parcelEstimate, reportParcelNotDelivered, returnDecision,
     phone, setPhone, otp, setOtp, otpSent, setOtpSent, otpDigits, setOtpDigits,
     resendTimer, setResendTimer, canResend, setCanResend, otpRefs, otpShakeAnim, otpSuccessAnim,
     userName, setUserName, gender, setGender,

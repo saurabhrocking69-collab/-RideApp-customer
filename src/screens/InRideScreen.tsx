@@ -103,8 +103,16 @@ export function InRideScreen() {
     pickupCoords, dropCoords,
     driverLoc, driverEta, driverDist,
     rideData, rideType,
-    sosActive, setSosActive, triggerSOS, reportCancelRide,
+    sosActive, setSosActive, triggerSOS, reportCancelRide, returnDecision,
   } = useApp();
+
+  const [returnSubmitting, setReturnSubmitting] = useState(false);
+  const handleReturnDecision = async (decision: 'retry' | 'return') => {
+    if (!rideData?.ride_id || returnSubmitting) return;
+    setReturnSubmitting(true);
+    await returnDecision(rideData.ride_id, decision);
+    setReturnSubmitting(false);
+  };
 
   const REPORT_REASONS = ['Medical emergency', 'Feeling unsafe', 'Driver misbehaviour', 'Wrong route / detour', 'Other emergency'];
   const promptReportCancel = () => {
@@ -355,10 +363,55 @@ export function InRideScreen() {
             )}
           </View>
 
+          {/* ── Delivery issue — driver couldn't reach the receiver, sender decides ── */}
+          {rideData?.is_parcel && rideData?.returnStatus === 'pending_decision' && (
+            <View style={{ backgroundColor: 'rgba(239,68,68,0.08)', borderRadius: R.md, padding: 14, marginBottom: 10, borderWidth: 1.5, borderColor: 'rgba(239,68,68,0.3)' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                <Ionicons name="alert-circle" size={16} color="#DC2626" />
+                <Text style={{ fontSize: 12.5, fontWeight: '900', color: '#DC2626' }}>Delivery Issue</Text>
+              </View>
+              <Text style={{ fontSize: 12, color: C.text, marginBottom: 12, lineHeight: 17 }}>
+                Your delivery partner couldn't reach {rideData?.receiver_name || 'the receiver'}{rideData?.deliveryFailReason ? ` — ${rideData.deliveryFailReason}` : ''}. Do you want the package returned to you?
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TouchableOpacity onPress={() => handleReturnDecision('retry')} disabled={returnSubmitting} style={{ flex: 1, backgroundColor: C.glassMid, borderRadius: 12, paddingVertical: 11, alignItems: 'center', borderWidth: 1, borderColor: C.glassBorder }}>
+                  <Text style={{ fontSize: 12.5, fontWeight: '800', color: C.text }}>Try Again</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleReturnDecision('return')} disabled={returnSubmitting} style={{ flex: 1, backgroundColor: '#DC2626', borderRadius: 12, paddingVertical: 11, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#fff' }}>{returnSubmitting ? '...' : 'Yes, Return It'}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* ── Return OTP — sender agreed to get the package back; give this
+                 to the driver when they bring it. ── */}
+          {rideData?.is_parcel && rideData?.returnStatus === 'accepted' && rideData?.returnOtp ? (
+            <View style={{
+              backgroundColor: C.plumGlass, borderRadius: R.md, padding: 14,
+              marginBottom: 10, borderWidth: 1.5, borderColor: C.plumBorder,
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                <Ionicons name="lock-closed-outline" size={14} color={C.plum} />
+                <Text style={{ fontSize: 11, fontWeight: '900', color: C.textDim, letterSpacing: 1.2 }}>RETURN OTP</Text>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                {String(rideData.returnOtp).split('').slice(0, 4).map((d: string, i: number) => (
+                  <View key={i} style={{ width: 36, height: 44, borderRadius: 10, backgroundColor: '#fff', borderWidth: 1.5, borderColor: C.plumBorder, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 20, fontWeight: '900', color: C.plum }}>{d}</Text>
+                  </View>
+                ))}
+              </View>
+              <Text style={{ fontSize: 10.5, color: C.textMuted, marginTop: 8, lineHeight: 14 }}>
+                Give this code to your delivery partner when they bring your package back.
+              </Text>
+            </View>
+          ) : null}
+
           {/* ── Parcel delivery OTP — package is en route. Also shown earlier
                  in MatchingScreen once matched; repeated here since the trip
                  can run long and the sender may not have shared it yet. ── */}
-          {rideData?.is_parcel && rideData?.deliveryOtp ? (
+          {rideData?.is_parcel && rideData?.deliveryOtp && !rideData?.returnStatus ? (
             <View style={{
               backgroundColor: C.plumGlass, borderRadius: R.md, padding: 14,
               marginBottom: 10, borderWidth: 1.5, borderColor: C.plumBorder,

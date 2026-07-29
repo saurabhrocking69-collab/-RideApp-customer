@@ -189,7 +189,9 @@ _GST is included in the fare — not charged separately._
               </View>
             )}
             <View style={{ alignItems: 'flex-start' }}>
-              <Text style={{ fontSize: 24, fontWeight: '900', color: '#fff' }}>{paymentDone ? 'Payment Done!' : (rideData?.is_parcel ? 'Delivered! 🎉' : 'Trip Complete! 🎉')}</Text>
+              <Text style={{ fontSize: 24, fontWeight: '900', color: '#fff' }}>
+                {rideData?.returnStatus === 'returned' ? 'Package Returned 📦' : paymentDone ? 'Payment Done!' : (rideData?.is_parcel ? 'Delivered! 🎉' : 'Trip Complete! 🎉')}
+              </Text>
               {rideData?.driver?.name ? (
                 <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 2 }}>
                   Driver: {rideData.driver.name}
@@ -200,17 +202,28 @@ _GST is included in the fare — not charged separately._
 
           <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, marginBottom: 10, textAlign: 'center', paddingHorizontal: 24 }} numberOfLines={1}>{pickup} → {drop}</Text>
 
-          <View style={{ marginTop: 6, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: R.md, paddingHorizontal: SP.lg, paddingVertical: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.38)', alignItems: 'center' }}>
-            <Text style={{ ...T.label, color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>TOTAL PAID</Text>
-            <CountUp to={fareNum} prefix="₹" style={{ ...T.display, color: '#fff', letterSpacing: -1 }} />
-          </View>
+          {rideData?.returnStatus === 'returned' ? (
+            <View style={{ marginTop: 6, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: R.md, paddingHorizontal: SP.lg, paddingVertical: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.38)', alignItems: 'center' }}>
+              <Text style={{ ...T.label, color: 'rgba(255,255,255,0.65)', marginBottom: 6 }}>PACKAGE RETURNED</Text>
+              <Text style={{ fontSize: 13, color: '#fff', textAlign: 'center', lineHeight: 18 }}>
+                A handling fee was kept for the delivery attempt — the rest has been refunded to your Sppero wallet.
+              </Text>
+            </View>
+          ) : (
+            <View style={{ marginTop: 6, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: R.md, paddingHorizontal: SP.lg, paddingVertical: 12, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.38)', alignItems: 'center' }}>
+              <Text style={{ ...T.label, color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>TOTAL PAID</Text>
+              <CountUp to={fareNum} prefix="₹" style={{ ...T.display, color: '#fff', letterSpacing: -1 }} />
+            </View>
+          )}
 
-          <Bouncy
-            onPress={openBill}
-            style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 20, paddingHorizontal: 18, paddingVertical: 9, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)' }}>
-            <Text style={{ fontSize: 16 }}>🧾</Text>
-            <Text style={{ ...T.bodyBold, color: '#fff' }}>{billLoading ? 'Loading...' : 'Full Bill & Share'}</Text>
-          </Bouncy>
+          {rideData?.returnStatus !== 'returned' && (
+            <Bouncy
+              onPress={openBill}
+              style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 20, paddingHorizontal: 18, paddingVertical: 9, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)' }}>
+              <Text style={{ fontSize: 16 }}>🧾</Text>
+              <Text style={{ ...T.bodyBold, color: '#fff' }}>{billLoading ? 'Loading...' : 'Full Bill & Share'}</Text>
+            </Bouncy>
+          )}
         </View>
         </View>
 
@@ -306,7 +319,7 @@ _GST is included in the fare — not charged separately._
           </View>
         </FadeIn>
 
-        {rideData?.is_parcel && !reportDone && (
+        {rideData?.is_parcel && rideData?.returnStatus !== 'returned' && !reportDone && (
           <View style={{ marginHorizontal: 14, marginTop: 14, alignItems: 'center' }}>
             <TouchableOpacity onPress={() => setShowReportModal(true)}>
               <Text style={{ fontSize: 12, color: C.textMuted, fontWeight: '700', textDecorationLine: 'underline' }}>
