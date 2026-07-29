@@ -446,6 +446,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const screenRef = useRef<Screen>('splash');
   useEffect(() => { screenRef.current = screen; }, [screen]);
   const payingRef = useRef(false);
+  const bookingInFlightRef = useRef(false);
   const [altSuggest, setAltSuggest] = useState<any>(null);
   const [switchingVehicle, setSwitchingVehicle] = useState(false);
   const [driverLoc, setDriverLoc] = useState<any>(null);
@@ -673,6 +674,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                   setDropCoords({ lat: parseFloat(ride.drop_lat), lng: parseFloat(ride.drop_lng) });
 
                 activeRideIdRef.current = activeRideId;
+                // Cold-start race: connectSocket() was already kicked off above
+                // (line ~633) before this ride ID was known — if that socket's
+                // 'connect' event fired first, its join check saw
+                // activeRideIdRef.current still null and skipped joining the
+                // room, with nothing else ever re-emitting it. If we're already
+                // connected by now, join explicitly; if not, connectSocket's own
+                // 'connect' handler will see the ref set and join correctly.
+                if (socketRef.current?.connected) socketRef.current.emit('joinRide', { rideId: activeRideId });
                 setScreen(st === 'started' ? 'inride' : 'matching');
               } else if (st === 'completed' || st === 'payment') {
                 // rides.status alone can't distinguish "trip ended, please pay"
@@ -775,10 +784,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       else if (data.type === 'trip_completed') {
         // Parcel: already paid at booking (escrow) — nothing to pay, skip
-        // straight to postride instead of the payment screen.
+        // straight to postride instead of the payment screen. Also refresh
+        // rideData's net_fare/discount from the server here — previously this
+        // handler only fetched the ride to check is_parcel and threw the rest
+        // away, so a customer who cold-opened the app via this exact
+        // notification tap could land on PaymentScreen showing a stale
+        // pre-trip fare estimate instead of the real metered fare (the socket
+        // rideUpdate handler already does this merge; this path didn't).
         if (rideId) {
           fetch(`${API}/api/rides/status/${rideId}`).then(r => r.json()).then(d => {
-            setScreen(d?.ride?.is_parcel ? 'postride' : 'payment');
+            const ride = d?.ride;
+            if (ride) {
+              setRideData((p: any) => p ? { ...p, net_fare: ride.net_fare, discount: ride.discount ?? p?.discount ?? 0 } : p);
+            }
+            setScreen(ride?.is_parcel ? 'postride' : 'payment');
           }).catch(() => setScreen('payment'));
         } else setScreen('payment');
       }
@@ -1866,15 +1885,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const bookRide = async (route?: { distanceKm: number; durationMin: number; polyline: string; routeType: string }) => {
     if (!pickup || !drop) { setResult('❌ Enter pickup and drop locations'); return; }
-    // High-value city ride (>₹3000, rare — surge/long trip): collect the 1/3
-    // advance before booking, same as intercity.
-    let advance: { order_id: string; payment_id: string; signature: string } | null = null;
-    const estFare = (fareEstimates[rideType]?.fare ?? 0) as number;
-    if (estFare > ADVANCE_THRESHOLD) {
-      advance = await collectAdvance(estFare);
-      if (!advance) return; // advance cancelled → abort booking
+    // Synchronous ref guard, set before ANY await (including the advance
+    // collection below) — `loading` state alone doesn't close this window
+    // since setLoading(true) previously only ran after collectAdvance
+    // resolved, leaving the whole multi-second Razorpay advance sheet open
+    // with the Book button still enabled, so a stray second tap could start
+    // a second advance collection + a second /api/rides/book for the same trip.
+    if (bookingInFlightRef.current) return;
+    bookingInFlightRef.current = true;
+    setLoading(true);
+    try {
+      // High-value city ride (>₹3000, rare — surge/long trip): collect the 1/3
+      // advance before booking, same as intercity.
+      let advance: { order_id: string; payment_id: string; signature: string } | null = null;
+      const estFare = (fareEstimates[rideType]?.fare ?? 0) as number;
+      if (estFare > ADVANCE_THRESHOLD) {
+        advance = await collectAdvance(estFare);
+        if (!advance) return; // advance cancelled → abort booking
+      }
+      await bookRideCore(route, advance);
+    } finally {
+      bookingInFlightRef.current = false;
     }
-    setLoading(true); setPaymentDone(false);
+  };
+
+  const bookRideCore = async (route: { distanceKm: number; durationMin: number; polyline: string; routeType: string } | undefined, advance: { order_id: string; payment_id: string; signature: string } | null) => {
+    setPaymentDone(false);
     try {
       let distanceKm: number, durationMin: number;
       if (route) {
@@ -2171,21 +2207,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const handlePayment = async () => {
     if (!RazorpayCheckout) { Alert.alert('Payment Error', 'Payment module failed to load. Please restart the app.'); return; }
+    // Same payingRef guard payWithWallet already uses — without it, a fast
+    // double-tap before the native Razorpay sheet visually blocks input can
+    // fire two /api/payment/create-order calls for the same ride (two orders,
+    // two checkout sheets).
+    if (payingRef.current) return;
+    payingRef.current = true;
     try {
       const fareNum = _netFare();
       const order = await apiPost('/api/payment/create-order', { amount: fareNum, ride_id: rideData.ride_id });
-      if (!order.success) { setResult('❌ ' + (order.error || 'Could not create order')); return; }
+      if (!order.success) { setResult('❌ ' + (order.error || 'Could not create order')); payingRef.current = false; return; }
       RazorpayCheckout.open({ description: 'Sppero Trip', currency: 'INR', key: order.key_id, amount: order.amount, order_id: order.order_id, name: 'Sppero', prefill: { contact: phone, name: userName || 'User' }, theme: { color: C.pink } })
         .then(async (data: any) => {
           apiPost('/api/payment/verify', { ride_id: rideData.ride_id, razorpay_payment_id: data.razorpay_payment_id, razorpay_order_id: data.razorpay_order_id, razorpay_signature: data.razorpay_signature, amount: fareNum, method: 'online' }).catch(() => {});
           apiPost('/api/rides/payment-complete', { ride_id: rideData.ride_id, payment_method: 'online', phone: phone || '9999999999' }).catch(() => {});
           setPaymentDone(true); setScreen('postride'); createScratchCard();
           AsyncStorage.removeItem('activeStdRideId').catch(() => {});
+          payingRef.current = false;
         }).catch((e: any) => {
           const { cancelled, msg } = rzpErr(e);
           setResult(cancelled ? '❌ Payment cancelled' : `❌ ${msg}`);
+          payingRef.current = false;
         });
-    } catch (e: any) { setResult('❌ Payment failed. Please try again.'); }
+    } catch (e: any) { setResult('❌ Payment failed. Please try again.'); payingRef.current = false; }
   };
 
   const payWithWallet = async () => {
