@@ -25,6 +25,14 @@ const SIZE_INFO: { key: PackageSize; label: string; desc: string; icon: string }
   { key: 'medium', label: 'Medium', desc: 'A box · up to 10 kg',               icon: '📦' },
   { key: 'large',  label: 'Large',  desc: "Won't fit on a bike · up to 25 kg", icon: '🗄️' },
 ];
+// One line per size explaining which delivery vehicles show and why — the
+// vehicle list below is filtered server-side by package_size (never trust
+// the client), this just sets the customer's expectation before they see it.
+const SIZE_VEHICLE_HINT: Record<PackageSize, string> = {
+  small:  '🏍️ Bike & Green Bike only — fastest and cheapest for something bag-sized.',
+  medium: '🛺 Auto, E-Rickshaw, E-Auto or Car — needs a proper boot for a box.',
+  large:  '🚗 Car only — too big and heavy for a bike or 3-wheeler.',
+};
 
 type EstOption = { vehicle_type: string; fare: number; base_fare: number; dist_fare: number; per_km_rate: number; surcharge: number };
 
@@ -254,7 +262,8 @@ Once your driver is matched, you'll get a delivery OTP — share it with them yo
         </View>
 
         {/* Vehicle options */}
-        <Text style={{ fontSize: 12, fontWeight: '900', color: C.text, marginBottom: 8, marginLeft: 2 }}>Choose a delivery vehicle</Text>
+        <Text style={{ fontSize: 12, fontWeight: '900', color: C.text, marginBottom: 4, marginLeft: 2 }}>Choose a delivery vehicle</Text>
+        <Text style={{ fontSize: 10.5, color: C.textMuted, marginBottom: 8, marginLeft: 2, lineHeight: 14 }}>{SIZE_VEHICLE_HINT[packageSize]}</Text>
         {estLoading ? (
           <View style={{ paddingVertical: 24, alignItems: 'center' }}>
             <ActivityIndicator size="large" color={PLUM} />
