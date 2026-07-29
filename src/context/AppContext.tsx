@@ -863,6 +863,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.getItem('activeStdRideId').then(id => {
           if (!id) return;
           reconcilePaymentConfirmed(id).then(ok => { if (ok && screen === 'payment') setScreen('postride'); });
+          reconcileReturnStatus(id);
         }).catch(() => {});
         // Re-sync an already-tracked standard ride against the server on every
         // resume, not just at cold start. A socket 'rideUpdate' (matched/
@@ -1131,6 +1132,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         reconcilePaymentConfirmed(activeRideIdRef.current).then(ok => {
           if (ok && screenRef.current === 'payment') setScreen('postride');
         });
+        reconcileReturnStatus(activeRideIdRef.current);
       }
     });
 
@@ -1475,6 +1477,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       await AsyncStorage.removeItem('activeStdRideId').catch(() => {});
       return true;
     } catch { return false; }
+  };
+
+  // Same class of gap as reconcilePaymentConfirmed above, for the parcel
+  // return-decision flow: `returnDecisionNeeded` only had a live socket
+  // listener, no reconciliation-on-reconnect — a driver's flag fired while
+  // this exact socket was mid-reconnect (app stayed foregrounded, so the
+  // AppState resume path never ran either) was silently lost forever, with
+  // the driver left waiting on a decision the sender never even saw asked.
+  const reconcileReturnStatus = async (rideId: string | number) => {
+    try {
+      const r = await fetch(`${API}/api/rides/status/${rideId}`);
+      const d = await r.json();
+      const ride = d.ride;
+      if (!ride) return;
+      setRideData((p: any) => p ? {
+        ...p,
+        returnStatus: ride.return_status ?? p?.returnStatus,
+        returnOtp: ride.return_otp || p?.returnOtp,
+        deliveryFailReason: ride.delivery_fail_reason ?? p?.deliveryFailReason,
+      } : p);
+    } catch {}
   };
 
   // ── Auth ─────────────────────────────────────────────────────────────────
