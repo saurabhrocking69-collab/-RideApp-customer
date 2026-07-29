@@ -6,7 +6,7 @@ import * as Location from 'expo-location';
 import * as Clipboard from 'expo-clipboard';
 import * as Notifications from 'expo-notifications';
 import { io, Socket } from 'socket.io-client';
-import { apiGet, apiPost, apiAuthPost, externalGet } from '../../api';
+import { apiGet, apiPost, apiAuthPost, apiAuthGet, externalGet } from '../../api';
 import { saveNotification } from '../components/NotificationCenter';
 import { C } from '../styles';
 import type { ToastNotif } from '../components/NotificationToast';
@@ -1882,6 +1882,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const token = await AsyncStorage.getItem('userToken').catch(() => null);
     return apiAuthPost(path, body, token || '');
   };
+  const authRideGet = async (path: string) => {
+    const token = await AsyncStorage.getItem('userToken').catch(() => null);
+    return apiAuthGet(path, token || '');
+  };
 
   const bookRide = async (route?: { distanceKm: number; durationMin: number; polyline: string; routeType: string }) => {
     if (!pickup || !drop) { setResult('❌ Enter pickup and drop locations'); return; }
@@ -2241,7 +2245,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       payingRef.current = false; return;
     }
     try {
-      const data = await apiPost('/api/wallet/pay', { phone: phone || '9999999999', amount: fareNum, ride_id: rideData.ride_id });
+      const data = await authRidePost('/api/wallet/pay', { phone: phone || '9999999999', amount: fareNum, ride_id: rideData.ride_id });
       if (data.success) {
         setWalletBalance(data.balance);
         // Advance screen immediately — never block the customer on payment-complete network call
@@ -2288,12 +2292,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (amt < 1) return;
     if (!RazorpayCheckout) { Alert.alert('Error', 'Payment module failed to load. Please restart the app.'); return; }
     try {
-      const d = await apiPost('/api/wallet/topup/order', { phone, amount: amt });
+      const d = await authRidePost('/api/wallet/topup/order', { phone, amount: amt });
       if (!d.success) { Alert.alert('Payment Error', d.error || 'Could not initiate payment'); return; }
       RazorpayCheckout.open({ key: d.key_id, amount: d.amount, currency: d.currency || 'INR', order_id: d.order_id, name: 'Sppero', description: `Wallet Recharge ₹${amt}`, prefill: { contact: phone }, theme: { color: C.pink } })
         .then(async (payment: any) => {
           try {
-            const vd = await apiPost('/api/wallet/topup/verify', { phone, razorpay_order_id: payment.razorpay_order_id, razorpay_payment_id: payment.razorpay_payment_id, razorpay_signature: payment.razorpay_signature, amount: amt });
+            const vd = await authRidePost('/api/wallet/topup/verify', { phone, razorpay_order_id: payment.razorpay_order_id, razorpay_payment_id: payment.razorpay_payment_id, razorpay_signature: payment.razorpay_signature, amount: amt });
             if (vd.success) { setWalletBalance(vd.balance); await loadWalletDetail(phone); Alert.alert('✅ Wallet Recharged!', `₹${amt} has been added to your wallet!`); }
             else { Alert.alert('Payment Failed', 'Payment could not be verified. Your balance will refresh shortly.'); }
           } catch (_e) { Alert.alert('Network Error', 'Payment done but verification pending. Refresh your balance in a moment.'); }
@@ -2379,11 +2383,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (_e) {}
   };
   const loadWallet = async (ph: string) => {
-    try { const d = await apiGet(`/api/wallet/balance?phone=${ph}`); setWalletBalance(d.balance || 0); } catch (_e) {}
+    try { const d = await authRideGet(`/api/wallet/balance?phone=${ph}`); setWalletBalance(d.balance || 0); } catch (_e) {}
   };
   const loadWalletDetail = async (ph: string) => {
     try {
-      const d = await apiGet(`/api/wallet/customer/detail?phone=${ph}`);
+      const d = await authRideGet(`/api/wallet/customer/detail?phone=${ph}`);
       setWalletBalance(d.balance || 0); setWalletTxns(d.transactions || []); setWalletStats(d.stats || {});
     } catch (_e) {}
   };
