@@ -2421,7 +2421,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try { const r = await fetch(`${API}/api/rewards/dashboard?phone=${ph}`); const d = await r.json(); setRewardsDash(d); } catch (_e) {}
   };
   const loadOffers = async () => {
-    try { const r = await fetch(`${API}/api/offers/active?role=customer`); const d = await r.json(); setActiveOffers(d.offers || []); } catch (_e) {}
+    try { const r = await fetch(`${API}/api/offers/active?role=customer&phone=${phone || ''}`); const d = await r.json(); setActiveOffers(d.offers || []); } catch (_e) {}
   };
   const loadHourlyPackages = async () => {
     try { const r = await fetch(`${API}/api/hourly/packages`); const d = await r.json(); if (d.fares) setHourlyPackages(d.fares); } catch (_e) {}
