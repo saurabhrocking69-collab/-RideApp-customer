@@ -21,11 +21,27 @@ export function PostRideScreen() {
     result, setResult,
     loadHistory, loadWallet,
     cashbackEarned,
+    reportParcelNotDelivered,
   } = useApp();
 
   const [showBill, setShowBill] = useState(false);
   const [billData, setBillData] = useState<any>(null);
   const [billLoading, setBillLoading] = useState(false);
+
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportDone, setReportDone] = useState(false);
+  const submitParcelReport = async () => {
+    if (!rideData?.ride_id) return;
+    setReportSubmitting(true);
+    try {
+      const res = await reportParcelNotDelivered(rideData.ride_id, reportReason.trim());
+      if (res?._error || res?.error) { setResult('❌ ' + (res?.error || 'Could not submit report')); }
+      else { setReportDone(true); setShowReportModal(false); }
+    } catch { setResult('❌ Network error — please try again'); }
+    setReportSubmitting(false);
+  };
 
   // Buddy Fund nudge
   const [buddyPhase, setBuddyPhase]     = useState<'idle' | 'loading' | 'done'>('idle');
@@ -290,6 +306,21 @@ _GST is included in the fare — not charged separately._
           </View>
         </FadeIn>
 
+        {rideData?.is_parcel && !reportDone && (
+          <View style={{ marginHorizontal: 14, marginTop: 14, alignItems: 'center' }}>
+            <TouchableOpacity onPress={() => setShowReportModal(true)}>
+              <Text style={{ fontSize: 12, color: C.textMuted, fontWeight: '700', textDecorationLine: 'underline' }}>
+                Package not delivered? Report it
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {reportDone && (
+          <View style={{ marginHorizontal: 14, marginTop: 14, backgroundColor: C.glassMid, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: C.glassBorder }}>
+            <Text style={{ fontSize: 12, color: C.text, fontWeight: '700', textAlign: 'center' }}>Your report is under review — our team will get back to you.</Text>
+          </View>
+        )}
+
         <View style={{ marginHorizontal: 14, marginTop: 16, marginBottom: 10 }}>
           {/* Auto-redirect countdown */}
           <View style={{ alignItems: 'center', marginTop: 20 }}>
@@ -302,6 +333,37 @@ _GST is included in the fare — not charged separately._
           </View>
         </View>
       </ScrollView>
+
+      {/* Report Not Delivered Modal */}
+      <Modal visible={showReportModal} transparent animationType="slide" onRequestClose={() => setShowReportModal(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' }}>
+            <TouchableOpacity style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} activeOpacity={1} onPress={() => setShowReportModal(false)} />
+            <View style={{ backgroundColor: C.bgDark, borderTopLeftRadius: R.lg, borderTopRightRadius: R.lg, padding: 20, paddingBottom: 20 + bottomInset }}>
+              <View style={{ width: 40, height: 4, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2, alignSelf: 'center', marginBottom: 16 }} />
+              <Text style={{ fontSize: 16, fontWeight: '900', color: '#fff', marginBottom: 6 }}>Package not delivered?</Text>
+              <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 14, lineHeight: 17 }}>
+                Tell us what happened — our team will review and take action if the driver is at fault.
+              </Text>
+              <TextInput
+                style={{ backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 13.5, color: '#fff', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', minHeight: 80, textAlignVertical: 'top' }}
+                placeholder="What went wrong? (e.g. receiver says it never arrived)"
+                placeholderTextColor="rgba(255,255,255,0.35)"
+                multiline
+                value={reportReason}
+                onChangeText={setReportReason}
+              />
+              <TouchableOpacity
+                onPress={submitParcelReport}
+                disabled={reportSubmitting || !reportReason.trim()}
+                style={{ marginTop: 14, backgroundColor: (reportSubmitting || !reportReason.trim()) ? 'rgba(255,45,120,0.4)' : C.pink, borderRadius: 14, paddingVertical: 14, alignItems: 'center' }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: '900', color: '#fff' }}>{reportSubmitting ? 'Submitting…' : 'Submit Report'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {/* Bill Modal */}
       <Modal visible={showBill} transparent animationType="slide" onRequestClose={() => setShowBill(false)}>

@@ -51,8 +51,6 @@ export function ParcelScreen() {
 
   const [packageSize, setPackageSize] = useState<PackageSize>('small');
   const [packageNote, setPackageNote] = useState('');
-  const [hasCod, setHasCod] = useState(false);
-  const [codAmount, setCodAmount] = useState('');
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [etaText, setEtaText] = useState('');
   const [options, setOptions] = useState<EstOption[]>([]);
@@ -107,15 +105,13 @@ export function ParcelScreen() {
     if (!drop || !dropCoords) { Alert.alert('Drop needed', "Enter or select the receiver's address"); return; }
     if (!riderName.trim()) { Alert.alert("Receiver's name needed", "Enter who's receiving the package"); return; }
     if (riderPhone.length !== 10) { Alert.alert("Receiver's phone needed", "Enter a valid 10-digit phone number"); return; }
-    if (!selVehicle || !distanceKm) { Alert.alert('Almost there', 'Pick a delivery vehicle'); return; }
-    if (hasCod && (!codAmount || parseFloat(codAmount) <= 0)) { Alert.alert('COD amount', 'Enter the amount to collect, or turn off Cash on Delivery'); return; }
+    if (!selVehicle || !distanceKm || !selOpt) { Alert.alert('Almost there', 'Pick a delivery vehicle'); return; }
 
     await bookParcel({
       vehicleType: selVehicle,
       packageSize,
       distanceKm,
-      fare: selOpt?.fare,
-      codAmount: hasCod ? parseFloat(codAmount) : null,
+      fare: selOpt.fare,
       packageNote: packageNote.trim(),
     });
   };
@@ -286,33 +282,14 @@ Once your driver is matched, you'll get a delivery OTP — share it with them yo
           );
         })}
 
-        {/* Cash on delivery */}
+        {/* Payment note + driver instructions */}
         <View style={{ backgroundColor: '#fff', borderRadius: 14, borderWidth: 1, borderColor: C.glassBorder, padding: 14, marginTop: 4 }}>
-          <TouchableOpacity activeOpacity={0.8} onPress={() => setHasCod(v => !v)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <View style={{
-              width: 20, height: 20, borderRadius: 6, borderWidth: 2,
-              borderColor: hasCod ? PLUM : C.glassBorder, backgroundColor: hasCod ? PLUM : 'transparent',
-              alignItems: 'center', justifyContent: 'center',
-            }}>
-              {hasCod && <Ionicons name="checkmark" size={13} color="#fff" />}
-            </View>
-            <Text style={{ fontSize: 12.5, fontWeight: '800', color: C.text, flex: 1 }}>Collect cash on delivery</Text>
-          </TouchableOpacity>
-          {hasCod && (
-            <View style={{ marginTop: 10 }}>
-              <TextInput
-                style={{ backgroundColor: C.glassMid, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13.5, color: C.text, borderWidth: 1, borderColor: C.glassBorder }}
-                placeholder="Amount to collect from receiver (₹)"
-                placeholderTextColor={C.textDim}
-                keyboardType="number-pad"
-                value={codAmount}
-                onChangeText={(v: string) => setCodAmount(v.replace(/[^0-9]/g, ''))}
-              />
-              <Text style={{ fontSize: 10, color: C.textMuted, marginTop: 6, lineHeight: 14 }}>
-                This is separate from the delivery fee — the driver collects it from the receiver on your behalf and settles it with you directly.
-              </Text>
-            </View>
-          )}
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6 }}>
+            <Ionicons name="shield-checkmark" size={13} color={PLUM} style={{ marginTop: 1 }} />
+            <Text style={{ flex: 1, fontSize: 10.5, color: C.textMuted, lineHeight: 14 }}>
+              Paid now — released to your delivery partner the moment the package is delivered.
+            </Text>
+          </View>
           <TextInput
             style={{ marginTop: 12, backgroundColor: C.glassMid, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: C.text, borderWidth: 1, borderColor: C.glassBorder }}
             placeholder="Instructions for the driver (optional) — fragile, handle with care, etc."
@@ -343,7 +320,7 @@ Once your driver is matched, you'll get a delivery OTP — share it with them yo
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={{ fontSize: 16, fontWeight: '900', color: '#fff' }}>
-              {selOpt ? `Book Pickup — ₹${selOpt.fare}` : 'Book Pickup'}
+              {selOpt ? `Pay & Book — ₹${selOpt.fare}` : 'Book Pickup'}
             </Text>
           )}
         </TouchableOpacity>

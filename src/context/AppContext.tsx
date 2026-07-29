@@ -55,8 +55,9 @@ interface AppContextType {
   intercityRoute: { km: number; durationMin: number } | null;
   setIntercityRoute: (v: { km: number; durationMin: number } | null) => void;
   bookIntercity: (p: { vehicleType: 'car' | 'luxury'; tripKind: 'oneway' | 'round'; fare?: number; scheduledAt?: string | null; returnAt?: string | null }) => Promise<any>;
-  bookParcel: (p: { vehicleType: string; packageSize: 'small' | 'medium' | 'large'; distanceKm: number; fare?: number; codAmount?: number | null; packageNote?: string }) => Promise<any>;
+  bookParcel: (p: { vehicleType: string; packageSize: 'small' | 'medium' | 'large'; distanceKm: number; fare: number; packageNote?: string }) => Promise<any>;
   parcelEstimate: (distanceKm: number, packageSize: 'small' | 'medium' | 'large') => Promise<any>;
+  reportParcelNotDelivered: (rideId: string | number, reason: string) => Promise<any>;
   // Auth
   phone: string; setPhone: (p: string) => void;
   otp: string; setOtp: (o: string) => void;
@@ -370,7 +371,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (storeStatus === 'started') {
       setScreen((cur: Screen) => (['matching', 'inride'].includes(cur) ? 'inride' : cur));
     } else if (storeStatus === 'completed' && rideDataRef.current?.ride_id) {
-      setScreen((cur: Screen) => (['payment', 'postride'].includes(cur) ? cur : 'payment'));
+      // Parcel: already paid in full at booking (escrow) — nothing to pay,
+      // go straight to the post-ride summary instead of the payment screen.
+      const target = rideDataRef.current?.is_parcel ? 'postride' : 'payment';
+      setScreen((cur: Screen) => (['payment', 'postride'].includes(cur) ? cur : target));
       AsyncStorage.removeItem('activeStdRideId').catch(() => {});
     }
   }, [storeStatus]);
@@ -762,7 +766,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (rideId) await adoptActiveRide(rideId);
         setScreen('inride');
       }
-      else if (data.type === 'trip_completed')                     setScreen('payment');
+      else if (data.type === 'trip_completed') {
+        // Parcel: already paid at booking (escrow) — nothing to pay, skip
+        // straight to postride instead of the payment screen.
+        if (rideId) {
+          fetch(`${API}/api/rides/status/${rideId}`).then(r => r.json()).then(d => {
+            setScreen(d?.ride?.is_parcel ? 'postride' : 'payment');
+          }).catch(() => setScreen('payment'));
+        } else setScreen('payment');
+      }
       else if (data.type === 'ride_cancelled')                     { setScreen('home'); setDriverCancelPopup(true); setRideData(null); resetBookingState(); }
       else if (data.type === 'no_driver_found')                    setScreen('home');
       else if (data.type === 'extension_accepted')                 { if (rideId) await adoptActiveRide(rideId); setScreen('matching'); }
@@ -1248,7 +1260,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (data.fare != null) {
           setRideData((p: any) => p ? { ...p, status: 'completed', net_fare: data.fare, discount: data.discount ?? p?.discount ?? 0 } : p);
         }
-        setScreen((cur: Screen) => (cur === 'payment' || cur === 'postride') ? cur : 'payment');
+        // Parcel: already paid at booking (escrow) — nothing to pay, skip
+        // straight to postride instead of the payment screen.
+        const completedTarget = rideDataRef.current?.is_parcel ? 'postride' : 'payment';
+        setScreen((cur: Screen) => (cur === 'payment' || cur === 'postride') ? cur : completedTarget);
         loadWallet(phoneRef.current || userPhone);
         resetBookingState();
       }
@@ -1938,6 +1953,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch { Alert.alert('Error', 'Could not connect to server'); return null; }
   };
 
+  // Parcel delivery fee is paid in FULL upfront, before the ride is created
+  // — held in escrow and released to the driver on delivery. Prefers the
+  // sender's Sppero wallet balance (instant, no checkout) and falls back to
+  // Razorpay — same two "digital" options already used for a normal ride.
+  const collectParcelPayment = async (fare: number): Promise<{ method: 'wallet' } | { method: 'online'; order_id: string; payment_id: string; signature: string } | null> => {
+    if (walletBalance >= fare) return { method: 'wallet' };
+    if (!RazorpayCheckout) { Alert.alert('Payment Error', 'Payment module failed to load. Please restart the app.'); return null; }
+    try {
+      const d = await authRidePost('/api/parcel/payment-order', { fare });
+      if (!d.success) { Alert.alert('Payment Error', d.error || 'Could not start payment'); return null; }
+      return await new Promise((resolve) => {
+        RazorpayCheckout.open({
+          key: d.key_id, amount: d.amount, currency: 'INR', order_id: d.order_id, name: 'Sppero',
+          description: `Parcel delivery ₹${fare}`,
+          prefill: { contact: phone }, theme: { color: C.pink },
+        })
+          .then((payment: any) => resolve({ method: 'online', order_id: payment.razorpay_order_id, payment_id: payment.razorpay_payment_id, signature: payment.razorpay_signature }))
+          .catch((e: any) => { const { cancelled, msg } = rzpErr(e); if (!cancelled) Alert.alert('Payment failed', msg); resolve(null); });
+      });
+    } catch { Alert.alert('Error', 'Could not connect to server'); return null; }
+  };
+
   const bookIntercity = async (p: { vehicleType: 'car' | 'luxury'; tripKind: 'oneway' | 'round'; fare?: number; scheduledAt?: string | null; returnAt?: string | null }) => {
     if (!pickup || !drop || !intercityRoute) { Alert.alert('Missing route', 'Please select pickup and drop first'); return null; }
     // Collect the 1/3 advance up front for high-value bookings, before creating the ride.
@@ -1991,12 +2028,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     finally { setLoading(false); }
   };
 
-  const bookParcel = async (p: { vehicleType: string; packageSize: 'small' | 'medium' | 'large'; distanceKm: number; fare?: number; codAmount?: number | null; packageNote?: string }) => {
+  const bookParcel = async (p: { vehicleType: string; packageSize: 'small' | 'medium' | 'large'; distanceKm: number; fare: number; packageNote?: string }) => {
     if (!pickup || !drop) { Alert.alert('Missing addresses', 'Please enter both the pickup and drop-off address'); return null; }
     if (!riderName.trim() || riderPhone.length !== 10) {
       Alert.alert("Receiver's details needed", "Enter the receiver's name and a 10-digit phone number so we can text them the delivery OTP.");
       return null;
     }
+    // Full delivery fee is collected upfront (escrow) — before the ride exists.
+    const payment = await collectParcelPayment(p.fare);
+    if (!payment) return null; // cancelled/failed → don't book
     setLoading(true); setPaymentDone(false);
     try {
       const data = await authRidePost('/api/parcel/book', {
@@ -2005,17 +2045,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         vehicle_type: p.vehicleType,
         package_size: p.packageSize,
         package_note: p.packageNote || null,
-        cod_amount: p.codAmount || null,
         distance: p.distanceKm,
         pickup_lat: pickupCoords?.lat, pickup_lng: pickupCoords?.lng,
         drop_lat:   dropCoords?.lat,   drop_lng:   dropCoords?.lng,
         discount: 0, promo_code: null,
         receiver_name:  riderName.trim(),
         receiver_phone: riderPhone.trim(),
+        payment,
       });
       if (data.restricted) { Alert.alert('Account on hold', data.error || 'Contact support: help@sppero.com'); return null; }
       if (data._error || data.error) { Alert.alert('Could not book', data.error || data.message || 'Please try again'); return null; }
       if (!data.ride_id) { Alert.alert('Could not book', 'Please try again'); return null; }
+      if (payment.method === 'wallet') setWalletBalance(b => Math.max(0, b - p.fare));
 
       setRiderName(''); setRiderPhone('');
 
@@ -2036,6 +2077,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // identity verified — same userAuth middleware as /api/parcel/book.
   const parcelEstimate = async (distanceKm: number, packageSize: 'small' | 'medium' | 'large') => {
     return authRidePost('/api/parcel/estimate', { distance: distanceKm, package_size: packageSize });
+  };
+
+  // Sender reports a completed delivery as never having reached the
+  // receiver — opens a review with Sppero's team (money's already been
+  // released to the driver by this point, so this doesn't undo anything by
+  // itself; an admin decides refund/penalty after review).
+  const reportParcelNotDelivered = async (rideId: string | number, reason: string) => {
+    return authRidePost('/api/parcel/report-not-delivered', { ride_id: rideId, reason });
   };
 
   const surgeFareNow = async (amount: number) => {
@@ -2403,7 +2452,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ═══════════════════════════════════════════════════════════════════════
   const value: AppContextType = {
     screen, setScreen, tab, setTab, scheduleIntent, setScheduleIntent,
-    intercityRoute, setIntercityRoute, bookIntercity, bookParcel, parcelEstimate,
+    intercityRoute, setIntercityRoute, bookIntercity, bookParcel, parcelEstimate, reportParcelNotDelivered,
     phone, setPhone, otp, setOtp, otpSent, setOtpSent, otpDigits, setOtpDigits,
     resendTimer, setResendTimer, canResend, setCanResend, otpRefs, otpShakeAnim, otpSuccessAnim,
     userName, setUserName, gender, setGender,
