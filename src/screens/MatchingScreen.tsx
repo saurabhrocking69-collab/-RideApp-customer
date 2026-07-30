@@ -372,6 +372,79 @@ function PreAssignedCard({ rideData, onCancel }: { rideData: any; onCancel: () =
   );
 }
 
+// ── Batch queue card — shown when this parcel got route-batched with
+//    another nearby delivery and the driver has a pickup to make before
+//    reaching this sender. Same visual language as PreAssignedCard (purple
+//    hero, pulsing glow) since it's the same underlying idea — "driver is
+//    committed to you, just not coming straight to you yet" — but distinct
+//    copy: unlike pre-assignment, a driver IS already fully matched here
+//    (start_otp/delivery_otp already exist), so no "reviewing your
+//    request…"/confirmed-toggle state, just a live stop count. ─────────────
+function BatchQueueCard({ rideData }: { rideData: any }) {
+  const driver = rideData?.driver;
+  const stopsBefore = rideData?.stops_before_pickup ?? 1;
+
+  const glow = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(glow, { toValue: 1, duration: 1800, useNativeDriver: true }),
+      Animated.timing(glow, { toValue: 0, duration: 1800, useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, []);
+
+  return (
+    <View style={{ marginHorizontal: 12, marginTop: 10 }}>
+      <Animated.View style={{
+        backgroundColor: '#1A0A2E', borderRadius: 20, overflow: 'hidden',
+        borderWidth: 1.5, borderColor: '#7C3AED',
+        shadowColor: '#7C3AED', shadowOpacity: glow.interpolate({ inputRange: [0, 1], outputRange: [0.3, 0.7] }), shadowRadius: 20, elevation: 12,
+      }}>
+        <View style={{ backgroundColor: '#7C3AED', paddingVertical: 12, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Text style={{ fontSize: 18 }}>📦📦</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 13, fontWeight: '900', color: '#fff', letterSpacing: 0.3 }}>Driver Matched!</Text>
+            <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: '500', marginTop: 1 }}>
+              Batched with a nearby delivery — {stopsBefore} pickup before you
+            </Text>
+          </View>
+        </View>
+
+        {driver && (
+          <View style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: '#2D1B4E', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#7C3AED' }}>
+              <Text style={{ fontSize: 22, fontWeight: '900', color: '#A78BFA' }}>{(driver.name || 'D')[0].toUpperCase()}</Text>
+            </View>
+            <View style={{ flex: 1, gap: 3 }}>
+              <Text style={{ fontSize: 16, fontWeight: '900', color: '#F1F5F9' }}>{driver.name || 'Driver'}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={{ fontSize: 11, color: '#C4B5FD', fontWeight: '700' }}>⭐ {driver.rating ? parseFloat(driver.rating).toFixed(1) : '5.0'}</Text>
+                {driver.vehicle_brand ? (
+                  <Text style={{ fontSize: 11, color: '#94A3B8' }}>· {[driver.vehicle_brand, driver.vehicle_model].filter(Boolean).join(' ')}</Text>
+                ) : null}
+              </View>
+              {driver.vehicle_no ? (
+                <View style={{ backgroundColor: '#2D1B4E', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: '#7C3AED', alignSelf: 'flex-start', marginTop: 2 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#C4B5FD', letterSpacing: 0.5 }}>{driver.vehicle_no}</Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+        )}
+
+        <View style={{ marginHorizontal: 16, marginBottom: 16, backgroundColor: '#0D0520', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#4C1D95', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Text style={{ fontSize: 22 }}>🔁</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: '#E9D5FF' }}>Your pickup OTP is ready whenever they arrive</Text>
+            <Text style={{ fontSize: 11, color: '#7C3AED', fontWeight: '600', marginTop: 2 }}>They're on their way to another pickup first</Text>
+          </View>
+        </View>
+      </Animated.View>
+    </View>
+  );
+}
+
 // ── Surge price step slider — shown when backend emits surge_offer ──────────
 const SURGE_STEPS = [10, 20, 30, 40, 50, 80, 100, 150];
 
@@ -986,6 +1059,8 @@ export function MatchingScreen() {
           {/* ═══════════════ PRE-ASSIGNED STATE ═══════════════ */}
           {rideData?.status === 'pre_assigned' ? (
             <PreAssignedCard rideData={rideData} onCancel={() => setShowCancelModal(true)} />
+          ) : rideData?.batched && (rideData?.stops_before_pickup ?? 0) > 0 ? (
+            <BatchQueueCard rideData={rideData} />
           ) : rideData?.driver ? (
             <>
               {!driverArrived && <BuddyMessages visible />}

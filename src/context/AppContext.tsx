@@ -1229,7 +1229,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
         }
         if (data.driver) {
-          setRideData((p: any) => p ? { ...p, status: st, startOtp: data.start_otp || p?.startOtp, deliveryOtp: data.delivery_otp || p?.deliveryOtp, driver: data.driver } : p);
+          setRideData((p: any) => p ? {
+            ...p, status: st, startOtp: data.start_otp || p?.startOtp, deliveryOtp: data.delivery_otp || p?.deliveryOtp, driver: data.driver,
+            // Route batching (2 parcels, one driver trip) — batched/
+            // stops_before_pickup tell MatchingScreen's BatchQueueCard
+            // whether the driver is coming straight here or has another
+            // pickup first. ?? not ||, since stops_before_pickup can
+            // legitimately be 0 (driver's next stop IS this one).
+            batched: data.batched ?? p?.batched, stops_before_pickup: data.stops_before_pickup ?? p?.stops_before_pickup,
+          } : p);
           useRideStore.setState({ rideStatus: st, startOtp: data.start_otp || '' });
         } else {
           // Driver info not in socket payload — fetch from API immediately
