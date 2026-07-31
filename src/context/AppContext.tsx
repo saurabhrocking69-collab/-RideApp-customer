@@ -11,7 +11,7 @@ import { saveNotification } from '../components/NotificationCenter';
 import { C } from '../styles';
 import type { ToastNotif } from '../components/NotificationToast';
 import { useRideStore } from '../../store';
-import { API, MAPS_KEY, RIDES, DEFAULT_HOURLY_PACKAGES } from '../constants';
+import { API, MAPS_KEY, RIDES, DEFAULT_HOURLY_PACKAGES, WELCOME_SEEN_KEY } from '../constants';
 import { Screen, Tab, Coords, HourlyStep, ExtendStep, WalletTxnTab } from '../types';
 import { shortRideId } from '../rideId';
 
@@ -621,7 +621,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (savedName) setUserName(savedName);
         setScreen('home');
       } else {
-        setScreen('login');
+        // Genuinely new install → introduce Sppero before asking for a phone
+        // number. Someone who has seen it (or logged out later) goes straight
+        // to login. Read here rather than inside WelcomeScreen so the correct
+        // screen is set BEFORE the splash fades — same reason the branch above
+        // sets 'home' up front, otherwise login flashes underneath first.
+        const seenWelcome = await AsyncStorage.getItem(WELCOME_SEEN_KEY).catch(() => null);
+        setScreen(seenWelcome ? 'login' : 'welcome');
       }
 
       Animated.timing(splashFade, { toValue: 0, duration: 300, useNativeDriver: true }).start(async () => {

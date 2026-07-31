@@ -31,10 +31,12 @@ import { ScheduledRideDetailScreen } from './screens/ScheduledRideDetailScreen';
 import { IntercityScreen } from './screens/IntercityScreen';
 import { ParcelScreen } from './screens/ParcelScreen';
 import { ParcelIntroScreen } from './screens/ParcelIntroScreen';
+import { WelcomeScreen } from './screens/WelcomeScreen';
 
 function ActiveScreen() {
   const { screen } = useApp();
   if (screen === 'splash')           return null;
+  if (screen === 'welcome')          return <WelcomeScreen />;
   if (screen === 'language-select')  return <LanguageSelectScreen />;
   if (screen === 'onboarding')       return <OnboardingScreen />;
   if (screen === 'login')            return <LoginScreen />;

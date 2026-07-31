@@ -50,6 +50,9 @@ function BackHandlerWrapper() {
       if (screen === 'splash') return true;
       if (screen === 'language-select') return true;
       if (screen === 'onboarding') return true;
+      // Pre-login intro — swallow back rather than let the default fallback
+      // below drop an unauthenticated user onto 'home'.
+      if (screen === 'welcome') return true;
       if (screen === 'otp') { setScreen('login'); return true; }
 
       // During active standard ride — block accidental back

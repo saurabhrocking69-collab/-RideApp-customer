@@ -1,4 +1,9 @@
 export const API = 'https://api.sppero.com';
+
+// Lives here, not in WelcomeScreen: AppContext needs it during boot, and
+// WelcomeScreen needs useApp() from AppContext — importing the key from the
+// screen would make that a cycle with the context at the root of it.
+export const WELCOME_SEEN_KEY = 'welcomeSeen';
 export const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 
 export const DEFAULT_HOURLY_PACKAGES: any = {
