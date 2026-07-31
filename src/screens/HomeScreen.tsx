@@ -14,6 +14,7 @@ import { MAPS_KEY, API } from '../constants';
 import { useNearbyDrivers } from '../offline';
 import { NotifBell, NotificationCenter, getUnreadCount } from '../components/NotificationCenter';
 import { PARCEL_INTRO_SEEN_KEY } from './ParcelIntroScreen';
+import { HOURLY_INFO_SEEN_KEY } from './HourlyInfoScreen';
 import { FeatureIllustrationBanner, IlluFamily3, BikeScene } from '../components/Illustrations';
 import { NEARBY_CATEGORIES } from '../nearbyCategories';
 
@@ -1166,7 +1167,12 @@ function HomeTab() {
                   if (v.mode === 'hourly') {
                     setHourlyStep('book'); setHPickup(''); setHDrop(''); setHPickupCoords(null); setHDropCoords(null);
                     setHPickupSugg([]); setHDropSugg([]); setHRoundTrip(false); setHStayHours(1);
-                    setHourlyBooking(null); setScreen('hourly');
+                    setHourlyBooking(null);
+                    // First-timers get the walkthrough; afterwards straight to
+                    // booking. Still reachable from the ℹ️ in the hourly header.
+                    AsyncStorage.getItem(HOURLY_INFO_SEEN_KEY)
+                      .then(seen => setScreen(seen ? 'hourly' : 'hourly-info'))
+                      .catch(() => setScreen('hourly'));
                   } else if (v.mode === 'parcel') {
                     // First-time senders get the walkthrough; after that Parcel
                     // goes straight to booking so a repeat sender isn't walled
