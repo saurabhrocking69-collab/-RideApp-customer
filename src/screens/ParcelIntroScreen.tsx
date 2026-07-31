@@ -34,24 +34,21 @@ function useFloat(distance = 10, duration = 2600, delay = 0) {
 
 // ── Hero illustration — a parcel riding through the city ────────────────────
 function ParcelHeroArt() {
-  const float = useFloat(9, 2400);
-  const floatSlow = useFloat(6, 3200, 400);
-  const spin = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.timing(spin, { toValue: 1, duration: 9000, easing: Easing.linear, useNativeDriver: true })
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [spin]);
-
-  const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  // ONE looping animation for the whole hero, shared by the parcel and the
+  // chips (offset via interpolation) instead of a separate loop each.
+  //
+  // This used to run five concurrent infinite loops — a rotating halo, three
+  // independent floats and a pulse — all with useNativeDriver, all still
+  // animating while scrolled far off screen. On a mid-range Android that
+  // competes with the scroll gesture on the UI thread and makes a long page
+  // feel stuck or unscrollable. Decorative motion is not worth costing someone
+  // the ability to read the page.
+  const float = useFloat(9, 2600);
 
   return (
     <View style={{ height: 210, alignItems: 'center', justifyContent: 'center' }}>
-      {/* slow rotating halo behind everything */}
-      <Animated.View style={{ position: 'absolute', transform: [{ rotate }] }}>
+      {/* Static halo — was a 9s infinite rotation; it reads the same at rest. */}
+      <View style={{ position: 'absolute' }}>
         <Svg width={220} height={220} viewBox="0 0 220 220">
           <Defs>
             <LinearGradient id="halo" x1="0" y1="0" x2="1" y2="1">
@@ -61,7 +58,7 @@ function ParcelHeroArt() {
           </Defs>
           <Circle cx="110" cy="110" r="92" fill="none" stroke="url(#halo)" strokeWidth="16" strokeDasharray="34 22" strokeLinecap="round" />
         </Svg>
-      </Animated.View>
+      </View>
 
       {/* the parcel itself */}
       <Animated.View style={{ transform: [{ translateY: float }] }}>
@@ -93,16 +90,17 @@ function ParcelHeroArt() {
         </Svg>
       </Animated.View>
 
-      {/* floating trust chips around the box */}
-      <Animated.View style={{ position: 'absolute', left: 8, top: 34, transform: [{ translateY: floatSlow }] }}>
+      {/* Trust chips — static. pointerEvents="none" so a drag that starts on
+          one is never swallowed here and always reaches the ScrollView. */}
+      <View pointerEvents="none" style={{ position: 'absolute', left: 8, top: 34 }}>
         <Chip icon="lock-closed" label="Escrow" tint={C.green} />
-      </Animated.View>
-      <Animated.View style={{ position: 'absolute', right: 6, top: 62, transform: [{ translateY: float }] }}>
+      </View>
+      <View pointerEvents="none" style={{ position: 'absolute', right: 6, top: 62 }}>
         <Chip icon="keypad" label="2 OTPs" tint={C.purple} />
-      </Animated.View>
-      <Animated.View style={{ position: 'absolute', right: 22, bottom: 20, transform: [{ translateY: floatSlow }] }}>
+      </View>
+      <View pointerEvents="none" style={{ position: 'absolute', right: 22, bottom: 20 }}>
         <Chip icon="navigate" label="Live track" tint={C.pink} />
-      </Animated.View>
+      </View>
     </View>
   );
 }
@@ -123,24 +121,11 @@ function Chip({ icon, label, tint }: { icon: any; label: string; tint: string })
 
 // ── The escrow explainer — the single strongest reason to trust this ────────
 function EscrowArt() {
-  const pulse = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 1400, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0, duration: 1400, easing: Easing.in(Easing.ease), useNativeDriver: true }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [pulse]);
-
-  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.14] });
-  const opacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.30, 0.05] });
-
+  // Static halo. This was a second infinite loop that kept animating even when
+  // the card was nowhere near the viewport — see the note in ParcelHeroArt.
   return (
-    <View style={{ width: 92, height: 92, alignItems: 'center', justifyContent: 'center' }}>
-      <Animated.View style={{ position: 'absolute', width: 84, height: 84, borderRadius: 42, backgroundColor: C.green, transform: [{ scale }], opacity }} />
+    <View pointerEvents="none" style={{ width: 92, height: 92, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ position: 'absolute', width: 84, height: 84, borderRadius: 42, backgroundColor: C.green, opacity: 0.14 }} />
       <Svg width={62} height={62} viewBox="0 0 62 62">
         <Defs>
           <LinearGradient id="shield" x1="0" y1="0" x2="0" y2="1">
@@ -162,8 +147,21 @@ function EscrowArt() {
 // sender had already typed. The modal floats above it instead.
 function GuideBody({ onCta, ctaLabel }: { onCta: () => void; ctaLabel: string }) {
   return (
-    <>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 118 }} showsVerticalScrollIndicator={false}>
+    // Explicit flex:1 wrapper rather than a Fragment. A Fragment works, but it
+    // leaves the ScrollView's height depending on whatever the caller's
+    // container happens to be; this makes it unambiguous in both the screen
+    // and the modal.
+    <View style={{ flex: 1 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 128 }}
+        // Indicator ON. It was hidden, which on a page this long with a sticky
+        // bar pinned over the bottom leaves nothing at all showing there is
+        // more content — the page simply reads as stuck.
+        showsVerticalScrollIndicator
+        overScrollMode="always"
+        alwaysBounceVertical
+      >
 
         {/* ── HERO ───────────────────────────────────────────────────────── */}
         <View style={{
@@ -386,7 +384,7 @@ function GuideBody({ onCta, ctaLabel }: { onCta: () => void; ctaLabel: string })
           See the exact price before you pay · No hidden charges
         </Text>
       </View>
-    </>
+    </View>
   );
 }
 
