@@ -326,7 +326,8 @@ function GuideBody({ onCta, ctaLabel }: { onCta: () => void; ctaLabel: string })
           <SectionLabel kicker="THE RULES" title="Good to know" />
           {([
             ['person-outline', "Receiver's name & number are required", "We can't deliver without a way to reach them — it's how the OTP gets to the right person.", C.purple],
-            ['swap-horizontal-outline', 'If the receiver refuses or is unreachable', 'Your Buddy tells you straight away, and you choose: try again, or have it brought back to you. A return trip is chargeable.', C.yellow],
+            ['swap-horizontal-outline', 'If the receiver refuses or is unreachable', 'Your Buddy tells you straight away and you choose: try again, or have it brought back (a return trip is chargeable). Answer quickly — your Buddy is holding your parcel and waiting on you.', C.yellow],
+            ['time-outline', "If you don't reply for a few hours", 'The trip closes so your Buddy can work again — but your parcel is not lost. They keep it safe and we send you their number so you can arrange collection.', C.purple],
             ['cube-outline', 'Pick the honest size', 'The size decides which vehicle comes. A box booked as Small may not fit on the bike that arrives.', C.pink],
             ['shield-checkmark-outline', 'Pack it properly', 'Seal it well and cushion anything fragile. Sppero moves your parcel — it does not package it for you.', C.green],
           ] as const).map(([icon, title, desc, tint], i) => (
