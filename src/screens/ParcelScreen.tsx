@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { MAPS_KEY } from '../constants';
 import { C } from '../styles';
+import { ParcelGuideModal } from './ParcelIntroScreen';
 
 const PLUM    = '#2E1461';
 const PLUM_BG = '#F1EBFA';
@@ -58,6 +59,7 @@ export function ParcelScreen() {
   }, []);
 
   const [packageSize, setPackageSize] = useState<PackageSize>('small');
+  const [showGuide, setShowGuide] = useState(false);
   const [packageNote, setPackageNote] = useState('');
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [etaText, setEtaText] = useState('');
@@ -141,9 +143,16 @@ export function ParcelScreen() {
           <Text style={{ fontSize: 18, fontWeight: '900', color: C.text }}>Send a Parcel</Text>
           <Text style={{ fontSize: 11, color: C.textMuted }}>{etaText || 'Enter pickup & drop to see fares'}</Text>
         </View>
-        <View style={{ backgroundColor: PLUM_BG, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: PLUM_BD }}>
-          <Text style={{ fontSize: 11, fontWeight: '800', color: PLUM }}>📦 Parcel</Text>
-        </View>
+        {/* Re-open the walkthrough. It auto-shows only on a sender's first
+            visit, so this is how anyone gets back to the rules/how-it-works
+            later — same affordance Book by Hour uses for its guide. */}
+        <TouchableOpacity
+          onPress={() => setShowGuide(true)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={{ backgroundColor: PLUM_BG, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: PLUM_BD, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Ionicons name="information-circle-outline" size={13} color={PLUM} />
+          <Text style={{ fontSize: 11, fontWeight: '800', color: PLUM }}>Guide</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 140 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -334,6 +343,8 @@ Once your driver is matched, you'll get a delivery OTP — share it with them yo
           )}
         </TouchableOpacity>
       </View>
+
+      <ParcelGuideModal visible={showGuide} onClose={() => setShowGuide(false)} />
     </View>
   );
 }

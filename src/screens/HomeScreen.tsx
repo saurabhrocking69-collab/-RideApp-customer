@@ -13,6 +13,7 @@ import { shortRideId } from '../rideId';
 import { MAPS_KEY, API } from '../constants';
 import { useNearbyDrivers } from '../offline';
 import { NotifBell, NotificationCenter, getUnreadCount } from '../components/NotificationCenter';
+import { PARCEL_INTRO_SEEN_KEY } from './ParcelIntroScreen';
 import { FeatureIllustrationBanner, IlluFamily3, BikeScene } from '../components/Illustrations';
 import { NEARBY_CATEGORIES } from '../nearbyCategories';
 
@@ -1167,7 +1168,13 @@ function HomeTab() {
                     setHPickupSugg([]); setHDropSugg([]); setHRoundTrip(false); setHStayHours(1);
                     setHourlyBooking(null); setScreen('hourly');
                   } else if (v.mode === 'parcel') {
-                    setScreen('parcel');
+                    // First-time senders get the walkthrough; after that Parcel
+                    // goes straight to booking so a repeat sender isn't walled
+                    // off by a guide every time. It stays reachable from the ℹ️
+                    // in the parcel header — same pattern as Book by Hour.
+                    AsyncStorage.getItem(PARCEL_INTRO_SEEN_KEY)
+                      .then(seen => setScreen(seen ? 'parcel' : 'parcel-intro'))
+                      .catch(() => setScreen('parcel'));
                   } else {
                     setRideType(v.id); setScreen('booking');
                   }

@@ -30,6 +30,7 @@ import { ScheduledRidesScreen } from './screens/ScheduledRidesScreen';
 import { ScheduledRideDetailScreen } from './screens/ScheduledRideDetailScreen';
 import { IntercityScreen } from './screens/IntercityScreen';
 import { ParcelScreen } from './screens/ParcelScreen';
+import { ParcelIntroScreen } from './screens/ParcelIntroScreen';
 
 function ActiveScreen() {
   const { screen } = useApp();
@@ -66,6 +67,7 @@ if (screen === 'referral')         return <ReferralScreen />;
   if (screen === 'scheduled-detail')   return <ScheduledRideDetailScreen />;
   if (screen === 'intercity')          return <IntercityScreen />;
   if (screen === 'parcel')             return <ParcelScreen />;
+  if (screen === 'parcel-intro')       return <ParcelIntroScreen />;
   return <HomeScreen />;
 }
 
