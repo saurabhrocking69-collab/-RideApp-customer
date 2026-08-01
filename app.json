@@ -4,6 +4,15 @@
     "newArchEnabled": false,
     "slug": "rideapp-mobile3",
     "version": "1.0.0",
+    "updates": {
+      "enabled": true,
+      "url": "https://u.expo.dev/8f1a5733-b0fe-466b-ab3e-862983570572",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
