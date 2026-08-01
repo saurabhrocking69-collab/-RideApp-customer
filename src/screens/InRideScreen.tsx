@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { Alert, Linking, Platform, ScrollView, Share, Text, TouchableOpacity, View, Animated, Vibration } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Platform, ScrollView, Share, Text, TouchableOpacity, View, Animated, Vibration } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useApp } from '../context/AppContext';
@@ -103,8 +103,44 @@ export function InRideScreen() {
     pickupCoords, dropCoords,
     driverLoc, driverEta, driverDist,
     rideData, rideType,
-    sosActive, setSosActive, triggerSOS, reportCancelRide, returnDecision,
+    sosActive, setSosActive, triggerSOS, reportCancelRide, returnDecision, payReturnFare,
+    reportParcelNotDelivered,
   } = useApp();
+
+  // ── Reporting a parcel that isn't being delivered ────────────────────────
+  // Reportable mid-trip, not just after completion: a driver deliberately
+  // sitting on a package never completes the ride, so a completed-only report
+  // was useless in exactly the case it exists for. Filing it freezes the
+  // escrow so the driver can't collect while it's under review.
+  const [parcelReportRes, setParcelReportRes] = useState<any>(null);
+  const [reportingParcel, setReportingParcel] = useState(false);
+  const PARCEL_PROBLEMS = [
+    'Driver is not delivering my parcel',
+    'Driver is not answering calls',
+    'Driver went the wrong way',
+    'I think my parcel is lost',
+  ];
+  const fileParcelReport = async (reason: string) => {
+    if (!rideData?.ride_id || reportingParcel) return;
+    setReportingParcel(true);
+    try {
+      const res = await reportParcelNotDelivered(rideData.ride_id, reason);
+      if (res?.success) setParcelReportRes(res);
+      else Alert.alert('Could not report', res?.error || 'Please try again.');
+    } catch (_e) {
+      Alert.alert('Network', 'Could not reach the server — please try again.');
+    } finally { setReportingParcel(false); }
+  };
+  const promptParcelReport = () => {
+    Alert.alert(
+      '⚠️ Problem with this delivery?',
+      "Our team will review it, and your payment is put on hold straight away so it can't be released to the driver while we look.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        ...PARCEL_PROBLEMS.map(r => ({ text: r, onPress: () => fileParcelReport(r) })),
+      ]
+    );
+  };
 
   const [returnSubmitting, setReturnSubmitting] = useState(false);
   const handleReturnDecision = async (decision: 'retry' | 'return') => {
@@ -112,6 +148,32 @@ export function InRideScreen() {
     setReturnSubmitting(true);
     await returnDecision(rideData.ride_id, decision);
     setReturnSubmitting(false);
+  };
+
+  const [payingReturn, setPayingReturn] = useState(false);
+  const [payReturnErr, setPayReturnErr] = useState('');
+  // Guard set synchronously, before any await — `disabled` lags a render
+  // behind, so a fast double-tap would otherwise fire two charges.
+  const payingReturnRef = useRef(false);
+  const handlePayReturn = async () => {
+    if (!rideData?.ride_id || payingReturnRef.current) return;
+    payingReturnRef.current = true;
+    setPayingReturn(true); setPayReturnErr('');
+    try {
+      const res = await payReturnFare(rideData.ride_id, 'wallet');
+      if (!res?.success) {
+        setPayReturnErr(
+          res?.error === 'Not enough wallet balance'
+            ? `Not enough wallet balance — you need ₹${Math.round(res?.required || rideData?.returnFare || 0)}. Top up and try again.`
+            : (res?.error || 'Payment failed — please try again.')
+        );
+      }
+    } catch (_e) {
+      setPayReturnErr('Could not reach the server — please try again.');
+    } finally {
+      payingReturnRef.current = false;
+      setPayingReturn(false);
+    }
   };
 
   const REPORT_REASONS = ['Medical emergency', 'Feeling unsafe', 'Driver misbehaviour', 'Wrong route / detour', 'Other emergency'];
@@ -363,6 +425,50 @@ export function InRideScreen() {
             )}
           </View>
 
+          {/* ── Report a delivery that isn't happening ─────────────────────── */}
+          {rideData?.is_parcel && !parcelReportRes && (
+            <TouchableOpacity onPress={promptParcelReport} disabled={reportingParcel}
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, marginBottom: 8 }}>
+              <Ionicons name="alert-circle-outline" size={14} color={C.textMuted} />
+              <Text style={{ fontSize: 12, fontWeight: '700', color: C.textMuted }}>
+                {reportingParcel ? 'Reporting…' : 'Problem with this delivery?'}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {/* ── Report filed — escrow frozen, and the sender is told where
+                 their parcel was last seen. They are entitled to know. ── */}
+          {parcelReportRes && (
+            <View style={{ backgroundColor: 'rgba(220,38,38,0.07)', borderRadius: R.md, padding: 14, marginBottom: 10, borderWidth: 1.5, borderColor: 'rgba(220,38,38,0.28)' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                <Ionicons name="shield-checkmark" size={16} color="#DC2626" />
+                <Text style={{ fontSize: 12.5, fontWeight: '900', color: '#DC2626' }}>Under review by our team</Text>
+              </View>
+              <Text style={{ fontSize: 12, color: C.text, lineHeight: 17 }}>
+                {parcelReportRes.escrow_frozen
+                  ? "Your payment is on hold — it can't be released to the driver while we review this."
+                  : 'Our team will get back to you about this delivery.'}
+              </Text>
+
+              {parcelReportRes.driver_last_location && (
+                <View style={{ marginTop: 10, backgroundColor: '#fff', borderRadius: 12, padding: 11, borderWidth: 1, borderColor: C.glassBorder }}>
+                  <Text style={{ fontSize: 11, fontWeight: '900', color: C.textMuted, letterSpacing: 0.4 }}>
+                    WHERE YOUR PARCEL WAS LAST SEEN
+                  </Text>
+                  <Text style={{ fontSize: 11.5, color: C.textMuted, marginTop: 4 }}>
+                    {parcelReportRes.driver_last_location.lat.toFixed(5)}, {parcelReportRes.driver_last_location.lng.toFixed(5)}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${parcelReportRes.driver_last_location.lat},${parcelReportRes.driver_last_location.lng}`)}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 9 }}>
+                    <Ionicons name="map-outline" size={14} color={C.pink} />
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: C.pink }}>Open in Maps</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          )}
+
           {/* ── Delivery issue — driver couldn't reach the receiver, sender decides ── */}
           {rideData?.is_parcel && rideData?.returnStatus === 'pending_decision' && (
             <View style={{ backgroundColor: 'rgba(239,68,68,0.08)', borderRadius: R.md, padding: 14, marginBottom: 10, borderWidth: 1.5, borderColor: 'rgba(239,68,68,0.3)' }}>
@@ -370,17 +476,72 @@ export function InRideScreen() {
                 <Ionicons name="alert-circle" size={16} color="#DC2626" />
                 <Text style={{ fontSize: 12.5, fontWeight: '900', color: '#DC2626' }}>Delivery Issue</Text>
               </View>
-              <Text style={{ fontSize: 12, color: C.text, marginBottom: 12, lineHeight: 17 }}>
+              <Text style={{ fontSize: 12, color: C.text, marginBottom: 4, lineHeight: 17 }}>
                 Your delivery partner couldn't reach {rideData?.receiver_name || 'the receiver'}{rideData?.deliveryFailReason ? ` — ${rideData.deliveryFailReason}` : ''}. Do you want the package returned to you?
+              </Text>
+              {/* Price the return before they commit, not after. */}
+              {rideData?.returnFare > 0 && (
+                <Text style={{ fontSize: 11.5, color: C.textMuted, marginBottom: 10, lineHeight: 16 }}>
+                  Bringing it back is a second trip for your Buddy — ₹{Math.round(rideData.returnFare)}.
+                </Text>
+              )}
+              <Text style={{ fontSize: 11, color: C.textDim, marginBottom: 10 }}>
+                Please answer soon — your Buddy is holding your parcel and waiting on you.
               </Text>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <TouchableOpacity onPress={() => handleReturnDecision('retry')} disabled={returnSubmitting} style={{ flex: 1, backgroundColor: C.glassMid, borderRadius: 12, paddingVertical: 11, alignItems: 'center', borderWidth: 1, borderColor: C.glassBorder }}>
                   <Text style={{ fontSize: 12.5, fontWeight: '800', color: C.text }}>Try Again</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => handleReturnDecision('return')} disabled={returnSubmitting} style={{ flex: 1, backgroundColor: '#DC2626', borderRadius: 12, paddingVertical: 11, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#fff' }}>{returnSubmitting ? '...' : 'Yes, Return It'}</Text>
+                  <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#fff' }}>{returnSubmitting ? '...' : 'Send It Back'}</Text>
                 </TouchableOpacity>
               </View>
+            </View>
+          )}
+
+          {/* ── Return awaiting payment ────────────────────────────────────
+                 The sender asked for the parcel back but hasn't paid for that
+                 trip yet. Until they do, the driver is NOT sent back and no
+                 return OTP exists — so this step can't be skipped. */}
+          {rideData?.is_parcel && rideData?.returnStatus === 'awaiting_payment' && (
+            <View style={{ backgroundColor: 'rgba(245,158,11,0.08)', borderRadius: R.md, padding: 14, marginBottom: 10, borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.32)' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                <Ionicons name="wallet-outline" size={16} color="#B45309" />
+                <Text style={{ fontSize: 12.5, fontWeight: '900', color: '#B45309' }}>Pay for the return trip</Text>
+              </View>
+              <Text style={{ fontSize: 12, color: C.text, lineHeight: 17 }}>
+                Your Buddy will bring the parcel back to you. This is a second
+                trip, so it's charged separately — and held safely until they
+                hand it over.
+              </Text>
+
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: 10, marginBottom: 12 }}>
+                <Text style={{ fontSize: 26, fontWeight: '900', color: C.text }}>₹{Math.round(rideData?.returnFare || 0)}</Text>
+                <Text style={{ fontSize: 11.5, color: C.textMuted }}>return trip</Text>
+              </View>
+
+              {payReturnErr ? (
+                <Text style={{ fontSize: 11.5, color: '#DC2626', marginBottom: 8 }}>{payReturnErr}</Text>
+              ) : null}
+
+              <TouchableOpacity
+                onPress={handlePayReturn}
+                disabled={payingReturn}
+                activeOpacity={0.9}
+                style={{
+                  backgroundColor: payingReturn ? '#C9C4D8' : C.green, borderRadius: 13, paddingVertical: 13,
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                }}>
+                {payingReturn
+                  ? <ActivityIndicator color="#fff" size="small" />
+                  : <Ionicons name="lock-closed" size={15} color="#fff" />}
+                <Text style={{ color: '#fff', fontSize: 13.5, fontWeight: '900' }}>
+                  {payingReturn ? 'Paying…' : `Pay ₹${Math.round(rideData?.returnFare || 0)} from wallet`}
+                </Text>
+              </TouchableOpacity>
+              <Text style={{ fontSize: 10.5, color: C.textDim, textAlign: 'center', marginTop: 8 }}>
+                Held by Sppero · released to your Buddy only on hand-over
+              </Text>
             </View>
           )}
 

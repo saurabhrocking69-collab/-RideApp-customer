@@ -59,6 +59,7 @@ interface AppContextType {
   parcelEstimate: (distanceKm: number, packageSize: 'small' | 'medium' | 'large') => Promise<any>;
   reportParcelNotDelivered: (rideId: string | number, reason: string) => Promise<any>;
   returnDecision: (rideId: string | number, decision: 'retry' | 'return') => Promise<any>;
+  payReturnFare: (rideId: string | number, paymentMethod: 'wallet' | 'online', payment?: any) => Promise<any>;
   // Auth
   phone: string; setPhone: (p: string) => void;
   otp: string; setOtp: (o: string) => void;
@@ -2182,11 +2183,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const returnDecision = async (rideId: string | number, decision: 'retry' | 'return') => {
     const data = await authRidePost('/api/parcel/return-decision', { ride_id: rideId, decision });
     if (data?.success) {
+      // Trust the server's own return_status rather than assuming 'accepted'.
+      // With paid returns enabled the server parks this at 'awaiting_payment'
+      // and mints NO OTP until the return trip is actually paid for; assuming
+      // otherwise would show the sender an OTP that does not exist.
       setRideData((p: any) => p ? {
         ...p,
-        returnStatus: decision === 'retry' ? null : 'accepted',
-        returnOtp: decision === 'return' ? data.return_otp : p?.returnOtp,
+        returnStatus: decision === 'retry' ? null : (data.return_status || 'accepted'),
+        returnFare: data.return_fare ?? p?.returnFare,
+        returnOtp: data.return_otp ?? p?.returnOtp,
       } : p);
+    }
+    return data;
+  };
+
+  // Pay for the return trip. Only after this does the driver get sent back and
+  // a return OTP get created — the money is held (escrowed) until the handover,
+  // exactly like the original parcel fare.
+  const payReturnFare = async (rideId: string | number, paymentMethod: 'wallet' | 'online', payment?: any) => {
+    const data = await authRidePost('/api/parcel/return-pay', { ride_id: rideId, payment_method: paymentMethod, payment });
+    if (data?.success) {
+      setRideData((p: any) => p ? {
+        ...p,
+        returnStatus: 'accepted',
+        returnOtp: data.return_otp ?? p?.returnOtp,
+        returnFare: data.return_fare ?? p?.returnFare,
+      } : p);
+      if (phoneRef.current) loadWallet(phoneRef.current);
     }
     return data;
   };
@@ -2572,7 +2595,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ═══════════════════════════════════════════════════════════════════════
   const value: AppContextType = {
     screen, setScreen, tab, setTab, scheduleIntent, setScheduleIntent,
-    intercityRoute, setIntercityRoute, bookIntercity, bookParcel, parcelEstimate, reportParcelNotDelivered, returnDecision,
+    intercityRoute, setIntercityRoute, bookIntercity, bookParcel, parcelEstimate, reportParcelNotDelivered, returnDecision, payReturnFare,
     phone, setPhone, otp, setOtp, otpSent, setOtpSent, otpDigits, setOtpDigits,
     resendTimer, setResendTimer, canResend, setCanResend, otpRefs, otpShakeAnim, otpSuccessAnim,
     userName, setUserName, gender, setGender,
