@@ -18,7 +18,6 @@ async function authRideCancel(body: any) {
   return apiAuthPost('/api/rides/cancel-smart', body, token || '');
 }
 import { API } from '../constants';
-import { ARDriverFinder } from '../components/ARDriverFinder';
 import { IlluNoDriver, IlluCancel } from '../components/Illustrations';
 
 // ── Parse Google Maps duration text → seconds ──────────────────────────────
@@ -762,7 +761,6 @@ export function MatchingScreen() {
     driverCancelPopup, setDriverCancelPopup,
   } = useApp();
 
-  const [showAR, setShowAR] = useState(false);
 
   // ── Chat icon bounce ───────────────────────────────────────────────────────
   const chatBounceAnim = useRef(new Animated.Value(1)).current;
@@ -885,18 +883,6 @@ export function MatchingScreen() {
       </View>
     </View>
   );
-
-  // ── AR finder overlay ─────────────────────────────────────────────────────
-  if (showAR && driverLoc?.lat && driverLoc?.lng) {
-    return (
-      <ARDriverFinder
-        driverLat={driverLoc.lat}
-        driverLng={driverLoc.lng}
-        driverName={rideData?.driver?.name}
-        onClose={() => setShowAR(false)}
-      />
-    );
-  }
 
   // ── Layout math ────────────────────────────────────────────────────────────
   const SCREEN_H = Dimensions.get('window').height;
@@ -1296,23 +1282,6 @@ export function MatchingScreen() {
                   </TouchableOpacity>
                 </View>
 
-                {/* AR Find — full-width featured button */}
-                {!driverArrived && driverLoc?.lat && (
-                  <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
-                    <TouchableOpacity
-                      onPress={() => setShowAR(true)}
-                      style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 16, borderRadius: 13, backgroundColor: 'rgba(255,45,120,0.07)', borderWidth: 1.5, borderColor: C.pinkBorder }}>
-                      <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: 'rgba(255,45,120,0.15)', alignItems: 'center', justifyContent: 'center' }}>
-                        <Ionicons name="camera" size={18} color={C.pink} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 13, fontWeight: '800', color: C.pink }}>AR Find — Augmented Reality</Text>
-                        <Text style={{ fontSize: 10, color: C.textDim, marginTop: 1 }}>Can't spot your driver? Point camera at the street</Text>
-                      </View>
-                      <Ionicons name="chevron-forward" size={16} color={C.pink} />
-                    </TouchableOpacity>
-                  </View>
-                )}
               </View>
 
               {/* ══ TRIP TIMELINE — dotted route line with fare ══ */}
