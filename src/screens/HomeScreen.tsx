@@ -892,6 +892,7 @@ function HomeTab() {
     screen,
     userCoords,
     setRideType,
+    greenSummary,
   } = useApp();
 
   // Buddy Fund
@@ -1425,6 +1426,53 @@ function HomeTab() {
           <SlideUp delay={20}>
             <FeatureIllustrationBanner />
           </SlideUp>
+
+          {/* 5b-ii. ── Green impact ──────────────────────────────────────
+              Only shown once the rider has actually taken an electric ride —
+              an empty "0 g saved" card would be a lecture, not a reward. */}
+          {greenSummary?.green_rides > 0 && (
+            <SlideUp delay={30}>
+              <View style={{
+                marginHorizontal: 16, marginBottom: 12, borderRadius: 20, padding: 16,
+                backgroundColor: 'rgba(5,150,105,0.06)',
+                borderWidth: 1.5, borderColor: 'rgba(5,150,105,0.22)',
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <View style={{
+                    width: 46, height: 46, borderRadius: 15, backgroundColor: 'rgba(5,150,105,0.12)',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Text style={{ fontSize: 22 }}>🌿</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 10.5, fontWeight: '900', color: C.green, letterSpacing: 0.6 }}>
+                      YOUR GREEN IMPACT
+                    </Text>
+                    <Text style={{ fontSize: 17, fontWeight: '900', color: C.text, marginTop: 3 }}>
+                      {greenSummary.kg >= 1
+                        ? `${greenSummary.kg} kg CO₂ saved`
+                        : `${greenSummary.co2_saved_g} g CO₂ saved`}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 12.5, color: C.textMuted, marginTop: 10, lineHeight: 18 }}>
+                  Across {greenSummary.green_rides} electric {greenSummary.green_rides === 1 ? 'ride' : 'rides'}
+                  {greenSummary.green_km > 0 ? ` · ${greenSummary.green_km} km` : ''}
+                  {greenSummary.treeDays >= 1 ? ` — about what a tree absorbs in ${Math.round(greenSummary.treeDays)} days.` : '.'}
+                </Text>
+                {greenSummary.green_share_pct > 0 && greenSummary.total_rides > 1 && (
+                  <View style={{ marginTop: 12 }}>
+                    <View style={{ height: 7, borderRadius: 4, backgroundColor: 'rgba(5,150,105,0.15)', overflow: 'hidden' }}>
+                      <View style={{ width: `${Math.min(100, greenSummary.green_share_pct)}%`, height: 7, borderRadius: 4, backgroundColor: C.green }} />
+                    </View>
+                    <Text style={{ fontSize: 11, color: C.textDim, marginTop: 6 }}>
+                      {greenSummary.green_share_pct}% of your rides were electric
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </SlideUp>
+          )}
 
           {/* 5c. ── Driver Buddy Fund banner ── */}
           <SlideUp delay={40}>

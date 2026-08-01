@@ -60,6 +60,8 @@ interface AppContextType {
   reportParcelNotDelivered: (rideId: string | number, reason: string) => Promise<any>;
   returnDecision: (rideId: string | number, decision: 'retry' | 'return') => Promise<any>;
   payReturnFare: (rideId: string | number, paymentMethod: 'wallet' | 'online', payment?: any) => Promise<any>;
+  greenSummary: any;
+  loadGreenSummary: (ph: string) => Promise<void>;
   // Auth
   phone: string; setPhone: (p: string) => void;
   otp: string; setOtp: (o: string) => void;
@@ -636,7 +638,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (savedPhone) {
           // Start background tasks without waiting for ride check
           fetchAppConfig();
-          loadHistory(savedPhone); loadWallet(savedPhone);
+          loadHistory(savedPhone); loadWallet(savedPhone); loadGreenSummary(savedPhone);
           loadOffers(); loadHourlyPackages();
           connectSocket(savedPhone); registerFCM(savedPhone);
 
@@ -2422,6 +2424,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // ── Data loaders ─────────────────────────────────────────────────────────
+  // Lifetime CO₂ saved by choosing electric vehicles, plus the per-km factors
+  // the booking screen uses. Factors come from the server (services/green.js)
+  // rather than being duplicated here, so the two can never disagree.
+  const [greenSummary, setGreenSummary] = useState<any>(null);
+
+  const loadGreenSummary = async (ph: string) => {
+    if (!ph) return;
+    try {
+      const r = await fetch(`${API}/api/rides/green-summary?phone=${ph}`);
+      const d = await r.json();
+      if (!d?.error) setGreenSummary(d);
+    } catch (_e) {}
+  };
+
   const loadHistory = async (ph: string) => {
     try {
       const r = await fetch(`${API}/api/rides/history?phone=${ph}`);
@@ -2595,7 +2611,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ═══════════════════════════════════════════════════════════════════════
   const value: AppContextType = {
     screen, setScreen, tab, setTab, scheduleIntent, setScheduleIntent,
-    intercityRoute, setIntercityRoute, bookIntercity, bookParcel, parcelEstimate, reportParcelNotDelivered, returnDecision, payReturnFare,
+    intercityRoute, setIntercityRoute, bookIntercity, bookParcel, parcelEstimate, reportParcelNotDelivered, returnDecision, payReturnFare, greenSummary, loadGreenSummary,
     phone, setPhone, otp, setOtp, otpSent, setOtpSent, otpDigits, setOtpDigits,
     resendTimer, setResendTimer, canResend, setCanResend, otpRefs, otpShakeAnim, otpSuccessAnim,
     userName, setUserName, gender, setGender,

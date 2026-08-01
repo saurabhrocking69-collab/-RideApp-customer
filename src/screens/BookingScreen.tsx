@@ -88,6 +88,7 @@ export function BookingScreen() {
     scheduleRide,
     scheduleIntent, setScheduleIntent,
     rideForSelf, setRideForSelf, riderName, setRiderName, riderPhone, setRiderPhone,
+    greenSummary,
   } = useApp() as any;
 
   // Defensive reset: this screen shares "who's riding" state with IntercityScreen.
@@ -1467,6 +1468,28 @@ export function BookingScreen() {
                       {info?.eta_min != null ? `  ·  ~${info.eta_min} min` : ''}
                       {info?.dist_km != null ? `  ·  ${info.dist_km} km away` : ''}
                     </Text>
+                    {/* Green nudge at the moment of choosing — the only point
+                        where showing this can actually change the decision.
+                        Factors come from the server so they can never drift
+                        from the numbers used to compute lifetime impact. */}
+                    {greenSummary?.factors?.[sel.id] && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 5 }}>
+                        <Text style={{ fontSize: 10 }}>🌿</Text>
+                        <Text style={{ fontSize: 10.5, color: C.green, fontWeight: '800' }}>
+                          {(() => {
+                            // Prefer the selected route's real distance; fall
+                            // back to the percentage when no route is computed
+                            // yet, so this never shows a made-up gram figure.
+                            const km = (routeChoiceActive && selectedRoute === 'shortest'
+                              ? routeOptions?.shortest?.distanceKm
+                              : routeOptions?.fastest?.distanceKm) ?? 0;
+                            return km > 0
+                              ? `Saves ~${Math.round(greenSummary.factors[sel.id].saved_g_per_km * km)} g CO₂ on this trip`
+                              : `~${greenSummary.factors[sel.id].less_pct}% less CO₂ than petrol`;
+                          })()}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                   {bestAlt && (
                     <TouchableOpacity
