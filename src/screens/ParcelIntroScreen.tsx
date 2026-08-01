@@ -1,5 +1,4 @@
-import { useEffect, useRef } from 'react';
-import { Animated, Easing, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Circle, Rect, Defs, LinearGradient, Stop, Ellipse } from 'react-native-svg';
 import { useApp } from '../context/AppContext';
@@ -16,35 +15,12 @@ import { Storage } from '../storage';
 // any time from the ℹ️ in the parcel header (same pattern as Book-by-Hour).
 export const PARCEL_INTRO_SEEN_KEY = 'parcelIntroSeen';
 
-// ── Small looping float, used by the hero art and the floating chips ─────────
-function useFloat(distance = 10, duration = 2600, delay = 0) {
-  const v = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(v, { toValue: 1, duration, delay, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(v, { toValue: 0, duration, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [v, duration, delay]);
-  return v.interpolate({ inputRange: [0, 1], outputRange: [0, -distance] });
-}
-
 // ── Hero illustration — a parcel riding through the city ────────────────────
 function ParcelHeroArt() {
-  // ONE looping animation for the whole hero, shared by the parcel and the
-  // chips (offset via interpolation) instead of a separate loop each.
-  //
-  // This used to run five concurrent infinite loops — a rotating halo, three
-  // independent floats and a pulse — all with useNativeDriver, all still
-  // animating while scrolled far off screen. On a mid-range Android that
-  // competes with the scroll gesture on the UI thread and makes a long page
-  // feel stuck or unscrollable. Decorative motion is not worth costing someone
-  // the ability to read the page.
-  const float = useFloat(9, 2600);
-
+  // No infinite animation here at all any more. It started as five concurrent
+  // native loops, was cut to one, and the page STILL would not scroll — so the
+  // last one goes too rather than leave a variable in play while the page is
+  // unreadable. Entrance animations (FadeIn/SlideUp) are one-shot and stay.
   return (
     <View style={{ height: 210, alignItems: 'center', justifyContent: 'center' }}>
       {/* Static halo — was a 9s infinite rotation; it reads the same at rest. */}
@@ -61,7 +37,7 @@ function ParcelHeroArt() {
       </View>
 
       {/* the parcel itself */}
-      <Animated.View style={{ transform: [{ translateY: float }] }}>
+      <View>
         <Svg width={168} height={168} viewBox="0 0 168 168">
           <Defs>
             <LinearGradient id="boxFace" x1="0" y1="0" x2="0" y2="1">
@@ -88,7 +64,7 @@ function ParcelHeroArt() {
           {/* tape seam */}
           <Path d="M30 96 H138" stroke="#B9823B" strokeWidth="1.4" opacity="0.5" />
         </Svg>
-      </Animated.View>
+      </View>
 
       {/* Trust chips — static. pointerEvents="none" so a drag that starts on
           one is never swallowed here and always reaches the ScrollView. */}
@@ -146,22 +122,22 @@ function EscrowArt() {
 // away to a separate screen would unmount it and throw away whatever the
 // sender had already typed. The modal floats above it instead.
 function GuideBody({ onCta, ctaLabel }: { onCta: () => void; ctaLabel: string }) {
+  // Structure copied EXACTLY from SafetyScreen, which is long, shipped and
+  // scrolls correctly: ScreenIn > topBar > a single ScrollView with flex:1 and
+  // nothing else in the column.
+  //
+  // The previous version added two things on top of that pattern — an extra
+  // flex:1 View around the ScrollView, and a sticky CTA absolutely pinned to
+  // the bottom — and the page would not scroll. The CTA now simply lives at
+  // the end of the content. A button you have to reach is a fair trade for a
+  // page you can actually read.
   return (
-    // Explicit flex:1 wrapper rather than a Fragment. A Fragment works, but it
-    // leaves the ScrollView's height depending on whatever the caller's
-    // container happens to be; this makes it unambiguous in both the screen
-    // and the modal.
-    <View style={{ flex: 1 }}>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 128 }}
-        // Indicator ON. It was hidden, which on a page this long with a sticky
-        // bar pinned over the bottom leaves nothing at all showing there is
-        // more content — the page simply reads as stuck.
-        showsVerticalScrollIndicator
-        overScrollMode="always"
-        alwaysBounceVertical
-      >
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ paddingBottom: 40 }}
+      showsVerticalScrollIndicator
+      overScrollMode="always"
+    >
 
         {/* ── HERO ───────────────────────────────────────────────────────── */}
         <View style={{
@@ -361,15 +337,8 @@ function GuideBody({ onCta, ctaLabel }: { onCta: () => void; ctaLabel: string })
             </Text>
           </View>
         </FadeIn>
-      </ScrollView>
-
-      {/* ── STICKY CTA ──────────────────────────────────────────────────── */}
-      <View style={{
-        position: 'absolute', left: 0, right: 0, bottom: 0,
-        paddingHorizontal: 16, paddingTop: 12, paddingBottom: 22,
-        backgroundColor: 'rgba(255,255,255,0.97)',
-        borderTopWidth: 1, borderColor: C.glassBorder,
-      }}>
+      {/* ── CTA — inline, at the end of the content ──────────────────────── */}
+      <View style={{ paddingHorizontal: 16, marginTop: 26 }}>
         <Bouncy onPress={onCta}>
           <View style={{
             backgroundColor: C.pink, borderRadius: 17, paddingVertical: 16,
@@ -384,7 +353,7 @@ function GuideBody({ onCta, ctaLabel }: { onCta: () => void; ctaLabel: string })
           See the exact price before you pay · No hidden charges
         </Text>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 

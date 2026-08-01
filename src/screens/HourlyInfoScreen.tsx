@@ -216,14 +216,16 @@ function MutualAgreeArt() {
 }
 
 function GuideBody({ onCta, ctaLabel }: { onCta: () => void; ctaLabel: string }) {
+  // Same structure as SafetyScreen (long, shipped, scrolls): ScreenIn > topBar
+  // > one ScrollView, nothing else in the column. The extra flex:1 wrapper and
+  // the absolutely-pinned sticky CTA this used to have are exactly what the
+  // parcel guide had when it refused to scroll, so they are gone here too.
   return (
-    <View style={{ flex: 1 }}>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 128 }}
+        contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator
         overScrollMode="always"
-        alwaysBounceVertical
       >
         {/* ── HERO ───────────────────────────────────────────────────────── */}
         <View style={{
@@ -465,15 +467,8 @@ function GuideBody({ onCta, ctaLabel }: { onCta: () => void; ctaLabel: string })
             </Text>
           </View>
         </FadeIn>
-      </ScrollView>
-
-      {/* ── STICKY CTA ──────────────────────────────────────────────────── */}
-      <View style={{
-        position: 'absolute', left: 0, right: 0, bottom: 0,
-        paddingHorizontal: 16, paddingTop: 12, paddingBottom: 22,
-        backgroundColor: 'rgba(255,255,255,0.97)',
-        borderTopWidth: 1, borderColor: C.glassBorder,
-      }}>
+      {/* ── CTA — inline, at the end of the content ──────────────────────── */}
+      <View style={{ paddingHorizontal: 16, marginTop: 26 }}>
         <Bouncy onPress={onCta}>
           <View style={{
             backgroundColor: C.purple, borderRadius: 17, paddingVertical: 16,
@@ -488,7 +483,7 @@ function GuideBody({ onCta, ctaLabel }: { onCta: () => void; ctaLabel: string })
           Full price shown before you pay · Money held until the trip ends
         </Text>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
