@@ -1,33 +1,60 @@
 import { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Animated, StyleSheet, useWindowDimensions, Easing } from 'react-native';
+import { View, Text, TouchableOpacity, Animated, StyleSheet, useWindowDimensions, Easing, Platform } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import { MAPS_KEY } from '../constants';
 import { C, R, SHADOW } from '../styles';
 
 // ─── GlassPanel ──────────────────────────────────────────────────────────────
-// Glassmorphism via semi-transparent bg + white border + shadow.
-// Pure RN — no native blur module needed (cross-platform safe).
-export const GlassPanel = ({ children, style, tint = 'light' }: {
+// Real frosted glass: an expo-blur BlurView behind a translucent tint.
+//
+// This used to be a flat approximation — an opaque panel with a hairline
+// border — because expo-blur wasn't installed. The `intensity` prop was kept
+// unused on the old version specifically so callers wouldn't need touching
+// when blur arrived; they don't.
+//
+// Layering matters here:
+//   outer View  — layout, border, shadow. NOT clipped, or the shadow is cut.
+//   clip layer  — absolutely filled, overflow hidden, so the blur follows the
+//                 caller's borderRadius instead of spilling out square.
+//   BlurView    — the actual blur of whatever is behind (map, list, photo).
+//   tint layer  — translucent colour over the blur. Without it, text sitting
+//                 on a blurred map is unreadable; blur alone is not contrast.
+export const GlassPanel = ({ children, style, tint = 'light', intensity = 24 }: {
   children: React.ReactNode;
   style?: any;
-  intensity?: number; // kept for API compat, unused
+  intensity?: number;
   tint?: 'light' | 'dark' | 'default';
-}) => (
-  <View style={[{
-    backgroundColor: tint === 'dark'
-      ? 'rgba(26,13,46,0.88)'
-      : C.bg,
-    borderWidth: 1,
-    borderColor: tint === 'dark'
-      ? 'rgba(255,255,255,0.10)'
-      : 'rgba(180,160,255,0.22)',
-    ...SHADOW.md,
-    shadowColor: tint === 'dark' ? '#2E1461' : C.pink,
-  }, style]}>
-    {children}
-  </View>
-);
+}) => {
+  const flat = StyleSheet.flatten(style) || ({} as any);
+  const radius = flat.borderRadius ?? 0;
+  const dark = tint === 'dark';
+  return (
+    <View style={[{
+      borderWidth: 1,
+      borderColor: dark ? 'rgba(255,255,255,0.10)' : 'rgba(180,160,255,0.22)',
+      ...SHADOW.md,
+      shadowColor: dark ? '#2E1461' : C.pink,
+    }, style, { backgroundColor: 'transparent' }]}>
+      <View style={[StyleSheet.absoluteFillObject, { borderRadius: radius, overflow: 'hidden' }]}>
+        <BlurView
+          intensity={intensity}
+          tint={dark ? 'dark' : 'light'}
+          // Android renders BlurView as a plain translucent view unless this is
+          // set — i.e. without it there would be no visible change at all on the
+          // platform this app actually ships to.
+          experimentalBlurMethod={Platform.OS === 'android' ? 'dimezisBlurView' : undefined}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={[StyleSheet.absoluteFill, {
+          backgroundColor: dark ? 'rgba(26,13,46,0.62)' : 'rgba(247,247,248,0.72)',
+        }]} />
+      </View>
+      {children}
+    </View>
+  );
+};
 
 // ─── RideVehicleIcon ─────────────────────────────────────────────────────────
 export const RideVehicleIcon = ({ id, size = 26, color = '#fff' }: { id: string; size?: number; color?: string }) => {
