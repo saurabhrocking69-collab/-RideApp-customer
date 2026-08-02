@@ -573,6 +573,80 @@ export const LiveMap = memo(function LiveMap({
   const [heading, setHeading] = useState(0);
   const [draggingPickup, setDraggingPickup] = useState(false);
   const [draggingDrop, setDraggingDrop] = useState(false);
+
+  // ── Measured viewport, and padding that can actually fit inside it ─────────
+  // Every fitToCoordinates call used to pass a FIXED edgePadding of
+  // {top:96, bottom:130} = 226dp. That is fine while the map is tall, but this
+  // component is mounted at flex:1 ABOVE an in-flow drawer whose height is a
+  // fraction of the window (0.40 / 0.72 / 0.80 / 0.94 in BookingScreen). On an
+  // 800dp phone the browse state leaves the map only ~224dp — less than the
+  // padding itself — so the fit had a negative content box and Google resolved
+  // it by framing neither pin: the user saw a mid-route fragment with the
+  // pickup and drop both off-screen.
+  //
+  // So the padding is now scaled down only when it would not fit, keeping at
+  // least 40% of the viewport for actual content. When there IS room (compact
+  // drawer and every other screen using this component) the numbers are
+  // untouched, so existing framing is preserved exactly.
+  const [viewSize, setViewSize] = useState({ h: 0, w: 0 });
+  const fitPad = () => {
+    const h = viewSize.h || (fill ? 320 : height);
+    const w = viewSize.w || 360;
+    let top = 96, bottom = 130, side = 60;
+    const maxV = h * 0.6;
+    if (top + bottom > maxV) {
+      const k = maxV / (top + bottom);
+      top = Math.round(top * k);
+      bottom = Math.round(bottom * k);
+    }
+    if (side * 2 > w * 0.6) side = Math.round((w * 0.6) / 2);
+    return { top, right: side, bottom, left: side };
+  };
+
+  // A settled height, updated only once layout has stopped changing for 250ms
+  // and only when it moved meaningfully. The drawer animates open with a
+  // spring, so onLayout fires continuously; re-fitting on every frame would
+  // fight the animation and jitter the camera. Debouncing means exactly one
+  // re-fit after the drawer comes to rest, which is what makes the pins come
+  // back into frame when the sheet expands.
+  const [settledH, setSettledH] = useState(0);
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onMapLayout = (e: any) => {
+    const { height: h, width: w } = e.nativeEvent.layout;
+    setViewSize(prev => (Math.abs(prev.h - h) > 4 || Math.abs(prev.w - w) > 4) ? { h, w } : prev);
+    if (settleTimer.current) clearTimeout(settleTimer.current);
+    settleTimer.current = setTimeout(() => {
+      setSettledH(prev => (Math.abs(prev - h) > 40 ? h : prev));
+    }, 250);
+  };
+  useEffect(() => () => { if (settleTimer.current) clearTimeout(settleTimer.current); }, []);
+
+  // ── Marker snapshot refresh ───────────────────────────────────────────────
+  // tracksViewChanges was `dragging || !!label`, which is permanently TRUE for
+  // the whole session once a label exists — Android then re-snapshots the
+  // marker view into a bitmap every frame, forever. An earlier comment here
+  // called that cost negligible; it is not, it keeps the UI thread busy and
+  // drains battery for as long as the booking screen is open.
+  //
+  // Both markers are fully static views (no Animated children), so their
+  // snapshot only needs refreshing when their CONTENT changes: the label text,
+  // or the drag state that restyles the ring/pin. Pulsing true for 700ms after
+  // either changes gives the snapshot time to repaint, then goes false. The
+  // drag dependency matters on its own — without it, ending a drag would leave
+  // the dragging-styled bitmap cached.
+  const [pickupTracking, setPickupTracking] = useState(true);
+  const [dropTracking, setDropTracking] = useState(true);
+  useEffect(() => {
+    setPickupTracking(true);
+    const id = setTimeout(() => setPickupTracking(false), 700);
+    return () => clearTimeout(id);
+  }, [pickupLabel, draggingPickup]);
+  useEffect(() => {
+    setDropTracking(true);
+    const id = setTimeout(() => setDropTracking(false), 700);
+    return () => clearTimeout(id);
+  }, [dropLabel, draggingDrop]);
+
   const PULSE_STEPS = 20;
   const [pulsePhase, setPulsePhase] = useState(0);
   useEffect(() => {
@@ -672,7 +746,9 @@ export const LiveMap = memo(function LiveMap({
           { latitude: driverLat, longitude: driverLng },
           { latitude: pickupCoords.lat, longitude: pickupCoords.lng },
         ],
-        { edgePadding: { top: 70, right: 60, bottom: 70, left: 60 }, animated: true }
+        // Tighter than fitPad()'s base on purpose (driver+pickup is a short
+        // hop and wants a closer camera), but still clamped to the viewport.
+        { edgePadding: (() => { const p = fitPad(); return { ...p, top: Math.min(70, p.top), bottom: Math.min(70, p.bottom) }; })(), animated: true }
       );
     } else {
       mapRef.current.animateToRegion(
@@ -790,11 +866,13 @@ export const LiveMap = memo(function LiveMap({
     }
     if (coords.length > 0) {
       mapRef.current.fitToCoordinates(coords, {
-        edgePadding: { top: 96, right: 60, bottom: 130, left: 60 },
+        edgePadding: fitPad(),
         animated: true,
       });
     }
-  }, [pickupCoords?.lat, pickupCoords?.lng, dropCoords?.lat, dropCoords?.lng, driverLat, driverLng, followDriver, fitKey, userLat, userLng, mode]);
+    // settledH: re-run once the drawer has finished resizing the map, so the
+    // framing is recomputed against the viewport that actually exists now.
+  }, [pickupCoords?.lat, pickupCoords?.lng, dropCoords?.lat, dropCoords?.lng, driverLat, driverLng, followDriver, fitKey, userLat, userLng, mode, settledH]);
 
   const recenter = () => {
     if (!mapRef.current) return;
@@ -805,7 +883,7 @@ export const LiveMap = memo(function LiveMap({
       const sampled = pts.filter((_, i) => i % stride === 0);
       if (sampled[sampled.length - 1] !== pts[pts.length - 1]) sampled.push(pts[pts.length - 1]);
       mapRef.current.fitToCoordinates(sampled, {
-        edgePadding: { top: 96, right: 60, bottom: 130, left: 60 }, animated: true,
+        edgePadding: fitPad(), animated: true,
       });
       return;
     }
@@ -814,7 +892,7 @@ export const LiveMap = memo(function LiveMap({
       mapRef.current.fitToCoordinates([
         { latitude: pickupCoords.lat, longitude: pickupCoords.lng },
         { latitude: dropCoords.lat,   longitude: dropCoords.lng   },
-      ], { edgePadding: { top: 96, right: 60, bottom: 130, left: 60 }, animated: true });
+      ], { edgePadding: fitPad(), animated: true });
       return;
     }
     // Fallback → center on user/driver
@@ -873,7 +951,10 @@ export const LiveMap = memo(function LiveMap({
   }
 
   return (
-    <View style={fill ? { flex: 1, width: '100%', overflow: 'hidden' } : { height, width: '100%', overflow: 'hidden' }}>
+    <View
+      onLayout={onMapLayout}
+      style={fill ? { flex: 1, width: '100%', overflow: 'hidden' } : { height, width: '100%', overflow: 'hidden' }}
+    >
       <MapView
         ref={mapRef}
         provider={PROVIDER_GOOGLE}
@@ -1110,10 +1191,10 @@ export const LiveMap = memo(function LiveMap({
             anchor={{ x: 0.5, y: pickupLabel ? 1 : 0.5 }}
             // tracksViewChanges=false caches the marker's native snapshot after
             // its first paint — if the label text wasn't ready on that very
-            // first render (or changes later), it silently never appears.
-            // Keeping it tied to `label` too (not just drag state) fixes that;
-            // only 2 markers on screen, so the perf cost is negligible.
-            tracksViewChanges={draggingPickup || !!pickupLabel}
+            // first render (or changes later), it silently never appears. The
+            // 700ms pulse above covers that without leaving tracking on for the
+            // whole session (see the pickupTracking comment).
+            tracksViewChanges={draggingPickup || pickupTracking}
             draggable={draggablePickup}
             onDragStart={() => setDraggingPickup(true)}
             onDragEnd={e => {
@@ -1133,7 +1214,7 @@ export const LiveMap = memo(function LiveMap({
           <Marker
             coordinate={{ latitude: dropCoords.lat, longitude: dropCoords.lng }}
             anchor={{ x: 0.5, y: 1 }}
-            tracksViewChanges={draggingDrop || !!dropLabel}
+            tracksViewChanges={draggingDrop || dropTracking}
             draggable={draggableDrop}
             onDragStart={() => setDraggingDrop(true)}
             onDragEnd={e => {
