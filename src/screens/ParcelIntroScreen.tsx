@@ -8,6 +8,7 @@ import { s, C } from '../styles';
 // separate stores, so writing the "seen" flag with one and reading it with the
 // other would make this guide reappear on every single tap.
 import { Storage } from '../storage';
+import { FigParcelHandover } from '../components/Figures';
 
 // Marker for "this customer has already seen the parcel walkthrough". Read by
 // HomeScreen so the guide auto-opens once and then gets out of the way — a
@@ -328,7 +329,7 @@ function GuideBody({ onCta, ctaLabel }: { onCta: () => void; ctaLabel: string })
         {/* ── CLOSING LINE ───────────────────────────────────────────────── */}
         <FadeIn delay={200}>
           <View style={{ alignItems: 'center', paddingHorizontal: 30, marginTop: 20 }}>
-            <Text style={{ fontSize: 26 }}>🛵💨</Text>
+            <FigParcelHandover size={210} />
             <Text style={{ color: C.text, fontSize: 16, fontWeight: '900', marginTop: 8, textAlign: 'center' }}>
               Your Buddy is already nearby
             </Text>

@@ -14,6 +14,7 @@ import { MAPS_KEY, API } from '../constants';
 import { useNearbyDrivers } from '../offline';
 import { NotifBell, NotificationCenter, getUnreadCount } from '../components/NotificationCenter';
 import { PARCEL_INTRO_SEEN_KEY } from './ParcelIntroScreen';
+import { FigNoTrips } from '../components/Figures';
 import { HOURLY_INFO_SEEN_KEY } from './HourlyInfoScreen';
 import { FeatureIllustrationBanner, IlluFamily3, BikeScene } from '../components/Illustrations';
 import { NEARBY_CATEGORIES } from '../nearbyCategories';
@@ -2087,7 +2088,17 @@ _GST is included in the fare._
         ListEmptyComponent={
           histLoading
             ? <>{[1, 2, 3, 4].map(i => <SkeletonTripCard key={i} />)}</>
-            : <EmptyAnim icon="🚖" title="No trips yet" sub="Book your first ride and see your history here!" />
+            : (
+              // Real illustration instead of a bare emoji — this is the first
+              // thing a brand-new rider sees on the Trips tab.
+              <View style={{ alignItems: 'center', paddingVertical: 34 }}>
+                <FigNoTrips size={200} />
+                <Text style={{ fontSize: 16, fontWeight: '900', color: C.text, marginTop: 10 }}>No trips yet</Text>
+                <Text style={{ fontSize: 12.5, color: C.textMuted, marginTop: 5, textAlign: 'center', paddingHorizontal: 40, lineHeight: 18 }}>
+                  Book your first ride and it will show up here.
+                </Text>
+              </View>
+            )
         }
         renderItem={({ item: h }: { item: any }) => {
             const pickup    = h.pickup?.trim()        || null;
