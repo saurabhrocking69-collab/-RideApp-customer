@@ -86,6 +86,7 @@ export function BookingScreen() {
     pickup, setPickup, drop, setDrop,
     pickupCoords, setPickupCoords, dropCoords, setDropCoords,
     setPickupLandmark,
+    dropPrecision, setDropPrecision, dropNote, setDropNote,
     pickupSugg, setPickupSugg, dropSugg, setDropSugg,
     eta, setEta,
     rideType, setRideType,
@@ -181,6 +182,9 @@ export function BookingScreen() {
     Keyboard.dismiss();
     setDrop(place.text); setDropSugg([]);
     setDropCoords(place.coords);
+    // A saved place was pinned exactly once, by this customer, and is reused —
+    // it never needs the area warning.
+    setDropPrecision({ precise: true, areaName: null });
   };
 
   const hasSavedPlaces = !!(savedPlaces.home || savedPlaces.office || savedPlaces.others.length > 0);
@@ -569,6 +573,9 @@ export function BookingScreen() {
     setDropCoords(coords);
     setDropSugg([]);
     setDropPickerOpen(false);
+    // The customer placed this pin themselves on a map, so it is exact by
+    // definition — clear any area warning raised by the earlier search.
+    setDropPrecision({ precise: true, areaName: null });
     // Clear fare so it recalculates with the new coords
     setFareEstimates({}); setEta(''); lastFetchKey.current = '';
   };
@@ -739,6 +746,28 @@ export function BookingScreen() {
     }, 450);
     return () => { cancelled = true; clearTimeout(t); };
   }, [pickupCoords?.lat, pickupCoords?.lng]);
+
+  // ── Where trips near this drop actually ended ────────────────────────────
+  // Learned from real completion positions, so unlike a search result these
+  // are guaranteed to be somewhere a vehicle could physically reach and stop.
+  // That matters more for drop than pickup: the customer is choosing a place
+  // they are NOT at, often from memory, and can easily land on a lane no car
+  // can enter.
+  const [dropPoints, setDropPoints] = useState<
+    { lat: number; lng: number; label?: string; distance_m: number; uses: number }[]
+  >([]);
+  useEffect(() => {
+    const la = dropCoords?.lat, ln = dropCoords?.lng;
+    if (la == null || ln == null) { setDropPoints([]); return; }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const d = await apiPost('/api/drop/suggest', { lat: la, lng: ln });
+        if (!cancelled) setDropPoints(Array.isArray(d?.points) ? d.points : []);
+      } catch { if (!cancelled) setDropPoints([]); }
+    }, 450);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [dropCoords?.lat, dropCoords?.lng]);
 
   // ── fitKey — re-triggers fitToCoordinates on route/map changes ───────────
   const [fitKey, setFitKey] = useState(0);
@@ -1301,6 +1330,118 @@ export function BookingScreen() {
                   )}
                 </View>
               )}
+            </View>
+          )}
+
+          {/* ─── Exact drop ───────────────────────────────────────────────
+                 Search returns AREA CENTROIDS, not doorsteps. Pick "Aminabad"
+                 and the fare is computed to the middle of Aminabad — so a
+                 customer whose shop is 300-400m further gets dropped at the
+                 pin, and the driver is economically right to stop there
+                 because going on is unpaid. This is a pin problem, not a
+                 driver-behaviour problem, and this is where it is cheapest to
+                 fix: before the fare is agreed. ─── */}
+          {!!dropCoords && !dropPrecision.precise && (
+            <View style={{
+              backgroundColor: C.yellow + '14', borderRadius: R.sm,
+              borderWidth: 1.5, borderColor: C.yellow + '55',
+              paddingVertical: 11, paddingHorizontal: 12, marginBottom: 12,
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="alert-circle-outline" size={15} color={C.yellow} />
+                <Text style={{ fontSize: 12.5, fontWeight: '800', color: C.text, flex: 1 }} numberOfLines={2}>
+                  {dropPrecision.areaName || 'This'} is a large area
+                </Text>
+              </View>
+              <Text style={{ fontSize: 11.5, color: C.textMuted, fontWeight: '600', marginTop: 4, lineHeight: 16 }}>
+                Your driver stops at this pin, and the fare covers only up to here.
+                Set your exact drop so you're taken all the way.
+              </Text>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={handleOpenDropPicker}
+                style={{
+                  marginTop: 9, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6,
+                  backgroundColor: C.text, borderRadius: R.xs, paddingHorizontal: 14, paddingVertical: 8,
+                }}
+              >
+                <Ionicons name="map-outline" size={14} color="#fff" />
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '900' }}>Set exact drop</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Where trips near this drop actually ended. Shown whenever we have
+              history, precise pin or not — even on an exact address, knowing
+              the spot cars actually stop at is useful. */}
+          {!!dropCoords && dropPoints.length > 0 && (
+            <View style={{
+              backgroundColor: C.bgCard, borderRadius: R.sm,
+              borderWidth: 1.5, borderColor: C.glassBorder,
+              paddingVertical: 10, paddingHorizontal: 12, marginBottom: 12,
+            }}>
+              <Text style={{ fontSize: 10.5, fontWeight: '800', color: C.textDim, marginBottom: 7 }}>
+                RIDES USUALLY END HERE
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} keyboardShouldPersistTaps="handled">
+                {dropPoints.map((dp, i) => {
+                  const dLat = (dropCoords!.lat - dp.lat) * 111320;
+                  const dLng = (dropCoords!.lng - dp.lng) * 111320 * Math.cos(dp.lat * Math.PI / 180);
+                  const isSel = Math.sqrt(dLat * dLat + dLng * dLng) < 12;
+                  return (
+                    <TouchableOpacity
+                      key={`${dp.lat},${dp.lng},${i}`}
+                      activeOpacity={0.75}
+                      onPress={() => {
+                        setDropCoords({ lat: dp.lat, lng: dp.lng });
+                        // Choosing a real, previously-used drop makes the pin
+                        // exact, so the area warning no longer applies.
+                        setDropPrecision({ precise: true, areaName: null });
+                        setFitKey(k => k + 1);
+                      }}
+                      style={{
+                        flexDirection: 'row', alignItems: 'center', gap: 6,
+                        backgroundColor: isSel ? C.green + '18' : C.bg,
+                        borderWidth: 1.5, borderColor: isSel ? C.green : C.glassBorder,
+                        borderRadius: R.xs, paddingHorizontal: 11, paddingVertical: 8,
+                      }}
+                    >
+                      <Ionicons
+                        name={isSel ? 'checkmark-circle' : 'flag-outline'}
+                        size={14}
+                        color={isSel ? C.green : C.textMuted}
+                      />
+                      <Text style={{ fontSize: 11.5, fontWeight: '800', color: isSel ? C.green : C.text }} numberOfLines={1}>
+                        {dp.label || 'Drop point'}
+                      </Text>
+                      <Text style={{ fontSize: 10.5, fontWeight: '700', color: C.textDim }}>{dp.distance_m}m</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Drop note — the last 100 metres that no coordinate can express.
+              Indian addresses are landmark-relative ("gali 3, behind Sharma
+              Medical"), and that sentence gets a driver to the door when a
+              rooftop-accurate pin still leaves them circling. */}
+          {!!dropCoords && (
+            <View style={{
+              backgroundColor: C.bgCard, borderRadius: R.sm,
+              borderWidth: 1.5, borderColor: C.glassBorder,
+              paddingHorizontal: 12, paddingVertical: 4, marginBottom: 12,
+              flexDirection: 'row', alignItems: 'center', gap: 8,
+            }}>
+              <Ionicons name="chatbubble-ellipses-outline" size={14} color={C.textDim} />
+              <TextInput
+                value={dropNote}
+                onChangeText={setDropNote}
+                placeholder="Note for driver — landmark, gate, floor (optional)"
+                placeholderTextColor={C.textDim}
+                maxLength={140}
+                style={{ flex: 1, fontSize: 12.5, color: C.text, fontWeight: '600', paddingVertical: 9 }}
+              />
             </View>
           )}
 

@@ -281,6 +281,7 @@ interface AppContextType {
   applyReferral: () => Promise<void>;
   shareReferral: () => Promise<void>;
   savePlace: (label: string) => Promise<void>;
+  savePlaceAt: (label: string, address: string, lat?: number | null, lng?: number | null) => Promise<void>;
   deletePlace: (id: number) => Promise<void>;
   animateStar: (i: number) => void;
   sendChat: (text?: string) => Promise<void>;
@@ -400,6 +401,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // driver reads the same phrase the customer confirmed — the backend can also
   // resolve one itself, but only this carries what was genuinely on screen.
   const [pickupLandmark, setPickupLandmark] = useState<string | null>(null);
+  // How precisely the chosen drop is pinned, and a free-text note for the last
+  // 100 metres. `precise: true` by default so nothing nags before a drop is
+  // even chosen, and so an unknown result never produces a false warning.
+  const [dropPrecision, setDropPrecision] = useState<{ precise: boolean; areaName: string | null }>({ precise: true, areaName: null });
+  const [dropNote, setDropNote] = useState('');
   const [dropCoords, setDropCoords] = useState<Coords>(null);
   const [rideType, setRideType] = useState('auto');
   const [pickupSugg, setPickupSugg] = useState<any[]>([]);
@@ -1823,12 +1829,48 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     })();
   };
 
+  // Google's own precision grade for a geocode result. It was being thrown
+  // away, and it is exactly the signal needed to tell "12 Rajaji Marg" from
+  // "Aminabad": ROOFTOP is an actual address, APPROXIMATE is an area whose
+  // returned coordinate is just its centroid — which can sit hundreds of
+  // metres from where the customer actually means to go. Combined with the
+  // result's types (locality/sublocality/political are areas by definition)
+  // this decides whether to ask the customer to place an exact pin.
+  const AREA_TYPES = ['locality', 'sublocality', 'sublocality_level_1', 'political',
+                      'neighborhood', 'administrative_area_level_1',
+                      'administrative_area_level_2', 'postal_code'];
+  const gradeDrop = (result: any): { precise: boolean; areaName: string | null } => {
+    if (!result) return { precise: true, areaName: null };   // unknown → don't nag
+    const lt = result.geometry?.location_type || '';
+    const types: string[] = result.types || [];
+    const isArea = types.some(t => AREA_TYPES.includes(t));
+    // Viewport span as a third signal, for results that are neither clearly an
+    // address nor typed as an area — a box a kilometre across is not a doorstep.
+    const vp = result.geometry?.viewport;
+    let spanKm = 0;
+    if (vp?.northeast && vp?.southwest) {
+      spanKm = Math.abs(vp.northeast.lat - vp.southwest.lat) * 111;
+    }
+    const precise = !isArea && lt !== 'APPROXIMATE' && spanKm < 1.2;
+    const areaName = precise ? null
+      : (result.address_components?.find((c: any) => c.types?.some((t: string) => AREA_TYPES.includes(t)))?.long_name
+         || String(result.formatted_address || '').split(',')[0] || null);
+    return { precise, areaName };
+  };
+
   const geocodePlace = async (address: string, type: 'pickup' | 'drop') => {
     try {
       const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${MAPS_KEY}`);
       const data = await res.json();
-      const loc = data.results?.[0]?.geometry?.location;
-      if (loc) { type === 'pickup' ? setPickupCoords({ lat: loc.lat, lng: loc.lng }) : setDropCoords({ lat: loc.lat, lng: loc.lng }); }
+      const result = data.results?.[0];
+      const loc = result?.geometry?.location;
+      if (loc) {
+        if (type === 'pickup') setPickupCoords({ lat: loc.lat, lng: loc.lng });
+        else {
+          setDropCoords({ lat: loc.lat, lng: loc.lng });
+          setDropPrecision(gradeDrop(result));
+        }
+      }
     } catch (_e) {}
   };
 
@@ -1997,6 +2039,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // scheduled bookings go to their own endpoints, so they keep whatever
         // landmark the backend resolves for them (currently none).
         pickup_landmark: pickupLandmark || null,
+        // The last 100 metres that no coordinate can express — "Gali 3, behind
+        // Sharma Medical". Shown to the driver as-is.
+        drop_note: dropNote.trim() ? dropNote.trim().slice(0, 140) : null,
       });
       if (data.restricted) {
         // Dedicated global toast (rendered once at the app root, auto-dismisses)
@@ -2583,6 +2628,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!pickup) { setResult('❌ Set a location first'); return; }
     try { await fetch(`${API}/api/places/save`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, label, address: pickup, lat: pickupCoords?.lat, lng: pickupCoords?.lng }) }); loadSaved(); setResult(`✅ ${label} saved!`); } catch (_e) {}
   };
+  // Save an arbitrary coordinate, rather than the current pickup. Used after a
+  // ride to capture where the trip ACTUALLY ended: that point is proven
+  // vehicle-reachable and is exactly where the customer meant to go, so
+  // reusing it next time removes the area-centroid guesswork permanently. This
+  // is the one fix that compounds — every saved destination is one that can
+  // never be mis-pinned again.
+  const savePlaceAt = async (label: string, address: string, lat?: number | null, lng?: number | null) => {
+    if (lat == null || lng == null) { setResult('❌ No exact location to save'); return; }
+    try {
+      await fetch(`${API}/api/places/save`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, label, address, lat, lng }),
+      });
+      loadSaved();
+      setResult(`✅ ${label} saved — next time it's one tap`);
+    } catch (_e) {}
+  };
   const deletePlace = async (id: number) => {
     try { await fetch(`${API}/api/places/delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }); loadSaved(); } catch (_e) {}
   };
@@ -2628,6 +2690,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     onboardFade, onboardSlide, loginHeroAnim, loginCardAnim,
     pickup, setPickup, drop, setDrop, pickupCoords, setPickupCoords, dropCoords, setDropCoords,
     pickupLandmark, setPickupLandmark,
+    dropPrecision, setDropPrecision, dropNote, setDropNote,
     resetBookingState,
     rideType, setRideType, pickupSugg, setPickupSugg, dropSugg, setDropSugg, dropHistory,
     appConfig,
@@ -2685,7 +2748,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     handlePayment, payWithWallet, createScratchCard, scratchNow, addMoney, openRazorpayTopup,
     loadHistory, loadWallet, loadWalletDetail, loadLoyalty, loadOffers, loadHourlyPackages,
     loadReferral, loadSaved, loadFavouriteBuddy, addFavouriteBuddy, removeFavouriteBuddy, registerFCM,
-    triggerSOS, reportCancelRide, applyReferral, shareReferral, savePlace, deletePlace,
+    triggerSOS, reportCancelRide, applyReferral, shareReferral, savePlace, savePlaceAt, deletePlace,
     animateStar, sendChat, initiateCall, callDriver, rideIcon,
     rewardsDash, setRewardsDash, cashbackEarned, setCashbackEarned, loadRewardsDash,
     selectedScheduledRide, setSelectedScheduledRide, scheduleRide,

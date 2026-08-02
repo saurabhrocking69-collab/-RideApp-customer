@@ -2626,6 +2626,9 @@ function ProfileTab() {
 // ── Post-ride rating modal — appears on home after 3s auto-redirect ──────────
 function RatingModal() {
   const { bottom: bottomInset } = useSafeAreaInsets();
+  // Local to the modal: resets with each ride, so the save prompt reappears
+  // for the next trip rather than staying dismissed forever.
+  const [savedDropDone, setSavedDropDone] = useState(false);
   const {
     showRatingModal, setShowRatingModal,
     rideData, setRideData,
@@ -2641,6 +2644,7 @@ function RatingModal() {
     favouriteBuddy, addFavouriteBuddy,
     setScreen,
     phone, loadHistory, loadWallet,
+    savePlaceAt,
   } = useApp();
   const { useRideStore } = require('../../store');
   const ride = useRideStore();
@@ -2769,6 +2773,57 @@ function RatingModal() {
                 </Bouncy>
               ))}
             </View>
+
+            {/* ── Save this destination ──────────────────────────────────
+                 The single fix that compounds. Where the ride ACTUALLY ended
+                 is proven reachable by a vehicle and is exactly where the
+                 customer meant to go — so saving it means this destination can
+                 never be mis-pinned to an area centroid again. Prefers the
+                 driver's completion position over the booked pin, since the
+                 whole problem is those two disagreeing. Offered only when we
+                 have a coordinate and it isn't already saved. */}
+            {(() => {
+              const endLat = rideData?.driver_lat_at_complete ?? rideData?.drop_lat;
+              const endLng = rideData?.driver_lng_at_complete ?? rideData?.drop_lng;
+              if (endLat == null || endLng == null || !drop) return null;
+              if (savedDropDone) {
+                return (
+                  <Text style={{ fontSize: 12, color: C.green, fontWeight: '800', textAlign: 'center', marginBottom: 10 }}>
+                    ✓ Saved — next time it's one tap
+                  </Text>
+                );
+              }
+              return (
+                <View style={{ marginBottom: 12 }}>
+                  <Text style={{ fontSize: 11.5, color: C.textMuted, fontWeight: '700', textAlign: 'center', marginBottom: 8 }}>
+                    Save this exact drop for next time?
+                  </Text>
+                  <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'center' }}>
+                    {['Home', 'Work', 'Other'].map(lbl => (
+                      <TouchableOpacity
+                        key={lbl}
+                        activeOpacity={0.8}
+                        onPress={() => {
+                          savePlaceAt(lbl, drop, parseFloat(endLat), parseFloat(endLng));
+                          setSavedDropDone(true);
+                        }}
+                        style={{
+                          flexDirection: 'row', alignItems: 'center', gap: 5,
+                          borderWidth: 1.5, borderColor: C.glassBorder, borderRadius: R.xs,
+                          paddingHorizontal: 14, paddingVertical: 8, backgroundColor: C.bgCard,
+                        }}
+                      >
+                        <Ionicons
+                          name={lbl === 'Home' ? 'home-outline' : lbl === 'Work' ? 'briefcase-outline' : 'bookmark-outline'}
+                          size={13} color={C.textMuted}
+                        />
+                        <Text style={{ fontSize: 12, fontWeight: '800', color: C.text }}>{lbl}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              );
+            })()}
 
             {/* Submit */}
             <Bouncy style={[s.btn, { marginBottom: 4 }]} onPress={() => dismiss(true)}>
