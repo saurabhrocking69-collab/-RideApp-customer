@@ -747,6 +747,29 @@ export function BookingScreen() {
     return () => { cancelled = true; clearTimeout(t); };
   }, [pickupCoords?.lat, pickupCoords?.lng]);
 
+  // ── Confirm an imprecise drop BEFORE pricing it ─────────────────────────
+  // A note in the booking sheet cannot fix this: it changes nothing about the
+  // route, the distance or the fare, so the extra 300-400m to the customer's
+  // real destination is still unpaid and the driver still stops at the pin.
+  // The COORDINATE has to be right before the fare is computed, which means
+  // confirming it is a step in the flow rather than a nudge afterwards.
+  //
+  // Only for drops the geocoder itself graded as an area (APPROXIMATE, or a
+  // locality/sublocality type). An exact address, a saved place or a learned
+  // drop point skips this entirely — adding a confirmation screen to every
+  // booking would be friction for no gain.
+  const promptedDropRef = useRef<string>('');
+  useEffect(() => {
+    if (!dropCoords || dropPrecision.precise) return;
+    const key = `${dropCoords.lat.toFixed(5)},${dropCoords.lng.toFixed(5)}`;
+    if (promptedDropRef.current === key) return;   // already asked for this one
+    promptedDropRef.current = key;
+    // Let the suggestion list finish dismissing first, so the picker does not
+    // animate in underneath a closing keyboard.
+    const t = setTimeout(() => setDropPickerOpen(true), 260);
+    return () => clearTimeout(t);
+  }, [dropCoords?.lat, dropCoords?.lng, dropPrecision.precise]);
+
   // ── Where trips near this drop actually ended ────────────────────────────
   // Learned from real completion positions, so unlike a search result these
   // are guaranteed to be somewhere a vehicle could physically reach and stop.
@@ -2586,6 +2609,7 @@ export function BookingScreen() {
           { lat: 26.8467, lng: 80.9462 }
         }
         originCoords={pickupCoords}
+        reason={dropPrecision.precise ? null : `${dropPrecision.areaName || 'This'} is a large area`}
         onConfirm={handleDropPickerConfirm}
         onClose={() => setDropPickerOpen(false)}
       />

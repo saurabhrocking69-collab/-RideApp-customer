@@ -38,6 +38,9 @@ interface Props {
   initialCoords: { lat: number; lng: number };
   /** Drop mode only: the confirmed pickup coords — used to draw the route line origin. */
   originCoords?: { lat: number; lng: number } | null;
+  /** Why the picker opened by itself, e.g. "Aminabad is a large area". Shown
+   *  above Confirm so an automatic prompt never feels like a random modal. */
+  reason?: string | null;
   onConfirm: (address: string, coords: { lat: number; lng: number }, saveLabel: 'Home' | 'Work' | null) => void;
   onClose: () => void;
 }
@@ -46,6 +49,7 @@ export function PickupMapPicker({
   visible,
   mode = 'pickup',
   initialCoords,
+  reason = null,
   originCoords,
   onConfirm,
   onClose,
@@ -400,6 +404,23 @@ export function PickupMapPicker({
                   </TouchableOpacity>
                 );
               })}
+            </View>
+          )}
+
+          {/* Why this opened. Only set when the picker was raised
+              automatically, so the driver-facing consequence is stated where
+              the customer is about to act on it. */}
+          {!!reason && (
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', gap: 8,
+              backgroundColor: 'rgba(245,158,11,0.10)', borderRadius: 12,
+              borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.45)',
+              paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12,
+            }}>
+              <Text style={{ fontSize: 15 }}>⚠️</Text>
+              <Text style={{ flex: 1, fontSize: 12, fontWeight: '700', color: '#92400E', lineHeight: 16 }}>
+                {reason} — set the exact spot. Your fare and route are calculated to this pin.
+              </Text>
             </View>
           )}
 
