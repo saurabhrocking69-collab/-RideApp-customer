@@ -885,6 +885,14 @@ export const LiveMap = memo(function LiveMap({
         showsTraffic={showTraffic}
         toolbarEnabled={false}
         moveOnMarkerPress={false}
+        // 3D building extrusions and indoor floor plans add depth and texture
+        // that fight the route for attention at street zoom. The customMapStyle
+        // above cannot switch either of them off — they are MapView props.
+        // showsPointsOfInterest is the iOS equivalent of the poi label rules in
+        // MAP_STYLE, which Apple Maps ignores.
+        showsBuildings={false}
+        showsIndoors={false}
+        showsPointsOfInterest={false}
         customMapStyle={MAP_STYLE}
         onPress={onMapPress
           ? (e) => onMapPress({ lat: e.nativeEvent.coordinate.latitude, lng: e.nativeEvent.coordinate.longitude })
@@ -919,7 +927,15 @@ export const LiveMap = memo(function LiveMap({
              at the midpoint. */}
         {mode === 'booking' && animDone && routeCoords.length > 1 && (
           <>
-            <Polyline coordinates={routeCoords} strokeColor={C.plum} strokeWidth={4} lineCap="round" />
+            {/* Two lines, not one: a wider dark CASING underneath and a
+                brighter core on top. This is how every real nav map draws a
+                route, and the reason is practical — a single flat stroke gets
+                visually lost wherever it crosses a white road or a pale block,
+                because it has no edge to separate it from what's beneath. The
+                casing gives it that edge, so the route reads as one continuous
+                ribbon the whole way instead of breaking up at junctions. */}
+            <Polyline coordinates={routeCoords} strokeColor="#1B0E33" strokeWidth={8} lineCap="round" lineJoin="round" />
+            <Polyline coordinates={routeCoords} strokeColor="#7C3AED" strokeWidth={4.5} lineCap="round" lineJoin="round" />
             {(() => {
               const mid = routeCoords[Math.floor(routeCoords.length / 2)];
               if (!mid || !distText) return null;
@@ -1252,12 +1268,24 @@ const MAP_STYLE = [
   { featureType: 'poi.park',                                       stylers: [{ visibility: 'on' }] },
   { featureType: 'landscape.natural', elementType: 'geometry',    stylers: [{ color: '#E3E5E9' }] },
 
-  // Other POI — hide to keep clean
-  { featureType: 'poi',           elementType: 'geometry',        stylers: [{ visibility: 'off' }] },
+  // Other POI — hidden entirely, LABELS INCLUDED.
+  //
+  // This previously only switched off `poi` GEOMETRY, which does nothing about
+  // the label text or its coloured icon — so attractions, temples, hospitals
+  // and schools kept printing their names and pins right across the route
+  // ("Regional Science City", "The Residency", "Balaji Mandir", a red H).
+  // Those are Google's POIs, not ours: they compete with the pickup and drop
+  // pins, which are the only two places on this screen the rider cares about.
+  { featureType: 'poi',           elementType: 'labels',           stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi',           elementType: 'geometry',         stylers: [{ visibility: 'off' }] },
   { featureType: 'poi.business',                                   stylers: [{ visibility: 'off' }] },
   { featureType: 'transit',                                        stylers: [{ visibility: 'off' }] },
   { featureType: 'administrative.land_parcel',                     stylers: [{ visibility: 'off' }] },
   { featureType: 'administrative.neighborhood', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+  // Parks stay as soft grey SHAPES with no label — they give the map a sense
+  // of place without adding another word to read.
+  { featureType: 'poi.park',      elementType: 'labels',           stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.park',      elementType: 'geometry',         stylers: [{ visibility: 'on' }, { color: '#DFE6E0' }] },
 ];
 
 // ── Styles ────────────────────────────────────────────────────────────────────
