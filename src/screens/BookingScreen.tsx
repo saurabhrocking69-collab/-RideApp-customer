@@ -711,10 +711,14 @@ export function BookingScreen() {
   const [boardingPoints, setBoardingPoints] = useState<
     { lat: number; lng: number; label?: string; distance_m: number; uses: number; source: string }[]
   >([]);
-  const [pickupHint, setPickupHint] = useState<string | null>(null);
+  // Only set when the pin is at a place that genuinely HAS multiple entrances —
+  // station, airport, mall, hospital, campus, large heritage site. Null on an
+  // ordinary road, which is the point: outside your own house there is no
+  // second gate to choose between, so nothing should be shown at all.
+  const [venue, setVenue] = useState<{ name: string; kind: string } | null>(null);
   useEffect(() => {
     const la = pickupCoords?.lat, ln = pickupCoords?.lng;
-    if (la == null || ln == null) { setBoardingPoints([]); setPickupHint(null); setPickupLandmark(null); return; }
+    if (la == null || ln == null) { setBoardingPoints([]); setVenue(null); setPickupLandmark(null); return; }
     let cancelled = false;
     // Debounced: dragging the pickup pin fires this continuously, and each call
     // can cost a Places lookup on a cache miss.
@@ -723,11 +727,14 @@ export function BookingScreen() {
         const d = await apiPost('/api/pickup/suggest', { lat: la, lng: ln });
         if (cancelled) return;
         setBoardingPoints(Array.isArray(d?.points) ? d.points : []);
-        setPickupHint(d?.landmark || null);
+        setVenue(d?.venue?.name ? d.venue : null);
+        // The landmark still goes to the ride for the DRIVER's card — "near
+        // <local shop>" is how addresses genuinely work on the ground here,
+        // even where it would be useless as a customer-facing prompt.
         setPickupLandmark(d?.landmark || null);
       } catch {
         // Purely additive UI — on failure just show nothing extra.
-        if (!cancelled) { setBoardingPoints([]); setPickupHint(null); }
+        if (!cancelled) { setBoardingPoints([]); setVenue(null); }
       }
     }, 450);
     return () => { cancelled = true; clearTimeout(t); };
@@ -1305,24 +1312,33 @@ export function BookingScreen() {
                  somewhere a vehicle can genuinely reach. Renders nothing at
                  all when the backend has neither — a brand-new area has no
                  history yet, and an empty card would just be noise. ─── */}
-          {!!pickupCoords && (!!pickupHint || boardingPoints.length > 0) && (
+          {!!pickupCoords && !!venue && (
             <View style={{
               backgroundColor: C.bgCard, borderRadius: R.sm,
               borderWidth: 1.5, borderColor: C.glassBorder,
               paddingVertical: 10, paddingHorizontal: 12, marginBottom: 12,
             }}>
-              {!!pickupHint && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Ionicons name="location-outline" size={14} color={C.textMuted} />
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: C.textMuted, flex: 1 }} numberOfLines={1}>
-                    Pickup near <Text style={{ color: C.text, fontWeight: '900' }}>{pickupHint}</Text>
-                  </Text>
-                </View>
-              )}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="business-outline" size={14} color={C.textMuted} />
+                <Text style={{ fontSize: 12, fontWeight: '700', color: C.textMuted, flex: 1 }} numberOfLines={1}>
+                  You're at <Text style={{ color: C.text, fontWeight: '900' }}>{venue.name}</Text>
+                </Text>
+              </View>
+              <Text style={{ fontSize: 10.5, color: C.textDim, fontWeight: '600', marginTop: 3 }}>
+                Big place — pick your {venue.kind} so the driver comes to the right side
+              </Text>
 
-              {boardingPoints.length > 0 && (
+              {boardingPoints.length === 0 ? (
+                // A venue we have no history for yet. Still worth saying
+                // something: the useful instruction here is "be precise", and
+                // dragging the pin is how they do that. The points fill in on
+                // their own as rides complete here.
+                <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: '700', marginTop: 9 }}>
+                  Drag the pin to the exact {venue.kind} you'll wait at.
+                </Text>
+              ) : (
                 <>
-                  <Text style={{ fontSize: 10.5, fontWeight: '800', color: C.textDim, marginTop: !!pickupHint ? 9 : 0, marginBottom: 7 }}>
+                  <Text style={{ fontSize: 10.5, fontWeight: '800', color: C.textDim, marginTop: 9, marginBottom: 7 }}>
                     DRIVERS USUALLY PICK UP HERE
                   </Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} keyboardShouldPersistTaps="handled">
