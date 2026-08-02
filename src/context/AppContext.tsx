@@ -395,6 +395,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [pickup, setPickup] = useState('');
   const [drop, setDrop] = useState('');
   const [pickupCoords, setPickupCoords] = useState<Coords>(null);
+  // Landmark the customer actually saw next to their pickup ("near Charbagh
+  // Metro Station"). Sent with the booking and frozen onto the ride so the
+  // driver reads the same phrase the customer confirmed — the backend can also
+  // resolve one itself, but only this carries what was genuinely on screen.
+  const [pickupLandmark, setPickupLandmark] = useState<string | null>(null);
   const [dropCoords, setDropCoords] = useState<Coords>(null);
   const [rideType, setRideType] = useState('auto');
   const [pickupSugg, setPickupSugg] = useState<any[]>([]);
@@ -1988,6 +1993,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         advance,
         rider_name:  !rideForSelf ? riderName.trim()  : null,
         rider_phone: !rideForSelf ? riderPhone.trim() : null,
+        // Only the standard booking route accepts this. Intercity and
+        // scheduled bookings go to their own endpoints, so they keep whatever
+        // landmark the backend resolves for them (currently none).
+        pickup_landmark: pickupLandmark || null,
       });
       if (data.restricted) {
         // Dedicated global toast (rendered once at the app root, auto-dismisses)
@@ -2618,6 +2627,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     splashLogo, splashScale, splashTag, splashFade, splashDone,
     onboardFade, onboardSlide, loginHeroAnim, loginCardAnim,
     pickup, setPickup, drop, setDrop, pickupCoords, setPickupCoords, dropCoords, setDropCoords,
+    pickupLandmark, setPickupLandmark,
     resetBookingState,
     rideType, setRideType, pickupSugg, setPickupSugg, dropSugg, setDropSugg, dropHistory,
     appConfig,

@@ -85,6 +85,7 @@ export function BookingScreen() {
     screen, setScreen,
     pickup, setPickup, drop, setDrop,
     pickupCoords, setPickupCoords, dropCoords, setDropCoords,
+    setPickupLandmark,
     pickupSugg, setPickupSugg, dropSugg, setDropSugg,
     eta, setEta,
     rideType, setRideType,
@@ -703,6 +704,35 @@ export function BookingScreen() {
     Animated.spring(drawerHeightAnim, { toValue: target, friction: 8, tension: 85, useNativeDriver: false }).start();
   }, [bothSet, inputFocused, drawerExpanded, drawerInputH, drawerBrowse, drawerCompact, drawerMax, keyboardShown]);
 
+  // ── Boarding points + landmark hint for the chosen pickup ────────────────
+  // Named boardingPoints, not pickupSugg — `pickupSugg` is already the address
+  // autocomplete list and these are a different thing entirely: real
+  // coordinates where drivers have previously managed to stop and wait.
+  const [boardingPoints, setBoardingPoints] = useState<
+    { lat: number; lng: number; label?: string; distance_m: number; uses: number; source: string }[]
+  >([]);
+  const [pickupHint, setPickupHint] = useState<string | null>(null);
+  useEffect(() => {
+    const la = pickupCoords?.lat, ln = pickupCoords?.lng;
+    if (la == null || ln == null) { setBoardingPoints([]); setPickupHint(null); setPickupLandmark(null); return; }
+    let cancelled = false;
+    // Debounced: dragging the pickup pin fires this continuously, and each call
+    // can cost a Places lookup on a cache miss.
+    const t = setTimeout(async () => {
+      try {
+        const d = await apiPost('/api/pickup/suggest', { lat: la, lng: ln });
+        if (cancelled) return;
+        setBoardingPoints(Array.isArray(d?.points) ? d.points : []);
+        setPickupHint(d?.landmark || null);
+        setPickupLandmark(d?.landmark || null);
+      } catch {
+        // Purely additive UI — on failure just show nothing extra.
+        if (!cancelled) { setBoardingPoints([]); setPickupHint(null); }
+      }
+    }, 450);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [pickupCoords?.lat, pickupCoords?.lng]);
+
   // ── fitKey — re-triggers fitToCoordinates on route/map changes ───────────
   const [fitKey, setFitKey] = useState(0);
   // Fit 720ms after both markers are set (drawer spring settles ~700ms)
@@ -1263,6 +1293,79 @@ export function BookingScreen() {
                     </>
                   )}
                 </View>
+              )}
+            </View>
+          )}
+
+          {/* ─── Landmark hint + known-good boarding points ───────────────
+                 Both come from /api/pickup/suggest. The landmark is a phrase
+                 the customer can repeat on the phone ("I'm near the metro
+                 station"); the chips are coordinates where drivers have
+                 actually stopped before, so tapping one moves the pin
+                 somewhere a vehicle can genuinely reach. Renders nothing at
+                 all when the backend has neither — a brand-new area has no
+                 history yet, and an empty card would just be noise. ─── */}
+          {!!pickupCoords && (!!pickupHint || boardingPoints.length > 0) && (
+            <View style={{
+              backgroundColor: C.bgCard, borderRadius: R.sm,
+              borderWidth: 1.5, borderColor: C.glassBorder,
+              paddingVertical: 10, paddingHorizontal: 12, marginBottom: 12,
+            }}>
+              {!!pickupHint && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="location-outline" size={14} color={C.textMuted} />
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: C.textMuted, flex: 1 }} numberOfLines={1}>
+                    Pickup near <Text style={{ color: C.text, fontWeight: '900' }}>{pickupHint}</Text>
+                  </Text>
+                </View>
+              )}
+
+              {boardingPoints.length > 0 && (
+                <>
+                  <Text style={{ fontSize: 10.5, fontWeight: '800', color: C.textDim, marginTop: !!pickupHint ? 9 : 0, marginBottom: 7 }}>
+                    DRIVERS USUALLY PICK UP HERE
+                  </Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} keyboardShouldPersistTaps="handled">
+                    {boardingPoints.map((bp, i) => {
+                      // "Selected" is proximity-based, not identity-based: tapping
+                      // a chip sets the pin to its exact coords, but the pin can
+                      // also be dragged near one, and that should read as chosen
+                      // too. 12m is inside GPS noise, so it cannot false-positive
+                      // on a genuinely different spot.
+                      const dLat = (pickupCoords!.lat - bp.lat) * 111320;
+                      const dLng = (pickupCoords!.lng - bp.lng) * 111320 * Math.cos(bp.lat * Math.PI / 180);
+                      const isSel = Math.sqrt(dLat * dLat + dLng * dLng) < 12;
+                      return (
+                        <TouchableOpacity
+                          key={`${bp.lat},${bp.lng},${i}`}
+                          activeOpacity={0.75}
+                          onPress={() => {
+                            setPickupCoords({ lat: bp.lat, lng: bp.lng });
+                            setFitKey(k => k + 1);
+                          }}
+                          style={{
+                            flexDirection: 'row', alignItems: 'center', gap: 6,
+                            backgroundColor: isSel ? C.green + '18' : C.bg,
+                            borderWidth: 1.5, borderColor: isSel ? C.green : C.glassBorder,
+                            borderRadius: R.xs, paddingHorizontal: 11, paddingVertical: 8,
+                          }}
+                        >
+                          <Ionicons
+                            name={isSel ? 'checkmark-circle' : 'navigate-circle-outline'}
+                            size={14}
+                            color={isSel ? C.green : C.textMuted}
+                          />
+                          <Text style={{ fontSize: 11.5, fontWeight: '800', color: isSel ? C.green : C.text }} numberOfLines={1}>
+                            {bp.label || 'Pickup point'}
+                          </Text>
+                          <Text style={{ fontSize: 10.5, fontWeight: '700', color: C.textDim }}>
+                            {bp.distance_m}m
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </>
               )}
             </View>
           )}
