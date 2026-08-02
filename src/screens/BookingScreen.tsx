@@ -37,7 +37,23 @@ function shortAreaLabel(address?: string): string | undefined {
   if (!address) return undefined;
   const parts = address.split(',').map(p => p.trim()).filter(Boolean);
   const isPlotLike = (p: string) => p.length < 20 && /\d/.test(p) && /[\/\-#]/.test(p);
-  return parts.find(p => !isPlotLike(p)) || parts[0];
+  let label = parts.find(p => !isPlotLike(p)) || parts[0];
+  if (!label) return undefined;
+
+  // Drop a trailing PIN code — "Charbagh 226004" is not a nicer label than
+  // "Charbagh", and the digits eat the width a name could have used.
+  label = label.replace(/\s*\b\d{6}\b\s*$/, '').trim();
+
+  // If it is still long, cut at a WORD boundary. Letting the Text component
+  // ellipsize mid-word gives "Charbagh Railway Stat…"; cutting at a space
+  // gives "Charbagh Railway…", which reads like a place rather than a glitch.
+  const MAX = 22;
+  if (label.length > MAX) {
+    const cut = label.slice(0, MAX);
+    const lastSpace = cut.lastIndexOf(' ');
+    label = (lastSpace > 8 ? cut.slice(0, lastSpace) : cut).trim() + '…';
+  }
+  return label;
 }
 
 // Drawer heights are fractions of the CURRENT window height, read live via

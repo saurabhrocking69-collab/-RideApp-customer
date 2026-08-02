@@ -368,17 +368,23 @@ function PinLabel({ text, accent }: { text: string; accent: string }) {
   return (
     <View style={{ alignItems: 'center' }}>
       {/* Frosted-glass area-name tag — short locality name, not the full address */}
+      {/* maxWidth was 130, which sounds generous but is not: the dot, the gap,
+          18px of horizontal padding and the border eat ~31px, leaving ~90px of
+          text. That clipped even short locality names — "Kalyanpur" rendered as
+          "Kalyanpu…", losing one character to an ellipsis, which just reads as
+          broken. Wider pill, tighter padding, and the label text itself is now
+          cut at a word boundary upstream so it never ends mid-word. */}
       <View style={{
         flexDirection: 'row', alignItems: 'center', gap: 5,
-        backgroundColor: 'rgba(255,255,255,0.65)',
-        borderRadius: 10,
-        paddingHorizontal: 9, paddingVertical: 5,
-        maxWidth: 130,
-        borderWidth: 1, borderColor: 'rgba(255,255,255,0.9)',
+        backgroundColor: 'rgba(255,255,255,0.82)',
+        borderRadius: 11,
+        paddingHorizontal: 8, paddingVertical: 5,
+        maxWidth: 176,
+        borderWidth: 1, borderColor: 'rgba(255,255,255,0.95)',
         elevation: 6, shadowColor: '#000', shadowOpacity: 0.22, shadowRadius: 5, shadowOffset: { width: 0, height: 2 },
       }}>
         <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: accent }} />
-        <Text numberOfLines={1} style={{ fontSize: 11, fontWeight: '800', color: '#1a1a1a', flexShrink: 1 }}>{text}</Text>
+        <Text numberOfLines={1} style={{ fontSize: 11.5, fontWeight: '800', color: '#1a1a1a', flexShrink: 1 }}>{text}</Text>
       </View>
       {/* Connector "rope" down to the pin */}
       <View style={{ width: 1.5, height: 9, backgroundColor: accent, opacity: 0.8 }} />
