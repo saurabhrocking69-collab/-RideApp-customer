@@ -55,7 +55,7 @@ interface AppContextType {
   intercityRoute: { km: number; durationMin: number } | null;
   setIntercityRoute: (v: { km: number; durationMin: number } | null) => void;
   bookIntercity: (p: { vehicleType: 'car' | 'luxury'; tripKind: 'oneway' | 'round'; fare?: number; scheduledAt?: string | null; returnAt?: string | null }) => Promise<any>;
-  bookParcel: (p: { vehicleType: string; packageSize: 'small' | 'medium' | 'large'; distanceKm: number; fare: number; packageNote?: string }) => Promise<any>;
+  bookParcel: (p: { vehicleType: string; packageSize: 'small' | 'medium' | 'large'; distanceKm: number; fare: number; packageNote?: string; dropBuilding?: string; dropFloor?: string; dropLandmark?: string; dropNote?: string }) => Promise<any>;
   parcelEstimate: (distanceKm: number, packageSize: 'small' | 'medium' | 'large') => Promise<any>;
   reportParcelNotDelivered: (rideId: string | number, reason: string) => Promise<any>;
   returnDecision: (rideId: string | number, decision: 'retry' | 'return') => Promise<any>;
@@ -2197,7 +2197,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     finally { setLoading(false); }
   };
 
-  const bookParcel = async (p: { vehicleType: string; packageSize: 'small' | 'medium' | 'large'; distanceKm: number; fare: number; packageNote?: string }) => {
+  const bookParcel = async (p: { vehicleType: string; packageSize: 'small' | 'medium' | 'large'; distanceKm: number; fare: number; packageNote?: string; dropBuilding?: string; dropFloor?: string; dropLandmark?: string; dropNote?: string }) => {
     if (!pickup || !drop) { Alert.alert('Missing addresses', 'Please enter both the pickup and drop-off address'); return null; }
     if (!riderName.trim() || riderPhone.length !== 10) {
       Alert.alert("Receiver's details needed", "Enter the receiver's name and a 10-digit phone number so we can text them the delivery OTP.");
@@ -2220,6 +2220,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         discount: 0, promo_code: null,
         receiver_name:  riderName.trim(),
         receiver_phone: riderPhone.trim(),
+        // Structured delivery address. For a parcel nobody is riding along to
+        // redirect the driver at the end, so these are not a nicety — they are
+        // the difference between a delivery and a return.
+        drop_building: p.dropBuilding || null,
+        drop_floor:    p.dropFloor    || null,
+        drop_landmark: p.dropLandmark || null,
+        drop_note:     p.dropNote     || null,
         payment,
       });
       if (data.restricted) { Alert.alert('Account on hold', data.error || 'Contact support: help@sppero.com'); return null; }

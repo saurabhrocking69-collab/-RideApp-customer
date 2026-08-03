@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import {
   ActivityIndicator, Alert, Keyboard, ScrollView, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
@@ -8,6 +8,8 @@ import { useApp } from '../context/AppContext';
 import { MAPS_KEY } from '../constants';
 import { C } from '../styles';
 import { ParcelGuideModal } from './ParcelIntroScreen';
+import { PickupMapPicker } from '../components/PickupMapPicker';
+import { apiGet } from '../../api';
 
 const PLUM    = '#2E1461';
 const PLUM_BG = '#F1EBFA';
@@ -46,6 +48,7 @@ export function ParcelScreen() {
     pickupSugg, setPickupSugg, dropSugg, setDropSugg,
     searchPlaces, geocodePlace,
     riderName, setRiderName, riderPhone, setRiderPhone,
+    dropPrecision, setDropPrecision,
     userCoords,
   } = useApp() as any;
 
@@ -61,6 +64,56 @@ export function ParcelScreen() {
   const [packageSize, setPackageSize] = useState<PackageSize>('small');
   const [showGuide, setShowGuide] = useState(false);
   const [packageNote, setPackageNote] = useState('');
+  // ── Structured delivery address ──────────────────────────────────────────
+  // A ride can be redirected mid-trip by the passenger sitting in the vehicle.
+  // A parcel cannot: the sender is elsewhere and the receiver may not pick up.
+  // So for a parcel the address has to be complete BEFORE the driver leaves,
+  // and an incomplete one does not become a phone call — it becomes a return.
+  const [dropBuilding, setDropBuilding] = useState('');
+  const [dropFloor,    setDropFloor]    = useState('');
+  const [dropLandmark, setDropLandmark] = useState('');
+  const [dropPickerOpen, setDropPickerOpen] = useState(false);
+  const [autofilled, setAutofilled] = useState(false);
+
+  // Repeat parcels are the norm — the same shop, the same relative, the same
+  // office. Re-typing building/floor/landmark each time is where the details
+  // get dropped, and a missing floor is what turns a delivery into a phone
+  // call and then into a return. When the receiver's number matches a previous
+  // parcel THIS sender sent, pull that address forward.
+  // Only fills blanks, so it can never overwrite something just typed.
+  useEffect(() => {
+    if (riderPhone.length !== 10) { setAutofilled(false); return; }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const d = await apiGet(`/api/parcel/receiver-address?receiver=${riderPhone}`);
+        const a = d?.address;
+        if (cancelled || !a) return;
+        setDropBuilding(prev => prev || a.building || '');
+        setDropFloor(prev    => prev || a.floor    || '');
+        setDropLandmark(prev => prev || a.landmark || '');
+        if (!riderName.trim() && a.receiver_name) setRiderName(a.receiver_name);
+        if (!drop && a.drop_location) {
+          setDrop(a.drop_location);
+          if (a.lat != null && a.lng != null) setDropCoords({ lat: a.lat, lng: a.lng });
+        }
+        setAutofilled(true);
+      } catch { /* convenience only */ }
+    }, 500);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [riderPhone]);
+
+  // Same exact-pin confirmation the ride flow uses, and it matters more here:
+  // a ride can be redirected by the passenger on board, a parcel cannot.
+  const promptedRef = useRef<string>('');
+  useEffect(() => {
+    if (!dropCoords || dropPrecision.precise) return;
+    const key = `${dropCoords.lat.toFixed(5)},${dropCoords.lng.toFixed(5)}`;
+    if (promptedRef.current === key) return;
+    promptedRef.current = key;
+    const t = setTimeout(() => setDropPickerOpen(true), 260);
+    return () => clearTimeout(t);
+  }, [dropCoords?.lat, dropCoords?.lng, dropPrecision.precise]);
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [etaText, setEtaText] = useState('');
   const [options, setOptions] = useState<EstOption[]>([]);
@@ -113,6 +166,13 @@ export function ParcelScreen() {
     if (loading) return;
     if (!pickup || !pickupCoords) { Alert.alert('Pickup needed', 'Enter or select a pickup address'); return; }
     if (!drop || !dropCoords) { Alert.alert('Drop needed', "Enter or select the receiver's address"); return; }
+    if (!dropBuilding.trim()) {
+      // Deliberately blocking, unlike the ride flow's optional note. Without a
+      // building or shop name the agent has a coordinate and nothing else, and
+      // for a parcel there is nobody on board to ask.
+      Alert.alert('Building or shop name needed', "Add the building, shop or house name so the delivery agent can find the exact door.");
+      return;
+    }
     if (!riderName.trim()) { Alert.alert("Receiver's name needed", "Enter who's receiving the package"); return; }
     if (riderPhone.length !== 10) { Alert.alert("Receiver's phone needed", "Enter a valid 10-digit phone number"); return; }
     if (!selVehicle || !distanceKm || !selOpt) { Alert.alert('Almost there', 'Pick a delivery vehicle'); return; }
@@ -123,6 +183,10 @@ export function ParcelScreen() {
       distanceKm,
       fare: selOpt.fare,
       packageNote: packageNote.trim(),
+      dropBuilding: dropBuilding.trim().slice(0, 80),
+      dropFloor:    dropFloor.trim().slice(0, 40),
+      dropLandmark: dropLandmark.trim().slice(0, 80),
+      dropNote:     packageNote.trim().slice(0, 140),
     });
   };
 
@@ -219,6 +283,63 @@ export function ParcelScreen() {
             </View>
           )}
         </View>
+
+        {/* ── Exact delivery address ─────────────────────────────────────
+               A coordinate puts the agent on the right street. These put them
+               at the right door — and for a parcel that gap is not a phone
+               call, it is a failed delivery and a paid return trip. Split into
+               fields rather than one blob so the agent's screen can show them
+               as a checklist and so a repeat parcel can auto-fill them. */}
+        {!!dropCoords && (
+          <View style={{ backgroundColor: '#fff', borderRadius: 14, borderWidth: 1, borderColor: C.glassBorder, padding: 14, marginBottom: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <Text style={{ fontSize: 12, fontWeight: '900', color: C.text, flex: 1 }}>Exact delivery address</Text>
+              <TouchableOpacity onPress={() => setDropPickerOpen(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Ionicons name="map-outline" size={13} color={PLUM} />
+                <Text style={{ fontSize: 11.5, fontWeight: '800', color: PLUM }}>Adjust pin</Text>
+              </TouchableOpacity>
+            </View>
+
+            {autofilled && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(34,197,94,0.10)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7, marginBottom: 8 }}>
+                <Ionicons name="sparkles-outline" size={13} color={C.green} />
+                <Text style={{ flex: 1, fontSize: 11, fontWeight: '700', color: C.green }}>
+                  Filled from your last parcel to this number — check it's still right
+                </Text>
+              </View>
+            )}
+
+            <TextInput
+              style={{ backgroundColor: C.glassMid, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13.5, color: C.text, borderWidth: 1, borderColor: C.glassBorder }}
+              placeholder="Building / shop / house name *"
+              placeholderTextColor={C.textDim}
+              value={dropBuilding}
+              maxLength={80}
+              onChangeText={setDropBuilding}
+            />
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+              <TextInput
+                style={{ flex: 1, backgroundColor: C.glassMid, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13.5, color: C.text, borderWidth: 1, borderColor: C.glassBorder }}
+                placeholder="Floor / flat"
+                placeholderTextColor={C.textDim}
+                value={dropFloor}
+                maxLength={40}
+                onChangeText={setDropFloor}
+              />
+              <TextInput
+                style={{ flex: 1.4, backgroundColor: C.glassMid, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13.5, color: C.text, borderWidth: 1, borderColor: C.glassBorder }}
+                placeholder="Nearby landmark"
+                placeholderTextColor={C.textDim}
+                value={dropLandmark}
+                maxLength={80}
+                onChangeText={setDropLandmark}
+              />
+            </View>
+            <Text style={{ fontSize: 10.5, color: C.textMuted, marginTop: 7, lineHeight: 14 }}>
+              Nobody rides with the package, so the agent cannot ask for directions on the way. The more exact this is, the fewer calls the receiver gets.
+            </Text>
+          </View>
+        )}
 
         {/* Receiver details */}
         <View style={{ backgroundColor: '#fff', borderRadius: 14, borderWidth: 1, borderColor: C.glassBorder, padding: 14, marginBottom: 8 }}>
@@ -345,6 +466,24 @@ Once your driver is matched, you'll get a delivery OTP — share it with them yo
       </View>
 
       <ParcelGuideModal visible={showGuide} onClose={() => setShowGuide(false)} />
+
+      {/* Exact drop pin. Raised automatically for area-level or big-venue
+          destinations, and reachable any time via "Adjust pin". */}
+      <PickupMapPicker
+        visible={dropPickerOpen}
+        mode="drop"
+        initialCoords={dropCoords ?? pickupCoords ?? { lat: 26.8467, lng: 80.9462 }}
+        originCoords={pickupCoords}
+        reason={dropPrecision.precise ? null : `${dropPrecision.areaName || 'This'} is a large area`}
+        onConfirm={(address, coords) => {
+          setDrop(address);
+          setDropCoords(coords);
+          setDropSugg([]);
+          setDropPickerOpen(false);
+          setDropPrecision({ precise: true, areaName: null });
+        }}
+        onClose={() => setDropPickerOpen(false)}
+      />
     </View>
   );
 }
