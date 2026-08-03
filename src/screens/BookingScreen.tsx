@@ -1329,7 +1329,7 @@ export function BookingScreen() {
                             <TouchableOpacity key={i}
                               activeOpacity={0.75}
                               style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 13, paddingHorizontal: 16, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: C.glassBorder }}
-                              onPress={() => { Keyboard.dismiss(); setDrop(h.text); setDropSugg([]); if (h.coords) setDropCoords(h.coords); else geocodePlace(h.text, 'drop'); }}>
+                              onPress={() => { Keyboard.dismiss(); setDrop(h.text); setDropSugg([]); if (h.coords) { setDropCoords(h.coords); /* A stored coordinate is one this customer already travelled to, so it needs no re-confirmation — and setting it explicitly stops a previous selection's grade leaking across. */ setDropPrecision({ precise: true, areaName: null }); } else geocodePlace(h.text, 'drop'); }}>
                               {/* Icon */}
                               <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: C.glassMid, alignItems: 'center', justifyContent: 'center', marginRight: 13, borderWidth: 1.5, borderColor: C.glassBorder }}>
                                 <Ionicons name="location-outline" size={17} color={C.textMuted} />

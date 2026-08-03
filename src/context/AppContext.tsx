@@ -1829,33 +1829,48 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     })();
   };
 
-  // Google's own precision grade for a geocode result. It was being thrown
-  // away, and it is exactly the signal needed to tell "12 Rajaji Marg" from
-  // "Aminabad": ROOFTOP is an actual address, APPROXIMATE is an area whose
-  // returned coordinate is just its centroid — which can sit hundreds of
-  // metres from where the customer actually means to go. Combined with the
-  // result's types (locality/sublocality/political are areas by definition)
-  // this decides whether to ask the customer to place an exact pin.
+  // Does this destination need the customer to confirm an exact pin?
+  //
+  // The first version leaned on geometry.location_type and viewport span. Both
+  // were checked against the live API and both are wrong for this job:
+  //   - "Aminabad Market" returns ROOFTOP. ROOFTOP means "we have a confident
+  //     coordinate for this entity", NOT "this is your doorstep" — the entity
+  //     is a market 300m across. Charbagh Railway Station is ROOFTOP too.
+  //   - Google clamps the geocoding viewport to a ~0.30km minimum, so a house
+  //     and a shopping mall BOTH report span 0.30. It cannot separate them.
+  // That is exactly why the picker never appeared for "Aminabad Market".
+  //
+  // TYPES are the signal that actually separates them:
+  //   premise / street_address / subpremise / store  -> a real doorstep
+  //   shopping_mall / train_station / university / … -> a big place with gates
+  //   political / sublocality / locality            -> an area, centroid only
   const AREA_TYPES = ['locality', 'sublocality', 'sublocality_level_1', 'political',
                       'neighborhood', 'administrative_area_level_1',
                       'administrative_area_level_2', 'postal_code'];
+  // Large venues: one confident coordinate, but the customer's actual
+  // destination can be a few hundred metres inside or around it.
+  const BIG_VENUE_TYPES = ['shopping_mall', 'department_store', 'supermarket',
+                           'train_station', 'subway_station', 'transit_station',
+                           'light_rail_station', 'bus_station', 'airport',
+                           'hospital', 'university', 'stadium', 'park',
+                           'tourist_attraction', 'museum', 'amusement_park',
+                           'zoo', 'convention_center', 'campground'];
   const gradeDrop = (result: any): { precise: boolean; areaName: string | null } => {
-    if (!result) return { precise: true, areaName: null };   // unknown → don't nag
-    const lt = result.geometry?.location_type || '';
+    if (!result) return { precise: true, areaName: null };   // unknown -> don't nag
     const types: string[] = result.types || [];
-    const isArea = types.some(t => AREA_TYPES.includes(t));
-    // Viewport span as a third signal, for results that are neither clearly an
-    // address nor typed as an area — a box a kilometre across is not a doorstep.
-    const vp = result.geometry?.viewport;
-    let spanKm = 0;
-    if (vp?.northeast && vp?.southwest) {
-      spanKm = Math.abs(vp.northeast.lat - vp.southwest.lat) * 111;
-    }
-    const precise = !isArea && lt !== 'APPROXIMATE' && spanKm < 1.2;
-    const areaName = precise ? null
+    const isArea  = types.some(t => AREA_TYPES.includes(t));
+    const isVenue = types.some(t => BIG_VENUE_TYPES.includes(t));
+    // APPROXIMATE kept as a backstop for anything the type lists miss.
+    const lt = result.geometry?.location_type || '';
+    const precise = !isArea && !isVenue && lt !== 'APPROXIMATE';
+    if (precise) return { precise: true, areaName: null };
+    // Name it the way the customer will recognise it: the place itself for a
+    // venue, the locality for an area.
+    const areaName = isVenue
+      ? (String(result.formatted_address || '').split(',')[0] || null)
       : (result.address_components?.find((c: any) => c.types?.some((t: string) => AREA_TYPES.includes(t)))?.long_name
          || String(result.formatted_address || '').split(',')[0] || null);
-    return { precise, areaName };
+    return { precise: false, areaName };
   };
 
   const geocodePlace = async (address: string, type: 'pickup' | 'drop') => {
