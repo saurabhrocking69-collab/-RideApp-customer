@@ -9,7 +9,7 @@ import { MAPS_KEY } from '../constants';
 import { C } from '../styles';
 import { ParcelGuideModal } from './ParcelIntroScreen';
 import { PickupMapPicker } from '../components/PickupMapPicker';
-import { apiGet } from '../../api';
+import { apiGet, apiPost } from '../../api';
 
 const PLUM    = '#2E1461';
 const PLUM_BG = '#F1EBFA';
@@ -74,6 +74,53 @@ export function ParcelScreen() {
   const [dropLandmark, setDropLandmark] = useState('');
   const [dropPickerOpen, setDropPickerOpen] = useState(false);
   const [autofilled, setAutofilled] = useState(false);
+  // Saved receiver addresses. Autofill only helps from the SECOND parcel to a
+  // person onwards; a named list covers the first one to a place you already
+  // know, which is the more common case ("bhej do Mummy ke ghar").
+  const [savedAddrs, setSavedAddrs] = useState<any[]>([]);
+  const [savingAddr, setSavingAddr] = useState(false);
+  const loadAddrs = useCallback(async () => {
+    try { const d = await apiGet('/api/parcel/addresses'); setSavedAddrs(d?.addresses || []); } catch { /* optional */ }
+  }, []);
+  useEffect(() => { loadAddrs(); }, [loadAddrs]);
+
+  const applyAddr = (a: any) => {
+    Keyboard.dismiss();
+    if (a.drop_location) setDrop(a.drop_location);
+    if (a.lat != null && a.lng != null) {
+      setDropCoords({ lat: a.lat, lng: a.lng });
+      // Saved from a real delivery, so exact — never re-prompt for a pin here.
+      setDropPrecision({ precise: true, areaName: null });
+    }
+    setDropBuilding(a.building || '');
+    setDropFloor(a.floor || '');
+    setDropLandmark(a.landmark || '');
+    if (a.receiver_name)  setRiderName(a.receiver_name);
+    if (a.receiver_phone) setRiderPhone(a.receiver_phone);
+    setDropSugg([]);
+    setAutofilled(false);
+    apiPost('/api/parcel/addresses/used', { id: a.id }).catch(() => {});
+  };
+
+  // Inline label input rather than Alert.prompt — that API is iOS-only and
+  // silently does nothing on Android, which is the platform that matters here.
+  const [addrLabel, setAddrLabel] = useState('');
+  const saveCurrentAddr = async () => {
+    const label = addrLabel.trim();
+    if (!label || !dropBuilding.trim() || !dropCoords) return;
+    setSavingAddr(true);
+    try {
+      await apiPost('/api/parcel/addresses/save', {
+        label,
+        receiver_name: riderName.trim(), receiver_phone: riderPhone.trim(),
+        drop_location: drop, lat: dropCoords.lat, lng: dropCoords.lng,
+        building: dropBuilding.trim(), floor: dropFloor.trim(), landmark: dropLandmark.trim(),
+      });
+      setAddrLabel('');
+      await loadAddrs();
+    } catch { /* non-blocking — saving is a convenience */ }
+    setSavingAddr(false);
+  };
 
   // Repeat parcels are the norm — the same shop, the same relative, the same
   // office. Re-typing building/floor/landmark each time is where the details
@@ -95,7 +142,14 @@ export function ParcelScreen() {
         if (!riderName.trim() && a.receiver_name) setRiderName(a.receiver_name);
         if (!drop && a.drop_location) {
           setDrop(a.drop_location);
-          if (a.lat != null && a.lng != null) setDropCoords({ lat: a.lat, lng: a.lng });
+          if (a.lat != null && a.lng != null) {
+            setDropCoords({ lat: a.lat, lng: a.lng });
+            // This coordinate was confirmed on a previous parcel that actually
+            // got delivered, so it is exact. Without saying so, a stale grade
+            // from an earlier search would raise the confirm-pin sheet over an
+            // address the customer has already used successfully.
+            setDropPrecision({ precise: true, areaName: null });
+          }
         }
         setAutofilled(true);
       } catch { /* convenience only */ }
@@ -284,6 +338,49 @@ export function ParcelScreen() {
           )}
         </View>
 
+        {/* ── Saved receivers ────────────────────────────────────────────
+               "Bhej do Mummy ke ghar" in one tap. Autofill by phone number
+               only works from the SECOND parcel to someone onwards; this
+               covers the first one to a place already known, which is the
+               commoner case. Hidden entirely until something is saved, so a
+               new customer never sees an empty shelf. */}
+        {savedAddrs.length > 0 && (
+          <View style={{ marginBottom: 8 }}>
+            <Text style={{ fontSize: 11, fontWeight: '900', color: C.textMuted, marginBottom: 7, letterSpacing: 0.3 }}>
+              SEND TO A SAVED ADDRESS
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} keyboardShouldPersistTaps="handled">
+              {savedAddrs.map((a: any) => (
+                <TouchableOpacity
+                  key={a.id}
+                  activeOpacity={0.8}
+                  onPress={() => applyAddr(a)}
+                  onLongPress={() => Alert.alert(
+                    a.label,
+                    'Remove this saved address?',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Remove', style: 'destructive', onPress: async () => {
+                          try { await apiPost('/api/parcel/addresses/delete', { id: a.id }); await loadAddrs(); } catch {}
+                        } },
+                    ],
+                  )}
+                  style={{
+                    backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 13, paddingVertical: 9,
+                    borderWidth: 1.5, borderColor: C.glassBorder, minWidth: 120,
+                  }}
+                >
+                  <Text style={{ fontSize: 12.5, fontWeight: '900', color: PLUM }} numberOfLines={1}>{a.label}</Text>
+                  <Text style={{ fontSize: 10.5, color: C.textMuted, marginTop: 2, fontWeight: '600' }} numberOfLines={1}>
+                    {a.building || a.drop_location || ''}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <Text style={{ fontSize: 9.5, color: C.textDim, marginTop: 5 }}>Long-press to remove</Text>
+          </View>
+        )}
+
         {/* ── Exact delivery address ─────────────────────────────────────
                A coordinate puts the agent on the right street. These put them
                at the right door — and for a parcel that gap is not a phone
@@ -338,6 +435,34 @@ export function ParcelScreen() {
             <Text style={{ fontSize: 10.5, color: C.textMuted, marginTop: 7, lineHeight: 14 }}>
               Nobody rides with the package, so the agent cannot ask for directions on the way. The more exact this is, the fewer calls the receiver gets.
             </Text>
+
+            {/* Save for reuse. Only offered once there is something worth
+                saving, so it never sits there as a dead control. */}
+            {!!dropBuilding.trim() && (
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, alignItems: 'center' }}>
+                <TextInput
+                  style={{ flex: 1, backgroundColor: C.glassMid, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9, fontSize: 12.5, color: C.text, borderWidth: 1, borderColor: C.glassBorder }}
+                  placeholder='Save as… "Mummy ka ghar", "Shop"'
+                  placeholderTextColor={C.textDim}
+                  value={addrLabel}
+                  maxLength={40}
+                  onChangeText={setAddrLabel}
+                />
+                <TouchableOpacity
+                  disabled={!addrLabel.trim() || savingAddr}
+                  onPress={saveCurrentAddr}
+                  activeOpacity={0.8}
+                  style={{
+                    backgroundColor: addrLabel.trim() ? PLUM : C.glassMid,
+                    borderRadius: 12, paddingHorizontal: 15, paddingVertical: 10,
+                  }}
+                >
+                  <Text style={{ color: addrLabel.trim() ? '#fff' : C.textDim, fontSize: 12.5, fontWeight: '900' }}>
+                    {savingAddr ? '…' : 'Save'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         )}
 
