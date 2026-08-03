@@ -160,11 +160,16 @@ export function ParcelScreen() {
   // Same exact-pin confirmation the ride flow uses, and it matters more here:
   // a ride can be redirected by the passenger on board, a parcel cannot.
   const promptedRef = useRef<string>('');
+  const searchedDropRef = useRef(false);
   useEffect(() => {
-    if (!dropCoords || dropPrecision.precise) return;
+    if (!dropCoords) return;
+    // A searched place is always a guess, and for a parcel a wrong pin is a
+    // paid return trip rather than a short walk — so confirm every search.
+    if (!searchedDropRef.current && dropPrecision.precise) return;
     const key = `${dropCoords.lat.toFixed(5)},${dropCoords.lng.toFixed(5)}`;
     if (promptedRef.current === key) return;
     promptedRef.current = key;
+    searchedDropRef.current = false;
     const t = setTimeout(() => setDropPickerOpen(true), 260);
     return () => clearTimeout(t);
   }, [dropCoords?.lat, dropCoords?.lng, dropPrecision.precise]);
@@ -329,7 +334,7 @@ export function ParcelScreen() {
             <View style={{ marginTop: 8, borderTopWidth: 1, borderTopColor: C.glassBorder, paddingTop: 6 }}>
               {dropSugg.slice(0, 4).map((sg: any, i: number) => (
                 <TouchableOpacity key={i} style={{ paddingVertical: 9 }}
-                  onPress={() => { Keyboard.dismiss(); setDrop(sg.text); setDropSugg([]); geocodePlace(sg.text, 'drop'); }}>
+                  onPress={() => { Keyboard.dismiss(); setDrop(sg.text); setDropSugg([]); searchedDropRef.current = true; geocodePlace(sg.text, 'drop'); }}>
                   <Text style={{ fontSize: 13.5, color: C.text, fontWeight: '600' }} numberOfLines={1}>{sg.main || sg.text}</Text>
                   {!!sg.secondary && <Text style={{ fontSize: 11.5, color: C.textMuted }} numberOfLines={1}>{sg.secondary}</Text>}
                 </TouchableOpacity>
@@ -599,7 +604,10 @@ Once your driver is matched, you'll get a delivery OTP — share it with them yo
         mode="drop"
         initialCoords={dropCoords ?? pickupCoords ?? { lat: 26.8467, lng: 80.9462 }}
         originCoords={pickupCoords}
-        reason={dropPrecision.precise ? null : `${dropPrecision.areaName || 'This'} is a large area`}
+        reason={dropPrecision.precise
+          ? 'Confirm the exact delivery point. Nobody rides with the package, so the agent cannot be redirected later.'
+          : `${dropPrecision.areaName || 'This'} is a large area — set the exact delivery point. Your fare and route are calculated to this pin.`}
+        reasonTone={dropPrecision.precise ? 'info' : 'warn'}
         onConfirm={(address, coords) => {
           setDrop(address);
           setDropCoords(coords);

@@ -38,9 +38,14 @@ interface Props {
   initialCoords: { lat: number; lng: number };
   /** Drop mode only: the confirmed pickup coords — used to draw the route line origin. */
   originCoords?: { lat: number; lng: number } | null;
-  /** Why the picker opened by itself, e.g. "Aminabad is a large area". Shown
-   *  above Confirm so an automatic prompt never feels like a random modal. */
+  /** Why the picker opened by itself. Shown above Confirm so an automatic
+   *  prompt never feels like a random modal. Full sentence — the caller owns
+   *  the wording, since only it knows which situation this is. */
   reason?: string | null;
+  /** 'warn' for a pin that is probably wrong (an area centroid); 'info' for a
+   *  routine confirmation. Dressing a routine step as a warning is how a
+   *  warning stops meaning anything when it actually matters. */
+  reasonTone?: 'warn' | 'info';
   onConfirm: (address: string, coords: { lat: number; lng: number }, saveLabel: 'Home' | 'Work' | null) => void;
   onClose: () => void;
 }
@@ -50,6 +55,7 @@ export function PickupMapPicker({
   mode = 'pickup',
   initialCoords,
   reason = null,
+  reasonTone = 'warn',
   originCoords,
   onConfirm,
   onClose,
@@ -410,19 +416,24 @@ export function PickupMapPicker({
           {/* Why this opened. Only set when the picker was raised
               automatically, so the driver-facing consequence is stated where
               the customer is about to act on it. */}
-          {!!reason && (
-            <View style={{
-              flexDirection: 'row', alignItems: 'center', gap: 8,
-              backgroundColor: 'rgba(245,158,11,0.10)', borderRadius: 12,
-              borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.45)',
-              paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12,
-            }}>
-              <Text style={{ fontSize: 15 }}>⚠️</Text>
-              <Text style={{ flex: 1, fontSize: 12, fontWeight: '700', color: '#92400E', lineHeight: 16 }}>
-                {reason} — set the exact spot. Your fare and route are calculated to this pin.
-              </Text>
-            </View>
-          )}
+          {!!reason && (() => {
+            const warn = reasonTone === 'warn';
+            return (
+              <View style={{
+                flexDirection: 'row', alignItems: 'center', gap: 8,
+                backgroundColor: warn ? 'rgba(245,158,11,0.10)' : 'rgba(59,130,246,0.08)',
+                borderRadius: 12,
+                borderWidth: 1.5,
+                borderColor: warn ? 'rgba(245,158,11,0.45)' : 'rgba(59,130,246,0.35)',
+                paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12,
+              }}>
+                <Text style={{ fontSize: 15 }}>{warn ? '⚠️' : '📍'}</Text>
+                <Text style={{ flex: 1, fontSize: 12, fontWeight: '700', color: warn ? '#92400E' : '#1D4ED8', lineHeight: 16 }}>
+                  {reason}
+                </Text>
+              </View>
+            );
+          })()}
 
           {/* Confirm button */}
           <TouchableOpacity

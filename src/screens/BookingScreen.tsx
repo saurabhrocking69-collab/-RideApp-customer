@@ -747,23 +747,32 @@ export function BookingScreen() {
     return () => { cancelled = true; clearTimeout(t); };
   }, [pickupCoords?.lat, pickupCoords?.lng]);
 
-  // ── Confirm an imprecise drop BEFORE pricing it ─────────────────────────
-  // A note in the booking sheet cannot fix this: it changes nothing about the
-  // route, the distance or the fare, so the extra 300-400m to the customer's
-  // real destination is still unpaid and the driver still stops at the pin.
-  // The COORDINATE has to be right before the fare is computed, which means
-  // confirming it is a step in the flow rather than a nudge afterwards.
+  // ── Confirm the drop BEFORE pricing it ──────────────────────────────────
+  // A note in the booking sheet cannot fix a wrong pin: it changes nothing
+  // about the route, the distance or the fare, so the extra few hundred metres
+  // to the customer's real destination stay unpaid and the driver still stops
+  // at the pin. The COORDINATE has to be right before the fare is computed,
+  // which makes confirming it a step in the flow rather than a nudge after it.
   //
-  // Only for drops the geocoder itself graded as an area (APPROXIMATE, or a
-  // locality/sublocality type). An exact address, a saved place or a learned
-  // drop point skips this entirely — adding a confirmation screen to every
-  // booking would be friction for no gain.
-  const promptedDropRef = useRef<string>('');
+  // Every SEARCH RESULT is a guess — Google returns its best match for typed
+  // text, not the spot the customer pictured — so a searched drop always gets
+  // confirmed. For an exact address that is one extra tap on an already
+  // correct pin; for an area or a big venue it is the whole point.
+  //
+  // Explicitly NOT triggered for a saved place, a recent, or a learned drop
+  // point: those coordinates were each chosen deliberately once already, and
+  // re-asking every time would be nagging rather than care.
+  const promptedDropRef  = useRef<string>('');
+  const searchedDropRef  = useRef(false);
   useEffect(() => {
-    if (!dropCoords || dropPrecision.precise) return;
+    if (!dropCoords) return;
+    // Confirm when the drop came from a search, or whenever the geocoder
+    // itself says the point is only an area/venue centroid.
+    if (!searchedDropRef.current && dropPrecision.precise) return;
     const key = `${dropCoords.lat.toFixed(5)},${dropCoords.lng.toFixed(5)}`;
     if (promptedDropRef.current === key) return;   // already asked for this one
     promptedDropRef.current = key;
+    searchedDropRef.current = false;
     // Let the suggestion list finish dismissing first, so the picker does not
     // animate in underneath a closing keyboard.
     const t = setTimeout(() => setDropPickerOpen(true), 260);
@@ -1252,7 +1261,7 @@ export function BookingScreen() {
                   {showDropSugg && dropSugg.slice(0, 5).map((sg: any, i: number) => (
                     <TouchableOpacity key={i}
                       style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 11, paddingHorizontal: 16, borderBottomWidth: i < Math.min(dropSugg.length, 5) - 1 ? 1 : 0, borderBottomColor: C.glassBorder }}
-                      onPress={() => { Keyboard.dismiss(); setDrop(sg.text); setDropSugg([]); geocodePlace(sg.text, 'drop'); }}>
+                      onPress={() => { Keyboard.dismiss(); setDrop(sg.text); setDropSugg([]); searchedDropRef.current = true; geocodePlace(sg.text, 'drop'); }}>
                       {/* Location pin icon — clean, neutral */}
                       <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: C.glassMid, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1, borderColor: C.glassBorder, flexShrink: 0 }}>
                         <Ionicons name="location-outline" size={18} color={C.textMuted} />
@@ -2609,7 +2618,14 @@ export function BookingScreen() {
           { lat: 26.8467, lng: 80.9462 }
         }
         originCoords={pickupCoords}
-        reason={dropPrecision.precise ? null : `${dropPrecision.areaName || 'This'} is a large area`}
+        // Two different messages, because they are two different situations.
+        // An area centroid is a warning — the pin is probably wrong. A precise
+        // address is a routine confirmation and must not be dressed up as a
+        // problem, or the warning stops meaning anything when it matters.
+        reason={dropPrecision.precise
+          ? 'Confirm exactly where you want to be dropped. Your fare and route are calculated to this pin.'
+          : `${dropPrecision.areaName || 'This'} is a large area — set the exact spot. Your fare and route are calculated to this pin.`}
+        reasonTone={dropPrecision.precise ? 'info' : 'warn'}
         onConfirm={handleDropPickerConfirm}
         onClose={() => setDropPickerOpen(false)}
       />
