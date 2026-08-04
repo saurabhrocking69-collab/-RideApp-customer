@@ -1391,7 +1391,10 @@ export function MatchingScreen() {
                 {/* Search phase subtitle */}
                 <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', marginTop: 4, textAlign: 'center', paddingHorizontal: 16 }}>
                   {noDriverFinal
-                    ? 'Try another vehicle or wait a moment'
+                    /* Says the search has stopped, not that it is pausing.
+                       "wait a moment" implied something was still running and
+                       left customers staring at a finished screen. */
+                    ? 'All drivers are busy right now — please search again in a few minutes'
                     : searchElapsed < 25
                       ? 'Requesting nearby drivers within 5km…'
                       : searchElapsed < 55
@@ -1482,10 +1485,10 @@ export function MatchingScreen() {
                     </View>
                     <View style={{ backgroundColor: C.redGlass, borderRadius: 16, padding: 18, borderWidth: 1.5, borderColor: C.redBorder, alignItems: 'center' }}>
                       <Text style={{ color: C.red, fontSize: 14, fontWeight: '900', textAlign: 'center', marginBottom: 4 }}>
-                        No driver found in this area
+                        All drivers are busy right now
                       </Text>
                       <Text style={{ color: C.textMuted, fontSize: 12, textAlign: 'center', marginBottom: 14 }}>
-                        Try another vehicle or retry in a few minutes
+                        Please search again in a few minutes, or try another vehicle
                       </Text>
                       {noDriverFinal.alternatives.length > 0 && (
                         <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 14 }}>

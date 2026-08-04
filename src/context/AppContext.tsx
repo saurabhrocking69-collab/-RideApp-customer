@@ -1355,17 +1355,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // stays on matching screen — inline surge card handles selection
       }
       if (st === 'no_driver_final') {
-        // Both base fare and surge round failed — show alternatives + retry
-        // Reset status so no-driver UI is visible (not hidden behind PreAssignedCard)
-        setRideData((p: any) => p ? { ...p, status: 'requested', driver: null } : p);
+        // The search is OVER — it is not paused, and it must not look paused.
+        //
+        // This used to leave rideData in 'requested' with an auto-retry
+        // countdown, which meant the app kept presenting itself as searching
+        // after the server had already given up. Two things went wrong because
+        // of it: the matching screen carried on animating a search that no
+        // longer existed, and Home kept showing "Looking for a driver..." for a
+        // ride nobody was looking for. Worse, the stale 'requested' ride was
+        // still the active ride, so starting a fresh search — an intercity one,
+        // say — landed back on the same dead screen.
+        //
+        // So the ride is cleared exactly the way a genuine 'no_driver' clears
+        // it. The customer is told plainly that drivers are busy and to try
+        // again shortly, which is true, instead of being shown a spinner that
+        // will never resolve.
+        if (data.rideId && String(data.rideId) !== String(activeRideIdRef.current)) return;
+        AsyncStorage.removeItem('activeStdRideId').catch(() => {});
+        ride.clearRide();
+        setRideData(null);
+        setDriverLoc(null);
         setServerSurgeOffer(null);
         setNoDriverFinal({
           alternatives: data.alternatives || [],
-          retry_after_sec: data.retry_after_sec || 300,
+          retry_after_sec: 0,          // 0 = no countdown; retry is manual only
         });
-        // Cancel ride state so alternatives/retry can work cleanly
-        setAltSuggest(data.alternatives?.length ? { alternatives: data.alternatives, current_type: rideDataRef.current?.vehicle_type || '' } : null);
-        // If customer is on surge screen when this fires, navigate back so no-driver UI renders
+        // Alternatives are still worth offering — a different vehicle really
+        // may be available — but they are now a suggestion on a finished
+        // search rather than a live one.
+        setAltSuggest(data.alternatives?.length
+          ? { alternatives: data.alternatives, current_type: rideDataRef.current?.vehicle_type || '' }
+          : null);
+        s.emit('leaveRide', { rideId: data.rideId });
         setScreen(prev => prev === 'surge' ? 'matching' : prev);
       }
       if (st === 'no_driver') {
