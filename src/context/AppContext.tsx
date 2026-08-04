@@ -2001,13 +2001,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Ride-mutation endpoints (book/cancel/switch-vehicle/etc.) now verify the
   // caller's identity server-side against this token, not just whatever
   // phone is typed into the request body — see middleware/userAuth.js.
+  // A rider can end up tokenless (signed in before tokens were stored, or the
+  // token expired and was cleared), in which case an empty Bearer goes out.
+  // The server doesn't enforce this yet so nothing fires today; the moment the
+  // held-back auth enforcement deploys, this is the difference between one
+  // clear "sign in again" and every booking failing with a generic error.
+  // Rate-limited so a burst of calls can't stack alerts.
+  const authAlertAtRef = useRef(0);
+  const notifyAuthExpired = () => {
+    const now = Date.now();
+    if (now - authAlertAtRef.current < 60000) return;
+    authAlertAtRef.current = now;
+    Alert.alert('Session expired', 'Please sign in again to continue.');
+  };
   const authRidePost = async (path: string, body: any) => {
     const token = await AsyncStorage.getItem('userToken').catch(() => null);
-    return apiAuthPost(path, body, token || '');
+    const res = await apiAuthPost(path, body, token || '');
+    if (res?._authExpired) notifyAuthExpired();
+    return res;
   };
   const authRideGet = async (path: string) => {
     const token = await AsyncStorage.getItem('userToken').catch(() => null);
-    return apiAuthGet(path, token || '');
+    const res = await apiAuthGet(path, token || '');
+    if (res?._authExpired) notifyAuthExpired();
+    return res;
   };
 
   const bookRide = async (route?: { distanceKm: number; durationMin: number; polyline: string; routeType: string }) => {
