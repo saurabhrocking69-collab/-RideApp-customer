@@ -1446,7 +1446,14 @@ export function MatchingScreen() {
               {serverSurgeOffer && !noDriverFinal && (
                 <SurgePriceSlider
                   offer={serverSurgeOffer}
-                  baseFare={parseInt(String(rideData?.fare ?? '0').replace(/[^\d]/g, '')) || 0}
+                  /* [^\d] strips the DECIMAL POINT as well as the currency
+                     symbol, so "159.00" became 15900 and the card offered to
+                     raise a 159 rupee fare from a base of 15,900 — a customer
+                     tapping "+50" would think they were adding to 159. Commas
+                     broke it too: "1,090.50" became 109050. Uses the same
+                     parse as every other fare in the app: keep the dot, parse
+                     as a float, then round. */
+                  baseFare={Math.round(parseFloat(String(rideData?.fare ?? '0').replace(/[^0-9.]/g, '')) || 0)}
                   onSelect={(amt) => surgeFareNow(amt)}
                   onDecline={() => setServerSurgeOffer(null)}
                   surging={surging}
