@@ -13,7 +13,7 @@ const BLUE    = '#2563EB';
 const BLUE_BG = '#EFF6FF';
 const BLUE_BD = '#BFDBFE';
 
-const VEHICLE_EMOJI: Record<string, string> = { car: '🚕', luxury: '🚙' };
+const VEHICLE_EMOJI: Record<string, string> = { car: '🚕', car_7: '🚐', luxury: '🚙' };
 
 // Mirrors the backend's ADVANCE_THRESHOLD/ADVANCE_FRACTION (services/advance.js)
 // — display-only math so the review screen can show the exact amounts before
@@ -47,7 +47,7 @@ export function IntercityScreen() {
   const [returnAt, setReturnAt]       = useState<ScheduleResult | null>(null);
   const [showLeavePicker, setShowLeavePicker]   = useState(false);
   const [showReturnPicker, setShowReturnPicker] = useState(false);
-  const [selVehicle, setSelVehicle] = useState<'car' | 'luxury'>('car');
+  const [selVehicle, setSelVehicle] = useState<'car' | 'car_7' | 'luxury'>('car');
   const [estimates, setEstimates]   = useState<Record<TripKind, EstOption[]>>({ oneway: [], round: [] });
   const [estLoading, setEstLoading] = useState(true);
   const [showBreakdown, setShowBreakdown] = useState(false);
@@ -249,7 +249,7 @@ export function IntercityScreen() {
             <TouchableOpacity
               key={o.vehicle_type}
               activeOpacity={0.85}
-              onPress={() => { setSelVehicle(o.vehicle_type as 'car' | 'luxury'); setShowBreakdown(true); }}
+              onPress={() => { setSelVehicle(o.vehicle_type as 'car' | 'car_7' | 'luxury'); setShowBreakdown(true); }}
               style={{
                 backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 10,
                 borderWidth: active ? 2 : 1, borderColor: active ? BLUE : C.glassBorder,

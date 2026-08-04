@@ -62,6 +62,7 @@ export const RideVehicleIcon = ({ id, size = 26, color = '#fff' }: { id: string;
   if (id === 'auto' || id === 'eriksha') return <MaterialCommunityIcons name="rickshaw" size={size} color={id === 'eriksha' ? C.green : color} />;
   if (id === 'electric_auto') return <Ionicons name="leaf" size={size} color={C.green} />;
   if (id === 'luxury') return <Ionicons name="diamond" size={size - 4} color={color} />;
+  if (id === 'car_7') return <MaterialCommunityIcons name="van-passenger" size={size} color={color} />;
   return <Ionicons name="car-sport" size={size} color={color} />;
 };
 

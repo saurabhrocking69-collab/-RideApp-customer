@@ -10,6 +10,7 @@ export const DEFAULT_HOURLY_PACKAGES: any = {
   auto:          { 2:{fare:180,km:20}, 4:{fare:320,km:40}, 6:{fare:460,km:60}, 8:{fare:580,km:80},  24:{fare:1500,km:200}, 48:{fare:2800,km:400}, 72:{fare:4000,km:600}, extra:8  },
   bike:          { 2:{fare:120,km:20}, 4:{fare:210,km:40}, 6:{fare:300,km:60}, 8:{fare:380,km:80},  24:{fare:1000,km:200}, 48:{fare:1800,km:400}, 72:{fare:2600,km:600}, extra:5  },
   car:           { 2:{fare:260,km:20}, 4:{fare:460,km:40}, 6:{fare:660,km:60}, 8:{fare:840,km:80},  24:{fare:2200,km:200}, 48:{fare:4000,km:400}, 72:{fare:5800,km:600}, extra:12 },
+  car_7:         { 2:{fare:350,km:20}, 4:{fare:620,km:40}, 6:{fare:890,km:60}, 8:{fare:1130,km:80}, 24:{fare:2950,km:200}, 48:{fare:5400,km:400}, 72:{fare:7800,km:600}, extra:16 },
   eriksha:       { 2:{fare:150,km:20}, 4:{fare:270,km:40}, 6:{fare:390,km:60}, 8:{fare:490,km:80},  24:{fare:1200,km:200}, 48:{fare:2200,km:400}, 72:{fare:3200,km:600}, extra:7  },
   ultra_luxury:  { 2:{fare:800,km:20}, 4:{fare:1400,km:40}, 6:{fare:2000,km:60}, 8:{fare:2600,km:80}, 24:{fare:6000,km:200}, 48:{fare:10000,km:400}, 72:{fare:14000,km:600}, extra:25 },
   green_bike:    { 2:{fare:100,km:20}, 4:{fare:180,km:40}, 6:{fare:260,km:60}, 8:{fare:330,km:80},  24:{fare:850,km:200},  48:{fare:1500,km:400}, 72:{fare:2200,km:600}, extra:4  },
@@ -19,7 +20,8 @@ export const DEFAULT_HOURLY_PACKAGES: any = {
 export const RIDES = [
   { id: 'bike',          icon: '🏍️', label: 'Bike',          base: 15, rate: 8,  eta: '2-3 min',  tag: 'FASTEST',  tagColor: '#FF6B35', desc: 'Fastest — cuts through traffic' },
   { id: 'auto',          icon: '🛺', label: 'Auto',           base: 25, rate: 12, eta: '3-5 min',  tag: null,       tagColor: '',        desc: 'Budget friendly ride' },
-  { id: 'car',           icon: '🚕', label: 'Car',            base: 40, rate: 15, eta: '5-7 min',  tag: 'POPULAR',  tagColor: '#2196F3', desc: 'AC • Comfortable' },
+  { id: 'car',           icon: '🚕', label: '5 Seater',       base: 40, rate: 15, eta: '5-7 min',  tag: 'POPULAR',  tagColor: '#2196F3', desc: 'Car • AC • 4 passengers + driver' },
+  { id: 'car_7',         icon: '🚐', label: '7 Seater',       base: 55, rate: 19, eta: '6-9 min',  tag: 'GROUPS',   tagColor: '#0891B2', desc: 'Car • AC • 6 passengers + driver' },
   { id: 'eriksha',       icon: '🛵', label: 'E-Riksha',       base: 20, rate: 10, eta: '4-6 min',  tag: 'ECO',      tagColor: '#4CAF50', desc: 'Eco-friendly ride' },
   { id: 'green_bike',    icon: '⚡', label: 'Green Bike',     base: 12, rate: 6,  eta: '2-4 min',  tag: 'GREEN',    tagColor: '#2e7d32', desc: 'Electric Bike • Zero Emission' },
   { id: 'electric_auto', icon: '🌿', label: 'Electric Auto',  base: 20, rate: 9,  eta: '3-5 min',  tag: 'GREEN',    tagColor: '#2e7d32', desc: 'Electric Auto • Eco Ride' },
@@ -28,4 +30,5 @@ export const RIDES = [
 
 export const rideIcon = (type: string) =>
   type === 'auto' ? '🛺' : type === 'bike' ? '🏍️' : type === 'eriksha' ? '🛵' :
-  type === 'luxury' ? '🚙' : type === 'green_bike' ? '⚡' : type === 'electric_auto' ? '🌿' : '🚕';
+  type === 'luxury' ? '🚙' : type === 'green_bike' ? '⚡' : type === 'electric_auto' ? '🌿' :
+  type === 'car_7' ? '🚐' : '🚕';
