@@ -897,3 +897,32 @@ export const LucknowCityCard = () => {
     </View>
   );
 };
+
+// ─── ResultBanner ────────────────────────────────────────────────────────────
+// One `result` string carries successes, warnings and errors alike, but it was
+// rendered through `s.err` — which is unconditionally red. So a successful
+// cancellation, or any message a caller had already prefixed with ✅, appeared
+// as a red error. Worse, a failed action whose caller prefixed it ✅ anyway
+// showed a green tick in red text saying something had gone wrong.
+//
+// Tone is derived from the marker the caller already puts on the string, so
+// every existing call site is styled correctly without being touched.
+export const ResultBanner = ({ result, style }: { result: string; style?: any }) => {
+  if (!result) return null;
+  const tone = result.startsWith('✅') ? 'ok' : result.startsWith('⚠️') ? 'warn' : 'err';
+  const color = tone === 'ok' ? C.green : tone === 'warn' ? C.yellow : C.red;
+  const bg = tone === 'ok' ? 'rgba(5,150,105,0.10)'
+           : tone === 'warn' ? 'rgba(245,158,11,0.12)'
+           : 'rgba(239,68,68,0.10)';
+  return (
+    <View style={[{
+      flexDirection: 'row', alignItems: 'center', gap: 8,
+      backgroundColor: bg, borderRadius: R.xs, paddingHorizontal: 12, paddingVertical: 10,
+      borderWidth: 1, borderColor: color + '3D',
+    }, style]}>
+      <Text style={{ flex: 1, color, fontWeight: '700', fontSize: 12.5, lineHeight: 17 }}>
+        {result}
+      </Text>
+    </View>
+  );
+};

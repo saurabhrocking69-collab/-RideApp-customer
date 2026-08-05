@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { Storage as AsyncStorage } from '../storage';
 import { useApp } from '../context/AppContext';
-import { GlassPanel, RideVehicleIcon, DotBG, SkeletonBox } from '../components/ui';
+import { GlassPanel, RideVehicleIcon, DotBG, SkeletonBox, ResultBanner } from '../components/ui';
 import { LiveMap, RouteOption } from '../components/LiveMap';
 import { PickupMapPicker } from '../components/PickupMapPicker';
 import { s, C, T, R, SP, SHADOW } from '../styles';
@@ -96,7 +96,7 @@ export function BookingScreen() {
     promoCode, setPromoCode,
     instantApplied, setInstantApplied,
     showPromoInput, setShowPromoInput,
-    result, loading,
+    result, setResult, loading,
     lastFetchKey,
     searchPlaces, searchNearbyCategory, geocodePlace, useMyLocation, swapLocations, applyPromo, bookRide,
     dropHistory,
@@ -113,6 +113,11 @@ export function BookingScreen() {
   // If a user started filling it in there (or here) and navigated away without
   // booking, don't let it silently carry over into the next trip.
   useEffect(() => { setRideForSelf(true); setRiderName(''); setRiderPhone(''); }, []);
+  // `result` is global and nothing cleared it on the way here, so a message
+  // from a previous screen — e.g. a cancellation attempt on the matching
+  // screen — sat on the fare card of the NEXT booking, long after it meant
+  // anything. Whatever is shown here should belong to this booking.
+  useEffect(() => { setResult(''); }, []);
 
   const selRide   = RIDES.find(r => r.id === rideType);
   const cardAnims = useRef<Record<string, Animated.Value>>(
@@ -2124,7 +2129,7 @@ export function BookingScreen() {
             </View>
           ) : null}
 
-          {result ? <Text style={[s.err, { marginTop: 12 }]}>{result}</Text> : null}
+          <ResultBanner result={result} style={{ marginTop: 12 }} />
         </ScrollView>
 
       </GlassPanel>

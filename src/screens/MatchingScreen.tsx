@@ -1592,7 +1592,16 @@ function CancelModal() {
     if (rideData?.ride_id) {
       const cd = await authRideCancel({ ride_id: rideData.ride_id, cancelled_by: 'customer', reason, phone: phone || '9999999999' });
       if (cd._error) setResult('❌ ' + cd.message);
-      else {
+      else if (cd.success === false) {
+        // The server refuses the cancel when the ride has moved on (driver
+        // already started it, or it's finished/cancelled). This branch used to
+        // be missing entirely: the ✅ path below ran regardless, so a refusal
+        // was shown with a green tick — reading as though the ride HAD been
+        // cancelled when it very much had not. Its raw wording
+        // ("Ride is already started, completed, or cancelled") is a server
+        // state list, not something to put in front of a passenger.
+        setResult('❌ Yeh ride ab cancel nahi ho sakti — driver already start kar chuka hai.');
+      } else {
         setResult(cd.penalty > 0 ? `⚠️ ${cd.message}` : `✅ ${cd.message}`);
         // Penalty is charged straight to the wallet server-side now — refresh
         // so the balance shown in-app reflects it immediately.

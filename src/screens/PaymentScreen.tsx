@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
-import { Bouncy, DotBG, ScreenIn } from '../components/ui';
+import { Bouncy, DotBG, ScreenIn, ResultBanner } from '../components/ui';
 import { s, C, T, R, SP, SHADOW } from '../styles';
 import { apiPost } from '../../api';
 
@@ -490,7 +490,7 @@ export function PaymentScreen() {
             </Bouncy>
           )}
 
-          {result ? <Text style={[s.err, { marginTop: 6 }]}>{result}</Text> : null}
+          <ResultBanner result={result} style={{ marginTop: 6 }} />
 
           {/* Security footer */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.greenGlass, borderRadius: R.sm, padding: 12, marginTop: 8, borderWidth: 1.5, borderColor: C.greenBorder }}>
