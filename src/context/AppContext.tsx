@@ -10,6 +10,7 @@ import { apiGet, apiPost, apiAuthPost, apiAuthGet, externalGet } from '../../api
 import { saveNotification } from '../components/NotificationCenter';
 import { C } from '../styles';
 import type { ToastNotif } from '../components/NotificationToast';
+import type { NearbyCategory } from '../nearbyCategories';
 import { useRideStore } from '../../store';
 import { API, MAPS_KEY, RIDES, DEFAULT_HOURLY_PACKAGES, WELCOME_SEEN_KEY } from '../constants';
 import { Screen, Tab, Coords, HourlyStep, ExtendStep, WalletTxnTab } from '../types';
@@ -247,7 +248,7 @@ interface AppContextType {
   surgeFareNow: (amount: number) => Promise<void>;
   switchVehicle: (newType: string) => Promise<void>;
   searchPlaces: (text: string, type: 'pickup'|'drop') => void;
-  searchNearbyCategory: (category: string | string[], type: 'pickup'|'drop', wideSearch?: boolean, acceptTypes?: string[], rejectTypes?: string[], rejectNamePrefixes?: string[]) => void;
+  searchNearbyCategory: (cat: NearbyCategory, type: 'pickup'|'drop') => void;
   geocodePlace: (address: string, type: 'pickup'|'drop') => Promise<void>;
   swapLocations: () => void;
   fetchEtaByCoords: (pc: any, dc: any) => Promise<void>;
@@ -1783,7 +1784,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // almost always named "Thana" on Maps, not "Police Station", so a single
   // English query can silently miss the actual nearest match. Variants are
   // queried in parallel and merged, deduped by place_id, sorted by distance.
-  const searchNearbyCategory = (category: string | string[], type: 'pickup' | 'drop', wideSearch?: boolean, acceptTypes?: string[], rejectTypes?: string[], rejectNamePrefixes?: string[]) => {
+  // Takes the whole category rather than seven positional args — the previous
+  // shape was one unlabelled boolean and three string arrays in a row, which
+  // is exactly the signature a new field gets silently dropped from.
+  const searchNearbyCategory = (cat: NearbyCategory, type: 'pickup' | 'drop') => {
+    const { q: category, wideSearch, acceptTypes, rejectTypes, rejectNamePrefixes, textSearch } = cat;
     const originCoords = type === 'drop'
       ? (pickupCoords || (userCoords
           ? { lat: (userCoords as any).latitude ?? (userCoords as any).lat, lng: (userCoords as any).longitude ?? (userCoords as any).lng }
@@ -1792,6 +1797,53 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           ? { lat: (userCoords as any).latitude ?? (userCoords as any).lat, lng: (userCoords as any).longitude ?? (userCoords as any).lng }
           : null);
     if (!originCoords?.lat) return;
+
+    // Type-defined categories (mall, tourist spot) go through Places TEXT
+    // SEARCH instead of autocomplete — see nearbyCategories.ts for why
+    // autocomplete and nearbysearch both fail at this. Ranked by prominence,
+    // gated on ratings count so small commercial buildings Google happens to
+    // type as shopping_mall don't crowd out the mall the rider actually means.
+    if (textSearch) {
+      (async () => {
+        try {
+          const d = await externalGet(
+            `https://maps.googleapis.com/maps/api/place/textsearch/json` +
+            `?query=${encodeURIComponent(textSearch.query)}` +
+            `&location=${originCoords.lat},${originCoords.lng}` +
+            `&radius=${textSearch.radiusM}&type=${textSearch.type}&key=${MAPS_KEY}`
+          );
+          const merged = (d?.results || [])
+            // Google keeps shut-down places in the index; sending a rider to
+            // one is worse than showing them nothing.
+            .filter((p: any) => !p.business_status || p.business_status === 'OPERATIONAL')
+            .filter((p: any) => (p.user_ratings_total || 0) >= textSearch.minRatings)
+            .map((p: any) => {
+              // Monuments often have no street address, so Google returns a
+              // plus-code ("VW7H+88H, Lucknow, …"). That leading token is
+              // noise to a rider — keep the human part of the address.
+              const addr = String(p.formatted_address || '').replace(/^[A-Z0-9]{4,}\+[A-Z0-9]{2,},?\s*/i, '');
+              return {
+              id:         p.place_id,
+              text:       [p.name, addr].filter(Boolean).join(', '),
+              main:       p.name,
+              secondary:  addr,
+              distance_m: p.geometry?.location
+                ? Math.round(_haversineKm(originCoords.lat, originCoords.lng,
+                             p.geometry.location.lat, p.geometry.location.lng) * 1000)
+                : null,
+              };
+            })
+            // Text search biases to the location but does not bound it — drop
+            // anything past the radius so "near me" stays true.
+            .filter((p: any) => p.distance_m == null || p.distance_m <= textSearch.radiusM)
+            .sort((a: any, b: any) => (a.distance_m ?? Infinity) - (b.distance_m ?? Infinity))
+            .slice(0, 8);
+          type === 'drop' ? setDropSugg(merged) : setPickupSugg(merged);
+        } catch (_e) {}
+      })();
+      return;
+    }
+
     const variants = Array.isArray(category) ? category : [category];
     const fetchAtRadius = async (radiusM: number) => {
       const results = await Promise.all(variants.map(v =>

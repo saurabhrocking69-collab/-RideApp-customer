@@ -33,6 +33,22 @@ export interface NearbyCategory {
   // positive for "Park", not a hypothetical. Matched case-insensitively
   // against the prediction's main name text.
   rejectNamePrefixes?: string[];
+  // Categories where the right answer is defined by what a place IS, not by
+  // what it is called. Autocomplete fundamentally cannot serve these — it
+  // matches name text, so "Mall" returns "Mallpur". Places TEXT SEARCH with a
+  // type filter does, and ranks by prominence, so real landmarks come back
+  // instead of whichever tiny shop sits nearest.
+  //
+  // Verified live from Lucknow: this returns Sahara Ganj Mall (53k ratings),
+  // Fun Republic, Umrao, City Mall, Crown; and Bara Imambara (52k), Rumi
+  // Darwaza, The Residency, Sikandar Bagh. From Delhi: India Gate (286k),
+  // Jantar Mantar, Safdarjung Tomb. The query stays generic — no city name —
+  // because `location` + `radius` already bias it to wherever the rider is.
+  //
+  // minRatings is the quality gate. Google types every small commercial
+  // building as shopping_mall, so without it the list fills with "Kapoorthala
+  // Complex" and "Manas Complex" long before it reaches a mall anyone means.
+  textSearch?: { query: string; type: string; minRatings: number; radiusM: number };
 }
 
 export const NEARBY_CATEGORIES: NearbyCategory[] = [
@@ -69,25 +85,28 @@ export const NEARBY_CATEGORIES: NearbyCategory[] = [
   { icon: '🚇', label: 'Metro Station',  shortLabel: 'Metro',       q: ['Metro Station'],
     acceptTypes: ['subway_station', 'transit_station', 'train_station', 'light_rail_station', 'premise'],
     rejectTypes: ['store', 'supermarket', 'lodging', 'restaurant', 'food', 'route', 'shopping_mall'] },
+  // Back, and working — see textSearch above. `q` is unused on these two but
+  // kept non-empty so nothing that reads the field trips over an empty query.
+  { icon: '🛍️', label: 'Mall',           shortLabel: 'Mall',        q: 'Mall',
+    textSearch: { query: 'shopping mall', type: 'shopping_mall', minRatings: 5000, radiusM: 15000 } },
+  { icon: '🏛️', label: 'Tourist Place',  shortLabel: 'Tourist',     q: 'Tourist Attraction',
+    textSearch: { query: 'tourist attraction', type: 'tourist_attraction', minRatings: 500, radiusM: 15000 } },
 ];
 
-// REMOVED — 'Mall' and 'Tourist Place'.
+// Why Mall/Tourist are the only two on `textSearch`, recorded so nobody
+// "simplifies" them back onto autocomplete:
 //
-// Both were built on Places AUTOCOMPLETE, which matches a place's NAME text,
-// never its type. So "Mall" ranked "Mallpur" (a locality, 12.5km) and "Mall
-// Avenue" (a road, 10km) above any actual mall, and "Park" matched "Parking
-// No. 5"; "Tourist Place" routinely returned nothing at all. The accept/reject
-// type filters below could only ever clean up whatever the name match happened
-// to return — they cannot make a name search behave like a type search.
+// On autocomplete they were broken beyond filtering — "Mall" ranked "Mallpur"
+// (a locality) and "Mall Avenue" (a road) above every real mall, and "Tourist
+// Place" (querying "Park") returned nothing at all. Autocomplete matches NAME
+// text; no accept/reject type list can turn that into a type search.
 //
-// Genuinely fixing those two means Places NEARBY SEARCH
-// (/place/nearbysearch/json?type=shopping_mall&rankby=distance), which queries
-// by TYPE and is what "malls near me" actually means. That is not a tweak to
-// this list — searchNearbyCategory() would need a second code path, because
-// nearbysearch returns places + geometry rather than autocomplete predictions.
-//
-// It is entirely doable client-side though: BookingScreen already calls
-// nearbysearch with type=shopping_mall / type=transit_station on the same
-// MAPS_KEY for its nearby-places strip, so no backend proxy is required.
-// Until that path exists these chips are withdrawn rather than left showing
-// people a road called "Mall Avenue" when they asked for a mall.
+// NEARBY SEARCH was tried next and is also wrong here, which is worth knowing
+// before someone reaches for it again:
+//   - rankby=distance returns the nearest thing Google types shopping_mall,
+//     which in India is every small commercial complex — "Durga Complex",
+//     "Winkz mall", even CLOSED_TEMPORARILY entries.
+//   - rankby=prominence + radius caps at 20 results and still buried the
+//     famous ones: Sahara Ganj sits 3.8km away with 53,077 ratings and simply
+//     did not come back, while a 1,292-rating "Sahara Bazar" did.
+// TEXT SEARCH with a type filter is the one that returns what a rider means.
