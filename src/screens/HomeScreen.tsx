@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ScrollView, FlatList, StyleSheet, View, Text, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, Animated, Easing, Share, Dimensions, Linking } from 'react-native';
+import { ScrollView, FlatList, View, Text, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, Animated, Easing, Share, Dimensions, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Storage as AsyncStorage } from '../storage';
@@ -1016,14 +1016,14 @@ function HomeTab() {
 
   return (
     <View style={[s.screen, { backgroundColor: '#FFFFFF' }]}>
-      {/* ── Green header ── */}
+      {/* ── Brand header ── (was labelled "Green header"; it has been pink for
+             a long time) Eight overlaid diagonal stripes used to sit on top of
+             the pink. At 8% white they read as smudges rather than texture on a
+             phone, and they were the busiest thing on the first screen anyone
+             sees. Flat pink is the more confident surface — the single shimmer
+             sweep below stays, because one moving highlight is a brand moment
+             where a repeating pattern was just noise. */}
       <Animated.View style={{ height: headerH, overflow: 'hidden', backgroundColor: '#FF2D78' }}>
-        {/* Subtle diagonal stripe texture */}
-        <View style={{ ...StyleSheet.absoluteFillObject, opacity: 0.08 }}>
-          {[0,1,2,3,4,5,6,7].map(i => (
-            <View key={i} style={{ position: 'absolute', top: -20, left: i * 48 - 20, width: 18, height: 300, backgroundColor: '#fff', transform: [{ rotate: '20deg' }] }} />
-          ))}
-        </View>
         {/* Shimmer sweep */}
         <Animated.View pointerEvents="none" style={{
           position: 'absolute', top: 0, bottom: 0, width: 64,
@@ -1277,7 +1277,7 @@ function HomeTab() {
 
               {/* Auto card */}
               <Bouncy onPress={() => { setRideType('auto'); setScreen('booking'); }} style={{ flex: 1 }}>
-                <View style={{ borderRadius: 22, backgroundColor: '#6D5A8C', overflow: 'hidden', minHeight: CARD_H, justifyContent: 'space-between', ...SHADOW.md }}>
+                <View style={{ borderRadius: 22, backgroundColor: '#1A0D2E', overflow: 'hidden', minHeight: CARD_H, justifyContent: 'space-between', ...SHADOW.md }}>
                   <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', backgroundColor: 'rgba(255,255,255,0.09)', borderTopLeftRadius: 22, borderTopRightRadius: 22 }} />
                   <View style={{ position: 'absolute', top: -22, right: -22, width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.07)' }} />
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start', paddingTop: 9, paddingHorizontal: 9 }}>
@@ -1293,7 +1293,7 @@ function HomeTab() {
                     <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900', letterSpacing: -0.4 }}>Auto</Text>
                     <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, marginTop: 2 }}>₹30+ · ~3 min ETA</Text>
                     <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#A78BFA' }} />
+                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.42)' }} />
                       <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 9, fontWeight: '700' }}>Drivers available</Text>
                     </View>
                     {liveAutoCount > 0 && (
@@ -1308,7 +1308,7 @@ function HomeTab() {
 
               {/* Bike card — animated */}
               <Bouncy onPress={() => { setRideType('bike'); setScreen('booking'); }} style={{ flex: 1 }}>
-                <View style={{ borderRadius: 22, backgroundColor: '#3E7A50', overflow: 'hidden', minHeight: CARD_H, justifyContent: 'space-between', ...SHADOW.md }}>
+                <View style={{ borderRadius: 22, backgroundColor: '#1A0D2E', overflow: 'hidden', minHeight: CARD_H, justifyContent: 'space-between', ...SHADOW.md }}>
                   <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', backgroundColor: 'rgba(255,255,255,0.09)', borderTopLeftRadius: 22, borderTopRightRadius: 22 }} />
                   <View style={{ position: 'absolute', top: -22, right: -22, width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.07)' }} />
                   <View style={{ alignItems: 'flex-end', padding: 9 }}>
@@ -1324,13 +1324,13 @@ function HomeTab() {
                     <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900', letterSpacing: -0.4 }}>Bike</Text>
                     <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, marginTop: 2 }}>₹20+ · Beat traffic</Text>
                     <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#6EE7B7' }} />
+                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.42)' }} />
                       <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 9, fontWeight: '700' }}>Fastest option</Text>
                     </View>
                     {liveBikeCount > 0 && (
                       <View style={{ marginTop: 3, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                         <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#22C55E' }} />
-                        <Text style={{ color: '#A7F3D0', fontSize: 9, fontWeight: '800' }}>{liveBikeCount} nearby now</Text>
+                        <Text style={{ color: '#6EE7B7', fontSize: 9, fontWeight: '800' }}>{liveBikeCount} nearby now</Text>
                       </View>
                     )}
                   </View>
@@ -1343,7 +1343,7 @@ function HomeTab() {
 
               {/* Car card */}
               <Bouncy onPress={() => { setRideType('car'); setScreen('booking'); }} style={{ flex: 1 }}>
-                <View style={{ borderRadius: 22, backgroundColor: '#4D63A3', overflow: 'hidden', minHeight: CARD_H, justifyContent: 'space-between', ...SHADOW.md }}>
+                <View style={{ borderRadius: 22, backgroundColor: '#1A0D2E', overflow: 'hidden', minHeight: CARD_H, justifyContent: 'space-between', ...SHADOW.md }}>
                   <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', backgroundColor: 'rgba(255,255,255,0.09)', borderTopLeftRadius: 22, borderTopRightRadius: 22 }} />
                   <View style={{ position: 'absolute', top: -22, right: -22, width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.07)' }} />
                   <View style={{ position: 'absolute', bottom: -14, left: -14, width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(147,197,253,0.12)' }} />
@@ -1357,7 +1357,7 @@ function HomeTab() {
                     <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900', letterSpacing: -0.4 }}>Car</Text>
                     <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, marginTop: 2 }}>₹80+ · AC comfort</Text>
                     <View style={{ marginTop: 9, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#93C5FD' }} />
+                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.42)' }} />
                       <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 9, fontWeight: '700' }}>4.8★ avg driver</Text>
                     </View>
                     {liveCarCount > 0 && (
@@ -1376,7 +1376,7 @@ function HomeTab() {
                 setHPickupSugg([]); setHDropSugg([]); setHRoundTrip(false); setHStayHours(1);
                 setHourlyBooking(null); setScreen('hourly');
               }}>
-                <View style={{ borderRadius: 22, backgroundColor: '#A6784A', overflow: 'hidden', minHeight: CARD_H, justifyContent: 'space-between', ...SHADOW.md }}>
+                <View style={{ borderRadius: 22, backgroundColor: '#1A0D2E', overflow: 'hidden', minHeight: CARD_H, justifyContent: 'space-between', ...SHADOW.md }}>
                   <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', backgroundColor: 'rgba(255,255,255,0.09)', borderTopLeftRadius: 22, borderTopRightRadius: 22 }} />
                   <View style={{ position: 'absolute', top: -22, right: -22, width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.07)' }} />
                   <View style={{ position: 'absolute', bottom: -14, left: -14, width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(251,191,36,0.16)' }} />
@@ -1385,7 +1385,7 @@ function HomeTab() {
                     <View style={{ marginTop: 9, gap: 6 }}>
                       {(['No fixed destination', 'Shopping / hospital', 'Driver stays with you'] as const).map((line, i) => (
                         <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#FDE68A' }} />
+                          <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.42)' }} />
                           <Text style={{ color: 'rgba(255,255,255,0.78)', fontSize: 9.5, fontWeight: '600' }}>{line}</Text>
                         </View>
                       ))}
@@ -1395,7 +1395,7 @@ function HomeTab() {
                     <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900', letterSpacing: -0.4 }}>By Hour</Text>
                     <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, marginTop: 2 }}>₹120+ · 2h–Full Day</Text>
                     <View style={{ marginTop: 9, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#FDE68A' }} />
+                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.42)' }} />
                       <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 9, fontWeight: '700' }}>Unlimited km plans</Text>
                     </View>
                     <View style={{ height: 13 }} />
