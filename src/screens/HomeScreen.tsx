@@ -20,6 +20,18 @@ import { FeatureIllustrationBanner, IlluFamily3, BikeScene } from '../components
 import { NEARBY_CATEGORIES } from '../nearbyCategories';
 
 
+// How much room scrollable content must leave at the bottom.
+//
+// The nav is a FLOATING translucent panel (s.navFloat is position:absolute), so
+// it sits ON TOP of the scroll content rather than pushing it up. Its real
+// height is s.nav's own paddingTop (10) + icon and label (~38) + paddingBottom
+// (44 on Android for the gesture bar, 16 on iOS) — about 92px on Android. The
+// content was reserving 90, i.e. slightly LESS than the nav's height, which is
+// why the last line of the footer ("Sppero Inc. · India") was sitting behind
+// the blur. Derived from the same numbers as s.nav so the two cannot drift
+// apart again, plus 24 of actual breathing room so the footer ends clear of it.
+const NAV_CLEARANCE = (Platform.OS === 'android' ? 44 : 16) + 10 + 38 + 24;
+
 function NavBar() {
   const { tab, screen, setScreen, setTab, loadHistory, phone, rideData, storeStatus, hourlyBooking } = useApp();
   const hasLive = (!!rideData?.ride_id && storeStatus !== 'cancelled') ||
@@ -1077,7 +1089,7 @@ function HomeTab() {
         scrollEventThrottle={8}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: 90 }}
+        contentContainerStyle={{ paddingBottom: NAV_CLEARANCE }}
       >
         {/* 0. ── Active ride / hourly banner — pre-empts the booking pitch
                entirely when one is running. Shown immediately, not gated

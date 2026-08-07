@@ -11,6 +11,9 @@ const AnimatedG = Animated.createAnimatedComponent(G);
 const PINK   = '#FF2D78';
 const PLUM   = '#2E1461';
 const GREEN  = '#059669';
+// Shared card surface — same ink the HomeScreen ride cards use, so the whole
+// Home column reads as one system instead of a run of coloured blocks.
+const INK    = '#1A0D2E';
 const HAIR   = '#14080C';
 const SKIN_L = '#DFA070';
 const SKIN_M = '#B87840';
@@ -319,10 +322,15 @@ export function FeatureIllustrationBanner() {
   return (
     <View style={{ gap: 10, marginBottom: 14 }}>
 
-      {/* ── Hero card: "Get a ride in 3 min" ── */}
+      {/* ── Hero card: "Get a ride in 3 min" ──
+             On INK, not plum. The ride cards above this were unified onto one
+             ink surface; leaving these two on plum and green meant the lower
+             half of Home was a stack of full-bleed colour blocks that each
+             shouted as loudly as the next, so nothing led. One surface for
+             every card lets the type and the artwork do the ranking. */}
       <View style={{
         borderRadius: 22,
-        backgroundColor: PLUM,
+        backgroundColor: INK,
         overflow: 'hidden',
         flexDirection: 'row',
         alignItems: 'center',
@@ -361,7 +369,7 @@ export function FeatureIllustrationBanner() {
              carry the one thing nothing else on the screen says. ── */}
       <View style={{
         borderRadius: 20, padding: 16,
-        backgroundColor: GREEN, minHeight: 92, overflow: 'hidden',
+        backgroundColor: INK, minHeight: 92, overflow: 'hidden',
         flexDirection: 'row', alignItems: 'center',
       }}>
         <View style={{ position: 'absolute', top: -18, right: -18, width: 70, height: 70,
@@ -376,9 +384,12 @@ export function FeatureIllustrationBanner() {
             <Text style={{ color: '#fff', fontSize: 14, fontWeight: '900', lineHeight: 18 }}>
               Safety First
             </Text>
-            <View style={{ backgroundColor: 'rgba(255,255,255,0.20)', borderRadius: 20,
-              paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: 'rgba(255,255,255,0.34)' }}>
-              <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>INSURED</Text>
+            {/* Green moves off the card fill and onto the badge, where it is
+                actually saying something — "insured" — instead of colouring
+                92px of background. */}
+            <View style={{ backgroundColor: 'rgba(5,150,105,0.26)', borderRadius: 20,
+              paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: 'rgba(16,185,129,0.55)' }}>
+              <Text style={{ color: '#6EE7B7', fontSize: 9, fontWeight: '800' }}>INSURED</Text>
             </View>
           </View>
           <Text style={{ color: 'rgba(255,255,255,0.78)', fontSize: 10.5, marginTop: 3, lineHeight: 14 }}>
