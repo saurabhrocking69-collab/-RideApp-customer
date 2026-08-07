@@ -251,7 +251,9 @@ interface AppContextType {
   searchNearbyCategory: (cat: NearbyCategory, type: 'pickup'|'drop') => void;
   geocodePlace: (address: string, type: 'pickup'|'drop') => Promise<void>;
   swapLocations: () => void;
-  fetchEtaByCoords: (pc: any, dc: any) => Promise<void>;
+  // Resolves true only if a distance actually came back — callers must not
+  // treat a failed lookup as a completed one.
+  fetchEtaByCoords: (pc: any, dc: any) => Promise<boolean>;
   loadFareEstimates: (km: number) => Promise<void>;
   applyPromo: () => Promise<void>;
   useMyLocation: () => Promise<void>;
@@ -420,6 +422,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [showPromoInput, setShowPromoInput] = useState(false);
   const [instantApplied, setInstantApplied] = useState(false);
   const lastFetchKey = useRef('');
+  // Bumped to re-run the fare effect after a failed distance lookup, so a
+  // transient network blip can't leave the Book button permanently dead.
+  const [fareRetry, setFareRetry] = useState(0);
+  const fareRetryTimer = useRef<any>(null);
   const pickupDebounceRef = useRef<any>(null);
   const dropDebounceRef   = useRef<any>(null);
   const hPickupDebounceRef = useRef<any>(null);
@@ -998,8 +1004,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const key = `${pickupCoords.lat.toFixed(4)},${pickupCoords.lng.toFixed(4)}-${dropCoords.lat.toFixed(4)},${dropCoords.lng.toFixed(4)}`;
     if (lastFetchKey.current === key) return;
     lastFetchKey.current = key;
-    fetchEtaByCoords(pickupCoords, dropCoords);
-  }, [pickupCoords?.lat, pickupCoords?.lng, dropCoords?.lat, dropCoords?.lng, screen]);
+    fetchEtaByCoords(pickupCoords, dropCoords).then(ok => {
+      if (ok) return;
+      // Only a SUCCESSFUL fetch gets to claim this pair.
+      //
+      // The key used to be committed before the result was known, while
+      // fetchEtaByCoords clears the fare estimates as it starts. So a single
+      // failed call left BOTH an empty fare table and the route marked
+      // "already fetched" — and because the effect only re-runs when the
+      // coordinates change, nothing ever retried. hasFare stayed false and the
+      // Book button read "Select pickup & drop" forever, on a screen already
+      // showing a drawn route and a distance.
+      //
+      // The near-me categories are the most exposed path to this: picking a
+      // suggestion sets searchedDropRef, which always opens the drop-pin
+      // picker, and confirming that pin usually moves the point by a few
+      // metres — which rounds to the SAME 4-decimal key (~11m), so the confirm
+      // could not force the retry either.
+      if (lastFetchKey.current === key) lastFetchKey.current = '';
+      // Give it one automatic go rather than making the customer edit an
+      // address to shake the screen out of a dead state.
+      const t = setTimeout(() => setFareRetry(v => v + 1), 1500);
+      fareRetryTimer.current = t;
+    });
+  }, [pickupCoords?.lat, pickupCoords?.lng, dropCoords?.lat, dropCoords?.lng, screen, fareRetry]);
+  useEffect(() => () => { if (fareRetryTimer.current) clearTimeout(fareRetryTimer.current); }, []);
 
   // Cancel countdown timer
   useEffect(() => {
@@ -1969,8 +1998,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setFareEstimates({}); setEta(''); lastFetchKey.current = '';
   };
 
-  const fetchEtaByCoords = async (pc: any, dc: any) => {
-    if (!pc?.lat || !dc?.lat) return;
+  // Returns whether it actually produced a distance — the caller uses that to
+  // decide if this pickup/drop pair may be recorded as fetched. Reporting
+  // nothing meant a failure was indistinguishable from a success.
+  const fetchEtaByCoords = async (pc: any, dc: any): Promise<boolean> => {
+    if (!pc?.lat || !dc?.lat) return false;
     setEta('⏳ Calculate ho raha hai...'); setFareEstimates({});
     try {
       const res = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${pc.lat},${pc.lng}&destinations=${dc.lat},${dc.lng}&key=${MAPS_KEY}&mode=driving&departure_time=now`, { cache: 'no-store' } as any);
@@ -1981,8 +2013,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const durMin = ((el.duration_in_traffic?.value ?? el.duration?.value ?? 0) / 60);
         setEta(`🕐 ${el.duration_in_traffic?.text || el.duration.text} · 📍 ${el.distance.text}`);
         loadFareEstimates(km, durMin);
-      } else setEta('');
-    } catch { setEta(''); }
+        return true;
+      }
+      setEta('');
+      return false;
+    } catch { setEta(''); return false; }
   };
 
   const loadFareEstimates = async (km: number, durationMin?: number) => {
