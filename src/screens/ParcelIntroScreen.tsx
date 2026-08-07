@@ -1,4 +1,4 @@
-import { Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Circle, Rect, Defs, LinearGradient, Stop, Ellipse } from 'react-native-svg';
 import { useApp } from '../context/AppContext';
@@ -386,18 +386,39 @@ export function ParcelIntroScreen() {
 
 // Re-open version — floats over the booking screen so nothing typed is lost.
 export function ParcelGuideModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { height } = useWindowDimensions();
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose} transparent={false}>
-      <View style={[s.screen, { flex: 1 }]}>
-        <View style={s.topBar}>
-          <TouchableOpacity onPress={onClose} style={s.backBtn}>
-            <Ionicons name="close" size={22} color="#fff" />
-          </TouchableOpacity>
-          <Text style={s.topTitle}>📦 Sppero Parcel</Text>
-          <View style={{ width: 36 }} />
+      {/* Two fixes for "the guide won't scroll", after two structural attempts
+          that changed the layout and did not help. The layout was not the
+          problem — WHEN it gets laid out was.
+
+          1. Mount the body only while open. A React Native <Modal> mounts its
+             children even at visible={false}, so this whole guide was built and
+             measured as soon as ParcelScreen rendered, inside a modal window
+             that was not on screen, and never re-measured on open. That is also
+             why every FadeIn/SlideUp in here had already finished its entrance
+             animation — they run on mount — so opening the guide showed a
+             static page whose animations played, invisibly, minutes earlier.
+             Gating on `visible` gives it a fresh mount against a real window.
+
+          2. Give the column a real height instead of flex:1. Inside a modal
+             window, flex:1 has nothing to resolve against until that window is
+             measured; a concrete pixel height cannot be ambiguous, so the
+             ScrollView always has a bounded viewport and content taller than it
+             always scrolls. */}
+      {visible && (
+        <View style={[s.screen, { height }]}>
+          <View style={s.topBar}>
+            <TouchableOpacity onPress={onClose} style={s.backBtn}>
+              <Ionicons name="close" size={22} color="#fff" />
+            </TouchableOpacity>
+            <Text style={s.topTitle}>📦 Sppero Parcel</Text>
+            <View style={{ width: 36 }} />
+          </View>
+          <GuideBody ctaLabel="Got it" onCta={onClose} />
         </View>
-        <GuideBody ctaLabel="Got it" onCta={onClose} />
-      </View>
+      )}
     </Modal>
   );
 }
