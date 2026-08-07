@@ -8,6 +8,7 @@ import { apiPost, apiGet } from '../../api';
 import { useRideStore } from '../../store';
 import { useApp } from '../context/AppContext';
 import { Bouncy, GlassPanel, PulseView, SlideUp, CountUp, EmptyAnim, GlowPulse, ShineCard, FadeIn, SkeletonBox } from '../components/ui';
+import { DeleteAccountSheet } from '../components/DeleteAccountSheet';
 import { s, C, T, SP, R, SHADOW } from '../styles';
 import { shortRideId } from '../rideId';
 import { MAPS_KEY, API } from '../constants';
@@ -2497,6 +2498,7 @@ function ProfileTab() {
     loadWalletDetail, loadLoyalty, loadReferral, loadSaved,
     openRazorpayTopup,
   } = useApp();
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
 
   const [tierData, setTierData] = useState<any>(null);
   useEffect(() => {
@@ -2666,6 +2668,11 @@ function ProfileTab() {
           {menuSection([
             { label: 'Privacy Policy',      sub: 'How we handle your data',    icon: 'lock-closed-outline',      color: C.textMuted, bg: C.glassMid,  border: C.glassBorder,  onPress: () => Linking.openURL('https://api.sppero.com/privacy') },
             { label: 'Terms of Service',    sub: 'Platform terms of use',      icon: 'document-text-outline',    color: C.textMuted, bg: C.glassMid,  border: C.glassBorder,  onPress: () => Linking.openURL('https://api.sppero.com/terms') },
+            // Google Play requires account deletion to be reachable from inside
+            // the app, not only by emailing support. Sits under Legal with the
+            // other data rights, and is red because it is the one row here that
+            // destroys something.
+            { label: 'Delete account',      sub: 'Request deletion of your account and data', icon: 'trash-outline', color: C.red, bg: 'rgba(239,68,68,0.10)', border: 'rgba(239,68,68,0.30)', onPress: () => setShowDeleteAccount(true) },
           ])}
 
           {/* ── Log out ──────────────────────────────────────────────────── */}
@@ -2676,6 +2683,13 @@ function ProfileTab() {
           }}>
             <Text style={{ color: C.red, fontWeight: '800', fontSize: 14 }}>Log Out</Text>
           </Bouncy>
+
+          <DeleteAccountSheet
+            visible={showDeleteAccount}
+            onClose={() => setShowDeleteAccount(false)}
+            phone={phone}
+            role="customer"
+          />
 
         </View>
       </ScrollView>

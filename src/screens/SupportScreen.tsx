@@ -4,13 +4,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { DotBG, ScreenIn, FadeIn, Bouncy } from '../components/ui';
 import { s, C, T, R, SP, SHADOW } from '../styles';
+import { DeleteAccountSheet } from '../components/DeleteAccountSheet';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
 export function SupportScreen() {
-  const { setScreen, setTab } = useApp();
+  const { setScreen, setTab, phone } = useApp();
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   // TODO: swap in the real support number/WhatsApp/email before launch —
@@ -21,6 +23,10 @@ export function SupportScreen() {
     { icon: 'logo-whatsapp',    label: 'WhatsApp',       sub: 'Fastest response',         color: '#25D366', bg: 'rgba(37,211,102,0.12)',  border: 'rgba(37,211,102,0.35)',    action: () => Linking.openURL('https://wa.me/919999999999?text=Hi%20Sppero%20Support') },
     { icon: 'call',             label: 'Helpline Call',  sub: '24/7 available',           color: C.purple,  bg: C.glassMid,                border: C.glassBorder,              action: () => Linking.openURL('tel:9999999999') },
     { icon: 'mail',             label: 'Email Support',  sub: 'Response in 24 hrs',        color: C.pink,   bg: C.pinkGlass,               border: C.pinkBorder,               action: () => Linking.openURL('mailto:support@sppero.com') },
+    // Play requires this to be doable IN the app. It was previously an FAQ
+    // line telling people to email support, which is exactly the pattern that
+    // gets a submission rejected.
+    { icon: 'trash',            label: 'Delete Account', sub: 'Request deletion of your data', color: C.red,     bg: 'rgba(239,68,68,0.10)',   border: 'rgba(239,68,68,0.30)',     action: () => setShowDeleteAccount(true) },
   ];
 
   const faqs = [
@@ -28,7 +34,7 @@ export function SupportScreen() {
     ['How do I pay?', 'Cash, Wallet, or UPI — settle with the driver at the end of the trip.'],
     ['No driver found?', 'After 90 seconds, the "Surge" option appears — increase the fare to attract more drivers.'],
     ['How do I recharge my wallet?', 'Profile → Wallet → tap the "+₹100/200/500" buttons.'],
-    ['How do I delete my account?', 'Email support@sppero.com — it will be deleted within 7 days.'],
+    ['How do I delete my account?', 'Tap "Delete Account" above, or go to Profile → Legal → Delete account. We review and delete within 7 days, and you can cancel any time before that.'],
   ];
 
   const toggleFaq = (i: number) => {
@@ -120,6 +126,13 @@ export function SupportScreen() {
           </View>
         </FadeIn>
       </ScrollView>
+
+      <DeleteAccountSheet
+        visible={showDeleteAccount}
+        onClose={() => setShowDeleteAccount(false)}
+        phone={phone}
+        role="customer"
+      />
     </ScreenIn>
   );
 }
