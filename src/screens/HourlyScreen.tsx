@@ -719,12 +719,33 @@ export function HourlyScreen() {
           <Ionicons name="arrow-back" size={20} color="#fff" />
         </TouchableOpacity>
         <Text style={{ ...T.title, color: '#fff', flex: 1 }}>Book by Hour</Text>
+        {/* Wallet, on the screen where it actually decides the outcome: an
+            hourly booking is paid up front and held in escrow, so a rider who
+            is short finds out at the payment step after choosing a vehicle and
+            a package. Showing the balance here — and letting them top up
+            without losing this screen's state — makes that a decision instead
+            of a dead end. */}
+        <TouchableOpacity
+          onPress={() => { loadWalletDetail(phone); loadLoyalty(phone); setScreen('wallet'); }}
+          activeOpacity={0.82}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginRight: 8, paddingHorizontal: 11, paddingVertical: 8, backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: R.xs, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.24)' }}>
+          <Ionicons name="wallet" size={15} color="#fff" />
+          <Text style={{ color: '#fff', fontSize: 12.5, fontWeight: '900' }}>
+            ₹{Math.max(0, Math.round(walletBalance || 0))}
+          </Text>
+        </TouchableOpacity>
         <TouchableOpacity onPress={() => setScreen('hourly-info')} style={{ padding: 8, backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: R.xs, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.18)' }}><Text style={{ fontSize: 18 }}>ℹ️</Text></TouchableOpacity>
       </View>
       <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16, paddingBottom: 50 }}>
         <Text style={[s.secTitle, { color: C.textMuted, letterSpacing: 1 }]}>VEHICLE TYPE</Text>
         <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-          {[{id:'auto',label:'Auto'},{id:'bike',label:'Bike'},{id:'car',label:'Car'},{id:'eriksha',label:'E-Riksha'}].map(v => (
+          {/* Row 1 — the mainstream four, now including the 7 Seater. The
+              backend has served car_7 hourly packages since the seater split
+              (₹350/2h vs ₹260 for the 5 Seater) but this list is hardcoded, so
+              there was no way to book one by the hour from the app at all.
+              E-Riksha moves down to sit with the other small/eco vehicles,
+              which also fixes a ragged 4 / 2 grid. */}
+          {[{id:'auto',label:'Auto'},{id:'bike',label:'Bike'},{id:'car',label:'5 Seater'},{id:'car_7',label:'7 Seater'}].map(v => (
             <Bouncy key={v.id} style={{ flex: 1, backgroundColor: hVehicle === v.id ? C.bgCard : C.glassMid, borderRadius: 14, padding: 10, alignItems: 'center', borderWidth: 2, borderColor: hVehicle === v.id ? C.pinkBorder : C.glassBorder, elevation: hVehicle === v.id ? 4 : 0 }} onPress={() => setHVehicle(v.id)}>
               <RideVehicleIcon id={v.id} size={22} color={hVehicle === v.id ? C.pink : C.textMuted} />
               <Text style={{ fontSize: 10, fontWeight: '700', marginTop: 3, color: hVehicle === v.id ? C.text : C.textMuted }}>{v.label}</Text>
@@ -732,7 +753,7 @@ export function HourlyScreen() {
           ))}
         </View>
         <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-          {[{id:'green_bike',label:'Green Bike'},{id:'electric_auto',label:'Elec. Auto'}].map(v => (
+          {[{id:'eriksha',label:'E-Riksha'},{id:'green_bike',label:'Green Bike'},{id:'electric_auto',label:'Elec. Auto'}].map(v => (
             <Bouncy key={v.id} style={{ flex: 1, backgroundColor: hVehicle === v.id ? C.greenGlass : C.glass, borderRadius: 14, padding: 10, alignItems: 'center', borderWidth: 2, borderColor: hVehicle === v.id ? C.green : C.greenBorder }} onPress={() => setHVehicle(v.id)}>
               <RideVehicleIcon id={v.id} size={22} color={hVehicle === v.id ? C.green : C.textDim} />
               <Text style={{ fontSize: 10, fontWeight: '700', marginTop: 3, color: hVehicle === v.id ? C.green : C.textDim }}>{v.label}</Text>

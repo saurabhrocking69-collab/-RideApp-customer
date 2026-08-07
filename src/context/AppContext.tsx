@@ -205,7 +205,11 @@ interface AppContextType {
   hDropSugg: any[]; setHDropSugg: (s: any[]) => void;
   hourlyTimerSec: number; setHourlyTimerSec: (s: number) => void;
   hOtpInput: string; setHOtpInput: (s: string) => void;
-  hChatOpen: boolean; setHChatOpen: (v: boolean) => void;
+  // Declared as the real useState setter, not (v: boolean) => void. The narrow
+  // form was a lie — the value behind it is a useState setter, so the updater
+  // call HourlyScreen already makes, setHChatOpen(o => !o), works at runtime
+  // and only failed to compile.
+  hChatOpen: boolean; setHChatOpen: React.Dispatch<React.SetStateAction<boolean>>;
   hChatMsgs: any[]; setHChatMsgs: React.Dispatch<React.SetStateAction<any[]>>;
   hChatInput: string; setHChatInput: (s: string) => void;
   hChatUnread: number; setHChatUnread: React.Dispatch<React.SetStateAction<number>>;
