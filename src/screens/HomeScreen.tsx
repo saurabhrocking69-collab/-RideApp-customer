@@ -32,6 +32,14 @@ import { NEARBY_CATEGORIES } from '../nearbyCategories';
 // apart again, plus 24 of actual breathing room so the footer ends clear of it.
 const NAV_CLEARANCE = (Platform.OS === 'android' ? 44 : 16) + 10 + 38 + 24;
 
+// Search-bar halo. Lime is the outer, softer ring; green is the inner, crisper
+// one and also the Go button. Green carries a meaning pink never did on this
+// control — it is the "start a ride" action — and it keeps the one saturated
+// pink moment on this screen (the header) from being competed with directly
+// beneath itself.
+const SEARCH_LIME  = '#A3E635';
+const SEARCH_GREEN = '#059669';
+
 function NavBar() {
   const { tab, screen, setScreen, setTab, loadHistory, phone, rideData, storeStatus, hourlyBooking } = useApp();
   const hasLive = (!!rideData?.ride_id && storeStatus !== 'cancelled') ||
@@ -1137,10 +1145,23 @@ function HomeTab() {
                as a secondary shortcut for people who already know what
                they want — one visual unit instead of two competing blocks. ── */}
         <View style={{ marginHorizontal: 16, marginTop: 10, position: 'relative' }}>
-          {/* Animated glowing border ring (native driver, opacity only) */}
+          {/* Lime → green halo, replacing the single pink ring.
+              Two concentric rings rather than one: a wide, soft lime ring sits
+              outside a tighter green one, so the edge reads as a glow with
+              depth instead of a drawn outline. React Native cannot gradient a
+              border, and adding expo-linear-gradient for this would change the
+              native fingerprint (and with it OTA compatibility) for one halo.
+              Both are driven by the SAME animation value — the lime is
+              interpolated to a lower, softer range so it trails the green
+              rather than pulsing in lockstep with it. */}
+          <Animated.View pointerEvents="none" style={{
+            position: 'absolute', top: -5, left: -5, right: -5, bottom: -5,
+            borderRadius: 25, borderWidth: 3, borderColor: SEARCH_LIME,
+            opacity: searchGlowOpacity.interpolate({ inputRange: [0.18, 0.92], outputRange: [0.10, 0.5] }),
+          }} />
           <Animated.View pointerEvents="none" style={{
             position: 'absolute', top: -2, left: -2, right: -2, bottom: -2,
-            borderRadius: 22, borderWidth: 2.5, borderColor: C.pink,
+            borderRadius: 22, borderWidth: 2.5, borderColor: SEARCH_GREEN,
             opacity: searchGlowOpacity,
           }} />
           <TouchableOpacity onPress={() => setScreen('booking')} activeOpacity={0.88} style={{
@@ -1148,14 +1169,18 @@ function HomeTab() {
             borderRadius: 20, paddingVertical: 15, paddingHorizontal: 18,
             flexDirection: 'row', alignItems: 'center', gap: 12,
             ...SHADOW.lg,
-            borderWidth: 1.5, borderColor: 'rgba(233,69,96,0.18)',
+            borderWidth: 1.5, borderColor: 'rgba(5,150,105,0.20)',
             zIndex: 10,
           }}>
-            <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.pinkBorder }}>
-              <Ionicons name="search" size={16} color={C.pink} />
+            <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(163,230,53,0.20)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(5,150,105,0.38)' }}>
+              <Ionicons name="search" size={16} color={SEARCH_GREEN} />
             </View>
             <Text style={{ flex: 1, fontSize: 15, color: C.textMuted, fontWeight: '500' }}>Where are you going?</Text>
-            <View style={{ backgroundColor: C.pink, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8, ...SHADOW.pink }}>
+            {/* Go turns green with the rest of the unit. Leaving it pink inside
+                a lime/green halo read as a leftover, and green is the right
+                meaning for the one control that starts a ride. */}
+            <View style={{ backgroundColor: SEARCH_GREEN, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8,
+              elevation: 6, shadowColor: SEARCH_GREEN, shadowOpacity: 0.42, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } }}>
               <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900', letterSpacing: 0.5 }}>Go</Text>
             </View>
           </TouchableOpacity>
