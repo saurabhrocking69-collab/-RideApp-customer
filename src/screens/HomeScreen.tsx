@@ -903,7 +903,7 @@ function HomeTab() {
     historyRides,
     setScreen, setTab,
     setShowBuddyBook, setBuddyBookMsg, setBuddyWaiting,
-    loadReferral, loadSaved, loadWallet,
+    loadReferral, loadSaved, loadWallet, loadWalletDetail, loadLoyalty,
     setPickup, setDrop,
     setHourlyStep, setHPickup, setHDrop, setHPickupCoords, setHDropCoords,
     setHPickupSugg, setHDropSugg, setHRoundTrip, setHStayHours, setHourlyBooking,
@@ -949,7 +949,13 @@ function HomeTab() {
   const liveBikeCount = Array.isArray(nearbyDriversData) ? nearbyDriversData.filter((d: any) => ['bike','green_bike'].includes(d.vehicleType)).length : 0;
   const liveCarCount  = Array.isArray(nearbyDriversData) ? nearbyDriversData.filter((d: any) => ['car','luxury'].includes(d.vehicleType)).length : 0;
 
-  // Search box micro-animation: pulsing pink border glow (native driver, smooth)
+  // The header shows the wallet balance now, so it has to be right on arrival.
+  // It was previously only fetched at boot and after a ride — fine when the
+  // number lived inside the Profile tab, not fine when it is on the first
+  // screen. Cheap call, and a stale balance in the header is worse than none.
+  useEffect(() => { if (phone) loadWallet(phone); }, [phone]);
+
+  // Search box micro-animation: pulsing halo (native driver, smooth)
   const searchGlowOpacity = useRef(new Animated.Value(0.18)).current;
   useEffect(() => {
     Animated.loop(
@@ -1074,9 +1080,20 @@ function HomeTab() {
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <NotifBell onPress={() => { setNotifOpen(true); setUnreadNotif(0); }} unread={unreadNotif} />
-            <TouchableOpacity onPress={() => { setTab('profile'); loadWallet(phone); }}
-              style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 8, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)' }}>
-              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 18 }}>{(userName || 'R')[0].toUpperCase()}</Text>
+            {/* Wallet, not a second way into Profile. Profile already owns a
+                bottom tab, so the avatar here spent prime header space on a
+                destination that was one tap away regardless. Wallet had no
+                shortcut at all — it was buried inside the Profile tab — and it
+                is the one number a rider wants before booking, so it shows the
+                balance rather than just an icon. */}
+            <TouchableOpacity
+              onPress={() => { loadWalletDetail(phone); loadLoyalty(phone); setScreen('wallet'); }}
+              activeOpacity={0.82}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, height: 44, paddingHorizontal: 13, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.22)', elevation: 4, shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 8, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)' }}>
+              <Ionicons name="wallet" size={17} color="#fff" />
+              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>
+                ₹{Math.max(0, Math.round(walletBalance || 0))}
+              </Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -1084,9 +1101,16 @@ function HomeTab() {
         {/* Mini row — compact when scrolled */}
         <Animated.View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', opacity: miniAlpha }}>
           <Text style={{ color: '#fff', fontSize: 15, fontWeight: '900', letterSpacing: -0.3 }}>{userName || 'Rider'}</Text>
-          <TouchableOpacity onPress={() => { setTab('profile'); loadWallet(phone); }}
-            style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)' }}>
-            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>{(userName || 'R')[0].toUpperCase()}</Text>
+          {/* Same wallet shortcut, compact — the scrolled header must not
+              suddenly offer a different destination than the full one. */}
+          <TouchableOpacity
+            onPress={() => { loadWalletDetail(phone); loadLoyalty(phone); setScreen('wallet'); }}
+            activeOpacity={0.82}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 5, height: 34, paddingHorizontal: 11, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.22)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)' }}>
+            <Ionicons name="wallet" size={14} color="#fff" />
+            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 13 }}>
+              ₹{Math.max(0, Math.round(walletBalance || 0))}
+            </Text>
           </TouchableOpacity>
         </Animated.View>
       </Animated.View>
