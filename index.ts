@@ -3,11 +3,13 @@ import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import App from './App';
 
+// children optional: it is passed as createElement's third argument, not in
+// the props object, so requiring it here made that call fail to typecheck.
 class ErrorBoundary extends React.Component<
-  { children: React.ReactNode },
+  { children?: React.ReactNode },
   { error: Error | null }
 > {
-  constructor(props: { children: React.ReactNode }) {
+  constructor(props: { children?: React.ReactNode }) {
     super(props);
     this.state = { error: null };
   }

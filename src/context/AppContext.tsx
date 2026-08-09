@@ -74,7 +74,9 @@ interface AppContextType {
   otpShakeAnim: Animated.Value;
   otpSuccessAnim: Animated.Value;
   userName: string; setUserName: (n: string) => void;
-  gender: string; setGender: (g: 'male'|'female'|'other'|'') => void;
+  // Dispatch, not a plain setter: it IS a useState setter, and the narrow
+  // signature rejected the updater form callers legitimately use.
+  gender: string; setGender: React.Dispatch<React.SetStateAction<'male'|'female'|'other'|''>>;
   // Splash anims
   splashLogo: Animated.Value; splashScale: Animated.Value;
   splashTag: Animated.Value; splashFade: Animated.Value;
@@ -756,8 +758,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               if (hd.booking && ['pending','matched','active'].includes(hd.booking.status)) {
                 setHourlyBooking({ ...hd.booking, driver: hd.driver });
                 activeHourlyIdRef.current = hd.booking.id;
-                const step: HourlyStep = hd.booking.status === 'active' ? 'active'
-                  : hd.booking.status === 'matched' ? 'matched' : 'pending';
+                // 'matched' and 'pending' are BOOKING statuses, not steps —
+                // HourlyStep is 'book' | 'waiting' | 'active' | 'done'. Setting
+                // it to either matched nothing in HourlyScreen, so it fell
+                // through to the default render: a customer reopening the app
+                // with a live hourly booking was shown the form to book a NEW
+                // one. It could not self-correct either, because the status
+                // poll that would have fixed it only runs while the step is
+                // 'waiting'.
+                //
+                // Mapping matches what the poll and the socket already do: a
+                // driver being assigned puts you on the trip screen (that is
+                // where the OTP lives), and only an unassigned booking waits.
+                const step: HourlyStep = hd.booking.status === 'pending' ? 'waiting' : 'active';
                 setHourlyStep(step);
                 setScreen('hourly');
               }
@@ -804,7 +817,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ts:       Date.now(),
         imageUrl: data?.image_url || undefined,
       };
-      saveNotification({ ...toast, read: false });
+      // saveNotification stamps `read: false` itself — passing it here was
+      // both redundant and outside the argument's type.
+      saveNotification(toast);
       setNotifToast(toast);
     });
 
@@ -877,8 +892,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               if (hd.booking && ['pending','matched','active'].includes(hd.booking.status)) {
                 setHourlyBooking({ ...hd.booking, driver: hd.driver });
                 activeHourlyIdRef.current = hd.booking.id;
-                const step: HourlyStep = hd.booking.status === 'active' ? 'active'
-                  : hd.booking.status === 'matched' ? 'matched' : 'pending';
+                // 'matched' and 'pending' are BOOKING statuses, not steps —
+                // HourlyStep is 'book' | 'waiting' | 'active' | 'done'. Setting
+                // it to either matched nothing in HourlyScreen, so it fell
+                // through to the default render: a customer reopening the app
+                // with a live hourly booking was shown the form to book a NEW
+                // one. It could not self-correct either, because the status
+                // poll that would have fixed it only runs while the step is
+                // 'waiting'.
+                //
+                // Mapping matches what the poll and the socket already do: a
+                // driver being assigned puts you on the trip screen (that is
+                // where the OTP lives), and only an unassigned booking waits.
+                const step: HourlyStep = hd.booking.status === 'pending' ? 'waiting' : 'active';
                 setHourlyStep(step);
                 if (screen === 'home') setScreen('hourly');
               }
@@ -2272,7 +2298,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const gr = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(drop)}&key=${MAPS_KEY}`);
           const gd = await gr.json();
           const loc = gd.results?.[0]?.geometry?.location;
-          if (loc) { dropLat = loc.lat; dropLng = loc.lng; setDropCoords({ lat: dropLat, lng: dropLng }); }
+          // Straight from `loc` rather than via the two `number | undefined`
+          // locals, which is both narrower and clearer about the source.
+          if (loc) { dropLat = loc.lat; dropLng = loc.lng; setDropCoords({ lat: loc.lat, lng: loc.lng }); }
         } catch (_e) {}
       }
       const data = await authRidePost('/api/rides/book', {

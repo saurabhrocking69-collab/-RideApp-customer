@@ -1350,7 +1350,7 @@ export function BookingScreen() {
                       </View>
                       {dropHistory.length > 0 && (
                         <>
-                          {dropHistory.slice(0, 3).map((h, i) => (
+                          {dropHistory.slice(0, 3).map((h: any, i: number) => (
                             <TouchableOpacity key={i}
                               activeOpacity={0.75}
                               style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 13, paddingHorizontal: 16, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: C.glassBorder }}

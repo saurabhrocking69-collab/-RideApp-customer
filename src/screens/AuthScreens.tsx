@@ -83,14 +83,17 @@ export function OnboardingScreen() {
 
           <Text style={{ fontSize: 10, fontWeight: '800', color: C.textMuted, marginBottom: 12, letterSpacing: 1.4 }}>GENDER (OPTIONAL)</Text>
           <View style={{ flexDirection: 'row', gap: 10, marginBottom: 28 }}>
-            {[
+            {/* `as const` keeps each id as its literal type — without it they
+                widen to `string` and the tap handler no longer typechecks
+                against the gender union. */}
+            {([
               { id: 'male',   icon: 'male',   label: 'Male'   },
               { id: 'female', icon: 'female', label: 'Female' },
               { id: 'other',  icon: 'ellipsis-horizontal', label: 'Other' },
-            ].map(g => (
+            ] as const).map(g => (
               <TouchableOpacity
                 key={g.id}
-                onPress={() => setGender((prev: any) => prev === g.id ? '' : g.id)}
+                onPress={() => setGender(prev => prev === g.id ? '' : g.id)}
                 style={{
                   flex: 1, alignItems: 'center', paddingVertical: 16, borderRadius: 16,
                   backgroundColor: gender === g.id ? C.pinkGlass : C.glass,
