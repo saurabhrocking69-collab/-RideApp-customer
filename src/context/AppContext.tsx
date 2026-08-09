@@ -430,6 +430,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // transient network blip can't leave the Book button permanently dead.
   const [fareRetry, setFareRetry] = useState(0);
   const fareRetryTimer = useRef<any>(null);
+  // Attempts are counted per route, so a new pickup/drop always starts fresh.
+  const fareAttempts = useRef(0);
+  const fareAttemptKey = useRef('');
+  const [fareFailed, setFareFailed] = useState(false);
+  // Manual "Try again" from the booking screen: forgets the route so the
+  // effect re-runs, and resets the attempt budget.
+  const retryFare = () => {
+    lastFetchKey.current = '';
+    fareAttempts.current = 0; fareAttemptKey.current = '';
+    setFareFailed(false);
+    setFareRetry(v => v + 1);
+  };
   const pickupDebounceRef = useRef<any>(null);
   const dropDebounceRef   = useRef<any>(null);
   const hPickupDebounceRef = useRef<any>(null);
@@ -1008,8 +1020,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const key = `${pickupCoords.lat.toFixed(4)},${pickupCoords.lng.toFixed(4)}-${dropCoords.lat.toFixed(4)},${dropCoords.lng.toFixed(4)}`;
     if (lastFetchKey.current === key) return;
     lastFetchKey.current = key;
+    setFareFailed(false);
     fetchEtaByCoords(pickupCoords, dropCoords).then(ok => {
-      if (ok) return;
+      if (ok) { fareAttempts.current = 0; return; }
       // Only a SUCCESSFUL fetch gets to claim this pair.
       //
       // The key used to be committed before the result was known, while
@@ -1026,9 +1039,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // metres — which rounds to the SAME 4-decimal key (~11m), so the confirm
       // could not force the retry either.
       if (lastFetchKey.current === key) lastFetchKey.current = '';
-      // Give it one automatic go rather than making the customer edit an
-      // address to shake the screen out of a dead state.
-      const t = setTimeout(() => setFareRetry(v => v + 1), 1500);
+      // Back off over three tries rather than one. A single retry 1.5s later
+      // lands inside the same blip that caused the first failure, so it tended
+      // to fail with it and leave the screen just as dead.
+      if (fareAttemptKey.current !== key) { fareAttemptKey.current = key; fareAttempts.current = 0; }
+      fareAttempts.current += 1;
+      if (fareAttempts.current > 3) {
+        // Out of automatic tries. Surface it so the customer has a button to
+        // press — if the network is genuinely down, retrying forever behind a
+        // disabled Book button just looks broken.
+        setFareFailed(true);
+        return;
+      }
+      const wait = [1500, 3000, 6000][fareAttempts.current - 1] ?? 6000;
+      const t = setTimeout(() => setFareRetry(v => v + 1), wait);
       fareRetryTimer.current = t;
     });
   }, [pickupCoords?.lat, pickupCoords?.lng, dropCoords?.lat, dropCoords?.lng, screen, fareRetry]);
@@ -2016,15 +2040,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const km = el.distance.value / 1000;
         const durMin = ((el.duration_in_traffic?.value ?? el.duration?.value ?? 0) / 60);
         setEta(`🕐 ${el.duration_in_traffic?.text || el.duration.text} · 📍 ${el.distance.text}`);
-        loadFareEstimates(km, durMin);
-        return true;
+        // AWAITED, and its result decides the outcome.
+        //
+        // This used to be fire-and-forget, so the function reported success the
+        // moment Google answered — even when the fare call that follows it
+        // failed. The screen then showed a drawn route, "17 mins · 5.1 km", and
+        // a vehicle row that had quietly fallen back to its "₹15+" starting
+        // prices, while hasFare stayed false and the Book button sat disabled
+        // reading "Select pickup & drop". The retry below never fired, because
+        // as far as it could tell nothing had gone wrong.
+        return await loadFareEstimates(km, durMin);
       }
       setEta('');
       return false;
     } catch { setEta(''); return false; }
   };
 
-  const loadFareEstimates = async (km: number, durationMin?: number) => {
+  // Returns whether it actually produced fares. The caller needs to know:
+  // an empty fare table is what disables the Book button.
+  const loadFareEstimates = async (km: number, durationMin?: number): Promise<boolean> => {
     lastFareKmRef.current = km;
     if (durationMin != null) lastFareDurRef.current = durationMin;
     // Long-distance route (>80km) → this is an intercity trip, not a city ride.
@@ -2033,7 +2067,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setIntercityRoute({ km, durationMin: durationMin ?? lastFareDurRef.current ?? (km / 20) * 60 });
       setFareLoading(false);
       setScreen((cur: Screen) => (cur === 'booking' || cur === 'intercity' ? 'intercity' : cur));
-      return;
+      // Handed off, not failed — retrying here would fight the screen change.
+      return true;
     }
     setIntercityRoute(null);
     setFareLoading(true);
@@ -2067,6 +2102,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }));
     }
     setFareEstimates(est); setFareLoading(false);
+    // Every vehicle missing means the carousel is showing its "₹15+" starting
+    // prices and nothing is bookable — that is a failure, not an empty result.
+    return Object.keys(est).length > 0;
   };
 
   const calcDriverEta = async (driverLat: number, driverLng: number, pickupLat: number, pickupLng: number) => {
@@ -2845,7 +2883,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     resetBookingState,
     rideType, setRideType, pickupSugg, setPickupSugg, dropSugg, setDropSugg, dropHistory,
     appConfig,
-    fareEstimates, setFareEstimates, fareLoading, eta, setEta, userCoords, setUserCoords,
+    fareEstimates, setFareEstimates, fareLoading, fareFailed, retryFare, eta, setEta, userCoords, setUserCoords,
     showPromoInput, setShowPromoInput, instantApplied, setInstantApplied, lastFetchKey,
     promoCode, setPromoCode, promoDiscount, setPromoDiscount,
     promoScreenCode, setPromoScreenCode, promoScreenMsg, setPromoScreenMsg,

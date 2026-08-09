@@ -91,7 +91,7 @@ export function BookingScreen() {
     eta, setEta,
     rideType, setRideType,
     appConfig,
-    fareEstimates, setFareEstimates, fareLoading,
+    fareEstimates, setFareEstimates, fareLoading, fareFailed, retryFare,
     promoDiscount, setPromoDiscount,
     promoCode, setPromoCode,
     instantApplied, setInstantApplied,
@@ -2566,6 +2566,17 @@ export function BookingScreen() {
                     {selRide?.label} · {scheduledAt ? 'scheduled' : 'instant booking'}
                   </Text>
                 </>
+              ) : fareFailed && pickupCoords?.lat && dropCoords?.lat ? (
+                // Both points ARE chosen and the route is drawn — only the fare
+                // call failed. Saying "Select pickup & drop" here blames the
+                // customer for something they already did, and leaves them no
+                // way out but to re-enter an address.
+                <TouchableOpacity onPress={retryFare} activeOpacity={0.7}>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: C.text }}>Couldn't load fares</Text>
+                  <Text style={{ fontSize: 11.5, marginTop: 2, fontWeight: '700', color: BRAND_PINK }}>
+                    Tap to try again
+                  </Text>
+                </TouchableOpacity>
               ) : (
                 <Text style={{ fontSize: 13.5, fontWeight: '700', color: C.textMuted }}>Select pickup & drop</Text>
               )}
