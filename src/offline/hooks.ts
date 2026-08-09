@@ -1,7 +1,9 @@
 import { useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCachedFetch } from './useCachedFetch';
 import { Cache, KEY, TTL } from './cache';
 import { API } from '../constants';
+import { apiAuthGet } from '../../api';
 
 // ── Nearby Drivers ────────────────────────────────────────────────────────────
 export function useNearbyDrivers(lat?: number | null, lng?: number | null) {
@@ -64,9 +66,14 @@ export function useRideHistory(phone?: string) {
 export function useWalletBalance(phone?: string) {
   const fetcher = useCallback(async () => {
     if (!phone) return null;
-    const r = await fetch(`${API}/api/wallet/balance?phone=${phone}`);
-    const d = await r.json();
-    return d.balance != null ? d : null;
+    // Authenticated. /api/wallet/balance is owner-checked on the server — a
+    // bare phone number in the query used to be enough to read anyone's
+    // balance. This was the last caller in either app still sending none, so
+    // without it this hook would 401 and the cached balance would go stale
+    // with no visible reason.
+    const token = await AsyncStorage.getItem('userToken').catch(() => null);
+    const d = await apiAuthGet(`/api/wallet/balance?phone=${phone}`, token || '');
+    return d && d.balance != null ? d : null;
   }, [phone]);
 
   return useCachedFetch({
