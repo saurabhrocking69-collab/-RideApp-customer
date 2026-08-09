@@ -1844,6 +1844,44 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Takes the whole category rather than seven positional args — the previous
   // shape was one unlabelled boolean and three string arrays in a row, which
   // is exactly the signature a new field gets silently dropped from.
+  /* Replaces the straight-line distance on each suggestion with the real
+     driving distance, and re-sorts on it.
+
+     Autocomplete's `distance_meters` is geodesic — "as the crow flies". For a
+     rider choosing between four ATMs that is the wrong number twice over: it
+     is not what they will travel, not what the fare is built from, and it does
+     not even rank them correctly, because a place 4.3km across a river can be
+     8.8km to drive while a 5.2km one is 8.3km. The list said one was nearer
+     when it was not.
+
+     One Distance Matrix request covers the whole list — destinations can be
+     given as place_id, so no per-item Place Details lookup is needed. On any
+     failure the geodesic numbers are simply left in place; a slightly wrong
+     badge beats an empty one. */
+  const attachRoadDistances = async (list: any[], origin: { lat: number; lng: number }) => {
+    const ids = list.filter(p => p.id).slice(0, 25);
+    if (!ids.length) return list;
+    try {
+      const dests = ids.map(p => `place_id:${p.id}`).join('|');
+      const d = await externalGet(
+        `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origin.lat},${origin.lng}` +
+        `&destinations=${encodeURIComponent(dests)}&key=${MAPS_KEY}&mode=driving`
+      );
+      const els = d?.rows?.[0]?.elements || [];
+      const byId = new Map<string, number>();
+      ids.forEach((p, i) => {
+        const e = els[i];
+        if (e?.status === 'OK' && e.distance?.value != null) byId.set(p.id, e.distance.value);
+      });
+      if (!byId.size) return list;
+      return list
+        .map(p => (byId.has(p.id) ? { ...p, distance_m: byId.get(p.id), by_road: true } : p))
+        // Anything the matrix could not reach sorts last rather than pretending
+        // to be nearest on a number measured a different way.
+        .sort((a, b) => (a.by_road ? a.distance_m : Infinity) - (b.by_road ? b.distance_m : Infinity));
+    } catch { return list; }
+  };
+
   const searchNearbyCategory = (cat: NearbyCategory, type: 'pickup' | 'drop') => {
     const { q: category, wideSearch, acceptTypes, rejectTypes, rejectNamePrefixes, textSearch } = cat;
     const originCoords = type === 'drop'
@@ -1895,7 +1933,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             .filter((p: any) => p.distance_m == null || p.distance_m <= textSearch.radiusM)
             .sort((a: any, b: any) => (a.distance_m ?? Infinity) - (b.distance_m ?? Infinity))
             .slice(0, 8);
+          // Show it immediately on the geodesic ordering, then upgrade to real
+          // driving distances — waiting on a second round-trip to render would
+          // make the list feel slow for a number most taps never read.
           type === 'drop' ? setDropSugg(merged) : setPickupSugg(merged);
+          const road = await attachRoadDistances(merged, originCoords);
+          type === 'drop' ? setDropSugg(road) : setPickupSugg(road);
         } catch (_e) {}
       })();
       return;
@@ -1955,6 +1998,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           distance_m: p.distance_meters ?? null,
         }));
         type === 'pickup' ? setPickupSugg(merged) : setDropSugg(merged);
+        const road = await attachRoadDistances(merged, originCoords);
+        type === 'pickup' ? setPickupSugg(road) : setDropSugg(road);
       } catch (_e) {}
     })();
   };
@@ -2003,11 +2048,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return { precise: false, areaName };
   };
 
-  const geocodePlace = async (address: string, type: 'pickup' | 'drop') => {
+  /* Resolves a chosen suggestion to coordinates.
+     Prefers the place_id. Geocoding the description text instead was sending
+     riders to the wrong place entirely: the Geocoding API resolves ADDRESSES,
+     not POI names, so "Bank of Baroda ATM, Kursi Road, near Pahadpur Chauraha,
+     Sector H, Jankipuram, Lucknow" collapsed to "Kursi Rd, Uttar Pradesh" —
+     the whole road — and returned a point 8.3km from the ATM the customer had
+     just tapped. The suggestion row said 1.3km; the booking screen then
+     quoted 10.0km, and the fare with it.
+
+     It bites hardest exactly where suggestions matter most: near-me results
+     are chain outlets sharing one name (four "Bank of Baroda ATM" here), so
+     the text carries no way to tell them apart while the place_id is precise
+     by construction. Text remains the fallback for entries that have no id,
+     such as items typed by hand or recalled from history. */
+  const geocodePlace = async (address: string, type: 'pickup' | 'drop', placeId?: string | null) => {
     try {
-      const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${MAPS_KEY}`);
-      const data = await res.json();
-      const result = data.results?.[0];
+      let result: any = null;
+      if (placeId) {
+        const r = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}&fields=geometry,types,formatted_address,address_components,name&key=${MAPS_KEY}`);
+        const d = await r.json();
+        if (d?.result?.geometry?.location) result = d.result;
+      }
+      if (!result) {
+        const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${MAPS_KEY}`);
+        const data = await res.json();
+        result = data.results?.[0];
+      }
       const loc = result?.geometry?.location;
       if (loc) {
         if (type === 'pickup') setPickupCoords({ lat: loc.lat, lng: loc.lng });

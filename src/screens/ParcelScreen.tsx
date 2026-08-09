@@ -305,7 +305,7 @@ export function ParcelScreen() {
             <View style={{ marginTop: 8, borderTopWidth: 1, borderTopColor: C.glassBorder, paddingTop: 6 }}>
               {pickupSugg.slice(0, 4).map((sg: any, i: number) => (
                 <TouchableOpacity key={i} style={{ paddingVertical: 9 }}
-                  onPress={() => { Keyboard.dismiss(); setPickup(sg.text); setPickupSugg([]); geocodePlace(sg.text, 'pickup'); }}>
+                  onPress={() => { Keyboard.dismiss(); setPickup(sg.text); setPickupSugg([]); geocodePlace(sg.text, 'pickup', sg.id); }}>
                   <Text style={{ fontSize: 13.5, color: C.text, fontWeight: '600' }} numberOfLines={1}>{sg.main || sg.text}</Text>
                   {!!sg.secondary && <Text style={{ fontSize: 11.5, color: C.textMuted }} numberOfLines={1}>{sg.secondary}</Text>}
                 </TouchableOpacity>
@@ -334,7 +334,7 @@ export function ParcelScreen() {
             <View style={{ marginTop: 8, borderTopWidth: 1, borderTopColor: C.glassBorder, paddingTop: 6 }}>
               {dropSugg.slice(0, 4).map((sg: any, i: number) => (
                 <TouchableOpacity key={i} style={{ paddingVertical: 9 }}
-                  onPress={() => { Keyboard.dismiss(); setDrop(sg.text); setDropSugg([]); searchedDropRef.current = true; geocodePlace(sg.text, 'drop'); }}>
+                  onPress={() => { Keyboard.dismiss(); setDrop(sg.text); setDropSugg([]); searchedDropRef.current = true; geocodePlace(sg.text, 'drop', sg.id); }}>
                   <Text style={{ fontSize: 13.5, color: C.text, fontWeight: '600' }} numberOfLines={1}>{sg.main || sg.text}</Text>
                   {!!sg.secondary && <Text style={{ fontSize: 11.5, color: C.textMuted }} numberOfLines={1}>{sg.secondary}</Text>}
                 </TouchableOpacity>

@@ -398,8 +398,19 @@ export function BookingScreen() {
   }, [hasFare]);
 
   // Forward geocode an address string → lat/lng (used before opening picker)
-  const geocodeForPicker = async (address: string): Promise<{ lat: number; lng: number } | null> => {
+  // Same place_id-first rule as geocodePlace. This runs BEFORE it on the
+  // pickup path, so leaving it on text alone would keep centring the map on
+  // whatever road the description happened to name and the correct branch
+  // below would never be reached.
+  const geocodeForPicker = async (address: string, placeId?: string | null): Promise<{ lat: number; lng: number } | null> => {
     try {
+      if (placeId) {
+        const d = await externalGet(
+          `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}&fields=geometry&key=${MAPS_KEY}`
+        );
+        const l = d?.result?.geometry?.location;
+        if (l) return { lat: l.lat, lng: l.lng };
+      }
       const res = await externalGet(
         `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${MAPS_KEY}`
       );
@@ -1127,12 +1138,12 @@ export function BookingScreen() {
                           setPickup(sg.text);
                           setPickupSugg([]);
                           setPickerLoading(true);
-                          const coords = await geocodeForPicker(sg.text);
+                          const coords = await geocodeForPicker(sg.text, sg.id);
                           setPickerLoading(false);
                           if (coords) {
                             setPickerCoords(coords);
                           } else {
-                            geocodePlace(sg.text, 'pickup');
+                            geocodePlace(sg.text, 'pickup', sg.id);
                           }
                         }}>
                         <View style={{ width: 36, height: 36, borderRadius: 11, backgroundColor: C.glassMid, alignItems: 'center', justifyContent: 'center', marginRight: 11, borderWidth: 1, borderColor: C.glassBorder, flexShrink: 0 }}>
@@ -1266,7 +1277,7 @@ export function BookingScreen() {
                   {showDropSugg && dropSugg.slice(0, 5).map((sg: any, i: number) => (
                     <TouchableOpacity key={i}
                       style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 11, paddingHorizontal: 16, borderBottomWidth: i < Math.min(dropSugg.length, 5) - 1 ? 1 : 0, borderBottomColor: C.glassBorder }}
-                      onPress={() => { Keyboard.dismiss(); setDrop(sg.text); setDropSugg([]); searchedDropRef.current = true; geocodePlace(sg.text, 'drop'); }}>
+                      onPress={() => { Keyboard.dismiss(); setDrop(sg.text); setDropSugg([]); searchedDropRef.current = true; geocodePlace(sg.text, 'drop', sg.id); }}>
                       {/* Location pin icon — clean, neutral */}
                       <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: C.glassMid, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1, borderColor: C.glassBorder, flexShrink: 0 }}>
                         <Ionicons name="location-outline" size={18} color={C.textMuted} />
