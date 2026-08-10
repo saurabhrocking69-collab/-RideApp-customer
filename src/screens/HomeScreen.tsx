@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { ScrollView, FlatList, View, Text, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, Animated, Easing, Share, Dimensions, Linking } from 'react-native';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { ScrollView, FlatList, View, Text, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, Animated, Easing, Share, Dimensions, Linking, AccessibilityInfo } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Storage as AsyncStorage } from '../storage';
@@ -40,6 +40,101 @@ const NAV_CLEARANCE = (Platform.OS === 'android' ? 44 : 16) + 10 + 38 + 24;
 // beneath itself.
 const SEARCH_LIME  = '#A3E635';
 const SEARCH_GREEN = '#059669';
+
+// Destinations the typing placeholder falls back to before this rider has any
+// history of their own. Deliberately the same words as NEARBY_CATEGORIES rather
+// than invented ones or a specific city's landmarks — every one of these is a
+// place the app can actually find near you, so the box never mimes a search it
+// could not perform, and it reads the same in Lucknow as it will anywhere else.
+const TYPE_FALLBACK = ['Airport', 'Railway Station', 'Metro Station', 'Mall', 'Hospital', 'Bus Stand'];
+
+/* The Home search box's value line, typing itself out and deleting again.
+   Lives at module level and owns its own state on purpose: it re-renders every
+   ~55ms while typing, and HomeScreen is a very large component — declaring this
+   inside it would both remount the whole thing on each parent render and drag
+   the entire screen through those 18 renders a second.
+
+   The caret is an Animated View rather than a "|" character, so its blink runs
+   on the native driver and costs no re-renders at all; only the letters, which
+   genuinely cannot be animated natively, go through setState. */
+function TypingPlaceholder({ words }: { words: string[] }) {
+  const [shown, setShown] = useState(words[0] || '');
+  const [still, setStill] = useState(false);
+  const alive = useRef(true);
+  const timer = useRef<any>(null);
+  const caret = useRef(new Animated.Value(1)).current;
+  // Depend on the joined text, not the array identity — a parent that rebuilds
+  // this list on some unrelated render would otherwise restart the animation
+  // mid-word, which looks like a stutter.
+  const key = words.join('|');
+
+  useEffect(() => {
+    alive.current = true;
+    return () => { alive.current = false; if (timer.current) clearTimeout(timer.current); };
+  }, []);
+
+  // Someone who has asked their phone to reduce motion should not be given a
+  // caption that never stops moving. They still see a real destination, just a
+  // still one, and no timer is ever started.
+  useEffect(() => {
+    let off = false;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then(on => { if (!off) setStill(!!on); })
+      .catch(() => {});
+    return () => { off = true; };
+  }, []);
+
+  useEffect(() => {
+    if (still) return;
+    const blink = Animated.loop(Animated.sequence([
+      Animated.timing(caret, { toValue: 0, duration: 480, delay: 320, useNativeDriver: true }),
+      Animated.timing(caret, { toValue: 1, duration: 480, useNativeDriver: true }),
+    ]));
+    blink.start();
+    // Held in a variable purely so it can be stopped. An Animated.loop with no
+    // handle keeps running after unmount, and this one would also have been
+    // left spinning underneath a second loop once reduce-motion resolved.
+    return () => { blink.stop(); caret.setValue(1); };
+  }, [still]);
+
+  useEffect(() => {
+    if (still || !words.length) { setShown(words[0] || ''); return; }
+    let w = 0, i = 0, erasing = false;
+    const step = () => {
+      if (!alive.current) return;
+      const word = words[w % words.length];
+      if (!erasing) {
+        i += 1;
+        setShown(word.slice(0, i));
+        // Pause on the finished word — this is the moment the line is actually
+        // readable, so it is by far the longest beat in the cycle.
+        if (i >= word.length) { erasing = true; timer.current = setTimeout(step, 1600); return; }
+        timer.current = setTimeout(step, 55);
+      } else {
+        i -= 1;
+        setShown(word.slice(0, Math.max(0, i)));
+        if (i <= 0) { erasing = false; w += 1; timer.current = setTimeout(step, 300); return; }
+        timer.current = setTimeout(step, 26); // erasing reads better fast
+      }
+    };
+    timer.current = setTimeout(step, 650);
+    return () => { if (timer.current) clearTimeout(timer.current); };
+  }, [still, key]);
+
+  return (
+    // Hidden from screen readers: the touchable above carries one stable label.
+    // Announcing a word that rewrites itself every few seconds would make this
+    // box unusable with TalkBack.
+    <View style={{ flexDirection: 'row', alignItems: 'center', height: 20 }} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+      <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: '800', color: C.text, letterSpacing: -0.2 }}>
+        {shown}
+      </Text>
+      {!still && (
+        <Animated.View style={{ width: 2, height: 16, marginLeft: 2, borderRadius: 1, backgroundColor: SEARCH_GREEN, opacity: caret }} />
+      )}
+    </View>
+  );
+}
 
 function NavBar() {
   const { tab, screen, setScreen, setTab, loadHistory, phone, rideData, storeStatus, hourlyBooking } = useApp();
@@ -914,6 +1009,7 @@ function HomeTab() {
     userCoords,
     setRideType,
     greenSummary,
+    dropHistory,
   } = useApp();
 
   // Buddy Fund
@@ -965,6 +1061,32 @@ function HomeTab() {
       ])
     ).start();
   }, []);
+
+  // Press feedback for the search box. Scale and lift are separate values so
+  // the card can sink INTO its own shadow lip rather than just shrinking.
+  const searchPress = useRef(new Animated.Value(0)).current;
+  const pressSearch = (down: boolean) => {
+    Animated.spring(searchPress, {
+      toValue: down ? 1 : 0,
+      useNativeDriver: true, speed: 40, bounciness: down ? 0 : 10,
+    }).start();
+  };
+
+  // What the placeholder types. This rider's own recent drops come first —
+  // seeing the place you actually go named back to you is the whole point, and
+  // the generic list only fills in behind it. First comma-segment only, because
+  // a full Google-formatted address is far too long to type out on one line.
+  const typeWords = useMemo(() => {
+    const mine = (dropHistory || [])
+      .map((h: any) => String(h?.text || '').split(',')[0].trim())
+      .filter((t: string) => t.length >= 3 && t.length <= 20);
+    const out: string[] = [];
+    for (const w of [...mine, ...TYPE_FALLBACK]) {
+      if (!out.some(o => o.toLowerCase() === w.toLowerCase())) out.push(w);
+      if (out.length === 5) break;
+    }
+    return out;
+  }, [dropHistory]);
 
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadNotif, setUnreadNotif] = useState(() => getUnreadCount());
@@ -1188,26 +1310,65 @@ function HomeTab() {
             borderRadius: 22, borderWidth: 2.5, borderColor: SEARCH_GREEN,
             opacity: searchGlowOpacity,
           }} />
-          <TouchableOpacity onPress={() => setScreen('booking')} activeOpacity={0.88} style={{
-            backgroundColor: C.bgCard,
-            borderRadius: 20, paddingVertical: 15, paddingHorizontal: 18,
-            flexDirection: 'row', alignItems: 'center', gap: 12,
-            ...SHADOW.lg,
-            borderWidth: 1.5, borderColor: 'rgba(5,150,105,0.20)',
+          {/* Depth layer 3 of 3: a solid lip sitting just under the card, like
+              the base of a physical key. The two halo rings above are lit edges
+              and read as glow; this one is opaque and reads as thickness, which
+              is what stopped the card feeling like a sticker on the background.
+              It shrinks back under the card on press, so the box genuinely sinks
+              instead of merely scaling down. */}
+          <Animated.View pointerEvents="none" style={{
+            position: 'absolute', left: 3, right: 3, top: 8, bottom: -5,
+            borderRadius: 20, backgroundColor: 'rgba(5,150,105,0.16)',
+            transform: [{ scaleY: searchPress.interpolate({ inputRange: [0, 1], outputRange: [1, 0.94] }) }],
+          }} />
+          <Animated.View style={{
+            transform: [
+              { scale: searchPress.interpolate({ inputRange: [0, 1], outputRange: [1, 0.977] }) },
+              { translateY: searchPress.interpolate({ inputRange: [0, 1], outputRange: [0, 3] }) },
+            ],
             zIndex: 10,
           }}>
-            <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(163,230,53,0.20)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(5,150,105,0.38)' }}>
-              <Ionicons name="search" size={16} color={SEARCH_GREEN} />
-            </View>
-            <Text style={{ flex: 1, fontSize: 15, color: C.textMuted, fontWeight: '500' }}>Where are you going?</Text>
-            {/* Go turns green with the rest of the unit. Leaving it pink inside
-                a lime/green halo read as a leftover, and green is the right
-                meaning for the one control that starts a ride. */}
-            <View style={{ backgroundColor: SEARCH_GREEN, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8,
-              elevation: 6, shadowColor: SEARCH_GREEN, shadowOpacity: 0.42, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } }}>
-              <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900', letterSpacing: 0.5 }}>Go</Text>
-            </View>
-          </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setScreen('booking')}
+              onPressIn={() => pressSearch(true)}
+              onPressOut={() => pressSearch(false)}
+              // activeOpacity 1 because the spring above IS the press feedback —
+              // dimming as well read as two different reactions to one tap.
+              activeOpacity={1}
+              accessibilityRole="button"
+              // Stable label: the visible line rewrites itself constantly, so the
+              // spoken one has to stand still.
+              accessibilityLabel="Where are you going? Tap to choose your destination"
+              style={{
+                backgroundColor: C.bgCard,
+                borderRadius: 20, paddingVertical: 13, paddingHorizontal: 18,
+                flexDirection: 'row', alignItems: 'center', gap: 12,
+                ...SHADOW.lg,
+                borderWidth: 1.5, borderColor: 'rgba(5,150,105,0.20)',
+              }}>
+              <View style={{ width: 34, height: 34, borderRadius: 11, backgroundColor: 'rgba(163,230,53,0.20)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(5,150,105,0.38)' }}>
+                <Ionicons name="search" size={16} color={SEARCH_GREEN} />
+              </View>
+              {/* Label above, typed value below — a real field's anatomy. The
+                  question keeps its exact wording and stays put; what changes is
+                  that it is now a LABEL rather than the box's only text, so it
+                  no longer has to be grey-and-15px, which is what made a button
+                  look like a disabled input. */}
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 11, color: C.textMuted, fontWeight: '800', letterSpacing: 0.3 }}>
+                  Where are you going?
+                </Text>
+                <TypingPlaceholder words={typeWords} />
+              </View>
+              {/* Go turns green with the rest of the unit. Leaving it pink inside
+                  a lime/green halo read as a leftover, and green is the right
+                  meaning for the one control that starts a ride. */}
+              <View style={{ backgroundColor: SEARCH_GREEN, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8,
+                elevation: 6, shadowColor: SEARCH_GREEN, shadowOpacity: 0.42, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } }}>
+                <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900', letterSpacing: 0.5 }}>Go</Text>
+              </View>
+            </TouchableOpacity>
+          </Animated.View>
         </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false}
