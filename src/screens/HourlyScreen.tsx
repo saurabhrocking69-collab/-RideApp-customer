@@ -7,7 +7,7 @@ import { useApp } from '../context/AppContext';
 import { Bouncy, DotBG, FloatingDots, PulseView, RideVehicleIcon, ScreenIn } from '../components/ui';
 import { s, C, T, SP, R, SHADOW } from '../styles';
 import { MAPS_KEY } from '../constants';
-import { apiGet, apiPost } from '../../api';
+import { apiGet, apiPost, authGet, authPost } from '../../api';
 
 const hVehicleIcons: any = { auto: '🛺', bike: '🏍️', car: '🚕', eriksha: '🛵', ultra_luxury: '💎', green_bike: '⚡', electric_auto: '🌿' };
 const hHourLabel = (h: number) => h >= 24 ? `${h/24} Day${h > 24 ? 's' : ''}` : h === 8 ? 'Full Day (8h)' : `${h} Hours`;
@@ -51,7 +51,7 @@ export function HourlyScreen() {
     if (hourlyBooking?.status === 'active') { setHourlyStep('active'); return; }
     const poll = async () => {
       try {
-        const d = await apiGet(`/api/hourly/status/${hourlyBooking.id}`);
+        const d = await authGet(`/api/hourly/status/${hourlyBooking.id}`);
         if (d.booking?.status === 'active') {
           setHourlyBooking((p: any) => ({ ...p, status: 'active', started_at: d.booking.started_at, driver_phone: d.booking.driver_phone }));
           setHourlyStep('active');
@@ -132,7 +132,7 @@ export function HourlyScreen() {
     try {
       const body: any = { phone, vehicle_type: hVehicle, package_hours: hPackageHours, pickup: hPickup, pickup_lat: hPickupCoords?.lat, pickup_lng: hPickupCoords?.lng, is_roundtrip: hRoundTrip, stay_hours: hStayHours };
       if (hDrop) { body.drop_location = hDrop; body.drop_lat = hDropCoords?.lat; body.drop_lng = hDropCoords?.lng; }
-      const data = await apiPost('/api/hourly/book', body);
+      const data = await authPost('/api/hourly/book', body);
       if (data.success) {
         setHourlyBooking({ id: data.booking_id, fare: data.fare, km_included: data.km_included, status: 'pending', vehicle_type: hVehicle, package_hours: hPackageHours, pickup: hPickup, drop_location: hDrop, is_roundtrip: hRoundTrip, stay_hours: hStayHours });
         Storage.setItem('activeHourlyId', String(data.booking_id)).catch(() => {});
@@ -170,7 +170,7 @@ export function HourlyScreen() {
           text: '✅ Yes, Complete',
           onPress: async () => {
             try {
-              const data = await apiPost('/api/hourly/customer-early-complete', { booking_id: hourlyBooking.id });
+              const data = await authPost('/api/hourly/customer-early-complete', { booking_id: hourlyBooking.id });
               if (data.success) {
                 setHourlyBooking((p: any) => ({ ...p, status: 'completed', driver_earning: data.driver_earning }));
                 setHourlyStep('done');
@@ -188,19 +188,19 @@ export function HourlyScreen() {
 
   const confirmEarlyEnd = async () => {
     if (!hourlyBooking?.id) return;
-    const data = await apiPost('/api/hourly/early-end-confirm', { booking_id: hourlyBooking.id });
+    const data = await authPost('/api/hourly/early-end-confirm', { booking_id: hourlyBooking.id });
     if (data.success) { setHourlyBooking((p: any) => ({ ...p, status: 'completed', driver_earning: data.driver_earning, refund_amount: data.refund })); setHourlyStep('done'); loadWallet(phone); }
   };
 
   const rejectEarlyEnd = async () => {
     if (!hourlyBooking?.id) return;
-    await apiPost('/api/hourly/early-end-reject', { booking_id: hourlyBooking.id });
+    await authPost('/api/hourly/early-end-reject', { booking_id: hourlyBooking.id });
     setHourlyBooking((p: any) => ({ ...p, early_end_requested_by: null }));
   };
 
   const cancelHourlyBooking = async () => {
     if (!hourlyBooking?.id) return;
-    const data = await apiPost('/api/hourly/cancel', { booking_id: hourlyBooking.id, phone });
+    const data = await authPost('/api/hourly/cancel', { booking_id: hourlyBooking.id, phone });
     if (data.success) { alert(`Booking cancelled! ₹${data.refunded} will be refunded.`); setHourlyStep('book'); setHourlyBooking(null); setScreen('home'); loadWallet(phone); }
     else alert(data.message || 'Could not cancel');
   };
@@ -539,7 +539,7 @@ export function HourlyScreen() {
                 onPress={async () => {
                   if (hExtendHours === 0 && hExtendMin < 15) { alert('Minimum 15 minute extension'); return; }
                   try {
-                    const data = await apiPost('/api/hourly/request-extend-v2', { booking_id: hourlyBooking.id, extra_hours: hExtendHours, extra_minutes: hExtendMin, customer_phone: phone });
+                    const data = await authPost('/api/hourly/request-extend-v2', { booking_id: hourlyBooking.id, extra_hours: hExtendHours, extra_minutes: hExtendMin, customer_phone: phone });
                     if (data.success) {
                       hExtendPrevHoursRef.current = parseFloat(hourlyBooking?.package_hours || 0);
                       hExtendStepRef.current = 'pending';
@@ -603,7 +603,7 @@ export function HourlyScreen() {
               <Bouncy style={{ flex: 1, backgroundColor: C.green, borderRadius: 12, padding: 14, alignItems: 'center', elevation: 4, shadowColor: C.green, shadowOpacity: 0.35, shadowRadius: 8 }}
                 onPress={async () => {
                   try {
-                    await apiPost('/api/hourly/customer-confirm-complete', { booking_id: hourlyBooking.id });
+                    await authPost('/api/hourly/customer-confirm-complete', { booking_id: hourlyBooking.id });
                     setHourlyStep('done'); loadWallet(phone);
                   } catch (_e) {}
                 }}>
@@ -613,7 +613,7 @@ export function HourlyScreen() {
               <Bouncy style={{ flex: 1, backgroundColor: C.redGlass, borderRadius: 12, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: C.redBorder }}
                 onPress={async () => {
                   try {
-                    await apiPost('/api/hourly/customer-dispute-complete', { booking_id: hourlyBooking.id, reason: 'Driver abandoned customer' });
+                    await authPost('/api/hourly/customer-dispute-complete', { booking_id: hourlyBooking.id, reason: 'Driver abandoned customer' });
                     setHourlyBooking((p: any) => ({ ...p, pending_customer_confirm: false, dispute_raised: true }));
                   } catch (_e) {}
                 }}>

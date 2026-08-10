@@ -6,7 +6,7 @@ import { useApp } from '../context/AppContext';
 import { Bouncy, Confetti, CountUp, DotBG, FadeIn, ScreenIn, TripSteps } from '../components/ui';
 import { IlluRideComplete } from '../components/Illustrations';
 import { s, C, T, SP, R, SHADOW } from '../styles';
-import { apiGet, apiPost } from '../../api';
+import { apiGet, apiPost, authPost } from '../../api';
 import { shortRideId } from '../rideId';
 
 export function PostRideScreen() {
@@ -61,7 +61,7 @@ export function PostRideScreen() {
       let RazorpayCheckout: any = null;
       try { const _m = require('react-native-razorpay'); RazorpayCheckout = _m?.default || _m || null; } catch (_e) {}
       if (!RazorpayCheckout) { setBuddyPhase('idle'); return; }
-      const orderRes = await apiPost('/api/buddy-fund/create-order', { phone, amount: amt });
+      const orderRes = await authPost('/api/buddy-fund/create-order', { phone, amount: amt });
       if (!orderRes.success) { setBuddyPhase('idle'); return; }
       const payData: any = await new Promise((resolve, reject) =>
         RazorpayCheckout.open({
@@ -71,7 +71,7 @@ export function PostRideScreen() {
           prefill: { contact: phone }, theme: { color: '#F59E0B' },
         }).then(resolve).catch(reject)
       );
-      await apiPost('/api/buddy-fund/verify', {
+      await authPost('/api/buddy-fund/verify', {
         phone,
         razorpay_order_id:   payData.razorpay_order_id,
         razorpay_payment_id: payData.razorpay_payment_id,

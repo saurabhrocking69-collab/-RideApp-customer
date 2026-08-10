@@ -86,6 +86,19 @@ export const apiDelete = async (path: string, body: any, retries = 1): Promise<a
 // Use these for JWT-protected endpoints like /api/complaints, /api/wallet, etc.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+/* Self-tokenising variants.
+   apiAuthGet/apiAuthPost need a token threaded in from the caller, which is
+   why screens that had no easy access to one quietly went on using the
+   unauthenticated apiGet/apiPost — that is how the hourly endpoints ended up
+   sending no credentials at all. These read the token themselves, so securing
+   a call site is a one-word change and there is no reason to reach for the
+   unauthenticated pair by accident. */
+const authToken = async (): Promise<string> => {
+  try { return (await AsyncStorage.getItem('userToken')) || ''; } catch { return ''; }
+};
+export const authGet  = async (path: string): Promise<any> => apiAuthGet(path, await authToken());
+export const authPost = async (path: string, body: any): Promise<any> => apiAuthPost(path, body, await authToken());
+
 export const apiAuthGet = async (path: string, token: string, retries = 2): Promise<any> => {
   for (let i = 0; i <= retries; i++) {
     try {

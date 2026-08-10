@@ -6,7 +6,7 @@ import * as Location from 'expo-location';
 import * as Clipboard from 'expo-clipboard';
 import * as Notifications from 'expo-notifications';
 import { io, Socket } from 'socket.io-client';
-import { apiGet, apiPost, apiAuthPost, apiAuthGet, externalGet } from '../../api';
+import { apiGet, apiPost, apiAuthPost, apiAuthGet, authGet, authPost, externalGet } from '../../api';
 import { saveNotification } from '../components/NotificationCenter';
 import { C } from '../styles';
 import type { ToastNotif } from '../components/NotificationToast';
@@ -746,8 +746,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           } else {
             // No active standard ride — check for active hourly booking
             try {
-              const hr = await fetch(`${API}/api/hourly/active?phone=${savedPhone}`);
-              const hd = await hr.json();
+              // Authenticated: /hourly/active returns the booking's OTP and the
+              // driver's details, so it must not answer to a bare phone number.
+              const hd = await authGet(`/api/hourly/active?phone=${savedPhone}`);
               if (hd.booking && ['pending','matched','active'].includes(hd.booking.status)) {
                 setHourlyBooking({ ...hd.booking, driver: hd.driver });
                 activeHourlyIdRef.current = hd.booking.id;
@@ -879,8 +880,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (socketRef.current && !socketRef.current.connected) socketRef.current.connect();
         // Restore hourly booking if state was lost while app was backgrounded
         if (!hourlyBooking) {
-          fetch(`${API}/api/hourly/active?phone=${phone}`)
-            .then(r => r.json())
+          authGet(`/api/hourly/active?phone=${phone}`)
             .then(hd => {
               if (hd.booking && ['pending','matched','active'].includes(hd.booking.status)) {
                 setHourlyBooking({ ...hd.booking, driver: hd.driver });
@@ -1247,7 +1247,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
     s.on('hourlyMatched', (data: any) => {
       if (data.booking_id) {
-        apiGet(`/api/hourly/status/${data.booking_id}`)
+        authGet(`/api/hourly/status/${data.booking_id}`)
           .then(d => {
             if (d.booking) setHourlyBooking((p: any) => p ? { ...p, ...d.booking, driver: d.driver } : d.booking);
             else setHourlyBooking((p: any) => p ? { ...p, status: 'matched', driver_phone: data.driver_phone } : p);

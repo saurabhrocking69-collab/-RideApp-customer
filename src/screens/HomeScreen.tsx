@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Storage as AsyncStorage } from '../storage';
 import { Ionicons } from '@expo/vector-icons';
-import { apiPost, apiGet } from '../../api';
+import { apiPost, apiGet, authPost } from '../../api';
 import { useRideStore } from '../../store';
 import { useApp } from '../context/AppContext';
 import { Bouncy, GlassPanel, PulseView, SlideUp, CountUp, EmptyAnim, GlowPulse, ShineCard, FadeIn, SkeletonBox } from '../components/ui';
@@ -645,7 +645,7 @@ function BuddyFundModal({
       try { const _m = require('react-native-razorpay'); RazorpayCheckout = _m?.default || _m || null; } catch (_e) {}
       if (!RazorpayCheckout) { setLoading(false); return; }
 
-      const orderRes = await apiPost('/api/buddy-fund/create-order', { phone, amount: amt });
+      const orderRes = await authPost('/api/buddy-fund/create-order', { phone, amount: amt });
       if (!orderRes.success) { setLoading(false); return; }
 
       const payData: any = await new Promise((resolve, reject) =>
@@ -657,7 +657,7 @@ function BuddyFundModal({
         }).then(resolve).catch(reject)
       );
 
-      const verRes = await apiPost('/api/buddy-fund/verify', {
+      const verRes = await authPost('/api/buddy-fund/verify', {
         phone,
         razorpay_order_id:   payData.razorpay_order_id,
         razorpay_payment_id: payData.razorpay_payment_id,
@@ -1926,7 +1926,7 @@ function LiveTab() {
                     <TouchableOpacity
                       onPress={async () => {
                         try {
-                          await apiPost('/api/hourly/cancel', { booking_id: hourlyBooking.id });
+                          await authPost('/api/hourly/cancel', { booking_id: hourlyBooking.id });
                         } catch (_) {}
                         setHourlyBooking(null);
                         setHourlyStep('book');
