@@ -17,7 +17,7 @@ import { WalletScreen } from './screens/WalletScreen';
 import { PromoScreen } from './screens/PromoScreen';
 import { SafetyScreen } from './screens/SafetyScreen';
 import { SupportScreen } from './screens/SupportScreen';
-import { ReferralScreen, PolicyScreen, SavedPlacesScreen, ChatScreen } from './screens/SimpleScreens';
+import { PartnerScreen, PolicyScreen, SavedPlacesScreen, ChatScreen } from './screens/SimpleScreens';
 import { RewardsScreen } from './screens/RewardsScreen';
 import { BudgetScreen } from './screens/BudgetScreen';
 import { SurgePricingScreen } from './screens/SurgePricingScreen';
@@ -53,7 +53,7 @@ function ActiveScreen() {
   if (screen === 'promo')            return <PromoScreen />;
   if (screen === 'safety')           return <SafetyScreen />;
   if (screen === 'support')          return <SupportScreen />;
-if (screen === 'referral')         return <ReferralScreen />;
+if (screen === 'partner')          return <PartnerScreen />;
   if (screen === 'policy')           return <PolicyScreen />;
   if (screen === 'saved')            return <SavedPlacesScreen />;
   if (screen === 'chat')             return <ChatScreen />;

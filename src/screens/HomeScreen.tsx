@@ -347,14 +347,14 @@ const SCREEN_H = Dimensions.get('window').height;
 const CARD_H   = Math.min(195, Math.max(160, Math.floor((SCREEN_H - 450) / 2)));
 const BANNER_CARDS = [
   {
-    id: 'referral',
+    id: 'partner',
     bg: [C.pink, '#c2185b'],
-    badge: '🎁 REFER & EARN',
-    title: '₹10 + ₹10 Reward',
-    sub: 'Invite a friend, both get cash!',
-    cta: '🔗 Invite Friends →',
+    badge: '🤝 EARN WITH SPPERO',
+    title: 'Earn on every ride',
+    sub: 'Bring drivers & riders, earn a share',
+    cta: '💰 Start Earning →',
     emoji: '🤝',
-    screen: 'referral' as const,
+    screen: 'partner' as const,
   },
   {
     id: 'hourly',
@@ -368,7 +368,7 @@ const BANNER_CARDS = [
   },
 ];
 
-function PromoBanner({ setScreen, loadReferral }: { setScreen: (s: any) => void; loadReferral: () => void }) {
+function PromoBanner({ setScreen }: { setScreen: (s: any) => void }) {
   const [activeIdx, setActiveIdx] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
   const CARD_W = SCREEN_W - 32; // 16px padding each side
@@ -407,7 +407,7 @@ function PromoBanner({ setScreen, loadReferral }: { setScreen: (s: any) => void;
           <TouchableOpacity
             key={card.id}
             activeOpacity={0.93}
-            onPress={() => { if (card.id === 'referral') loadReferral(); setScreen(card.screen); }}
+            onPress={() => setScreen(card.screen)}
             style={{ width: CARD_W, borderRadius: 22, overflow: 'hidden', elevation: 8, shadowColor: card.bg[0], shadowOpacity: 0.35, shadowRadius: 14 }}>
             {/* Background */}
             <View style={{ backgroundColor: card.bg[0], padding: 20, paddingBottom: 0, minHeight: 130 }}>
@@ -904,13 +904,12 @@ function HomeTab() {
     historyRides,
     setScreen, setTab,
     setShowBuddyBook, setBuddyBookMsg, setBuddyWaiting,
-    loadReferral, loadSaved, loadWallet, loadWalletDetail, loadLoyalty,
+    loadSaved, loadWallet, loadWalletDetail, loadLoyalty,
     setPickup, setDrop,
     setHourlyStep, setHPickup, setHDrop, setHPickupCoords, setHDropCoords,
     setHPickupSugg, setHDropSugg, setHRoundTrip, setHStayHours, setHourlyBooking,
     rideIcon, customerRating, walletBalance,
     storeStatus, paymentDone,
-    referralData,
     screen,
     userCoords,
     setRideType,
@@ -1472,7 +1471,7 @@ function HomeTab() {
                 detailed card/intro below). */}
             <TouchableOpacity
               activeOpacity={0.82}
-              onPress={() => { loadReferral(); setScreen('referral'); }}
+              onPress={() => setScreen('partner')}
               style={{ backgroundColor: '#FF2D78', borderRadius: 18, padding: 14, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 12, ...SHADOW.md }}>
               <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.28)' }}>
                 <Ionicons name="gift-outline" size={24} color="#fff" />
@@ -2495,7 +2494,7 @@ function ProfileTab() {
     setScreen, setTab,
     setPhone, setOtp, setOtpDigits, setUserName, setGender, setWalletBalance,
     setPromoScreenCode, setPromoScreenMsg,
-    loadWalletDetail, loadLoyalty, loadReferral, loadSaved,
+    loadWalletDetail, loadLoyalty, loadSaved,
     openRazorpayTopup,
   } = useApp();
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
@@ -2634,7 +2633,7 @@ function ProfileTab() {
 
           <Text style={{ fontSize: 11, fontWeight: '800', color: C.textDim, letterSpacing: 1.2, marginBottom: 8, paddingHorizontal: 2 }}>OFFERS & REWARDS</Text>
           {menuSection([
-            { label: 'Refer & Earn',     sub: 'Invite friends, earn ₹10 each', icon: 'gift-outline',     color: C.pink,   bg: C.pinkGlass,   border: C.pinkBorder,   onPress: () => { loadReferral(); setScreen('referral'); } },
+            { label: 'Earn with Sppero', sub: 'Bring people, earn on every ride', icon: 'people-outline',   color: C.pink,   bg: C.pinkGlass,   border: C.pinkBorder,   onPress: () => setScreen('partner') },
             { label: 'Cashback Rewards', sub: 'Earn cashback on every ride',   icon: 'cash-outline',     color: C.green,  bg: C.greenGlass,  border: C.greenBorder,  onPress: () => setScreen('rewards') },
             { label: 'Promo Codes',      sub: 'Apply discount codes',          icon: 'pricetag-outline', color: '#F59E0B', bg: C.yellowGlass, border: C.yellowBorder, onPress: () => { setPromoScreenCode(''); setPromoScreenMsg(''); setScreen('promo'); } },
           ])}

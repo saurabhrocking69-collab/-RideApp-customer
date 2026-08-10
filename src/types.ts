@@ -1,7 +1,7 @@
 export type Screen =
   | 'splash' | 'login' | 'otp' | 'onboarding' | 'language-select' | 'home'
   | 'booking' | 'matching' | 'inride' | 'payment' | 'postride'
-  | 'chat' | 'referral' | 'saved' | 'policy' | 'hourly'
+  | 'chat' | 'partner' | 'saved' | 'policy' | 'hourly'
   | 'wallet' | 'hourly-info' | 'promo' | 'support' | 'safety'
   | 'rewards' | 'budget' | 'surge' | 'insights' | 'tier'
   | 'tickets' | 'ticket-new' | 'fare-rates'

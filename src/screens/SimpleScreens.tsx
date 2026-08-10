@@ -1,57 +1,63 @@
-import { ScrollView, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { ScrollView, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { DotBG, ScreenIn, EmptyAnim, Bouncy } from '../components/ui';
 import { s, C } from '../styles';
 
-export function ReferralScreen() {
-  const {
-    referralData,
-    referralInput, setReferralInput,
-    result,
-    setScreen,
-    shareReferral, applyReferral,
-  } = useApp();
+/* Earn with Sppero — the partner programme.
+   Replaces the old in-app Refer & Earn, which paid ₹10 once after a friend's
+   third ride. The programme now pays a share of the commission on every ride
+   those people take, for as long as they keep riding — which is a real income
+   rather than a one-off, and it needs a dashboard, bank details and payouts.
+   All of that lives on sppero.com, so this screen's job is to explain it well
+   and get out of the way. */
+export function PartnerScreen() {
+  const { setScreen } = useApp();
+  const PORTAL = 'https://sppero.com/partner.html';
+  const open = () => Linking.openURL(PORTAL).catch(() => {});
+
+  const Step = ({ n, title, body }: { n: string; title: string; body: string }) => (
+    <View style={{ flexDirection: 'row', gap: 12, marginBottom: 14 }}>
+      <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.pinkBorder }}>
+        <Text style={{ color: C.pink, fontWeight: '900', fontSize: 12 }}>{n}</Text>
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: C.text, fontWeight: '800', fontSize: 14.5, marginBottom: 2 }}>{title}</Text>
+        <Text style={{ color: C.textMuted, fontSize: 12.5, lineHeight: 18 }}>{body}</Text>
+      </View>
+    </View>
+  );
 
   return (
     <ScreenIn style={s.screen}>
       <DotBG />
       <View style={s.topBar}>
         <TouchableOpacity onPress={() => setScreen('home')} style={s.backBtn}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
-        <Text style={s.topTitle}>🎁 Refer & Earn</Text>
+        <Text style={s.topTitle}>🤝 Earn with Sppero</Text>
         <View style={{ width: 36 }} />
       </View>
       <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 30 }}>
         <View style={{ backgroundColor: C.bgCard, borderRadius: 20, padding: 24, alignItems: 'center', marginBottom: 16, borderWidth: 1, borderColor: C.glassBorder, elevation: 4 }}>
-          <Text style={{ fontSize: 52 }}>🎁</Text>
-          <Text style={{ color: C.text, fontSize: 20, fontWeight: '900', marginTop: 8 }}>Both of you get ₹10!</Text>
-          <Text style={{ color: C.textMuted, fontSize: 13, marginTop: 6, textAlign: 'center' }}>Share your code. When a friend completes 3 rides, both get ₹10 in wallet!</Text>
+          <Text style={{ fontSize: 48 }}>🤝</Text>
+          <Text style={{ color: C.text, fontSize: 20, fontWeight: '900', marginTop: 8, textAlign: 'center', lineHeight: 27 }}>Bring people to Sppero. Earn from every ride.</Text>
+          <Text style={{ color: C.textMuted, fontSize: 13, marginTop: 8, textAlign: 'center', lineHeight: 19 }}>
+            Get a driver or a customer onto Sppero and you earn a share of what Sppero makes on their rides — for as long as they keep riding.
+          </Text>
         </View>
-        <View style={{ backgroundColor: C.glass, borderRadius: 18, padding: 20, marginBottom: 16, alignItems: 'center', elevation: 2, borderWidth: 1.5, borderColor: C.pinkBorder }}>
-          <Text style={{ fontSize: 12, color: C.textDim, letterSpacing: 1 }}>YOUR REFERRAL CODE</Text>
-          <Text style={{ fontSize: 36, fontWeight: '900', color: C.pink, letterSpacing: 5, marginVertical: 14, textShadowColor: C.pink, textShadowRadius: 8 }}>{referralData?.code || '...'}</Text>
-          <Bouncy style={[s.btn, { marginTop: 0, marginBottom: 0, width: '100%' }]} onPress={shareReferral}>
-            <Text style={s.btnTxt}>📤 Share</Text>
-          </Bouncy>
+
+        <View style={{ backgroundColor: C.glass, borderRadius: 18, padding: 18, marginBottom: 16, borderWidth: 1, borderColor: C.glassBorder }}>
+          <Step n="1" title="Join free" body="Your name, your number, a password. No fee, ever." />
+          <Step n="2" title="Get people on Sppero" body="Share your code, or add the numbers you installed for and Sppero verifies them." />
+          <Step n="3" title="Earn on their rides" body="Every completed ride adds to your balance. Watch it ride by ride." />
+          <Step n="4" title="Withdraw from ₹200" body="Straight to your UPI or bank account." />
         </View>
-        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
-          <View style={{ flex: 1, backgroundColor: C.glass, borderRadius: 14, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: C.glassBorder }}>
-            <Text style={{ color: C.pink, fontSize: 24, fontWeight: '900' }}>{referralData?.total_referrals || 0}</Text>
-            <Text style={{ color: C.textDim, fontSize: 11, marginTop: 4 }}>Total Referrals</Text>
-          </View>
-          <View style={{ flex: 1, backgroundColor: C.glass, borderRadius: 14, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: C.glassBorder }}>
-            <Text style={{ color: C.green, fontSize: 24, fontWeight: '900' }}>₹{referralData?.total_earned || 0}</Text>
-            <Text style={{ color: C.textDim, fontSize: 11, marginTop: 4 }}>Total Earned</Text>
-          </View>
-        </View>
-        <View style={{ backgroundColor: C.glass, borderRadius: 18, padding: 18, marginTop: 4, elevation: 2, borderWidth: 1, borderColor: C.glassBorder }}>
-          <Text style={{ fontSize: 14, fontWeight: '700', color: C.textMuted, marginBottom: 10 }}>Have someone's code? Enter it here</Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TextInput style={[s.input, { flex: 1, marginBottom: 0, backgroundColor: C.glassMid, color: C.text, borderColor: C.glassBorder }]} placeholder="Referral code" placeholderTextColor={C.textDim} autoCapitalize="characters" value={referralInput} onChangeText={setReferralInput} />
-            <TouchableOpacity style={[s.applyBtn, { backgroundColor: C.pinkGlass, borderColor: C.pinkBorder, borderWidth: 1 }]} onPress={applyReferral}><Text style={{ color: C.pink, fontWeight: '800' }}>Apply</Text></TouchableOpacity>
-          </View>
-          {result ? <Text style={[s.err, { marginTop: 10, color: result.includes('✅') ? C.green : C.pink }]}>{result}</Text> : null}
-        </View>
+
+        <Bouncy style={[s.btn, { marginTop: 0 }]} onPress={open}>
+          <Text style={s.btnTxt}>Open Partner Dashboard</Text>
+        </Bouncy>
+        <Text style={{ color: C.textDim, fontSize: 11.5, textAlign: 'center', marginTop: 10, lineHeight: 17 }}>
+          Opens sppero.com — join, track your earnings and withdraw there.
+        </Text>
       </ScrollView>
     </ScreenIn>
   );

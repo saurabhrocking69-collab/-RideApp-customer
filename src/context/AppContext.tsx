@@ -173,8 +173,6 @@ interface AppContextType {
   // Offers + Referral
   activeOffers: any[]; setActiveOffers: (o: any[]) => void;
   offerDismissed: Set<number>; setOfferDismissed: React.Dispatch<React.SetStateAction<Set<number>>>;
-  referralData: any; setReferralData: (d: any) => void;
-  referralInput: string; setReferralInput: (s: string) => void;
   savedPlaces: any[]; setSavedPlaces: (p: any[]) => void;
   customerRating: any; setCustomerRating: (r: any) => void;
   // Buddy
@@ -278,7 +276,6 @@ interface AppContextType {
   loadLoyalty: (ph: string) => Promise<void>;
   loadOffers: () => Promise<void>;
   loadHourlyPackages: () => Promise<void>;
-  loadReferral: () => Promise<void>;
   loadSaved: () => Promise<void>;
   loadFavouriteBuddy: (ph: string) => Promise<void>;
   addFavouriteBuddy: (driverPhone: string) => Promise<any>;
@@ -287,8 +284,6 @@ interface AppContextType {
   // Functions — misc
   triggerSOS: () => Promise<void>;
   reportCancelRide: (reason: string) => Promise<void>;
-  applyReferral: () => Promise<void>;
-  shareReferral: () => Promise<void>;
   savePlace: (label: string) => Promise<void>;
   savePlaceAt: (label: string, address: string, lat?: number | null, lng?: number | null) => Promise<void>;
   deletePlace: (id: number) => Promise<void>;
@@ -555,8 +550,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [historyRides, setHistoryRides] = useState<any[]>([]);
   const [activeOffers, setActiveOffers] = useState<any[]>([]);
   const [offerDismissed, setOfferDismissed] = useState<Set<number>>(new Set());
-  const [referralData, setReferralData] = useState<any>(null);
-  const [referralInput, setReferralInput] = useState('');
   const [savedPlaces, setSavedPlaces] = useState<any[]>([]);
   const [customerRating, setCustomerRating] = useState<any>(null);
 
@@ -2817,9 +2810,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const loadHourlyPackages = async () => {
     try { const r = await fetch(`${API}/api/hourly/packages`); const d = await r.json(); if (d.fares) setHourlyPackages(d.fares); } catch (_e) {}
   };
-  const loadReferral = async () => {
-    try { const r = await fetch(`${API}/api/referral/my-code?phone=${phone}`); const d = await r.json(); setReferralData(d); } catch (_e) {}
-  };
   const loadSaved = async () => {
     try { const r = await fetch(`${API}/api/places/saved?phone=${phone}`); const d = await r.json(); setSavedPlaces(d.places || []); } catch (_e) {}
   };
@@ -2894,19 +2884,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         await Linking.openURL(`sms:${numbers}?body=${encoded}`).catch(() => {});
       }
     } catch (_e) {}
-  };
-  const applyReferral = async () => {
-    if (!referralInput.trim()) return;
-    try {
-      const res = await fetch(`${API}/api/referral/apply`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, referral_code: referralInput }) });
-      const data = await res.json();
-      setResult(data.success ? '✅ ' + data.message : '❌ ' + data.message);
-      if (data.success) { loadWallet(phone); loadReferral(); setReferralInput(''); }
-    } catch (_e) { setResult('❌ Error'); }
-  };
-  const shareReferral = async () => {
-    if (!referralData?.code) return;
-    try { await Share.share({ message: `🚖 Join Sppero and get ₹10! Use my referral code: ${referralData.code}` }); } catch (_e) {}
   };
   const savePlace = async (label: string) => {
     if (!pickup) { setResult('❌ Set a location first'); return; }
@@ -3002,8 +2979,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     walletTxnTab, setWalletTxnTab, walletAddInput, setWalletAddInput,
     loyaltyPoints, setLoyaltyPoints, loyaltyCashback, setLoyaltyCashback,
     historyRides, setHistoryRides, activeOffers, setActiveOffers,
-    offerDismissed, setOfferDismissed, referralData, setReferralData,
-    referralInput, setReferralInput, savedPlaces, setSavedPlaces, customerRating, setCustomerRating,
+    offerDismissed, setOfferDismissed, savedPlaces, setSavedPlaces, customerRating, setCustomerRating,
     favouriteBuddy, setFavouriteBuddy, showBuddyBook, setShowBuddyBook,
     buddyBookPU, setBuddyBookPU, buddyBookDR, setBuddyBookDR,
     buddyBookPUCoords, setBuddyBookPUCoords, buddyBookDRCoords, setBuddyBookDRCoords,
@@ -3031,8 +3007,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     fetchEtaByCoords, loadFareEstimates, applyPromo, useMyLocation, calcDriverEta,
     handlePayment, payWithWallet, createScratchCard, scratchNow, addMoney, openRazorpayTopup,
     loadHistory, loadWallet, loadWalletDetail, loadLoyalty, loadOffers, loadHourlyPackages,
-    loadReferral, loadSaved, loadFavouriteBuddy, addFavouriteBuddy, removeFavouriteBuddy, registerFCM,
-    triggerSOS, reportCancelRide, applyReferral, shareReferral, savePlace, savePlaceAt, deletePlace,
+    loadSaved, loadFavouriteBuddy, addFavouriteBuddy, removeFavouriteBuddy, registerFCM,
+    triggerSOS, reportCancelRide, savePlace, savePlaceAt, deletePlace,
     animateStar, sendChat, initiateCall, callDriver, rideIcon,
     rewardsDash, setRewardsDash, cashbackEarned, setCashbackEarned, loadRewardsDash,
     selectedScheduledRide, setSelectedScheduledRide, scheduleRide,
