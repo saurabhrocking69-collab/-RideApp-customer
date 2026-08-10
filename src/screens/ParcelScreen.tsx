@@ -9,7 +9,7 @@ import { MAPS_KEY } from '../constants';
 import { C } from '../styles';
 import { ParcelGuideModal } from './ParcelIntroScreen';
 import { PickupMapPicker } from '../components/PickupMapPicker';
-import { apiGet, apiPost } from '../../api';
+import { authGet, authPost } from '../../api';
 
 const PLUM    = '#2E1461';
 const PLUM_BG = '#F1EBFA';
@@ -80,7 +80,7 @@ export function ParcelScreen() {
   const [savedAddrs, setSavedAddrs] = useState<any[]>([]);
   const [savingAddr, setSavingAddr] = useState(false);
   const loadAddrs = useCallback(async () => {
-    try { const d = await apiGet('/api/parcel/addresses'); setSavedAddrs(d?.addresses || []); } catch { /* optional */ }
+    try { const d = await authGet('/api/parcel/addresses'); setSavedAddrs(d?.addresses || []); } catch { /* optional */ }
   }, []);
   useEffect(() => { loadAddrs(); }, [loadAddrs]);
 
@@ -99,7 +99,7 @@ export function ParcelScreen() {
     if (a.receiver_phone) setRiderPhone(a.receiver_phone);
     setDropSugg([]);
     setAutofilled(false);
-    apiPost('/api/parcel/addresses/used', { id: a.id }).catch(() => {});
+    authPost('/api/parcel/addresses/used', { id: a.id }).catch(() => {});
   };
 
   // Inline label input rather than Alert.prompt — that API is iOS-only and
@@ -110,7 +110,7 @@ export function ParcelScreen() {
     if (!label || !dropBuilding.trim() || !dropCoords) return;
     setSavingAddr(true);
     try {
-      await apiPost('/api/parcel/addresses/save', {
+      await authPost('/api/parcel/addresses/save', {
         label,
         receiver_name: riderName.trim(), receiver_phone: riderPhone.trim(),
         drop_location: drop, lat: dropCoords.lat, lng: dropCoords.lng,
@@ -133,7 +133,7 @@ export function ParcelScreen() {
     let cancelled = false;
     const t = setTimeout(async () => {
       try {
-        const d = await apiGet(`/api/parcel/receiver-address?receiver=${riderPhone}`);
+        const d = await authGet(`/api/parcel/receiver-address?receiver=${riderPhone}`);
         const a = d?.address;
         if (cancelled || !a) return;
         setDropBuilding(prev => prev || a.building || '');
@@ -366,7 +366,7 @@ export function ParcelScreen() {
                     [
                       { text: 'Cancel', style: 'cancel' },
                       { text: 'Remove', style: 'destructive', onPress: async () => {
-                          try { await apiPost('/api/parcel/addresses/delete', { id: a.id }); await loadAddrs(); } catch {}
+                          try { await authPost('/api/parcel/addresses/delete', { id: a.id }); await loadAddrs(); } catch {}
                         } },
                     ],
                   )}
