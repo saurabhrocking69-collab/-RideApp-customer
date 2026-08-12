@@ -41,12 +41,20 @@ const NAV_CLEARANCE = (Platform.OS === 'android' ? 44 : 16) + 10 + 38 + 24;
 const SEARCH_LIME  = '#A3E635';
 const SEARCH_GREEN = '#059669';
 
-// Destinations the typing placeholder falls back to before this rider has any
-// history of their own. Deliberately the same words as NEARBY_CATEGORIES rather
-// than invented ones or a specific city's landmarks — every one of these is a
-// place the app can actually find near you, so the box never mimes a search it
-// could not perform, and it reads the same in Lucknow as it will anywhere else.
-const TYPE_FALLBACK = ['Airport', 'Railway Station', 'Metro Station', 'Mall', 'Hospital', 'Bus Stand'];
+// What the typing placeholder offers. A fixed, curated list of PLACE KINDS —
+// never the rider's own history.
+//
+// It used to lead with their recent drops, which sounded personal and was in
+// fact the fastest way to put junk on the home screen: anything ever typed into
+// the drop box came back as a suggestion, so a test entry like "whes+ddhuu"
+// typed itself out on the first screen of the app.
+//
+// Every entry is a NEARBY_CATEGORIES kind, so the box only ever mimes a search
+// it can actually perform, and it reads the same in any city.
+const TYPE_FALLBACK = [
+  'Bus Stand', 'Railway Station', 'Metro Station', 'Airport',
+  'Tourist Place', 'Mall', 'Hospital', 'Petrol Pump',
+];
 
 /* The Home search box's value line, typing itself out and deleting again.
    Lives at module level and owns its own state on purpose: it re-renders every
@@ -1051,17 +1059,6 @@ function HomeTab() {
   // screen. Cheap call, and a stale balance in the header is worse than none.
   useEffect(() => { if (phone) loadWallet(phone); }, [phone]);
 
-  // Search box micro-animation: pulsing halo (native driver, smooth)
-  const searchGlowOpacity = useRef(new Animated.Value(0.18)).current;
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(searchGlowOpacity, { toValue: 0.92, duration: 950, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(searchGlowOpacity, { toValue: 0.18, duration: 950, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-      ])
-    ).start();
-  }, []);
-
   // Press feedback for the search box. Scale and lift are separate values so
   // the card can sink INTO its own shadow lip rather than just shrinking.
   const searchPress = useRef(new Animated.Value(0)).current;
@@ -1072,21 +1069,17 @@ function HomeTab() {
     }).start();
   };
 
-  // What the placeholder types. This rider's own recent drops come first —
-  // seeing the place you actually go named back to you is the whole point, and
-  // the generic list only fills in behind it. First comma-segment only, because
-  // a full Google-formatted address is far too long to type out on one line.
+  // The curated list, shuffled once per mount so the same four are not always
+  // the ones seen. Nothing here comes from what the rider has typed before —
+  // see TYPE_FALLBACK for why.
   const typeWords = useMemo(() => {
-    const mine = (dropHistory || [])
-      .map((h: any) => String(h?.text || '').split(',')[0].trim())
-      .filter((t: string) => t.length >= 3 && t.length <= 20);
-    const out: string[] = [];
-    for (const w of [...mine, ...TYPE_FALLBACK]) {
-      if (!out.some(o => o.toLowerCase() === w.toLowerCase())) out.push(w);
-      if (out.length === 5) break;
+    const pool = [...TYPE_FALLBACK];
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
     }
-    return out;
-  }, [dropHistory]);
+    return pool.slice(0, 5);
+  }, []);
 
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadNotif, setUnreadNotif] = useState(() => getUnreadCount());
@@ -1291,34 +1284,21 @@ function HomeTab() {
                as a secondary shortcut for people who already know what
                they want — one visual unit instead of two competing blocks. ── */}
         <View style={{ marginHorizontal: 16, marginTop: 10, position: 'relative' }}>
-          {/* Lime → green halo, replacing the single pink ring.
-              Two concentric rings rather than one: a wide, soft lime ring sits
-              outside a tighter green one, so the edge reads as a glow with
-              depth instead of a drawn outline. React Native cannot gradient a
-              border, and adding expo-linear-gradient for this would change the
-              native fingerprint (and with it OTA compatibility) for one halo.
-              Both are driven by the SAME animation value — the lime is
-              interpolated to a lower, softer range so it trails the green
-              rather than pulsing in lockstep with it. */}
-          <Animated.View pointerEvents="none" style={{
-            position: 'absolute', top: -5, left: -5, right: -5, bottom: -5,
-            borderRadius: 25, borderWidth: 3, borderColor: SEARCH_LIME,
-            opacity: searchGlowOpacity.interpolate({ inputRange: [0.18, 0.92], outputRange: [0.10, 0.5] }),
-          }} />
-          <Animated.View pointerEvents="none" style={{
-            position: 'absolute', top: -2, left: -2, right: -2, bottom: -2,
-            borderRadius: 22, borderWidth: 2.5, borderColor: SEARCH_GREEN,
-            opacity: searchGlowOpacity,
-          }} />
-          {/* Depth layer 3 of 3: a solid lip sitting just under the card, like
-              the base of a physical key. The two halo rings above are lit edges
-              and read as glow; this one is opaque and reads as thickness, which
-              is what stopped the card feeling like a sticker on the background.
-              It shrinks back under the card on press, so the box genuinely sinks
-              instead of merely scaling down. */}
+          {/* The two coloured halo rings that used to sit here are gone. They
+              were drawn as rounded-rect borders a few pixels outside the card,
+              so what actually showed on screen was four bright arcs at the
+              corners — an outline pretending to be a glow. The box is frosted
+              glass now and needs no ring to separate it from the background. */}
+          {/* A soft lip just under the card, like the base of a physical key —
+              it reads as thickness, which is what stops the box feeling like a
+              sticker on the background. It shrinks back under the card on press,
+              so the box genuinely sinks rather than merely scaling down.
+              Neutral now, not green: it was tinted to match a ring that no
+              longer exists, and a green shadow under a white frosted panel
+              looks like a mistake. */}
           <Animated.View pointerEvents="none" style={{
             position: 'absolute', left: 3, right: 3, top: 8, bottom: -5,
-            borderRadius: 20, backgroundColor: 'rgba(5,150,105,0.16)',
+            borderRadius: 20, backgroundColor: 'rgba(90,48,64,0.10)',
             transform: [{ scaleY: searchPress.interpolate({ inputRange: [0, 1], outputRange: [1, 0.94] }) }],
           }} />
           <Animated.View style={{
@@ -1339,12 +1319,17 @@ function HomeTab() {
               // Stable label: the visible line rewrites itself constantly, so the
               // spoken one has to stand still.
               accessibilityLabel="Where are you going? Tap to choose your destination"
-              style={{
-                backgroundColor: C.bgCard,
+              // Frosted white: a real expo-blur panel, not a painted-on
+              // approximation — GlassPanel already does the layering (blur,
+              // then a translucent tint, clipped to the radius) and expo-blur
+              // is installed. No green border and no ring; the frost and a soft
+              // shadow are what lift it off the page.
+              style={{ borderRadius: 20 }}>
+              <GlassPanel intensity={28} tint="light" style={{
                 borderRadius: 20, paddingVertical: 13, paddingHorizontal: 18,
                 flexDirection: 'row', alignItems: 'center', gap: 12,
-                ...SHADOW.lg,
-                borderWidth: 1.5, borderColor: 'rgba(5,150,105,0.20)',
+                borderWidth: 1, borderColor: 'rgba(255,255,255,0.75)',
+                ...SHADOW.lg, shadowColor: C.plum,
               }}>
               <View style={{ width: 34, height: 34, borderRadius: 11, backgroundColor: 'rgba(163,230,53,0.20)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(5,150,105,0.38)' }}>
                 <Ionicons name="search" size={16} color={SEARCH_GREEN} />
@@ -1367,6 +1352,7 @@ function HomeTab() {
                 elevation: 6, shadowColor: SEARCH_GREEN, shadowOpacity: 0.42, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } }}>
                 <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900', letterSpacing: 0.5 }}>Go</Text>
               </View>
+              </GlassPanel>
             </TouchableOpacity>
           </Animated.View>
         </View>
