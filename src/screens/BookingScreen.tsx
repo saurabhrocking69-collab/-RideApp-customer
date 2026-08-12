@@ -138,7 +138,13 @@ export function BookingScreen() {
 
   const _est        = fareEstimates[rideType];
   // With a route choice, the shown fare follows the selected route.
-  const routeFareOverride = routeChoiceActive && routeFares ? routeFares[selectedRoute] : null;
+  // A route fare only overrides the estimate when it is a real fare. `??` falls
+  // through on null/undefined but NOT on 0, so a zero coming back for the
+  // selected route used to win, drive rawFare to 0 and disable Book — with a
+  // perfectly good estimate sitting unused right beside it. The route-fare
+  // fetch only checks `!= null`, so 0 can genuinely arrive here.
+  const _routeFare = routeChoiceActive && routeFares ? routeFares[selectedRoute] : null;
+  const routeFareOverride = (typeof _routeFare === 'number' && _routeFare > 0) ? _routeFare : null;
   const rawFare     = routeFareOverride ?? ((_est?.fare ?? _est) || 0);
   const estDistFare = Math.round(_est?.dist_fare ?? 0);
   const estTimeFare = Math.round(_est?.time_fare ?? 0);
@@ -592,8 +598,25 @@ export function BookingScreen() {
     // The customer placed this pin themselves on a map, so it is exact by
     // definition — clear any area warning raised by the earlier search.
     setDropPrecision({ precise: true, areaName: null });
-    // Clear fare so it recalculates with the new coords
-    setFareEstimates({}); setEta(''); lastFetchKey.current = '';
+    // Clear the fare, then FORCE the recalculation.
+    //
+    // Clearing alone was not enough and left the Book button dead for good.
+    // The fare effect depends on the coordinate VALUES —
+    // [pickupCoords?.lat, pickupCoords?.lng, dropCoords?.lat, dropCoords?.lng, ...]
+    // — so when the confirmed pin carries the same lat/lng as the drop already
+    // on screen, nothing in that list changes and the effect never re-runs.
+    // Resetting lastFetchKey cannot save it either: it is a ref, so writing to
+    // it renders nothing.
+    //
+    // That is exactly what confirming the picker WITHOUT dragging the pin does,
+    // and it is the shape of both reported failures — a near-me suggestion
+    // (which opens this picker automatically) and "Set exact drop" on a drop
+    // that was already precise. Fares wiped, effect never re-run, Book dead.
+    //
+    // retryFare() bumps fareRetry, which IS in that dependency list, so the
+    // fetch happens whether or not the pin actually moved.
+    setFareEstimates({}); setEta('');
+    retryFare();
   };
 
   // ── Route ETA (from LiveMap directions API callback) ─────────────────────────
