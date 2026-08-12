@@ -584,6 +584,99 @@ const WAIT_TIPS = [
   { icon: '💬', text: 'Chat directly with your Buddy once they\'re matched' },
   { icon: '🔒', text: 'Share your ride OTP only after boarding — never before' },
 ];
+/* ── What the customer sees while waiting, below the tips ───────────────────
+   Deliberately built on the EXISTING campaign system rather than a new ad
+   pipeline: /api/offers/active already targets by role, already caps
+   impressions per person (max_views) and already throttles repeat views, and
+   the app already fetches it into activeOffers. An admin creates one in the
+   panel and it appears here — no release needed.
+
+   When no campaign is running the slot is not left empty: it falls back to
+   Sppero's own partner programme, which is the thing we always want to say.
+
+   Three rules this follows, because an ad on a screen someone is anxiously
+   watching goes wrong easily:
+     1. Only while WAITING. The moment a driver is assigned this is gone —
+        that screen is about their ride arriving, not about us.
+     2. It never looks like ride status. A small "FROM SPPERO" label, muted
+        surface, and it sits below the tips, under everything that matters.
+     3. It never blocks. No modal, no dismiss-to-continue; it is a card. */
+const PARTNER_URL = 'https://sppero.com/partner.html';
+const PARTNER_AD = {
+  id: '__partner__',
+  icon: '₹',
+  title: 'Earn with Sppero',
+  body: 'Bring riders and drivers to Sppero and earn from the rides they take.',
+  cta_label: 'See how it works',
+};
+
+function WaitAd({ offers, onOpenBooking }: { offers: any[]; onOpenBooking: () => void }) {
+  // Campaigns first; the partner card is what fills the slot when there are none.
+  const items = useMemo(() => (offers && offers.length ? offers : [PARTNER_AD]), [offers]);
+  const [idx, setIdx] = useState(0);
+  const fade = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => { setIdx(0); }, [items.length]);
+  useEffect(() => {
+    if (items.length < 2) return;
+    const iv = setInterval(() => {
+      Animated.timing(fade, { toValue: 0, duration: 220, useNativeDriver: true }).start(() => {
+        setIdx(i => (i + 1) % items.length);
+        Animated.timing(fade, { toValue: 1, duration: 280, useNativeDriver: true }).start();
+      });
+    }, 6000);
+    return () => clearInterval(iv);
+  }, [items.length]);
+
+  const item = items[Math.min(idx, items.length - 1)];
+  if (!item) return null;
+  const isPartner = item.id === '__partner__';
+
+  return (
+    <View style={{ paddingHorizontal: 20, marginTop: 4, marginBottom: 10 }}>
+      <Text style={{ fontSize: 9.5, fontWeight: '900', color: C.textDim, letterSpacing: 1.2, marginBottom: 6 }}>
+        FROM SPPERO
+      </Text>
+      <Animated.View style={{ opacity: fade }}>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => {
+            // The partner programme lives on the website; a campaign's CTA
+            // means "go and book", which is what it means everywhere else.
+            if (isPartner) Linking.openURL(PARTNER_URL).catch(() => {});
+            else onOpenBooking();
+          }}
+          style={{
+            flexDirection: 'row', alignItems: 'center', gap: 12,
+            backgroundColor: C.glass, borderRadius: 14,
+            borderWidth: 1, borderColor: C.glassBorder,
+            paddingVertical: 12, paddingHorizontal: 14,
+          }}>
+          <View style={{
+            width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center',
+            backgroundColor: C.plumGlass, borderWidth: 1, borderColor: C.plumBorder,
+          }}>
+            <Text style={{ fontSize: 15, fontWeight: '900', color: C.plum }}>
+              {isPartner ? '₹' : item.type === 'promo' ? '🎫' : '📢'}
+            </Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: '800', color: C.text }}>{item.title}</Text>
+            {!!item.body && (
+              <Text numberOfLines={2} style={{ fontSize: 11.5, color: C.textMuted, marginTop: 2, lineHeight: 15 }}>
+                {item.body}
+              </Text>
+            )}
+          </View>
+          <Text style={{ fontSize: 11, fontWeight: '800', color: C.plum }}>
+            {item.cta_label || 'View'} ›
+          </Text>
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
+  );
+}
+
 function TipsCarousel() {
   const [idx, setIdx] = useState(0);
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -741,6 +834,10 @@ export function MatchingScreen() {
     cancelInfo,
     unreadChat, setUnreadChat,
     chatToast, setChatToast,
+    // Campaigns targeted at customers, already fetched and view-capped by the
+    // context — the waiting-state ad slot reads the same list the home screen
+    // does, so a campaign never appears in one place and not the other.
+    activeOffers,
     showCancelModal, setShowCancelModal,
     sosActive,
     searchElapsed,
@@ -1482,6 +1579,13 @@ export function MatchingScreen() {
 
               {/* ── Tips carousel (hidden when surge card or no driver final) ── */}
               {!serverSurgeOffer && !noDriverFinal && <TipsCarousel />}
+
+              {/* Ad slot — below the tips, above nothing that matters. Same
+                  guards as the tips, so it disappears the moment the screen
+                  has something urgent to say instead. */}
+              {!serverSurgeOffer && !noDriverFinal && (
+                <WaitAd offers={activeOffers} onOpenBooking={() => setScreen('booking')} />
+              )}
 
               {/* ── No driver final — alternatives + retry ── */}
               {noDriverFinal && (
