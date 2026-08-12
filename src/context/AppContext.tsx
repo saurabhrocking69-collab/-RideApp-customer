@@ -227,6 +227,8 @@ interface AppContextType {
   result: string; setResult: (r: string) => void;
   loading: boolean; setLoading: (v: boolean) => void;
   storeStatus: string;
+  liveStatus: string;
+  isRideLive: boolean;
   // Refs
   socketRef: React.MutableRefObject<Socket | null>;
   phoneRef: React.MutableRefObject<string>;
@@ -526,6 +528,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [tip, setTip] = useState(0);
   const [review, setReview] = useState('');
   const [paymentDone, setPaymentDone] = useState(false);
+
+  /* ── One answer to "is a ride live, and what is it doing?" ──────────────
+     storeStatus lives in memory and resets to 'idle' on every app launch;
+     rideData carries the status the SERVER gave us and survives a restore.
+     Three screens used to work this out separately against storeStatus alone,
+     and after a relaunch storeStatus is 'idle', so:
+
+       hasStd  = ... && !(paymentDone && storeStatus === 'completed')
+                 -> 'idle' !== 'completed', so a paid, finished ride passed
+       stdStatus = storeStatus !== 'idle' ? storeStatus
+                   : (rideData?.ride_id ? 'requested' : 'idle')
+                 -> it GUESSED 'requested'
+
+     Together those turned a completed ride into "Looking for a driver…" on the
+     Live tab, and tapping it opened the searching screen with its timer
+     running. Nothing was actually searching.
+
+     Resolved once here: prefer the live store, fall back to the server's own
+     status, and never invent one. */
+  const liveStatus: string =
+    storeStatus !== 'idle' ? storeStatus : (rideData?.status || 'idle');
+  // 'completed' is not the end on its own — the fare may still be unpaid, and
+  // that IS something the Live tab should show. It ends when the money is in.
+  const rideIsOver =
+    liveStatus === 'cancelled' || liveStatus === 'expired' ||
+    (liveStatus === 'completed' && (paymentDone || rideData?.payment_status === 'completed'));
+  const isRideLive = !!rideData?.ride_id && liveStatus !== 'idle' && !rideIsOver;
+
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showUpiQr, setShowUpiQr] = useState(false);
   const [fareCount, setFareCount] = useState(0);
@@ -680,7 +710,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               const ride = d.ride;
               const st   = ride?.status;
 
-              if (st === 'searching' || st === 'matched' || st === 'arrived' || st === 'started') {
+              // 'searching' is NOT a ride status — it only ever exists as a
+              // socket payload (emitRideUpdate(..., { status: 'searching' })).
+              // The database says 'requested' while a ride waits for a driver,
+              // and 'pre_assigned' when one has been offered it. Neither was
+              // listed, so this test could never be true for a waiting ride:
+              // it fell to the else, the stored id was deleted, and reopening
+              // the app mid-search silently lost the ride.
+              if (st === 'requested' || st === 'pre_assigned' || st === 'matched' || st === 'arrived' || st === 'started') {
                 const driver = ride.driver_name ? {
                   name:          ride.driver_name,
                   vehicle_no:    ride.vehicle_no,
@@ -2955,6 +2992,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     resetBookingState,
     rideType, setRideType, pickupSugg, setPickupSugg, dropSugg, setDropSugg, dropHistory,
     appConfig,
+    liveStatus, isRideLive,
     fareEstimates, setFareEstimates, fareLoading, fareFailed, retryFare, eta, setEta, userCoords, setUserCoords,
     showPromoInput, setShowPromoInput, instantApplied, setInstantApplied, lastFetchKey,
     promoCode, setPromoCode, promoDiscount, setPromoDiscount,

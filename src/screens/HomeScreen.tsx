@@ -147,8 +147,10 @@ function TypingPlaceholder({ words }: { words: string[] }) {
 }
 
 function NavBar() {
-  const { tab, screen, setScreen, setTab, loadHistory, phone, rideData, storeStatus, hourlyBooking } = useApp();
-  const hasLive = (!!rideData?.ride_id && storeStatus !== 'cancelled') ||
+  const { tab, screen, setScreen, setTab, loadHistory, phone, isRideLive, hourlyBooking } = useApp();
+  // isRideLive, not a storeStatus comparison — see AppContext. storeStatus is
+  // 'idle' after every relaunch, so this dot used to stay lit on a finished ride.
+  const hasLive = isRideLive ||
                   (!!hourlyBooking && ['pending','matched','active'].includes(hourlyBooking?.status));
   const navTabs: { t: string; ion: string; lbl: string }[] = [
     { t: 'home',    ion: 'home',     lbl: 'Home'    },
@@ -1014,7 +1016,7 @@ function HomeTab() {
     setHourlyStep, setHPickup, setHDrop, setHPickupCoords, setHDropCoords,
     setHPickupSugg, setHDropSugg, setHRoundTrip, setHStayHours, setHourlyBooking,
     rideIcon, customerRating, walletBalance,
-    storeStatus, paymentDone,
+    storeStatus, liveStatus, isRideLive, paymentDone,
     screen,
     userCoords,
     setRideType,
@@ -1244,20 +1246,20 @@ function HomeTab() {
                entirely when one is running. Shown immediately, not gated
                behind the 550ms homeReady skeleton delay below, since ride
                status is more urgent than a nice loading feel. ── */}
-        {rideData?.ride_id && !paymentDone && storeStatus !== 'completed' && (
+        {isRideLive && liveStatus !== 'completed' && (
           <SlideUp delay={0}>
             <TouchableOpacity
               onPress={() => {
-                if (storeStatus === 'started') setScreen('inride');
+                if (liveStatus === 'started') setScreen('inride');
                 else setScreen('matching');
               }}
               style={{ marginHorizontal: 16, marginTop: 10, backgroundColor: C.bgCard, borderRadius: 18, padding: 14, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: C.pinkBorder, ...SHADOW.md }}>
               <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: C.pinkGlass, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1, borderColor: C.pinkBorder }}>
-                <Ionicons name={storeStatus === 'started' ? 'navigate-outline' : 'car-outline'} size={22} color={C.pink} />
+                <Ionicons name={liveStatus === 'started' ? 'navigate-outline' : 'car-outline'} size={22} color={C.pink} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: C.text, fontWeight: '800', fontSize: 15 }}>
-                  {storeStatus === 'started' ? 'Ride In Progress' : 'Looking for Driver'}
+                  {liveStatus === 'started' ? 'Ride In Progress' : 'Looking for Driver'}
                 </Text>
                 <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>{drop ? `To ${drop}` : 'Tap to view ride status'}</Text>
               </View>
@@ -1904,7 +1906,7 @@ function HomeTab() {
 
 function LiveTab() {
   const {
-    rideData, storeStatus, paymentDone, hourlyBooking, setHourlyBooking,
+    rideData, storeStatus, liveStatus, isRideLive, paymentDone, hourlyBooking, setHourlyBooking,
     hourlyStep, setHourlyStep, hourlyTimerSec,
     pickup, drop,
     setScreen, setTab,
@@ -1913,9 +1915,11 @@ function LiveTab() {
   } = useApp();
   const ride = useRideStore();
 
-  const hasStd    = !!rideData?.ride_id && storeStatus !== 'cancelled' && !(paymentDone && storeStatus === 'completed');
+  const hasStd    = isRideLive;
   const hasHourly = !!hourlyBooking && ['pending','matched','active'].includes(hourlyBooking?.status);
-  const stdStatus = storeStatus !== 'idle' ? storeStatus : (rideData?.ride_id ? 'requested' : 'idle');
+  // Never guessed. liveStatus prefers the live store and falls back to the
+  // status the server actually reported; it does not invent 'requested'.
+  const stdStatus = liveStatus;
   const stdStatusMap: any = {
     requested: { label: 'Looking for a driver...', color: C.saffron, glassColor: C.saffGlass, border: C.saffBorder, icon: '🔍' },
     matched:   { label: 'Driver is on the way',    color: C.purple,  glassColor: C.glassMid,   border: C.glassBorder, icon: '🚗' },
