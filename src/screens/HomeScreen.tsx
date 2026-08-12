@@ -38,8 +38,10 @@ const NAV_CLEARANCE = (Platform.OS === 'android' ? 44 : 16) + 10 + 38 + 24;
 // control — it is the "start a ride" action — and it keeps the one saturated
 // pink moment on this screen (the header) from being competed with directly
 // beneath itself.
-const SEARCH_LIME  = '#A3E635';
-const SEARCH_GREEN = '#059669';
+// The search unit's accent. Was a lime/green pair chosen to match the halo
+// rings; those are gone and the box is frosted white now, so it takes the
+// brand's own plum instead of carrying a colour nothing else on the screen uses.
+const SEARCH_ACCENT = C.plum;
 
 // What the typing placeholder offers. A fixed, curated list of PLACE KINDS —
 // never the rider's own history.
@@ -138,7 +140,7 @@ function TypingPlaceholder({ words }: { words: string[] }) {
         {shown}
       </Text>
       {!still && (
-        <Animated.View style={{ width: 2, height: 16, marginLeft: 2, borderRadius: 1, backgroundColor: SEARCH_GREEN, opacity: caret }} />
+        <Animated.View style={{ width: 2, height: 16, marginLeft: 2, borderRadius: 1, backgroundColor: SEARCH_ACCENT, opacity: caret }} />
       )}
     </View>
   );
@@ -1331,8 +1333,8 @@ function HomeTab() {
                 borderWidth: 1, borderColor: 'rgba(255,255,255,0.75)',
                 ...SHADOW.lg, shadowColor: C.plum,
               }}>
-              <View style={{ width: 34, height: 34, borderRadius: 11, backgroundColor: 'rgba(163,230,53,0.20)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(5,150,105,0.38)' }}>
-                <Ionicons name="search" size={16} color={SEARCH_GREEN} />
+              <View style={{ width: 34, height: 34, borderRadius: 11, backgroundColor: C.plumGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.plumBorder }}>
+                <Ionicons name="search" size={16} color={SEARCH_ACCENT} />
               </View>
               {/* Label above, typed value below — a real field's anatomy. The
                   question keeps its exact wording and stays put; what changes is
@@ -1345,11 +1347,12 @@ function HomeTab() {
                 </Text>
                 <TypingPlaceholder words={typeWords} />
               </View>
-              {/* Go turns green with the rest of the unit. Leaving it pink inside
-                  a lime/green halo read as a leftover, and green is the right
-                  meaning for the one control that starts a ride. */}
-              <View style={{ backgroundColor: SEARCH_GREEN, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8,
-                elevation: 6, shadowColor: SEARCH_GREEN, shadowOpacity: 0.42, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } }}>
+              {/* Go is plum — the brand's own depth colour, and the same one the
+                  vehicle chips already use, so the one control that starts a
+                  ride belongs to the screen instead of introducing a colour
+                  nothing else on it wears. */}
+              <View style={{ backgroundColor: SEARCH_ACCENT, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8,
+                elevation: 6, shadowColor: SEARCH_ACCENT, shadowOpacity: 0.38, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } }}>
                 <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900', letterSpacing: 0.5 }}>Go</Text>
               </View>
               </GlassPanel>
