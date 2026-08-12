@@ -25,9 +25,13 @@ export function OfflineBanner() {
   if (!visible) return null;
 
   const bg    = !isOnline ? C.red : C.green;
+  // English only, all three states. "Saved data" rather than "cached data":
+  // cache is a developer's word, and this line is read by someone whose
+  // connection has just dropped and who needs to know in one glance that what
+  // they are looking at is old, not live.
   const label = !isOnline
-    ? (strength === 'weak' ? '⚠️ Weak signal — cached data dikh raha hai' : '📵 Offline — cached data dikh raha hai')
-    : '✅ Wapas Online!';
+    ? (strength === 'weak' ? '⚠️ Weak signal — showing saved data' : '📵 Offline — showing saved data')
+    : '✅ Back online';
 
   return (
     <Animated.View style={{
