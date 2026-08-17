@@ -1,9 +1,9 @@
 name: Build Android APK
 
+# Manual only. EAS is the shipping path now, and its builds are signed with a
+# different key than this workflow's — two build systems racing on every push
+# means every install needs an uninstall first.
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 # A new push supersedes whatever is still running for the same branch. Without
@@ -129,16 +129,18 @@ jobs:
             grep -n "minify\|Proguard\|proguard" android/app/build.gradle.kts || echo "(none found)"
           fi
 
-      # Generate a fresh keystore every build — alias and passwords are
-      # hardcoded so there is never a secret/alias mismatch at sign time.
-      - name: Generate signing keystore
+      # This used to run keytool and mint a BRAND NEW keypair on every single
+      # build. Android refuses to install an APK signed by a different key than
+      # the copy already on the phone, so each build could only be installed by
+      # uninstalling the last one — losing the app data every time, with nothing
+      # on screen to explain it beyond "App not installed".
+      #
+      # The committed keystore is ours and, more to the point, the same one
+      # every time.
+      - name: Use the project's own keystore
         run: |
-          keytool -genkeypair -v \
-            -keystore android/app/release.keystore \
-            -alias release \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass android123 -keypass android123 \
-            -dname "CN=Sppero,O=Sppero,C=IN"
+          cp .github/debug.keystore android/app/release.keystore
+          keytool -list -v -keystore android/app/release.keystore -storepass android | grep -E "Owner|SHA256" | head -2
 
       # arm64-v8a = modern phones; armeabi-v7a = older/budget ARM32 devices
       - name: Build Release APK
@@ -146,9 +148,9 @@ jobs:
         run: |
           ./gradlew assembleRelease \
             -Pandroid.injected.signing.store.file="$(pwd)/app/release.keystore" \
-            -Pandroid.injected.signing.store.password="android123" \
-            -Pandroid.injected.signing.key.alias="release" \
-            -Pandroid.injected.signing.key.password="android123" \
+            -Pandroid.injected.signing.store.password="android" \
+            -Pandroid.injected.signing.key.alias="androiddebugkey" \
+            -Pandroid.injected.signing.key.password="android" \
             -PreactNativeArchitectures=arm64-v8a,armeabi-v7a \
             --no-daemon
 
