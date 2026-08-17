@@ -4,6 +4,21 @@ import MapView, { Marker, Polyline, Circle, AnimatedRegion, PROVIDER_GOOGLE } fr
 import Svg, { Path, Rect, Ellipse, Circle as SvgCircle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { MAPS_KEY, isNimble} from '../constants';
+
+/* Booking route colour, in one place.
+
+   It was four separate literals before — the animating line, the casing, the
+   core, and the km badge — so changing the route meant finding all four and
+   the badge kept its old hue when the line changed.
+
+   Three tokens rather than one because they do different jobs: CORE is the
+   line, CASING is the dark edge underneath it (a single flat stroke gets lost
+   wherever it crosses a white road), and INK is the badge text, which sits on
+   white and so cannot be the light blue — that reads at about 1.9:1 and is
+   effectively invisible. */
+const ROUTE_CORE   = '#38BDF8';   // light blue
+const ROUTE_CASING = '#082F49';   // same hue, far darker
+const ROUTE_INK    = '#0369A1';   // readable on white
 import { C } from '../styles';
 
 // A single Google Directions route option, surfaced to the parent so the
@@ -504,7 +519,7 @@ function YouMarker() {
         shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 6, shadowOffset: { width: 0, height: 2 },
       }}>
         <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#3B82F6' }} />
-        <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#1a1a1a', letterSpacing: 0.2 }}>Currently You at</Text>
+        <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#1a1a1a', letterSpacing: 0.2 }}>It's me</Text>
       </View>
       <View style={{
         width: 14, height: 14, borderRadius: 7,
@@ -1092,7 +1107,7 @@ export const LiveMap = memo(function LiveMap({
         )}
         {/* Booking: plum route ahead of arrow — hidden once animation finishes */}
         {mode === 'booking' && !animDone && bookingAhead.length > 1 && (
-          <Polyline coordinates={bookingAhead} strokeColor={C.plum} strokeWidth={5} lineCap="round" />
+          <Polyline coordinates={bookingAhead} strokeColor={ROUTE_CORE} strokeWidth={5} lineCap="round" />
         )}
         {/* Booking: once the arrow animation finishes, the route stays on the
              map as a plain plum line (previously nothing replaced the arrow
@@ -1107,8 +1122,8 @@ export const LiveMap = memo(function LiveMap({
                 because it has no edge to separate it from what's beneath. The
                 casing gives it that edge, so the route reads as one continuous
                 ribbon the whole way instead of breaking up at junctions. */}
-            <Polyline coordinates={routeCoords} strokeColor="#1B0E33" strokeWidth={8} lineCap="round" lineJoin="round" />
-            <Polyline coordinates={routeCoords} strokeColor="#7C3AED" strokeWidth={4.5} lineCap="round" lineJoin="round" />
+            <Polyline coordinates={routeCoords} strokeColor={ROUTE_CASING} strokeWidth={8} lineCap="round" lineJoin="round" />
+            <Polyline coordinates={routeCoords} strokeColor={ROUTE_CORE} strokeWidth={4.5} lineCap="round" lineJoin="round" />
             {(() => {
               const mid = routeCoords[Math.floor(routeCoords.length / 2)];
               if (!mid || !distText) return null;
@@ -1117,10 +1132,10 @@ export const LiveMap = memo(function LiveMap({
                   <View style={{
                     backgroundColor: '#fff', borderRadius: 10,
                     paddingHorizontal: 8, paddingVertical: 4,
-                    borderWidth: 1.5, borderColor: C.plum,
+                    borderWidth: 1.5, borderColor: ROUTE_CORE,
                     elevation: 5, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 4, shadowOffset: { width: 0, height: 2 },
                   }}>
-                    <Text style={{ fontSize: 10.5, fontWeight: '900', color: C.plum }}>{distText}</Text>
+                    <Text style={{ fontSize: 10.5, fontWeight: '900', color: ROUTE_INK }}>{distText}</Text>
                   </View>
                 </Marker>
               );
