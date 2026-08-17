@@ -5,7 +5,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
-import { MAPS_KEY } from '../constants';
+import { MAPS_KEY, isNimble } from '../constants';
+import { nimbleDistance } from '../routeDistance';
 import { C } from '../styles';
 import { ParcelGuideModal } from './ParcelIntroScreen';
 import { PickupMapPicker } from '../components/PickupMapPicker';
@@ -179,12 +180,25 @@ export function ParcelScreen() {
   const [estLoading, setEstLoading] = useState(false);
   const [selVehicle, setSelVehicle] = useState<string | null>(null);
 
-  // Real driving distance (not straight-line) — same Distance Matrix call
-  // AppContext's fetchEtaByCoords uses for a normal ride, so parcel fares
-  // are priced on the actual road distance a driver has to cover.
+  // Two-wheeler road distance for the same pair, when it can be had.
+  //
+  // A parcel's vehicle list is mixed: small is bike-only, large is car-only,
+  // and medium spans auto/e-riksha/e-auto AND car. So one distance cannot
+  // price the whole list — a bike takes lanes the car graph excludes (2.82 km
+  // against the car's 4.22 km on a real Lucknow pair), while a car genuinely
+  // has to drive the long way round. Both are fetched and each option is
+  // priced on its own network below.
+  const [nimbleKm, setNimbleKm] = useState<{ km: number; durationMin: number } | null>(null);
+
+  // Real road distance (not straight-line), because the parcel fare is built
+  // from it. This one is the CAR figure.
   const fetchDistance = useCallback(async () => {
     if (!pickupCoords?.lat || !dropCoords?.lat) return;
     setEtaText('⏳ Calculating…');
+    nimbleDistance(
+      { lat: pickupCoords.lat, lng: pickupCoords.lng },
+      { lat: dropCoords.lat,   lng: dropCoords.lng },
+    ).then(setNimbleKm);
     try {
       const res = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${pickupCoords.lat},${pickupCoords.lng}&destinations=${dropCoords.lat},${dropCoords.lng}&key=${MAPS_KEY}&mode=driving&departure_time=now`, { cache: 'no-store' } as any);
       const data = await res.json();
@@ -202,13 +216,24 @@ export function ParcelScreen() {
     if (!distanceKm) { setOptions([]); return; }
     setEstLoading(true);
     try {
-      const r = await parcelEstimate(distanceKm, packageSize);
-      const opts: EstOption[] = r?.options || [];
+      // One estimate per road network, in parallel, then each vehicle keeps
+      // the fare priced on the network it actually rides. With no two-wheeler
+      // distance this collapses to the single call it always was.
+      const [carR, nimbleR] = await Promise.all([
+        parcelEstimate(distanceKm, packageSize),
+        nimbleKm ? parcelEstimate(nimbleKm.km, packageSize) : Promise.resolve(null),
+      ]);
+      const carOpts: EstOption[] = carR?.options || [];
+      const nimbleOpts: EstOption[] = (nimbleR as any)?.options || [];
+      const opts: EstOption[] = carOpts.map(o => {
+        const alt = isNimble(o.vehicle_type) ? nimbleOpts.find(n => n.vehicle_type === o.vehicle_type) : null;
+        return alt || o;
+      });
       setOptions(opts);
       setSelVehicle(prev => opts.some(o => o.vehicle_type === prev) ? prev : (opts[0]?.vehicle_type || null));
     } catch { setOptions([]); }
     setEstLoading(false);
-  }, [distanceKm, packageSize]);
+  }, [distanceKm, nimbleKm, packageSize]);
 
   useEffect(() => { loadEstimates(); }, [loadEstimates]);
 
@@ -239,7 +264,10 @@ export function ParcelScreen() {
     await bookParcel({
       vehicleType: selVehicle,
       packageSize,
-      distanceKm,
+      // The distance that priced THIS vehicle — a bike is booked on the lane
+      // route it rides, a car on the car route. Sending the car figure for a
+      // bike would have the server re-derive a fare the customer never saw.
+      distanceKm: (isNimble(selVehicle) && nimbleKm) ? nimbleKm.km : distanceKm,
       fare: selOpt.fare,
       packageNote: packageNote.trim(),
       dropBuilding: dropBuilding.trim().slice(0, 80),

@@ -13,6 +13,7 @@ import type { ToastNotif } from '../components/NotificationToast';
 import type { NearbyCategory } from '../nearbyCategories';
 import { useRideStore } from '../../store';
 import { API, MAPS_KEY, RIDES, DEFAULT_HOURLY_PACKAGES, WELCOME_SEEN_KEY, isNimble} from '../constants';
+import { nimbleDistance } from '../routeDistance';
 import { Screen, Tab, Coords, HourlyStep, ExtendStep, WalletTxnTab } from '../types';
 import { shortRideId } from '../rideId';
 
@@ -2189,37 +2190,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Returns whether it actually produced fares. The caller needs to know:
   // an empty fare table is what disables the Book button.
-  /* Google's two-wheeler distance for the same pair, or null if it can't be had.
-     Legacy Distance Matrix has no two-wheeler mode at all, so this is the
-     Routes API. Origin/destination take either coords or a plain address, so
-     both estimate paths can use it. */
-  const nimbleDistance = async (
-    origin: { lat: number; lng: number } | string,
-    dest:   { lat: number; lng: number } | string,
-  ): Promise<{ km: number; durationMin: number } | null> => {
-    const place = (p: any) => typeof p === 'string'
-      ? { address: p }
-      : { location: { latLng: { latitude: p.lat, longitude: p.lng } } };
-    try {
-      const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Key': MAPS_KEY,
-          'X-Goog-FieldMask': 'routes.distanceMeters,routes.duration',
-        },
-        body: JSON.stringify({
-          origin: place(origin), destination: place(dest),
-          travelMode: 'TWO_WHEELER', languageCode: 'en-IN', regionCode: 'IN',
-        }),
-      });
-      const d = await res.json();
-      const r = d.routes?.[0];
-      if (!r?.distanceMeters) return null;
-      return { km: r.distanceMeters / 1000, durationMin: parseFloat(String(r.duration || '0')) / 60 };
-    } catch { return null; }
-  };
-
   /* Prices each vehicle on the road network it actually uses.
      `km` is the car distance; `nimble`, when present, is the two-wheeler one.
 
@@ -2385,10 +2355,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         distanceKm = route.distanceKm;
         durationMin = route.durationMin;
       } else {
-        const ddata = await externalGet(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(pickup)}&destinations=${encodeURIComponent(drop)}&key=${MAPS_KEY}&mode=driving&departure_time=now`);
-        const el = ddata._error ? null : ddata.rows?.[0]?.elements?.[0];
-        distanceKm = el?.status === 'OK' ? el.distance.value / 1000 : 5;
-        durationMin = el?.status === 'OK' ? (el.duration_in_traffic?.value ?? el.duration?.value ?? 0) / 60 : (distanceKm / 20) * 60;
+        // No route from the map — price it ourselves. This is the number the
+        // customer is actually CHARGED, so it has to use the same road network
+        // the estimate did, or a bike is quoted 2.8 km and billed 4.2 km.
+        const nb = isNimble(rideType) ? await nimbleDistance(pickup, drop) : null;
+        if (nb) {
+          distanceKm = nb.km; durationMin = nb.durationMin;
+        } else {
+          const ddata = await externalGet(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(pickup)}&destinations=${encodeURIComponent(drop)}&key=${MAPS_KEY}&mode=driving&departure_time=now`);
+          const el = ddata._error ? null : ddata.rows?.[0]?.elements?.[0];
+          distanceKm = el?.status === 'OK' ? el.distance.value / 1000 : 5;
+          durationMin = el?.status === 'OK' ? (el.duration_in_traffic?.value ?? el.duration?.value ?? 0) / 60 : (distanceKm / 20) * 60;
+        }
       }
       // Resolve drop coords inline — can't read state immediately after setDropCoords
       let dropLat = dropCoords?.lat;
