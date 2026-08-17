@@ -8,6 +8,11 @@ import { C } from '../styles';
 
 // A single Google Directions route option, surfaced to the parent so the
 // customer can choose between (e.g.) fastest and shortest.
+/* Vehicles that can use lanes a car cannot. Google routes these far better as
+   TWO_WHEELER than as a car — the same list that gets the fastest/shortest
+   choice in BookingScreen, because it is the same physical fact behind both. */
+const NIMBLE_VEHICLES = ['bike', 'auto', 'eriksha', 'electric_auto', 'green_bike'];
+
 export interface RouteOption {
   polyline: string;      // encoded overview_polyline — stored on the ride so the driver draws the same path
   distanceKm: number;
@@ -71,6 +76,37 @@ function computeBearing(lat1: number, lng1: number, lat2: number, lng2: number):
   const y = Math.sin(dL) * Math.cos(l2);
   const x = Math.cos(l1) * Math.sin(l2) - Math.sin(l1) * Math.cos(l2) * Math.cos(dL);
   return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+
+// ── Minimum camera span ──────────────────────────────────────────────────────
+// fitToCoordinates has no minimum-zoom option, so when the points it is given
+// sit close together — the pickup pin and the rider standing a street away
+// from it, which is the normal case on the booking editor — it slams the
+// camera all the way in and the map reads as a blank plate with no landmarks
+// around it. Padding the bounding box out to a floor gives the pins some
+// surroundings. Longer trips already exceed the floor, so their framing is
+// untouched.
+const MIN_FIT_SPAN = 0.018;   // degrees ≈ 2 km
+
+function withMinSpan(pts: { latitude: number; longitude: number }[]) {
+  if (!pts.length) return pts;
+  let minLat =  90, maxLat =  -90, minLng =  180, maxLng = -180;
+  for (const p of pts) {
+    if (p.latitude  < minLat) minLat = p.latitude;
+    if (p.latitude  > maxLat) maxLat = p.latitude;
+    if (p.longitude < minLng) minLng = p.longitude;
+    if (p.longitude > maxLng) maxLng = p.longitude;
+  }
+  if (maxLat - minLat >= MIN_FIT_SPAN && maxLng - minLng >= MIN_FIT_SPAN) return pts;
+  const cLat = (minLat + maxLat) / 2, cLng = (minLng + maxLng) / 2;
+  const hLat = Math.max(maxLat - minLat, MIN_FIT_SPAN) / 2;
+  const hLng = Math.max(maxLng - minLng, MIN_FIT_SPAN) / 2;
+  // Two opposite corners are enough to widen the box fitToCoordinates computes.
+  return [
+    ...pts,
+    { latitude: cLat - hLat, longitude: cLng - hLng },
+    { latitude: cLat + hLat, longitude: cLng + hLng },
+  ];
 }
 
 // ── Interpolate a lat/lng point at progress t (0→1) along a polyline ─────────
@@ -523,6 +559,7 @@ export interface LiveMapProps {
   onRouteInfo?: (eta: string, dist: string) => void;
   onRoutes?: (routes: { fastest: RouteOption; shortest: RouteOption | null }) => void;
   selectedRouteType?: 'fastest' | 'shortest';
+  rideType?: string;        // decides which road network to route on (see below)
   fitKey?: number;
   adjustOrigin?: { lat: number; lng: number } | null;
   fill?: boolean;           // flex:1 to fill parent instead of fixed height
@@ -558,6 +595,7 @@ export const LiveMap = memo(function LiveMap({
   onRouteInfo,
   onRoutes,
   selectedRouteType = 'fastest',
+  rideType,
   fitKey = 0,
   adjustOrigin = null,
   fill = false,
@@ -778,34 +816,89 @@ export const LiveMap = memo(function LiveMap({
     // single — no choice to make there.
     const wantAlternatives = mode === 'booking';
     let cancelled = false;
-    fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&mode=driving${wantAlternatives ? '&alternatives=true' : ''}&key=${MAPS_KEY}`)
-      .then(r => r.json())
-      .then(data => {
+
+    /* ── Which road network to route on ────────────────────────────────────
+       Every route used to be requested as mode=driving — a CAR route — no
+       matter what the customer had chosen. On a real Lucknow booking that made
+       a 1.9 km trip come back as 4.2 km, because the car route is forced out
+       onto Kursi Rd while the lanes an auto actually uses are excluded from
+       Google's car graph. Google's own two-wheeler routing for the same pair
+       returns 2.8 km.
+
+       That was not only a wrong ETA. Fare is base + per-km × distance, so
+       every bike and auto ride through a lane network was being quoted, and
+       charged, on a car's detour. */
+    const twoWheeler = mode === 'booking' && NIMBLE_VEHICLES.includes(String(rideType || ''));
+
+    const fmtKm  = (m: number) => m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`;
+    const fmtMin = (s: number) => {
+      const min = Math.round(s / 60);
+      return min >= 60 ? `${Math.floor(min / 60)} hr ${min % 60} min` : `${min} min${min === 1 ? '' : 's'}`;
+    };
+
+    /* Two shapes, one RouteOption. The Routes API returns metres and "534s" and
+       has no formatted text at all, so the labels are built here rather than
+       letting two code paths disagree about how a distance reads. */
+    const fromRoutesApi = (r: any): RouteOption => ({
+      polyline:    r.polyline?.encodedPolyline || '',
+      distanceKm:  (r.distanceMeters ?? 0) / 1000,
+      durationMin: parseFloat(String(r.duration || '0')) / 60,
+      distText:    fmtKm(r.distanceMeters ?? 0),
+      etaText:     fmtMin(parseFloat(String(r.duration || '0'))),
+    });
+    const fromDirections = (route: any): RouteOption => {
+      const leg = route.legs?.[0];
+      return {
+        polyline:    route.overview_polyline?.points || '',
+        distanceKm:  (leg?.distance?.value ?? 0) / 1000,
+        durationMin: (leg?.duration?.value ?? 0) / 60,
+        distText:    leg?.distance?.text || '',
+        etaText:     leg?.duration?.text || '',
+      };
+    };
+
+    const legacy = (): Promise<RouteOption[]> =>
+      fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&mode=driving${wantAlternatives ? '&alternatives=true' : ''}&key=${MAPS_KEY}`)
+        .then(r => r.json())
+        .then(d => (d.routes || []).map(fromDirections));
+
+    const twoWheelerRoutes = (): Promise<RouteOption[]> =>
+      fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': MAPS_KEY,
+          'X-Goog-FieldMask': 'routes.distanceMeters,routes.duration,routes.polyline.encodedPolyline',
+        },
+        body: JSON.stringify({
+          origin:      { location: { latLng: { latitude: +origin!.split(',')[0],      longitude: +origin!.split(',')[1] } } },
+          destination: { location: { latLng: { latitude: +destination!.split(',')[0], longitude: +destination!.split(',')[1] } } },
+          travelMode: 'TWO_WHEELER',
+          computeAlternativeRoutes: wantAlternatives,
+        }),
+      })
+        .then(r => r.json())
+        .then(d => (d.routes || []).map(fromRoutesApi))
+        // Never leave the customer without a route: if two-wheeler routing is
+        // unavailable — quota, billing, an API not enabled — fall back to the
+        // car route rather than showing nothing.
+        .then(list => list.length ? list : legacy())
+        .catch(() => legacy());
+
+    (twoWheeler ? twoWheelerRoutes() : legacy())
+      .then((options: RouteOption[]) => {
         if (cancelled) return;
-        const routes = data.routes || [];
-        if (!routes.length) return;
+        if (!options.length) return;
 
-        const toOption = (route: any): RouteOption => {
-          const leg = route.legs?.[0];
-          return {
-            polyline:   route.overview_polyline?.points || '',
-            distanceKm: (leg?.distance?.value ?? 0) / 1000,
-            durationMin: (leg?.duration?.value ?? 0) / 60,
-            distText:   leg?.distance?.text || '',
-            etaText:    leg?.duration?.text || '',
-          };
-        };
-
-        // Google returns routes sorted by duration → [0] is fastest.
-        const fastest = toOption(routes[0]);
-        // Shortest = least distance among alternatives.
+        // Both APIs return their routes fastest-first.
+        const fastest = options[0];
         let shortest: RouteOption | null = null;
-        if (wantAlternatives && routes.length > 1) {
-          const cand = routes.map(toOption).reduce((a: RouteOption, b: RouteOption) => b.distanceKm < a.distanceKm ? b : a);
+        if (wantAlternatives && options.length > 1) {
+          const cand = options.reduce((a, b) => b.distanceKm < a.distanceKm ? b : a);
           // Only offer it if it's meaningfully shorter AND not absurdly slower —
           // otherwise the "choice" is noise.
           const shorterEnough = cand.distanceKm <= fastest.distanceKm - 0.8 && cand.distanceKm <= fastest.distanceKm * 0.92;
-          const notTooSlow     = cand.durationMin <= fastest.durationMin * 1.2;
+          const notTooSlow    = cand.durationMin <= fastest.durationMin * 1.2;
           if (shorterEnough && notTooSlow && cand.polyline !== fastest.polyline) shortest = cand;
         }
         onRoutes?.({ fastest, shortest });
@@ -820,7 +913,7 @@ export const LiveMap = memo(function LiveMap({
     return () => { cancelled = true; };
   }, [
     pickupCoords?.lat, pickupCoords?.lng, dropCoords?.lat, dropCoords?.lng,
-    showRoute, mode, selectedRouteType,
+    showRoute, mode, selectedRouteType, rideType,   // switching bike↔car changes the road network
     driverLat != null ? Math.round(driverLat * 200) / 200 : null,
     driverLng != null ? Math.round(driverLng * 200) / 200 : null,
   ]);
@@ -865,7 +958,7 @@ export const LiveMap = memo(function LiveMap({
       if (!coords.length && userLat != null) coords.push({ latitude: userLat!, longitude: userLng! });
     }
     if (coords.length > 0) {
-      mapRef.current.fitToCoordinates(coords, {
+      mapRef.current.fitToCoordinates(withMinSpan(coords), {
         edgePadding: fitPad(),
         animated: true,
       });
@@ -882,17 +975,17 @@ export const LiveMap = memo(function LiveMap({
       const stride = Math.max(1, Math.floor(pts.length / 25));
       const sampled = pts.filter((_, i) => i % stride === 0);
       if (sampled[sampled.length - 1] !== pts[pts.length - 1]) sampled.push(pts[pts.length - 1]);
-      mapRef.current.fitToCoordinates(sampled, {
+      mapRef.current.fitToCoordinates(withMinSpan(sampled), {
         edgePadding: fitPad(), animated: true,
       });
       return;
     }
     // Markers only → fit to them
     if (pickupCoords && dropCoords) {
-      mapRef.current.fitToCoordinates([
+      mapRef.current.fitToCoordinates(withMinSpan([
         { latitude: pickupCoords.lat, longitude: pickupCoords.lng },
         { latitude: dropCoords.lat,   longitude: dropCoords.lng   },
-      ], { edgePadding: fitPad(), animated: true });
+      ]), { edgePadding: fitPad(), animated: true });
       return;
     }
     // Fallback → center on user/driver

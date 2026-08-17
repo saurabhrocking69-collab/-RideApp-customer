@@ -891,6 +891,9 @@ export function BookingScreen() {
           onRouteInfo={(et, dt) => { setRouteEta(et); setRouteDist(dt); }}
           onRoutes={handleRoutes}
           selectedRouteType={selectedRoute}
+          // A bike or an auto is not routed like a car. Without this the map
+          // returns the car detour, and the fare is quoted on it.
+          rideType={rideType}
           fitKey={fitKey}
           walkOrigin={walkGpsOrigin}
           pickupLabel={shortAreaLabel(pickup)}
