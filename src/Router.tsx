@@ -2,6 +2,7 @@ import { View, Animated, StyleSheet } from 'react-native';
 import { useApp } from './context/AppContext';
 import { C } from './styles';
 import { OfflineBanner } from './components/OfflineBanner';
+import { UpdateBanner } from './components/UpdateBanner';
 import { NotificationToast } from './components/NotificationToast';
 import { SplashScreen } from './screens/SplashScreen';
 import { OnboardingScreen, LoginScreen, OtpScreen } from './screens/AuthScreens';
@@ -90,6 +91,7 @@ export function Router() {
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <ActiveScreen />
       <OfflineBanner />
+      <UpdateBanner hold={['matching', 'inride', 'payment'].includes(screen)} />
       <NotificationToast
         notif={notifToast}
         onDismiss={() => setNotifToast(null)}
