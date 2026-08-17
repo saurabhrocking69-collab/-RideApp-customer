@@ -3,7 +3,7 @@ import { Animated, View, Text, StyleSheet, TouchableOpacity } from 'react-native
 import MapView, { Marker, Polyline, Circle, AnimatedRegion, PROVIDER_GOOGLE } from 'react-native-maps';
 import Svg, { Path, Rect, Ellipse, Circle as SvgCircle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
-import { MAPS_KEY } from '../constants';
+import { MAPS_KEY, isNimble} from '../constants';
 import { C } from '../styles';
 
 // A single Google Directions route option, surfaced to the parent so the
@@ -11,7 +11,6 @@ import { C } from '../styles';
 /* Vehicles that can use lanes a car cannot. Google routes these far better as
    TWO_WHEELER than as a car — the same list that gets the fastest/shortest
    choice in BookingScreen, because it is the same physical fact behind both. */
-const NIMBLE_VEHICLES = ['bike', 'auto', 'eriksha', 'electric_auto', 'green_bike'];
 
 export interface RouteOption {
   polyline: string;      // encoded overview_polyline — stored on the ride so the driver draws the same path
@@ -828,7 +827,7 @@ export const LiveMap = memo(function LiveMap({
        That was not only a wrong ETA. Fare is base + per-km × distance, so
        every bike and auto ride through a lane network was being quoted, and
        charged, on a car's detour. */
-    const twoWheeler = mode === 'booking' && NIMBLE_VEHICLES.includes(String(rideType || ''));
+    const twoWheeler = mode === 'booking' && isNimble(rideType);
 
     const fmtKm  = (m: number) => m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`;
     const fmtMin = (s: number) => {

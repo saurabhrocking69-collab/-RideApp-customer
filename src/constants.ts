@@ -6,6 +6,23 @@ export const API = 'https://api.sppero.com';
 export const WELCOME_SEEN_KEY = 'welcomeSeen';
 export const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 
+/* Vehicles that are NOT bound to the car road network.
+ *
+ * A bike or an auto uses lanes Google's car graph excludes. On a real Lucknow
+ * booking that is 2.8 km against the car route's 4.2 km — and fare is
+ * base + per_km × distance, so routing them as cars is money, not just a wrong
+ * ETA.
+ *
+ * MUST stay identical to `vehicles.ts` in rideapp-driver. The customer is
+ * quoted on one road network and the driver is sent down another; a vehicle
+ * listed in one file and not the other means the driver drives further than
+ * the passenger paid for.
+ */
+export const NIMBLE_VEHICLES = ['bike', 'auto', 'eriksha', 'electric_auto', 'green_bike'];
+
+export const isNimble = (rideType?: string | null): boolean =>
+  NIMBLE_VEHICLES.includes(String(rideType || ''));
+
 export const DEFAULT_HOURLY_PACKAGES: any = {
   auto:          { 2:{fare:180,km:20}, 4:{fare:320,km:40}, 6:{fare:460,km:60}, 8:{fare:580,km:80},  24:{fare:1500,km:200}, 48:{fare:2800,km:400}, 72:{fare:4000,km:600}, extra:8  },
   bike:          { 2:{fare:120,km:20}, 4:{fare:210,km:40}, 6:{fare:300,km:60}, 8:{fare:380,km:80},  24:{fare:1000,km:200}, 48:{fare:1800,km:400}, 72:{fare:2600,km:600}, extra:5  },

@@ -12,7 +12,7 @@ import { C } from '../styles';
 import type { ToastNotif } from '../components/NotificationToast';
 import type { NearbyCategory } from '../nearbyCategories';
 import { useRideStore } from '../../store';
-import { API, MAPS_KEY, RIDES, DEFAULT_HOURLY_PACKAGES, WELCOME_SEEN_KEY } from '../constants';
+import { API, MAPS_KEY, RIDES, DEFAULT_HOURLY_PACKAGES, WELCOME_SEEN_KEY, isNimble} from '../constants';
 import { Screen, Tab, Coords, HourlyStep, ExtendStep, WalletTxnTab } from '../types';
 import { shortRideId } from '../rideId';
 
@@ -260,7 +260,7 @@ interface AppContextType {
   // Resolves true only if a distance actually came back — callers must not
   // treat a failed lookup as a completed one.
   fetchEtaByCoords: (pc: any, dc: any) => Promise<boolean>;
-  loadFareEstimates: (km: number) => Promise<void>;
+  loadFareEstimates: (km: number, durationMin?: number, nimble?: { km: number; durationMin: number } | null) => Promise<boolean>;
   applyPromo: () => Promise<void>;
   useMyLocation: () => Promise<void>;
   calcDriverEta: (driverLat: number, driverLng: number, pickupLat: number, pickupLng: number) => Promise<void>;
@@ -604,6 +604,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const activeRideIdRef   = useRef<string|number|null>(null);
   const lastFareKmRef     = useRef<number | null>(null);
   const lastFareDurRef    = useRef<number | null>(null); // estimated trip duration (min) for fare re-fetch on admin update
+  // Two-wheeler distance for the same pair, kept so an admin fare update can
+  // re-price bike/auto on their own road network instead of the car's.
+  const lastNimbleRef     = useRef<{ km: number; durationMin: number } | null>(null);
   const [hPackageHours, setHPackageHours] = useState(4);
   const [hVehicle, setHVehicle] = useState('auto');
   const [hPickup, setHPickup] = useState('');
@@ -1539,7 +1542,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     s.on('fareSettingsUpdated', () => {
       fetchAppConfig();
       if (lastFareKmRef.current !== null) {
-        loadFareEstimates(lastFareKmRef.current, lastFareDurRef.current ?? undefined);
+        loadFareEstimates(lastFareKmRef.current, lastFareDurRef.current ?? undefined, lastNimbleRef.current);
       } else {
         setFareEstimates({});
       }
@@ -1833,7 +1836,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             const etaRes = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${lat},${lng}&destinations=${encodeURIComponent(drop)}&key=${MAPS_KEY}&mode=driving&departure_time=now`);
             const etaData = await etaRes.json();
             const el = etaData.rows?.[0]?.elements?.[0];
-            if (el?.status === 'OK') { const km = el.distance.value / 1000; const durMin = (el.duration_in_traffic?.value ?? el.duration?.value ?? 0) / 60; setEta(`🕐 ${el.duration_in_traffic?.text || el.duration.text} · 📍 ${el.distance.text}`); loadFareEstimates(km, durMin); }
+            if (el?.status === 'OK') { const km = el.distance.value / 1000; const durMin = (el.duration_in_traffic?.value ?? el.duration?.value ?? 0) / 60; setEta(`🕐 ${el.duration_in_traffic?.text || el.duration.text} · 📍 ${el.distance.text}`); const nb = await nimbleDistance({ lat, lng }, drop); loadFareEstimates(km, durMin, nb); }
           } catch (_e) {}
         }
         return;
@@ -2163,6 +2166,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const km = el.distance.value / 1000;
         const durMin = ((el.duration_in_traffic?.value ?? el.duration?.value ?? 0) / 60);
         setEta(`🕐 ${el.duration_in_traffic?.text || el.duration.text} · 📍 ${el.distance.text}`);
+        // Bike/auto/e-riksha are not on the car network — fetch their distance
+        // too, so the carousel prices each vehicle on the road it actually
+        // uses. Null (quota, failure) simply means everything falls back to the
+        // car figure, i.e. the old behaviour.
+        const nimble = await nimbleDistance(pc, dc);
         // AWAITED, and its result decides the outcome.
         //
         // This used to be fire-and-forget, so the function reported success the
@@ -2172,7 +2180,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // prices, while hasFare stayed false and the Book button sat disabled
         // reading "Select pickup & drop". The retry below never fired, because
         // as far as it could tell nothing had gone wrong.
-        return await loadFareEstimates(km, durMin);
+        return await loadFareEstimates(km, durMin, nimble);
       }
       setEta('');
       return false;
@@ -2181,9 +2189,54 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Returns whether it actually produced fares. The caller needs to know:
   // an empty fare table is what disables the Book button.
-  const loadFareEstimates = async (km: number, durationMin?: number): Promise<boolean> => {
+  /* Google's two-wheeler distance for the same pair, or null if it can't be had.
+     Legacy Distance Matrix has no two-wheeler mode at all, so this is the
+     Routes API. Origin/destination take either coords or a plain address, so
+     both estimate paths can use it. */
+  const nimbleDistance = async (
+    origin: { lat: number; lng: number } | string,
+    dest:   { lat: number; lng: number } | string,
+  ): Promise<{ km: number; durationMin: number } | null> => {
+    const place = (p: any) => typeof p === 'string'
+      ? { address: p }
+      : { location: { latLng: { latitude: p.lat, longitude: p.lng } } };
+    try {
+      const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': MAPS_KEY,
+          'X-Goog-FieldMask': 'routes.distanceMeters,routes.duration',
+        },
+        body: JSON.stringify({
+          origin: place(origin), destination: place(dest),
+          travelMode: 'TWO_WHEELER', languageCode: 'en-IN', regionCode: 'IN',
+        }),
+      });
+      const d = await res.json();
+      const r = d.routes?.[0];
+      if (!r?.distanceMeters) return null;
+      return { km: r.distanceMeters / 1000, durationMin: parseFloat(String(r.duration || '0')) / 60 };
+    } catch { return null; }
+  };
+
+  /* Prices each vehicle on the road network it actually uses.
+     `km` is the car distance; `nimble`, when present, is the two-wheeler one.
+
+     This used to take a single km for every vehicle — and that km came from
+     Distance Matrix in `driving` mode. So bike, auto and e-riksha were all
+     quoted on the car's detour: 4.2 km instead of 2.8 km on a real Lucknow
+     pair. Worse, booking already priced on the chosen route after the routing
+     fix, so the number the customer was shown and the number they were charged
+     had drifted apart. */
+  const loadFareEstimates = async (
+    km: number,
+    durationMin?: number,
+    nimble?: { km: number; durationMin: number } | null,
+  ): Promise<boolean> => {
     lastFareKmRef.current = km;
     if (durationMin != null) lastFareDurRef.current = durationMin;
+    lastNimbleRef.current = nimble ?? null;
     // Long-distance route (>80km) → this is an intercity trip, not a city ride.
     // Hand off to the IntercityScreen instead of loading city fares.
     if (km > 80) {
@@ -2197,27 +2250,44 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setFareLoading(true);
     const est: any = {};
     const durMin = durationMin ?? lastFareDurRef.current ?? (km / 20) * 60;
-    // ONE batched call for all vehicle fares (was 7 separate requests → felt
-    // slow). Falls back to per-vehicle calls if the batch endpoint is missing.
-    try {
-      const res = await fetch(`${API}/api/fare-estimate/batch`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
-        body: JSON.stringify({ distance: km, duration_min: durMin }),
-      });
-      const d = await res.json();
-      if (d?.fares && !d.error) {
-        for (const r of RIDES) if (d.fares[r.id]) est[r.id] = d.fares[r.id];
-      }
-    } catch (_e) {}
+    // Batched call for all vehicle fares (was 7 separate requests → felt slow).
+    // Falls back to per-vehicle calls if the batch endpoint is missing.
+    const batch = async (distance: number, duration_min: number) => {
+      try {
+        const res = await fetch(`${API}/api/fare-estimate/batch`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
+          body: JSON.stringify({ distance, duration_min }),
+        });
+        const d = await res.json();
+        return (d?.fares && !d.error) ? d.fares : null;
+      } catch (_e) { return null; }
+    };
+
+    // One call per road network, in parallel. With no two-wheeler distance
+    // this is exactly the single call it has always been.
+    const [carFares, nimbleFares] = await Promise.all([
+      batch(km, durMin),
+      nimble ? batch(nimble.km, nimble.durationMin) : Promise.resolve(null),
+    ]);
+    for (const r of RIDES) {
+      const src = (isNimble(r.id) && nimbleFares) ? nimbleFares : carFares;
+      if (src?.[r.id]) est[r.id] = src[r.id];
+    }
+
     // Fallback: if the batch returned nothing (old backend), fan out per vehicle.
     if (Object.keys(est).length === 0) {
       await Promise.all(RIDES.map(async (r) => {
+        const useNimble = isNimble(r.id) && nimble;
         try {
           const res = await fetch(`${API}/api/fare-estimate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
-            body: JSON.stringify({ ride_type: r.id, distance: km, duration_min: durMin }),
+            body: JSON.stringify({
+              ride_type: r.id,
+              distance: useNimble ? nimble!.km : km,
+              duration_min: useNimble ? nimble!.durationMin : durMin,
+            }),
           });
           const d = await res.json();
           if (!d.error && d.fare != null) est[r.id] = d;
