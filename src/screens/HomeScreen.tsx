@@ -4,11 +4,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Storage as AsyncStorage } from '../storage';
 import { Ionicons } from '@expo/vector-icons';
-import { apiPost, apiGet, authPost } from '../../api';
+import { apiPost, apiGet, authPost, authGet } from '../../api';
 import { useRideStore } from '../../store';
 import { useApp } from '../context/AppContext';
 import { Bouncy, GlassPanel, PulseView, SlideUp, CountUp, EmptyAnim, GlowPulse, ShineCard, FadeIn, SkeletonBox } from '../components/ui';
 import { DeleteAccountSheet } from '../components/DeleteAccountSheet';
+import { CallNumberSheet } from '../components/CallNumberSheet';
 import { s, C, T, SP, R, SHADOW } from '../styles';
 import { shortRideId } from '../rideId';
 import { MAPS_KEY, API } from '../constants';
@@ -2652,6 +2653,15 @@ function ProfileTab() {
     openRazorpayTopup,
   } = useApp();
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
+  const [showCallNumber, setShowCallNumber] = useState(false);
+  // Shown on the row itself so the setting is legible without opening it.
+  const [callPhone, setCallPhone] = useState<string | null>(null);
+  useEffect(() => {
+    if (!phone) return;
+    authGet(`/api/auth/call-phone?phone=${encodeURIComponent(phone)}`)
+      .then(r => { if (r && !r._error) setCallPhone(r.call_phone || null); })
+      .catch(() => {});
+  }, [phone, showCallNumber]);
 
   const [tierData, setTierData] = useState<any>(null);
   useEffect(() => {
@@ -2799,6 +2809,7 @@ function ProfileTab() {
             { label: 'Ride Budget',   sub: 'Track your monthly spend',        icon: 'bar-chart-outline',  color: C.purple, bg: C.purpleGlass, border: C.purpleBorder, onPress: () => setScreen('budget') },
             { label: 'Rider Tier',    sub: 'Your loyalty rank & perks',       icon: 'trophy-outline',     color: '#F59E0B', bg: C.yellowGlass, border: C.yellowBorder, onPress: () => setScreen('tier') },
             { label: 'Saved Places',  sub: 'Save Home, Office & more',        icon: 'bookmark-outline',   color: C.purple, bg: C.purpleGlass, border: C.purpleBorder, onPress: () => { loadSaved(); setScreen('saved'); } },
+            { label: 'Call number',   sub: callPhone ? `Drivers call ${callPhone}` : 'Drivers call your account number', icon: 'call-outline', color: C.green, bg: C.greenGlass, border: C.greenBorder, onPress: () => setShowCallNumber(true) },
           ])}
 
           {/* ── Fare Info ────────────────────────────────────────────────── */}
@@ -2836,6 +2847,12 @@ function ProfileTab() {
           }}>
             <Text style={{ color: C.red, fontWeight: '800', fontSize: 14 }}>Log Out</Text>
           </Bouncy>
+
+          <CallNumberSheet
+            visible={showCallNumber}
+            onClose={() => setShowCallNumber(false)}
+            phone={phone}
+          />
 
           <DeleteAccountSheet
             visible={showDeleteAccount}
