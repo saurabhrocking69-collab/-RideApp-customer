@@ -1802,9 +1802,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!userName.trim()) { setResult('❌ Name is required'); return; }
     setLoading(true);
     const finalName = userName.trim();
-    try {
-      await fetch(`${API}/api/auth/update-name`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, name: finalName, gender }) });
-    } catch (_e) {}
+    /* Retried rather than checked-and-blocked. If this never lands, the name
+       exists only on this phone and the driver coming to collect them sees
+       "Rider" instead — but refusing to finish onboarding over one network
+       hiccup would be worse than that, so it tries a few times and lets them
+       through either way. */
+    for (let i = 0; i < 3; i++) {
+      try {
+        const r = await fetch(`${API}/api/auth/update-name`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, name: finalName, gender }) });
+        if (r.ok) break;
+      } catch (_e) { /* fall through to the wait and try again */ }
+      await new Promise(res => setTimeout(res, 1200 * (i + 1)));
+    }
     await AsyncStorage.setItem('userName', finalName);
     await AsyncStorage.setItem('onboardingCompleted', 'true');
     if (gender) await AsyncStorage.setItem('userGender', gender);
@@ -1850,7 +1859,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         } catch (_e2) {}
       }
       if (!token) return;
-      await apiPost('/api/auth/save-fcm-token', { phone: userPhone, token, role: 'customer' });
+      /* Nobody looked at whether the server actually stored this, and apiPost
+         does not throw — it returns { _error: true } — so the catch could not
+         fire either. One dropped request here and the rider gets no push at
+         all for the whole session: no "driver has arrived", no payment
+         confirmation, no ride updates, and nothing anywhere saying so.
+         Registering the same token twice is harmless, so it is simply retried
+         until it lands. */
+      for (let i = 0; i < 4; i++) {
+        const r = await apiPost('/api/auth/save-fcm-token', { phone: userPhone, token, role: 'customer' });
+        if (r && !r._error && !r.error && (r._status == null || r._status < 400)) return;
+        await new Promise(res => setTimeout(res, 1500 * (i + 1)));
+      }
+      console.warn('[fcm] token not registered — push notifications will not arrive this session');
     } catch (_e) {}
   };
 
