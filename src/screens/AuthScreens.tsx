@@ -140,8 +140,18 @@ export function OnboardingScreen() {
 }
 
 export function LoginScreen() {
-  const { loginHeroAnim, loginCardAnim, phone, setPhone, result, loading, sendOtp } = useApp();
+  const { loginHeroAnim, loginCardAnim, phone, setPhone, result, loading, sendOtp, loginWithTruecaller, truecallerReady: tcReady } = useApp();
   const [activeTab, setActiveTab] = useState('auto');
+  const [tcBusy, setTcBusy]   = useState(false);
+  const [tcError, setTcError] = useState('');
+
+  const onTruecaller = async () => {
+    if (tcBusy) return;
+    setTcBusy(true); setTcError('');
+    const err = await loginWithTruecaller();
+    setTcBusy(false);
+    if (err) setTcError(err);
+  };
 
   const pinY     = useRef(new Animated.Value(0)).current;
   const p1Op     = useRef(new Animated.Value(0.7)).current;
@@ -501,8 +511,48 @@ export function LoginScreen() {
             ))}
           </View>
 
+          {/* ── One-tap sign-in ──────────────────────────────────────────
+              Rendered only when a native build actually carries the Truecaller
+              module (see src/truecaller.ts). Until then this is invisible, so
+              the block below stays the whole login exactly as before. */}
+          {tcReady && (
+            <>
+              <Bouncy
+                onPress={onTruecaller}
+                disabled={tcBusy}
+                style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12, opacity: tcBusy ? 0.6 : 1, elevation: 6, shadowColor: '#0087FF', shadowOpacity: 0.3, shadowRadius: 12 }}>
+                <View style={{ backgroundColor: '#0087FF', height: 54, borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 }}>
+                  <Ionicons name="call" size={18} color="#fff" />
+                  <Text style={{ color: '#fff', fontSize: 15.5, fontWeight: '800', letterSpacing: 0.2 }}>
+                    {tcBusy ? 'Verifying…' : 'Continue with Truecaller'}
+                  </Text>
+                </View>
+              </Bouncy>
+              <Text style={{ fontSize: 10.5, color: '#8A94B0', textAlign: 'center', marginBottom: 14 }}>
+                No SMS, no waiting — your number is confirmed in one tap
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                <View style={{ flex: 1, height: 1, backgroundColor: '#ECEDF8' }} />
+                <Text style={{ fontSize: 10.5, color: '#A8B0C8', fontWeight: '700', letterSpacing: 0.6 }}>OR</Text>
+                <View style={{ flex: 1, height: 1, backgroundColor: '#ECEDF8' }} />
+              </View>
+            </>
+          )}
+
+          {tcError ? (
+            <Text style={{ fontSize: 12, color: C.pink, fontWeight: '700', textAlign: 'center', marginBottom: 12 }}>{tcError}</Text>
+          ) : null}
+
           {/* Phone input */}
-          <Text style={{ fontSize: 11, color: '#8A94B0', fontWeight: '700', letterSpacing: 0.5, marginBottom: 8 }}>MOBILE NUMBER</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <Text style={{ fontSize: 11, color: '#8A94B0', fontWeight: '700', letterSpacing: 0.5 }}>MOBILE NUMBER</Text>
+            {phone.length === 10 ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Ionicons name="checkmark-circle" size={13} color="#12B76A" />
+                <Text style={{ fontSize: 10.5, color: '#12B76A', fontWeight: '700' }}>Looks right</Text>
+              </View>
+            ) : null}
+          </View>
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#F8F8FD', borderWidth: 1.5, borderColor: '#ECEDF8', borderRadius: 12, paddingHorizontal: 13, height: 52 }}>
               <Text style={{ fontSize: 19 }}>🇮🇳</Text>
@@ -639,12 +689,10 @@ export function OtpScreen() {
             <Text style={{ fontSize: 13, color: C.text, fontWeight: '700' }}>Paste from clipboard</Text>
           </TouchableOpacity>
 
-          {otpSent ? (
-            <View style={{ backgroundColor: C.yellowGlass, borderRadius: 12, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: C.yellowBorder }}>
-              <Text style={{ fontSize: 12, color: C.yellow, textAlign: 'center', marginBottom: 3 }}>Test OTP: <Text style={{ fontWeight: '900', letterSpacing: 5 }}>{otpSent}</Text></Text>
-              <Text style={{ fontSize: 11, color: C.textMuted, textAlign: 'center' }}>Testing: <Text style={{ fontWeight: '800', letterSpacing: 3, color: C.yellow }}>000000</Text> works on any number</Text>
-            </View>
-          ) : null}
+          {/* A yellow box used to sit here printing the live OTP on screen and,
+              underneath it, the words "Testing: 000000" — teaching anyone who
+              read it the bypass code that worked on every account in
+              production. Both the box and the hole behind it are gone. */}
 
           {result ? <Text style={{ color: C.pink, fontSize: 13, marginBottom: 14, textAlign: 'center', fontWeight: '700' }}>{result}</Text> : null}
 

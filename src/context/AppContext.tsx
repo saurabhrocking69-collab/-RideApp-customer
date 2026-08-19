@@ -16,6 +16,7 @@ import { API, MAPS_KEY, RIDES, DEFAULT_HOURLY_PACKAGES, WELCOME_SEEN_KEY, isNimb
 import { nimbleDistance } from '../routeDistance';
 import { Screen, Tab, Coords, HourlyStep, ExtendStep, WalletTxnTab } from '../types';
 import { shortRideId } from '../rideId';
+import { isReady as tcIsReady, signIn as tcSignIn } from '../truecaller';
 
 let RazorpayCheckout: any = null;
 try { const _m = require('react-native-razorpay'); RazorpayCheckout = _m?.default || _m || null; } catch (_e) {}
@@ -245,6 +246,8 @@ interface AppContextType {
   // Functions — auth
   sendOtp: () => Promise<void>;
   verifyOtp: (override?: string) => Promise<void>;
+  loginWithTruecaller: () => Promise<string | null>;
+  truecallerReady: boolean;
   completeOnboarding: () => Promise<void>;
   handleOtpChange: (text: string, index: number) => void;
   handleOtpKeyPress: (key: string, index: number) => void;
@@ -1037,20 +1040,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(iv);
   }, [screen]);
 
-  // Clipboard check on OTP screen
+  /* Read the clipboard ONCE on arriving at the OTP screen.
+
+     This used to be a setInterval every 2 seconds, which had two teeth. Any
+     six-digit string sitting in the clipboard — an old OTP, a PIN, a pincode —
+     was auto-submitted, and then submitted again two seconds later, and again:
+     three wrong tries inside six seconds, which is exactly what verify-otp
+     blocks an account for thirty minutes over. Someone could be locked out of
+     their own ride by whatever they had copied earlier. Second, Android 12 and
+     iOS 14 raise a "pasted from clipboard" banner on every read, so the screen
+     flashed one at the user every two seconds.
+
+     Once on entry, and never the same code twice, keeps the convenience and
+     drops both. The Paste button below is still there for the case where the
+     SMS lands after the screen opened. */
+  const triedClipRef = useRef<string>('');
   useEffect(() => {
     if (screen !== 'otp') return;
-    const iv = setInterval(async () => {
+    let cancelled = false;
+    (async () => {
       try {
         const text = await Clipboard.getStringAsync();
-        if (text && /^\d{6}$/.test(text)) {
-          const digits = text.split('');
-          setOtpDigits(digits); setOtp(text);
-          setTimeout(() => verifyOtp(text), 300);
+        if (cancelled) return;
+        if (text && /^\d{6}$/.test(text) && triedClipRef.current !== text) {
+          triedClipRef.current = text;
+          setOtpDigits(text.split('')); setOtp(text);
+          setTimeout(() => { if (!cancelled) verifyOtp(text); }, 300);
         }
       } catch (_e) {}
-    }, 2000);
-    return () => clearInterval(iv);
+    })();
+    return () => { cancelled = true; };
   }, [screen]);
 
   // Login screen entrance animation
@@ -1704,6 +1723,63 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     finally { setLoading(false); }
   };
 
+  /* Everything that happens after a login succeeds, whichever way it
+     succeeded. OTP and Truecaller both land here, so a brand-new rider gets
+     the same language-then-onboarding routing and a returning one gets the
+     same data warm-up regardless of which button they pressed. Keeping two
+     copies of this is how one sign-in route quietly stops registering for
+     push, or skips the language screen, months later. */
+  const completeLogin = async (data: any, loginPhone: string) => {
+    await AsyncStorage.setItem('userPhone', loginPhone);
+    await AsyncStorage.setItem('userToken', data.token);
+    const serverName = data.user?.name || '';
+    const onboardingDone = await AsyncStorage.getItem('onboardingCompleted');
+    const nameIsDefault = !serverName || serverName === 'User' || serverName === 'Rider';
+    const isNew = !onboardingDone && nameIsDefault;
+    const langSet = await AsyncStorage.getItem('userLanguage');
+    if (isNew) {
+      if (!langSet) {
+        await AsyncStorage.setItem('_postLangDest', 'onboarding');
+        setScreen('language-select'); setResult('');
+      } else {
+        onboardFade.setValue(0); onboardSlide.setValue(60);
+        setScreen('onboarding'); setResult('');
+        Animated.parallel([
+          Animated.timing(onboardFade, { toValue: 1, duration: 500, useNativeDriver: true }),
+          Animated.spring(onboardSlide, { toValue: 0, tension: 50, friction: 8, useNativeDriver: true }),
+        ]).start();
+      }
+    } else {
+      setUserName(serverName || 'Rider');
+      await AsyncStorage.setItem('userName', serverName || 'Rider');
+      fetchAppConfig(); loadHistory(loginPhone); loadWallet(loginPhone);
+      registerFCM(loginPhone); loadOffers(); loadHourlyPackages(); connectSocket(loginPhone);
+      setResult('');
+      if (!langSet) {
+        await AsyncStorage.setItem('_postLangDest', 'home');
+        setScreen('language-select');
+      } else {
+        setScreen('home');
+      }
+    }
+  };
+
+  /* Returns an error string to show, or null when there is nothing to say —
+     which covers both success and the user simply backing out of the
+     Truecaller sheet. Backing out is not a failure and must not be reported
+     as one. */
+  const loginWithTruecaller = async (): Promise<string | null> => {
+    try {
+      const out = await tcSignIn();
+      if (!out) return null;
+      setPhone(out.phone);
+      await completeLogin({ token: out.token, user: out.user }, out.phone);
+      return null;
+    } catch (e: any) {
+      return e?.message || 'Truecaller sign-in failed. Please use your number.';
+    }
+  };
+
   const verifyOtp = async (otpOverride?: string) => {
     const otpToUse = otpOverride || otp;
     if (!otpToUse) { setResult('❌ Enter OTP'); return; }
@@ -1712,38 +1788,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const data = await apiPost('/api/auth/verify-otp', { phone, otp: otpToUse, name: userName || 'Rider' });
       if (data._error) { setResult('❌ ' + (data.message || 'Could not connect to server')); shakeOtp(); return; }
       if (data.token) {
-        await AsyncStorage.setItem('userPhone', phone);
-        await AsyncStorage.setItem('userToken', data.token);
-        const serverName = data.user?.name || '';
-        const onboardingDone = await AsyncStorage.getItem('onboardingCompleted');
-        const nameIsDefault = !serverName || serverName === 'User' || serverName === 'Rider';
-        const isNew = !onboardingDone && nameIsDefault;
-        const langSet = await AsyncStorage.getItem('userLanguage');
-        if (isNew) {
-          if (!langSet) {
-            await AsyncStorage.setItem('_postLangDest', 'onboarding');
-            setScreen('language-select'); setResult('');
-          } else {
-            onboardFade.setValue(0); onboardSlide.setValue(60);
-            setScreen('onboarding'); setResult('');
-            Animated.parallel([
-              Animated.timing(onboardFade, { toValue: 1, duration: 500, useNativeDriver: true }),
-              Animated.spring(onboardSlide, { toValue: 0, tension: 50, friction: 8, useNativeDriver: true }),
-            ]).start();
-          }
-        } else {
-          setUserName(serverName || 'Rider');
-          await AsyncStorage.setItem('userName', serverName || 'Rider');
-          fetchAppConfig(); loadHistory(phone); loadWallet(phone);
-          registerFCM(phone); loadOffers(); loadHourlyPackages(); connectSocket(phone);
-          setResult('');
-          if (!langSet) {
-            await AsyncStorage.setItem('_postLangDest', 'home');
-            setScreen('language-select');
-          } else {
-            setScreen('home');
-          }
-        }
+        await completeLogin(data, phone);
       } else {
         setResult('❌ ' + (data.error || 'Incorrect OTP')); shakeOtp();
       }
@@ -3123,6 +3168,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     result, setResult, loading, setLoading, storeStatus,
     socketRef, phoneRef, pickupDebounceRef, dropDebounceRef, hPickupDebounceRef, hDropDebounceRef, buddyPUDebRef, buddyDRDebRef,
     sendOtp, verifyOtp, completeOnboarding, handleOtpChange, handleOtpKeyPress,
+    loginWithTruecaller, truecallerReady: tcIsReady(),
     connectSocket, joinRideSocket, joinHourlySocket, adoptActiveRide,
     bookRide, surgeFareNow, switchVehicle, searchPlaces, searchNearbyCategory, geocodePlace, swapLocations,
     fetchEtaByCoords, loadFareEstimates, applyPromo, useMyLocation, calcDriverEta,
