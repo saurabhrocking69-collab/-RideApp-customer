@@ -271,18 +271,32 @@ export function PaymentScreen() {
             );
           })()}
 
-          {/* Route pill */}
-          <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 16, padding: 12, marginTop: 16, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 9, fontWeight: '800', letterSpacing: 1.5, marginBottom: 3 }}>FROM</Text>
-              <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }} numberOfLines={1}>{pickup}</Text>
+          {/* Route pill.
+               The addresses used to come from the booking form's own pickup/drop
+               state, which is cleared once a ride is under way — so by the time
+               this screen appeared the labels were there and the addresses were
+               blank, and every rider paid against an empty FROM -> TO box.
+               The ride record carries its own addresses; those are the truth here.
+               And if neither is known the pill does not render at all — an empty
+               box is worse than no box. */}
+          {(() => {
+            const from_ = rideData?.pickup || pickup || '';
+            const to_   = rideData?.drop_location || drop || '';
+            if (!from_ && !to_) return null;
+            return (
+            <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 16, padding: 12, marginTop: 16, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 9, fontWeight: '800', letterSpacing: 1.5, marginBottom: 3 }}>FROM</Text>
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }} numberOfLines={1}>{from_}</Text>
+              </View>
+              <Ionicons name="arrow-forward" size={16} color="rgba(255,255,255,0.5)" />
+              <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 9, fontWeight: '800', letterSpacing: 1.5, marginBottom: 3 }}>TO</Text>
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }} numberOfLines={1}>{to_}</Text>
+              </View>
             </View>
-            <Ionicons name="arrow-forward" size={16} color="rgba(255,255,255,0.5)" />
-            <View style={{ flex: 1, alignItems: 'flex-end' }}>
-              <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 9, fontWeight: '800', letterSpacing: 1.5, marginBottom: 3 }}>TO</Text>
-              <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }} numberOfLines={1}>{drop}</Text>
-            </View>
-          </View>
+            );
+          })()}
 
           {/* Wallet promo bar */}
           {walletSufficient && (
