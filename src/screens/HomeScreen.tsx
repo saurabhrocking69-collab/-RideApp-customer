@@ -2910,13 +2910,27 @@ function RatingModal() {
 
   const dismiss = async (submitRating = false) => {
     if (submitRating && rating > 0 && rideData?.ride_id) {
-      try {
-        await fetch(`${API}/api/rides/rate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ride_id: rideData.ride_id, rating, review, tip }),
-        });
-      } catch (_e) {}
+      /* The tip rides along with the rating, and a tip is real money — it
+         credits the driver's wallet. This used to be fired and forgotten, so a
+         dropped request closed the modal, cleared the ride, and left the rider
+         certain they had tipped someone who never received anything. Retried,
+         and if it still will not go, the rider is told rather than left
+         believing it landed. */
+      let sent = false;
+      for (let i = 0; i < 3 && !sent; i++) {
+        try {
+          const r = await fetch(`${API}/api/rides/rate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ride_id: rideData.ride_id, rating, review, tip }),
+          });
+          sent = r.ok;
+        } catch (_e) { /* wait and try again */ }
+        if (!sent) await new Promise(res => setTimeout(res, 1000 * (i + 1)));
+      }
+      if (!sent && tip > 0) {
+        Alert.alert('Tip not sent', `Your ₹${tip} tip did not reach the driver, and your rating was not saved. Please check your connection.`);
+      }
     }
     setShowRatingModal(false);
     setRideData(null);
