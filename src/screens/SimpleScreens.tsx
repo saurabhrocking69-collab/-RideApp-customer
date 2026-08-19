@@ -163,7 +163,7 @@ export function SavedPlacesScreen() {
 export function ChatScreen() {
   const {
     rideData,
-    chatMsgs, chatInput, setChatInput,
+    chatMsgs, chatInput, setChatInput, chatError,
     setScreen, chatOrigin,
     sendChat, callDriver,
   } = useApp();
@@ -197,6 +197,16 @@ export function ChatScreen() {
           </TouchableOpacity>
         ))}
       </ScrollView>
+      {/* A failed send used to leave nothing on screen — the box was already
+          cleared and the message never appeared, because messages only show
+          after the server has them. The words are put back in the box now, and
+          this says why they are still sitting there. */}
+      {chatError ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: 'rgba(239,68,68,0.10)' }}>
+          <Ionicons name="alert-circle" size={15} color={C.red} />
+          <Text style={{ flex: 1, color: C.red, fontSize: 12, fontWeight: '700' }}>{chatError}</Text>
+        </View>
+      ) : null}
       <View style={[s.chatInputRow, { backgroundColor: C.bgCard, borderTopWidth: 1, borderColor: C.glassBorder }]}>
         <TextInput style={[s.chatInput, { backgroundColor: C.glassMid, color: C.text, borderColor: C.glassBorder, borderWidth: 1 }]} placeholder="Type a message..." placeholderTextColor={C.textDim} value={chatInput} onChangeText={setChatInput} onSubmitEditing={() => sendChat()} />
         <TouchableOpacity style={[s.chatSend, { backgroundColor: C.pink, elevation: 6, shadowColor: C.pink, shadowOpacity: 0.4, shadowRadius: 6 }]} onPress={() => sendChat()}><Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>➤</Text></TouchableOpacity>

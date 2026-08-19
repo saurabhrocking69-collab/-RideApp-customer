@@ -144,6 +144,7 @@ interface AppContextType {
   // Chat
   chatMsgs: any[]; setChatMsgs: (m: any[]) => void;
   chatInput: string; setChatInput: (i: string) => void;
+  chatError: string; setChatError: (e: string) => void;
   unreadChat: number; setUnreadChat: React.Dispatch<React.SetStateAction<number>>;
   lastChatCount: React.MutableRefObject<number>;
   chatToast: string | null; setChatToast: (v: string | null) => void;
@@ -524,6 +525,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ── Chat ────────────────────────────────────────────────────────────────
   const [chatMsgs, setChatMsgs] = useState<any[]>([]);
   const [chatInput, setChatInput] = useState('');
+  const [chatError, setChatError] = useState('');
   const [unreadChat, setUnreadChat] = useState(0);
   const lastChatCount = useRef(0);
   const [chatToast, setChatToast] = useState<string | null>(null);
@@ -2808,13 +2810,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (_e) {}
   };
 
+  /* The card was marked scratched before anyone knew the reward had been
+     credited, and apiPost never throws — it returns { _error: true } — so the
+     catch could not fire either. A failed claim showed the rider their prize
+     and put nothing in their wallet, and because a scratched card cannot be
+     scratched twice, the money was simply gone. */
   const scratchNow = async () => {
     if (!scratchCard || scratched) return;
-    scratchAnim.stopAnimation(); setScratched(true);
-    try {
-      await apiPost('/api/scratch-card/scratch', { card_id: scratchCard.card_id, phone: phone || '9999999999' });
-      loadWallet(phone);
-    } catch (_e) {}
+    scratchAnim.stopAnimation();
+    const r = await apiPost('/api/scratch-card/scratch', { card_id: scratchCard.card_id, phone: phone || '9999999999' });
+    if (!r || r._error || r.error) {
+      setResult('❌ Could not claim that reward — pull down to refresh and tap again');
+      return;                         // card stays unscratched, so it can be retried
+    }
+    setScratched(true);
+    loadWallet(phone);
   };
 
   const openRazorpayTopup = async (amt: number) => {
@@ -2961,12 +2971,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return d;
     } catch (_e) { return { error: 'Network error' }; }
   };
+  // Clearing this locally without checking the reply made the buddy look
+  // removed until the next load put them straight back — which reads as the app
+  // ignoring the request rather than failing it.
   const removeFavouriteBuddy = async () => {
     if (!phone) return;
     try {
-      await fetch(`${API}/api/favourites`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customer_phone: phone }) });
+      const r = await fetch(`${API}/api/favourites`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customer_phone: phone }) });
+      if (!r.ok) { setResult('❌ Could not remove — please try again'); return; }
       setFavouriteBuddy(null);
-    } catch (_e) {}
+    } catch (_e) { setResult('❌ Could not remove — check your connection'); }
   };
 
   // ── Misc ─────────────────────────────────────────────────────────────────
@@ -3062,17 +3076,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // never be mis-pinned again.
   const savePlaceAt = async (label: string, address: string, lat?: number | null, lng?: number | null) => {
     if (lat == null || lng == null) { setResult('❌ No exact location to save'); return; }
+    /* The success line used to be printed whether or not the save worked —
+       nothing checked the reply, so a 500 or a dropped connection still told
+       the rider "Home saved". They found out weeks later, looking for a Home
+       chip that was never there, at the moment they were in a hurry to use it. */
     try {
-      await fetch(`${API}/api/places/save`, {
+      const r = await fetch(`${API}/api/places/save`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, label, address, lat, lng }),
       });
+      if (!r.ok) { setResult(`❌ Could not save ${label} — please try again`); return; }
       loadSaved();
       setResult(`✅ ${label} saved — next time it's one tap`);
-    } catch (_e) {}
+    } catch (_e) {
+      setResult(`❌ Could not save ${label} — check your connection`);
+    }
   };
   const deletePlace = async (id: number) => {
-    try { await fetch(`${API}/api/places/delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }); loadSaved(); } catch (_e) {}
+    try {
+      const r = await fetch(`${API}/api/places/delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+      if (!r.ok) { setResult('❌ Could not remove that place — please try again'); return; }
+      loadSaved();
+    } catch (_e) { setResult('❌ Could not remove that place — check your connection'); }
   };
   const animateStar = (i: number) => {
     Animated.sequence([
@@ -3080,11 +3105,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       Animated.timing(starAnims[i], { toValue: 1, duration: 120, useNativeDriver: true }),
     ]).start();
   };
+  /* Sent messages only appear once the server has them and the list is re-read,
+     so a failed send left nothing behind at all: the input had already been
+     cleared and the message simply vanished. The rider watched "I am at gate 2"
+     disappear and believed the driver had it. On a pickup that is the whole
+     point of the feature.
+
+     Now a failure puts the words back in the box, so nothing typed is ever
+     lost, and says so above the input. */
   const sendChat = async (text?: string) => {
     const msg = text ?? chatInput;
     if (!msg.trim() || !rideData?.ride_id) return;
     if (!text) setChatInput('');
-    try { await fetch(`${API}/api/chat/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: rideData.ride_id, sender: 'customer', message: msg }) }); const r = await fetch(`${API}/api/chat/${rideData.ride_id}`); const d = await r.json(); setChatMsgs(d.messages || []); } catch (_e) {}
+    setChatError('');
+    try {
+      const sent = await fetch(`${API}/api/chat/send`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ride_id: rideData.ride_id, sender: 'customer', message: msg }),
+      });
+      if (!sent.ok) throw new Error('send failed');
+      const r = await fetch(`${API}/api/chat/${rideData.ride_id}`);
+      const d = await r.json();
+      setChatMsgs(d.messages || []);
+    } catch (_e) {
+      if (!text) setChatInput(msg);
+      setChatError('Not sent — tap send again, or call the driver');
+    }
   };
   const initiateCall = async (rideId: string | null, bookingId: string | null = null) => {
     try {
@@ -3137,7 +3183,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     serverSurgeOffer, setServerSurgeOffer, noDriverFinal, setNoDriverFinal,
     driverCancelPopup, setDriverCancelPopup,
     notifToast, setNotifToast,
-    chatMsgs, setChatMsgs, chatInput, setChatInput, unreadChat, setUnreadChat, lastChatCount, chatToast, setChatToast, chatOrigin, setChatOrigin,
+    chatMsgs, setChatMsgs, chatInput, setChatInput, chatError, setChatError, unreadChat, setUnreadChat, lastChatCount, chatToast, setChatToast, chatOrigin, setChatOrigin,
     rating, setRating, tip, setTip, review, setReview,
     paymentDone, setPaymentDone, showRatingModal, setShowRatingModal, showUpiQr, setShowUpiQr, fareCount, setFareCount,
     scratchCard, setScratchCard, scratched, setScratched, scratchAnim, starAnims, sosActive, setSosActive, sosOutcome,
