@@ -140,8 +140,7 @@ export function OnboardingScreen() {
 }
 
 export function LoginScreen() {
-  const { loginHeroAnim, loginCardAnim, phone, setPhone, result, loading, sendOtp, loginWithTruecaller, truecallerReady: tcReady } = useApp();
-  const [activeTab, setActiveTab] = useState('auto');
+  const { loginHeroAnim, loginCardAnim, phone, setPhone, result, loading, sendOtp, loginWithTruecaller, truecallerReady: tcReady, rideType, setRideType } = useApp();
   const [tcBusy, setTcBusy]   = useState(false);
   const [tcError, setTcError] = useState('');
 
@@ -181,10 +180,10 @@ export function LoginScreen() {
   }, []);
 
   const TABS = [
-    { id: 'auto',  emoji: '🛺',  label: 'Auto'  },
-    { id: 'bike',  emoji: '🏍️', label: 'Bike'  },
-    { id: 'sedan', emoji: '🚗',  label: 'Sedan' },
-    { id: 'suv',   emoji: '🚙',  label: 'SUV'   },
+    { id: 'auto',  emoji: '🛺', label: 'Auto'      },
+    { id: 'bike',  emoji: '🏍️', label: 'Bike'      },
+    { id: 'car',   emoji: '🚕', label: '5 Seater' },
+    { id: 'car_7', emoji: '🚐', label: '7 Seater' },
   ];
 
   return (
@@ -491,26 +490,39 @@ export function LoginScreen() {
             India's fastest & safest ride · 24/7 available
           </Text>
 
-          {/* Vehicle tabs */}
+          {/* ── Which do you usually take ────────────────────────────────
+              This row looked exactly like a picker and picked nothing: it set
+              a local `activeTab` that only coloured itself in, and the choice
+              died with the screen. Someone tapped Bike, watched it highlight,
+              and got Auto on the booking screen a moment later.
+
+              It is real now. `rideType` is the same sticky selection the
+              booking screen reads, so the vehicle chosen here is the one that
+              is already selected when the map opens. The ids and icons come
+              from the app's own RIDES catalogue rather than a second private
+              list — the old one offered "Sedan" and "SUV", which are not
+              vehicles this platform has ever run. */}
+          <Text style={{ fontSize: 11, color: '#8A94B0', fontWeight: '700', letterSpacing: 0.5, marginBottom: 8 }}>
+            WHICH DO YOU USUALLY TAKE?
+          </Text>
           <View style={{ flexDirection: 'row', gap: 7, marginBottom: 18 }}>
             {TABS.map(tab => (
               <TouchableOpacity
                 key={tab.id}
-                onPress={() => setActiveTab(tab.id)}
+                onPress={() => setRideType(tab.id)}
                 activeOpacity={0.75}
                 style={{
                   flex: 1, alignItems: 'center',
                   paddingVertical: 8, paddingHorizontal: 4, borderRadius: 12,
-                  backgroundColor: activeTab === tab.id ? '#FFF0F4' : '#F8F8FD',
+                  backgroundColor: rideType === tab.id ? '#FFF0F4' : '#F8F8FD',
                   borderWidth: 1.5,
-                  borderColor: activeTab === tab.id ? 'rgba(255,45,107,0.28)' : 'transparent',
+                  borderColor: rideType === tab.id ? 'rgba(255,45,107,0.28)' : 'transparent',
                 }}>
                 <Text style={{ fontSize: 20, lineHeight: 24 }}>{tab.emoji}</Text>
-                <Text style={{ fontSize: 9, fontWeight: '600', letterSpacing: 0.3, marginTop: 3, color: activeTab === tab.id ? C.pink : '#8A94B0' }}>{tab.label}</Text>
+                <Text style={{ fontSize: 9, fontWeight: '600', letterSpacing: 0.3, marginTop: 3, color: rideType === tab.id ? C.pink : '#8A94B0' }}>{tab.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
-
           {/* ── One-tap sign-in ──────────────────────────────────────────
               Rendered only when a native build actually carries the Truecaller
               module (see src/truecaller.ts). Until then this is invisible, so
@@ -603,16 +615,20 @@ export function LoginScreen() {
   );
 }
 
+/* ── Verification ────────────────────────────────────────────────────────
+   This screen used to be dark (C.night) while the login screen it follows is
+   bright and hand-illustrated. Tapping a button on a sunlit screen and landing
+   somewhere black reads as two different apps bolted together, and that break
+   lands at the exact moment a first-time rider is deciding whether to trust
+   this thing with their phone number. It is one continuous flow now: same
+   ground, same type, same pink, with a compact header instead of a full second
+   hero. */
 export function OtpScreen() {
   const {
     phone,
-    otp, setOtp,
-    otpDigits, setOtpDigits,
-    otpRefs,
-    otpShakeAnim, otpSuccessAnim,
-    otpSent,
-    canResend, resendTimer,
-    setCanResend, setResendTimer,
+    otpDigits, setOtpDigits, setOtp,
+    otpRefs, otpShakeAnim,
+    canResend, resendTimer, setCanResend, setResendTimer,
     result, setResult,
     loading,
     handleOtpChange, handleOtpKeyPress,
@@ -620,109 +636,162 @@ export function OtpScreen() {
     setScreen,
   } = useApp();
 
-  const checkClipboard = async () => {
+  const filled = otpDigits.filter((d: string) => d !== '').length;
+  const complete = filled === 6;
+  // 98765 43210 — the way the number is actually said out loud, so someone
+  // checking they typed the right one can scan it in two glances, not ten.
+  const pretty = phone.length === 10 ? phone.slice(0, 5) + ' ' + phone.slice(5) : phone;
+
+  /* The keyboard should already be up. Every extra tap here is a tap on the
+     one screen where the user has nothing to decide and only wants to be
+     through it. */
+  useEffect(() => {
+    const t = setTimeout(() => otpRefs.current[0]?.focus(), 350);
+    return () => clearTimeout(t);
+  }, []);
+
+  const paste = async () => {
     try {
       const text = await Clipboard.getStringAsync();
       if (text && /^\d{6}$/.test(text)) {
-        const digits = text.split('');
-        setOtpDigits(digits);
-        setOtp(text);
-        setTimeout(() => verifyOtp(text), 300);
+        setOtpDigits(text.split('')); setOtp(text);
+        setTimeout(() => verifyOtp(text), 250);
+      } else {
+        setResult('No 6-digit code found in your clipboard');
       }
     } catch (_e) {}
   };
 
+  const resend = async () => {
+    setOtpDigits(['', '', '', '', '', '']); setOtp(''); setResult('');
+    setCanResend(false); setResendTimer(60);
+    otpRefs.current[0]?.focus();
+    await sendOtp();
+  };
+
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.night }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#FAFBFF' }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
-        {/* Dark hero */}
-        <View style={{ alignItems: 'center', paddingTop: 64, paddingBottom: 32 }}>
-          <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,45,120,0.06)', top: -20, left: -40 }} />
-          <Animated.View style={{
-            width: 84, height: 84, borderRadius: 24,
-            backgroundColor: 'rgba(255,45,120,0.15)', borderWidth: 1.5, borderColor: C.pinkBorder,
-            alignItems: 'center', justifyContent: 'center', marginBottom: 20,
-            shadowColor: C.pink, shadowOpacity: 0.35, shadowRadius: 20, elevation: 10,
-            transform: [{ scale: otpSuccessAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.15] }) }],
-          }}>
-            <Ionicons name="shield-checkmark" size={44} color={C.pink} />
-          </Animated.View>
-          <Text style={{ fontSize: 26, fontWeight: '900', color: '#fff', letterSpacing: -0.5 }}>Verify OTP</Text>
-          <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13.5, marginTop: 8, textAlign: 'center', lineHeight: 22 }}>
-            6-digit code sent to{'\n'}
-            <Text style={{ color: C.pink, fontWeight: '800' }}>+91 {phone}</Text>
-          </Text>
+        {/* Back, and where you are. Two dots rather than "Step 2 of 2" because
+            the flow is short enough that the words cost more than they explain. */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 52, paddingBottom: 4 }}>
+          <TouchableOpacity
+            onPress={() => setScreen('login')}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#ECEDF8', alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="chevron-back" size={20} color="#1E2434" />
+          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View style={{ width: 18, height: 5, borderRadius: 3, backgroundColor: '#DDE1F0' }} />
+            <View style={{ width: 18, height: 5, borderRadius: 3, backgroundColor: C.pink }} />
+          </View>
         </View>
 
-        {/* Card */}
-        <View style={{
-          backgroundColor: C.bgCard,
-          borderTopLeftRadius: 32, borderTopRightRadius: 32,
-          flex: 1, padding: 28, paddingBottom: 36,
-          borderTopWidth: 1, borderColor: C.glassBorder,
-        }}>
-          <Text style={{ fontSize: 10, fontWeight: '800', color: C.textMuted, marginBottom: SP.md, letterSpacing: 1.5 }}>ENTER 6-DIGIT CODE</Text>
+        <View style={{ paddingHorizontal: 24, paddingTop: 26 }}>
 
-          <Animated.View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 22, gap: 6, transform: [{ translateX: otpShakeAnim }] }}>
-            {otpDigits.map((digit: string, i: number) => (
-              <TextInput
-                key={i}
-                ref={(ref) => { otpRefs.current[i] = ref; }}
-                style={{
-                  flex: 1, height: 64, borderRadius: R.sm, textAlign: 'center', fontSize: 26, fontWeight: '900' as const,
-                  borderWidth: 2.5, borderColor: digit ? C.pink : C.glassBorder,
-                  backgroundColor: digit ? C.pinkGlass : C.glassMid, color: C.text,
-                  elevation: digit ? 4 : 0, shadowColor: C.pink, shadowOpacity: digit ? 0.2 : 0, shadowRadius: 8,
-                }}
-                keyboardType="number-pad" maxLength={1} value={digit}
-                onChangeText={(t) => handleOtpChange(t, i)}
-                onKeyPress={({ nativeEvent }) => handleOtpKeyPress(nativeEvent.key, i)}
-              />
-            ))}
+          <View style={{
+            width: 62, height: 62, borderRadius: 20, marginBottom: 20,
+            backgroundColor: '#FFF0F5', borderWidth: 1.5, borderColor: 'rgba(255,45,120,0.20)',
+            alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Ionicons name="chatbubble-ellipses" size={28} color={C.pink} />
+          </View>
+
+          <Text style={{ fontSize: 28, fontWeight: '900', color: '#1E2434', letterSpacing: -0.7 }}>
+            Enter the code
+          </Text>
+
+          {/* The number and the way to fix it sit together. Someone who mistyped
+              a digit should not have to guess that "back" is how you correct it. */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginTop: 9, marginBottom: 26 }}>
+            <Text style={{ fontSize: 13.5, color: '#8A94B0' }}>We sent 6 digits to </Text>
+            <Text style={{ fontSize: 13.5, color: '#1E2434', fontWeight: '800' }}>+91 {pretty}</Text>
+            <TouchableOpacity onPress={() => setScreen('login')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Text style={{ fontSize: 13.5, color: C.pink, fontWeight: '800' }}>  Change</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Animated.View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8, transform: [{ translateX: otpShakeAnim }] }}>
+            {otpDigits.map((digit: string, i: number) => {
+              const active = !digit && i === filled;   // the box being typed into
+              return (
+                <TextInput
+                  key={i}
+                  ref={(ref) => { otpRefs.current[i] = ref; }}
+                  style={{
+                    flex: 1, height: 66, borderRadius: 16, textAlign: 'center',
+                    fontSize: 27, fontWeight: '900' as const, color: '#1E2434',
+                    backgroundColor: digit ? '#FFF0F5' : '#FFFFFF',
+                    borderWidth: 2,
+                    borderColor: digit ? C.pink : active ? 'rgba(255,45,120,0.45)' : '#E6E9F5',
+                    shadowColor: digit || active ? C.pink : '#8A94B0',
+                    shadowOpacity: digit ? 0.18 : active ? 0.12 : 0.05,
+                    shadowRadius: 10, shadowOffset: { width: 0, height: 3 },
+                    elevation: digit ? 3 : 1,
+                  }}
+                  keyboardType="number-pad" maxLength={1} value={digit}
+                  onChangeText={(t) => handleOtpChange(t, i)}
+                  onKeyPress={({ nativeEvent }) => handleOtpKeyPress(nativeEvent.key, i)}
+                  selectTextOnFocus
+                />
+              );
+            })}
           </Animated.View>
 
-          <TouchableOpacity
-            style={{ backgroundColor: C.glass, borderRadius: 12, padding: 13, marginBottom: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: C.glassBorder }}
-            onPress={checkClipboard}>
-            <Ionicons name="clipboard-outline" size={18} color={C.textMuted} />
-            <Text style={{ fontSize: 13, color: C.text, fontWeight: '700' }}>Paste from clipboard</Text>
-          </TouchableOpacity>
+          {result ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 16 }}>
+              <Ionicons name="alert-circle" size={15} color={C.pink} />
+              <Text style={{ flex: 1, color: C.pink, fontSize: 12.5, fontWeight: '700', lineHeight: 18 }}>
+                {String(result).replace('❌ ', '')}
+              </Text>
+            </View>
+          ) : null}
 
-          {/* A yellow box used to sit here printing the live OTP on screen and,
-              underneath it, the words "Testing: 000000" — teaching anyone who
-              read it the bypass code that worked on every account in
-              production. Both the box and the hole behind it are gone. */}
-
-          {result ? <Text style={{ color: C.pink, fontSize: 13, marginBottom: 14, textAlign: 'center', fontWeight: '700' }}>{result}</Text> : null}
-
+          {/* The button says what is missing rather than sitting there greyed
+              and mute — "Enter 2 more digits" answers the only question a
+              stuck user has. */}
           <Bouncy
-            style={{ borderRadius: 16, overflow: 'hidden', marginBottom: 16, opacity: (loading || otpDigits.join('').length < 6) ? 0.5 : 1, elevation: 10, shadowColor: C.pink, shadowOpacity: 0.45, shadowRadius: 12 }}
-            onPress={() => verifyOtp()} disabled={loading || otpDigits.join('').length < 6}>
-            <View style={{ backgroundColor: C.pink, paddingVertical: 18, alignItems: 'center', borderRadius: 16 }}>
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }}>
-                {loading ? 'Verifying...' : 'Verify OTP'}
+            onPress={() => verifyOtp()}
+            disabled={loading || !complete}
+            style={{ borderRadius: 16, overflow: 'hidden', marginTop: 22, opacity: (loading || !complete) ? 0.45 : 1, elevation: complete ? 9 : 0, shadowColor: C.pink, shadowOpacity: complete ? 0.35 : 0, shadowRadius: 16 }}>
+            <View style={{ backgroundColor: C.pink, height: 56, alignItems: 'center', justifyContent: 'center', borderRadius: 16 }}>
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900', letterSpacing: 0.2 }}>
+                {loading ? 'Verifying…' : complete ? 'Verify & continue' : 'Enter ' + (6 - filled) + ' more digit' + (6 - filled === 1 ? '' : 's')}
               </Text>
             </View>
           </Bouncy>
 
-          <View style={{ alignItems: 'center', marginBottom: 16 }}>
+          <View style={{ height: 1, backgroundColor: '#ECEDF8', marginTop: 26, marginBottom: 18 }} />
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 14 }}>
+            <Text style={{ fontSize: 13, color: '#8A94B0' }}>Code not arrived?</Text>
             {canResend ? (
-              <TouchableOpacity onPress={async () => {
-                setOtpDigits(['','','','','','']); setOtp(''); setResult('');
-                setCanResend(false); setResendTimer(60);
-                await sendOtp();
-              }}>
-                <Text style={{ color: C.pink, fontWeight: '800', fontSize: 14 }}>Resend OTP</Text>
+              <TouchableOpacity onPress={resend} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Text style={{ fontSize: 13, color: C.pink, fontWeight: '800' }}>Send again</Text>
               </TouchableOpacity>
             ) : (
-              <Text style={{ color: C.textMuted, fontSize: 13 }}>Resend in <Text style={{ color: C.pink, fontWeight: '700' }}>{resendTimer}s</Text></Text>
+              <Text style={{ fontSize: 13, color: '#1E2434', fontWeight: '700' }}>Send again in {resendTimer}s</Text>
             )}
           </View>
 
-          <TouchableOpacity onPress={() => setScreen('login')} style={{ alignItems: 'center', paddingVertical: 10 }}>
-            <Text style={{ color: C.textMuted, fontSize: 13 }}>Wrong number? <Text style={{ color: C.pink, fontWeight: '700' }}>Go back</Text></Text>
+          <TouchableOpacity
+            onPress={paste}
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 12, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#ECEDF8' }}>
+            <Ionicons name="clipboard-outline" size={16} color="#8A94B0" />
+            <Text style={{ fontSize: 13, color: '#1E2434', fontWeight: '700' }}>Paste from clipboard</Text>
           </TouchableOpacity>
+
+          {/* Said here because this is the screen the fraud actually happens on:
+              a caller pretending to be support asks for exactly these six
+              digits. It costs one line and it is true. */}
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 22, marginBottom: 36, paddingHorizontal: 4 }}>
+            <Ionicons name="lock-closed" size={13} color="#12B76A" style={{ marginTop: 1 }} />
+            <Text style={{ flex: 1, fontSize: 11, color: '#8A94B0', lineHeight: 17 }}>
+              Never share this code. Sppero staff will never call and ask for it.
+            </Text>
+          </View>
+
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
