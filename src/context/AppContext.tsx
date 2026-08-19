@@ -49,6 +49,8 @@ function _fmtEta(km: number): string {
 }
 
 // ─── Context Type ───────────────────────────────────────────────────────────
+export type SosOutcome = { logged: boolean; alerted: number; contacts: number; opened: boolean };
+
 interface AppContextType {
   // Navigation
   screen: Screen; setScreen: (s: Screen) => void;
@@ -158,6 +160,7 @@ interface AppContextType {
   scratchAnim: Animated.Value;
   starAnims: Animated.Value[];
   sosActive: boolean; setSosActive: (v: boolean) => void;
+  sosOutcome: SosOutcome | null;
   // Wallet
   walletBalance: number; setWalletBalance: (b: number) => void;
   walletTxns: any[]; setWalletTxns: (t: any[]) => void;
@@ -565,6 +568,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const scratchAnim = useRef(new Animated.Value(1)).current;
   const starAnims   = useRef([0,1,2,3,4].map(() => new Animated.Value(1))).current;
   const [sosActive, setSosActive] = useState(false);
+  /* What the last SOS actually managed to do. The panel reads this instead of
+     assuming, so it can never claim contacts were notified when none were. */
+  const [sosOutcome, setSosOutcome] = useState<SosOutcome | null>(null);
 
   // ── Wallet ──────────────────────────────────────────────────────────────
   const [walletBalance, setWalletBalance] = useState(0);
@@ -2936,39 +2942,68 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch { Alert.alert('Error', 'Network error — please try again'); }
   };
 
-  const triggerSOS = async () => {
+  /* SOS. Everything below exists so the panel on screen can tell the truth.
+
+     It used to set sosActive and return, and the screen then said "SOS Alert
+     Sent — Emergency contacts notified" whatever had actually happened: the
+     backend call sat in an empty catch, a rider with no saved contacts hit a
+     bare `return`, and on a phone without WhatsApp the throw took the SMS
+     fallback down with it. A frightened person read "contacts notified" and
+     stopped trying anything else. That is the worst thing a safety feature can
+     do, so it now reports what actually went out and the panel says so. */
+  const triggerSOS = async (): Promise<SosOutcome> => {
+    const out: SosOutcome = { logged: false, alerted: 0, contacts: 0, opened: false };
     setSosActive(true);
-    // 1. Notify backend
+
+    // 1. Tell the server. Its alerting must not depend on the rider's own
+    //    phone managing to open anything.
     try {
-      await fetch(`${API}/api/sos`, {
+      const r = await fetch(`${API}/api/sos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, ride_id: rideData?.ride_id, lat: userCoords?.latitude, lng: userCoords?.longitude, type: 'emergency' }),
       });
-    } catch (_e) {}
-    // 2. Send WhatsApp alert to every saved emergency contact
+      out.logged = r.ok;
+    } catch (_e) { out.logged = false; }
+
+    // 2. The rider's own saved contacts.
+    let contacts: { name: string; phone: string }[] = [];
     try {
       const raw = await AsyncStorage.getItem('sppero_emergency_contacts');
-      const contacts: { name: string; phone: string }[] = raw ? JSON.parse(raw) : [];
-      if (contacts.length === 0) return;
-      const locUrl = userCoords
-        ? `https://maps.google.com/?q=${userCoords.latitude},${userCoords.longitude}`
-        : '';
-      const driverPart = rideData
-        ? `\nDriver: ${rideData.driver_name || 'Unknown'} | Vehicle: ${rideData.vehicle_no || 'Unknown'} | Ride ${shortRideId(rideData.ride_id)}`
-        : '';
-      const message = `🆘 EMERGENCY — I need immediate help!\nI am on a Sppero ride.${driverPart}\n📍 My current location:\n${locUrl}\n\nPlease call me or alert the police (100).`;
-      const encoded = encodeURIComponent(message);
-      // Open WhatsApp for the first contact; others get alerted via SMS fallback
-      const first = contacts[0];
-      const waNum = first.phone.startsWith('91') ? first.phone : `91${first.phone}`;
+      contacts = raw ? JSON.parse(raw) : [];
+    } catch (_e) { contacts = []; }
+    out.contacts = contacts.length;
+    if (!contacts.length) { setSosOutcome(out); return out; }
+
+    const locUrl = userCoords
+      ? `https://maps.google.com/?q=${userCoords.latitude},${userCoords.longitude}`
+      : '';
+    const driverPart = rideData
+      ? `\nDriver: ${rideData.driver_name || 'Unknown'} | Vehicle: ${rideData.vehicle_no || 'Unknown'} | Ride ${shortRideId(rideData.ride_id)}`
+      : '';
+    const message = `🆘 EMERGENCY — I need immediate help!\nI am on a Sppero ride.${driverPart}\n📍 My current location:\n${locUrl}\n\nPlease call me now.`;
+    const encoded = encodeURIComponent(message);
+
+    /* WhatsApp first, because it carries a live map link — but its failure must
+       not take the rest down. This was one try block, so a phone without
+       WhatsApp installed alerted nobody at all. Each channel is attempted on
+       its own now, and SMS covers everyone if WhatsApp could not open. */
+    const first = contacts[0];
+    const waNum = first.phone.startsWith('91') ? first.phone : `91${first.phone}`;
+    try {
       await Linking.openURL(`https://wa.me/${waNum}?text=${encoded}`);
-      // SMS to remaining contacts (Android supports comma-separated)
-      if (contacts.length > 1) {
-        const numbers = contacts.slice(1).map(c => c.phone).join(',');
-        await Linking.openURL(`sms:${numbers}?body=${encoded}`).catch(() => {});
-      }
-    } catch (_e) {}
+      out.opened = true; out.alerted = 1;
+    } catch (_e) { /* fall through to SMS */ }
+
+    const smsTo = out.opened ? contacts.slice(1) : contacts;
+    if (smsTo.length) {
+      try {
+        await Linking.openURL(`sms:${smsTo.map(c => c.phone).join(',')}?body=${encoded}`);
+        out.opened = true; out.alerted += smsTo.length;
+      } catch (_e) { /* nothing further can be opened from here */ }
+    }
+    setSosOutcome(out);
+    return out;
   };
   const savePlace = async (label: string) => {
     if (!pickup) { setResult('❌ Set a location first'); return; }
@@ -3060,7 +3095,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     chatMsgs, setChatMsgs, chatInput, setChatInput, unreadChat, setUnreadChat, lastChatCount, chatToast, setChatToast, chatOrigin, setChatOrigin,
     rating, setRating, tip, setTip, review, setReview,
     paymentDone, setPaymentDone, showRatingModal, setShowRatingModal, showUpiQr, setShowUpiQr, fareCount, setFareCount,
-    scratchCard, setScratchCard, scratched, setScratched, scratchAnim, starAnims, sosActive, setSosActive,
+    scratchCard, setScratchCard, scratched, setScratched, scratchAnim, starAnims, sosActive, setSosActive, sosOutcome,
     walletBalance, setWalletBalance, walletTxns, setWalletTxns, walletStats, setWalletStats,
     walletTxnTab, setWalletTxnTab, walletAddInput, setWalletAddInput,
     loyaltyPoints, setLoyaltyPoints, loyaltyCashback, setLoyaltyCashback,

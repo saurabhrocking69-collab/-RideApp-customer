@@ -103,7 +103,7 @@ export function InRideScreen() {
     pickupCoords, dropCoords,
     driverLoc, driverEta, driverDist,
     rideData, rideType,
-    sosActive, setSosActive, triggerSOS, reportCancelRide, returnDecision, payReturnFare,
+    sosActive, setSosActive, sosOutcome, triggerSOS, reportCancelRide, returnDecision, payReturnFare,
     reportParcelNotDelivered,
   } = useApp();
 
@@ -740,21 +740,47 @@ export function InRideScreen() {
           {/* ── SOS ── */}
           <InlineSOSButton onActivate={handleSOS} active={sosActive} />
 
-          {sosActive && (
-            <View style={{
-              backgroundColor: C.redGlass, borderRadius: 14, padding: 12,
-              flexDirection: 'row', alignItems: 'center', gap: 10,
-              borderWidth: 1.5, borderColor: C.red, marginBottom: 10,
-            }}>
-              <Ionicons name="warning" size={16} color={C.red} />
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 12, color: C.red, fontWeight: '900' }}>🆘 SOS Alert Sent!</Text>
-                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>
-                  Emergency contacts notified. Police: 100 · Ambulance: 108
-                </Text>
+          {sosActive && (() => {
+            /* This panel used to say "SOS Alert Sent — Emergency contacts
+               notified" every single time, including when the rider had saved
+               no contacts and nothing had been sent at all. Somebody reading
+               that in a frightening situation stops looking for other help,
+               which makes a reassuring lie the most dangerous string in the
+               app. It now states what actually happened, and when nothing went
+               out it says so first and loudest. */
+            const o = sosOutcome;
+            const nobody = o && o.contacts === 0;
+            const failed = o && o.contacts > 0 && !o.opened;
+            const bad = nobody || failed;
+            return (
+              <View style={{
+                backgroundColor: C.redGlass, borderRadius: 14, padding: 12,
+                flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+                borderWidth: 1.5, borderColor: C.red, marginBottom: 10,
+              }}>
+                <Ionicons name="warning" size={16} color={C.red} style={{ marginTop: 2 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 12, color: C.red, fontWeight: '900' }}>
+                    {nobody ? '🆘 No emergency contact saved'
+                      : failed ? '🆘 Could not open your messages'
+                      : '🆘 SOS Alert Sent!'}
+                  </Text>
+                  <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2, lineHeight: 16 }}>
+                    {nobody
+                      ? 'Nobody was messaged. Call for help now — Police 100 · Ambulance 108. Add a contact in Safety so this is automatic next time.'
+                      : failed
+                        ? `Sppero has your alert${o!.logged ? '' : ' (still trying to reach our servers)'}, but your phone could not open WhatsApp or SMS. Call directly — Police 100 · Ambulance 108.`
+                        : `${o ? o.alerted : 0} emergency contact${o && o.alerted === 1 ? '' : 's'} messaged${o && o.logged ? ' · Sppero alerted' : ''}. Police: 100 · Ambulance: 108`}
+                  </Text>
+                  {bad && (
+                    <TouchableOpacity onPress={() => Linking.openURL('tel:100')} style={{ marginTop: 8, alignSelf: 'flex-start', backgroundColor: C.red, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 7 }}>
+                      <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>Call 100 now</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
-            </View>
-          )}
+            );
+          })()}
 
           {/* ── Emergency: end trip & report (advance held for admin review) ──
               Saffron, not red — this is a "trip went wrong, end + report" action,
