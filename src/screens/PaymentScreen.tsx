@@ -46,24 +46,51 @@ export function PaymentScreen() {
   const walletSufficient = walletBalance >= fareNum;
   const cashback = Math.max(5, Math.min(50, Math.round(fareNum * 0.05)));
 
+  const [payErr, setPayErr] = useState('');
+
+  /* Both handlers below used to be written as
+
+         try { await apiPost(...) } catch (_e) {}
+         setPaymentDone(true); setScreen('postride'); createScratchCard();
+
+     which is wrong twice over. apiPost never throws — on a network failure it
+     RETURNS { _error: true } — so the catch was dead code that could not fire,
+     and a non-2xx reply carrying { error: ... } sailed through it too. Then the
+     screen advanced regardless. A rider whose call failed was shown the
+     post-ride screen and a scratch card and reasonably believed they had paid,
+     while the server still had the ride unpaid and the driver was still sitting
+     there waiting for it. That is exactly how a "maine to pay kar diya tha"
+     dispute gets manufactured by the app itself.
+
+     So the result is now inspected, and the screen only moves on when the
+     payment actually registered. */
+  const settled = (r: any) =>
+    !!r && !r._error && !r.error && (r._status == null || r._status < 400);
+
   const confirmUpiQrPaid = async () => {
     if (upiConfirming) return;
-    setUpiConfirming(true);
-    try {
-      await apiPost('/api/rides/payment-complete', { ride_id: rideData.ride_id, payment_method: 'upi_qr', phone: phone || '9999999999' });
-    } catch (_e) {}
+    setUpiConfirming(true); setPayErr('');
+    const r = await apiPost('/api/rides/payment-complete', { ride_id: rideData.ride_id, payment_method: 'upi_qr', phone: phone || '9999999999' });
     setUpiConfirming(false);
+    if (!settled(r)) {
+      // Stay on the QR screen. They have already sent money, so the one thing
+      // this must never do is imply they should send it again.
+      setPayErr('Could not record your payment. Your money is safe — tap "I\u2019ve Paid" again. Do not send it twice.');
+      return;
+    }
     setShowUpiQr(false);
     setPaymentDone(true); setScreen('postride'); createScratchCard();
   };
 
   const payWithCash = async () => {
     if (cashConfirming) return;
-    setCashConfirming(true);
-    try {
-      await apiPost('/api/rides/payment-complete', { ride_id: rideData.ride_id, payment_method: 'cash', phone: phone || '9999999999' });
-    } catch (_e) {}
+    setCashConfirming(true); setPayErr('');
+    const r = await apiPost('/api/rides/payment-complete', { ride_id: rideData.ride_id, payment_method: 'cash', phone: phone || '9999999999' });
     setCashConfirming(false);
+    if (!settled(r)) {
+      setPayErr('Could not record your cash payment — this ride still shows as unpaid. Check your connection and tap Cash again. Do not hand the driver cash twice.');
+      return;
+    }
     setPaymentDone(true); setScreen('postride'); createScratchCard();
   };
 
@@ -183,6 +210,7 @@ export function PaymentScreen() {
 
       {/* Confirm button */}
       <View style={{ padding: 16, paddingBottom: 32, gap: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.07)' }}>
+        <ResultBanner result={payErr} />
         <TouchableOpacity
           onPress={confirmUpiQrPaid}
           disabled={upiConfirming}
@@ -504,6 +532,7 @@ export function PaymentScreen() {
             </Bouncy>
           )}
 
+          <ResultBanner result={payErr} style={{ marginTop: 6 }} />
           <ResultBanner result={result} style={{ marginTop: 6 }} />
 
           {/* Security footer */}
