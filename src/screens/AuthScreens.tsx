@@ -140,17 +140,7 @@ export function OnboardingScreen() {
 }
 
 export function LoginScreen() {
-  const { loginHeroAnim, loginCardAnim, phone, setPhone, result, loading, sendOtp, loginWithTruecaller, truecallerReady: tcReady, rideType, setRideType } = useApp();
-  const [tcBusy, setTcBusy]   = useState(false);
-  const [tcError, setTcError] = useState('');
-
-  const onTruecaller = async () => {
-    if (tcBusy) return;
-    setTcBusy(true); setTcError('');
-    const err = await loginWithTruecaller();
-    setTcBusy(false);
-    if (err) setTcError(err);
-  };
+  const { loginHeroAnim, loginCardAnim, phone, setPhone, result, loading, sendOtp, rideType, setRideType } = useApp();
 
   const pinY     = useRef(new Animated.Value(0)).current;
   const p1Op     = useRef(new Animated.Value(0.7)).current;
@@ -523,37 +513,6 @@ export function LoginScreen() {
               </TouchableOpacity>
             ))}
           </View>
-          {/* ── One-tap sign-in ──────────────────────────────────────────
-              Rendered only when a native build actually carries the Truecaller
-              module (see src/truecaller.ts). Until then this is invisible, so
-              the block below stays the whole login exactly as before. */}
-          {tcReady && (
-            <>
-              <Bouncy
-                onPress={onTruecaller}
-                disabled={tcBusy}
-                style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12, opacity: tcBusy ? 0.6 : 1, elevation: 6, shadowColor: '#0087FF', shadowOpacity: 0.3, shadowRadius: 12 }}>
-                <View style={{ backgroundColor: '#0087FF', height: 54, borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 }}>
-                  <Ionicons name="call" size={18} color="#fff" />
-                  <Text style={{ color: '#fff', fontSize: 15.5, fontWeight: '800', letterSpacing: 0.2 }}>
-                    {tcBusy ? 'Verifying…' : 'Continue with Truecaller'}
-                  </Text>
-                </View>
-              </Bouncy>
-              <Text style={{ fontSize: 10.5, color: '#8A94B0', textAlign: 'center', marginBottom: 14 }}>
-                No SMS, no waiting — your number is confirmed in one tap
-              </Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                <View style={{ flex: 1, height: 1, backgroundColor: '#ECEDF8' }} />
-                <Text style={{ fontSize: 10.5, color: '#A8B0C8', fontWeight: '700', letterSpacing: 0.6 }}>OR</Text>
-                <View style={{ flex: 1, height: 1, backgroundColor: '#ECEDF8' }} />
-              </View>
-            </>
-          )}
-
-          {tcError ? (
-            <Text style={{ fontSize: 12, color: C.pink, fontWeight: '700', textAlign: 'center', marginBottom: 12 }}>{tcError}</Text>
-          ) : null}
 
           {/* Phone input */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>

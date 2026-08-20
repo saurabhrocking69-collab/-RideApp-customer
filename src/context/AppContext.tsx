@@ -16,7 +16,6 @@ import { API, MAPS_KEY, RIDES, DEFAULT_HOURLY_PACKAGES, WELCOME_SEEN_KEY, isNimb
 import { nimbleDistance } from '../routeDistance';
 import { Screen, Tab, Coords, HourlyStep, ExtendStep, WalletTxnTab } from '../types';
 import { shortRideId } from '../rideId';
-import { isReady as tcIsReady, signIn as tcSignIn } from '../truecaller';
 
 let RazorpayCheckout: any = null;
 try { const _m = require('react-native-razorpay'); RazorpayCheckout = _m?.default || _m || null; } catch (_e) {}
@@ -246,8 +245,6 @@ interface AppContextType {
   // Functions — auth
   sendOtp: () => Promise<void>;
   verifyOtp: (override?: string) => Promise<void>;
-  loginWithTruecaller: () => Promise<string | null>;
-  truecallerReady: boolean;
   completeOnboarding: () => Promise<void>;
   handleOtpChange: (text: string, index: number) => void;
   handleOtpKeyPress: (key: string, index: number) => void;
@@ -1724,11 +1721,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   /* Everything that happens after a login succeeds, whichever way it
-     succeeded. OTP and Truecaller both land here, so a brand-new rider gets
-     the same language-then-onboarding routing and a returning one gets the
-     same data warm-up regardless of which button they pressed. Keeping two
-     copies of this is how one sign-in route quietly stops registering for
-     push, or skips the language screen, months later. */
+     succeeded. Only the OTP path uses it today, but it stays factored out on
+     purpose: whatever second way in gets added next has to give a brand-new
+     rider the same language-then-onboarding routing, and a returning one the
+     same data warm-up. Keeping two copies of this is how one sign-in route
+     quietly stops registering for push, or skips the language screen, months
+     later. */
   const completeLogin = async (data: any, loginPhone: string) => {
     await AsyncStorage.setItem('userPhone', loginPhone);
     await AsyncStorage.setItem('userToken', data.token);
@@ -1761,22 +1759,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } else {
         setScreen('home');
       }
-    }
-  };
-
-  /* Returns an error string to show, or null when there is nothing to say —
-     which covers both success and the user simply backing out of the
-     Truecaller sheet. Backing out is not a failure and must not be reported
-     as one. */
-  const loginWithTruecaller = async (): Promise<string | null> => {
-    try {
-      const out = await tcSignIn();
-      if (!out) return null;
-      setPhone(out.phone);
-      await completeLogin({ token: out.token, user: out.user }, out.phone);
-      return null;
-    } catch (e: any) {
-      return e?.message || 'Truecaller sign-in failed. Please use your number.';
     }
   };
 
@@ -3233,7 +3215,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     result, setResult, loading, setLoading, storeStatus,
     socketRef, phoneRef, pickupDebounceRef, dropDebounceRef, hPickupDebounceRef, hDropDebounceRef, buddyPUDebRef, buddyDRDebRef,
     sendOtp, verifyOtp, completeOnboarding, handleOtpChange, handleOtpKeyPress,
-    loginWithTruecaller, truecallerReady: tcIsReady(),
     connectSocket, joinRideSocket, joinHourlySocket, adoptActiveRide,
     bookRide, surgeFareNow, switchVehicle, searchPlaces, searchNearbyCategory, geocodePlace, swapLocations,
     fetchEtaByCoords, loadFareEstimates, applyPromo, useMyLocation, calcDriverEta,
