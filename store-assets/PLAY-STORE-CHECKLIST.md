@@ -85,7 +85,7 @@ Category: **Utility / Travel & Local**. Answer honestly — no violence, gamblin
 
 ## 6. Before you upload — checklist
 - [ ] Play Console developer account created & verified (₹1,700 one-time)
-- [ ] App created in Play Console, package name `com.saurabhspero.rideappmobile3`
+- [ ] App created in Play Console, package name `com.sppero.rider`
 - [ ] Store listing text + icon + feature graphic + screenshots uploaded
 - [ ] Data safety form filled (Section 3 above)
 - [ ] Content rating questionnaire completed (Section 4 above)
