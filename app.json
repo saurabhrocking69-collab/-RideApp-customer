@@ -74,7 +74,7 @@
         "expo-build-properties",
         {
           "android": {
-            "useLegacyPackaging": true
+            "useLegacyPackaging": false
           }
         }
       ]
