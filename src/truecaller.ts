@@ -28,6 +28,12 @@ import { API } from '../api';
 
 type TcResult = { authorizationCode: string; codeVerifier: string };
 
+/* This app's own Truecaller credential. Truecaller issues one per Android
+   package, so the driver app has a different one — the backend knows both and
+   picks by whichever the app names here. Not a secret: it ships inside the APK
+   either way, and PKCE is what makes that safe. */
+export const CLIENT_ID = 'ixaf8zgtveksnmobfa_yfuaw7avcjzpeldkt9vqvxni';
+
 const BRIDGE: any =
   (NativeModules as any).TruecallerAuth ||
   (NativeModules as any).RNTruecallerSdk ||
@@ -67,6 +73,8 @@ export async function signIn(partnerCode?: string): Promise<{ token: string; use
     body: JSON.stringify({
       authorizationCode: out.authorizationCode,
       codeVerifier: out.codeVerifier,
+      client_id: CLIENT_ID,
+      role: 'customer',
       partner_code: partnerCode,
     }),
   });
