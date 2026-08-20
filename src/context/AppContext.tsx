@@ -151,7 +151,6 @@ interface AppContextType {
   chatOrigin: Screen; setChatOrigin: (s: Screen) => void;
   // Post ride
   rating: number; setRating: (r: number) => void;
-  tip: number; setTip: (t: number) => void;
   review: string; setReview: (r: string) => void;
   paymentDone: boolean; setPaymentDone: (v: boolean) => void;
   showRatingModal: boolean; setShowRatingModal: (v: boolean) => void;
@@ -534,7 +533,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // ── Post ride ───────────────────────────────────────────────────────────
   const [rating, setRating] = useState(0);
-  const [tip, setTip] = useState(0);
   const [review, setReview] = useState('');
   const [paymentDone, setPaymentDone] = useState(false);
 
@@ -3205,7 +3203,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     driverCancelPopup, setDriverCancelPopup,
     notifToast, setNotifToast,
     chatMsgs, setChatMsgs, chatInput, setChatInput, chatError, setChatError, unreadChat, setUnreadChat, lastChatCount, chatToast, setChatToast, chatOrigin, setChatOrigin,
-    rating, setRating, tip, setTip, review, setReview,
+    rating, setRating, review, setReview,
     paymentDone, setPaymentDone, showRatingModal, setShowRatingModal, showUpiQr, setShowUpiQr, fareCount, setFareCount,
     scratchCard, setScratchCard, scratched, setScratched, scratchAnim, starAnims, sosActive, setSosActive, sosOutcome,
     walletBalance, setWalletBalance, walletTxns, setWalletTxns, walletStats, setWalletStats,

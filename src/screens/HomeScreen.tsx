@@ -2879,7 +2879,7 @@ function RatingModal() {
     rideData, setRideData,
     rating, setRating,
     review, setReview,
-    tip, setTip,
+
     starAnims, animateStar,
     pickup, drop,
     resetBookingState,
@@ -2910,31 +2910,23 @@ function RatingModal() {
 
   const dismiss = async (submitRating = false) => {
     if (submitRating && rating > 0 && rideData?.ride_id) {
-      /* The tip rides along with the rating, and a tip is real money — it
-         credits the driver's wallet. This used to be fired and forgotten, so a
-         dropped request closed the modal, cleared the ride, and left the rider
-         certain they had tipped someone who never received anything. Retried,
-         and if it still will not go, the rider is told rather than left
-         believing it landed. */
-      let sent = false;
-      for (let i = 0; i < 3 && !sent; i++) {
+      // Retried rather than fired and forgotten, but a lost rating is not worth
+      // interrupting anyone over — the modal closes either way.
+      for (let i = 0, sent = false; i < 3 && !sent; i++) {
         try {
           const r = await fetch(`${API}/api/rides/rate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ride_id: rideData.ride_id, rating, review, tip }),
+            body: JSON.stringify({ ride_id: rideData.ride_id, rating, review }),
           });
           sent = r.ok;
         } catch (_e) { /* wait and try again */ }
         if (!sent) await new Promise(res => setTimeout(res, 1000 * (i + 1)));
       }
-      if (!sent && tip > 0) {
-        Alert.alert('Tip not sent', `Your ₹${tip} tip did not reach the driver, and your rating was not saved. Please check your connection.`);
-      }
     }
     setShowRatingModal(false);
     setRideData(null);
-    setRating(0); setReview(''); setTip(0);
+    setRating(0); setReview('');
     resetBookingState();
     setUnreadChat(0);
     setDriverLoc(null); setDriverEta(''); setDriverDist('');
@@ -3019,19 +3011,12 @@ function RatingModal() {
               );
             })()}
 
-            {/* Tip */}
-            <Text style={{ ...T.bodyBold, color: C.textMuted, marginBottom: 10 }}>💰 Add a tip (optional)</Text>
-            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
-              {[0, 10, 20, 50].map(t => (
-                <Bouncy key={t}
-                  style={{ flex: 1, paddingVertical: 11, borderRadius: R.sm, borderWidth: 1.5, alignItems: 'center',
-                    backgroundColor: tip === t ? C.pinkGlass : C.glassMid,
-                    borderColor: tip === t ? C.pinkBorder : C.glassBorder }}
-                  onPress={() => setTip(t)}>
-                  <Text style={{ ...T.bodyBold, color: tip === t ? C.pink : C.textMuted }}>{t === 0 ? 'Skip' : '₹' + t}</Text>
-                </Bouncy>
-              ))}
-            </View>
+            {/* A "💰 Add a tip" row of ₹10/20/50 buttons stood here. It credited
+                the driver's wallet, but the rider was never charged for it —
+                nothing left their wallet and nothing was added to the cash or
+                UPI they handed over — so every tip was paid out of Sppero's
+                own pocket. Removed rather than capped; it can come back the day
+                the amount is actually collected from the rider. */}
 
             {/* ── Save this destination ──────────────────────────────────
                  The single fix that compounds. Where the ride ACTUALLY ended
