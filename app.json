@@ -37,6 +37,22 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.saurabhspero.rideappmobile3",
+      "_truecallerMissedCallNote": [
+        "Truecaller's verify-all-users flow (src/truecaller.ts, VERIFY_ALL_USERS)",
+        "places a missed call to people who do not have Truecaller installed. To",
+        "let the SDK spot that call by itself, Android 8+ wants READ_PHONE_STATE,",
+        "READ_CALL_LOG and ANSWER_PHONE_CALLS.",
+        "READ_CALL_LOG is deliberately NOT in the list below. It belongs to a",
+        "Google Play RESTRICTED permission group, allowed only for a short list of",
+        "core uses - default dialer, caller ID, spam blocking, backup - and",
+        "verifying a phone number is not one of them. Adding it means filing a",
+        "permissions declaration that a ride app can plausibly lose, which would",
+        "block the Play release itself.",
+        "Before the next native build, decide: either confirm with Truecaller that",
+        "their manual path (user types the last digits of the calling number)",
+        "works without CALL_LOG - in which case add only READ_PHONE_STATE and",
+        "ANSWER_PHONE_CALLS - or accept the declaration risk and add all three."
+      ],
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",

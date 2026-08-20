@@ -39,6 +39,30 @@ const BRIDGE: any =
   (NativeModules as any).RNTruecallerSdk ||
   null;
 
+/* Verify EVERYONE, not only people who already have Truecaller installed.
+ *
+ * With the Truecaller-only option, someone without the app gets nothing and
+ * falls back to SMS OTP — which is exactly the path that does not work right
+ * now. `OPTION_VERIFY_ALL_USERS` makes Truecaller verify those users too, by
+ * placing a missed call to the number (or routing them to its own OTP), and it
+ * comes back through this same OAuth flow: same authorizationCode, same
+ * backend endpoint, nothing to change server-side.
+ *
+ * ── The catch, and it is a real one ────────────────────────────────────
+ * On Android 8+ that flow wants READ_PHONE_STATE, READ_CALL_LOG and
+ * ANSWER_PHONE_CALLS so the SDK can spot the missed call by itself.
+ * READ_CALL_LOG sits in a Google Play RESTRICTED permission group: Play only
+ * allows it for a short list of core uses — default dialer, caller ID, spam
+ * blocking, backup — and "verifying a phone number" is not among them. A ride
+ * app asking for it has to fill in a permissions declaration and can very
+ * plausibly be refused, which would block the Play release outright.
+ *
+ * So the flow is selected here, but the permissions are NOT in app.json. See
+ * the note there before the next native build. Worth asking Truecaller support
+ * whether their manual path — the user typing the last digits of the calling
+ * number — works without CALL_LOG, because if it does, this is free. */
+export const VERIFY_ALL_USERS = true;
+
 export function isReady(): boolean {
   return !!BRIDGE && typeof BRIDGE.isUsable === 'function' && typeof BRIDGE.requestAuth === 'function';
 }
@@ -56,12 +80,17 @@ export function isReady(): boolean {
 export async function signIn(partnerCode?: string): Promise<{ token: string; user: any; phone: string } | null> {
   if (!isReady()) throw new Error('Truecaller is not available on this device.');
 
-  const usable = await BRIDGE.isUsable();
-  if (!usable) return null;
+  /* With VERIFY_ALL_USERS the sheet is worth opening even when Truecaller is
+     not installed — that is the whole point of the fallback — so isUsable() is
+     only allowed to veto in the Truecaller-only mode. */
+  if (!VERIFY_ALL_USERS) {
+    const usable = await BRIDGE.isUsable();
+    if (!usable) return null;
+  }
 
   let out: TcResult | null;
   try {
-    out = await BRIDGE.requestAuth();
+    out = await BRIDGE.requestAuth({ verifyAllUsers: VERIFY_ALL_USERS });
   } catch (_e) {
     return null;                       // user dismissed the sheet
   }
