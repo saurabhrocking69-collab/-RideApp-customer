@@ -7,9 +7,47 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:1064897143984:android:06aef928b61ca20a9a4775",
+        "android_client_info": {
+          "package_name": "com.saurabhspero.rideappdriver"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAUO8uO_vS_bCi3pUN37pF71I1ey38uf8o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:1064897143984:android:ac01f8f3ad2c8ae69a4775",
         "android_client_info": {
           "package_name": "com.saurabhspero.rideappmobile3"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAUO8uO_vS_bCi3pUN37pF71I1ey38uf8o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1064897143984:android:9af68595d0a4b46c9a4775",
+        "android_client_info": {
+          "package_name": "com.sppero.rider"
         }
       },
       "oauth_client": [],
