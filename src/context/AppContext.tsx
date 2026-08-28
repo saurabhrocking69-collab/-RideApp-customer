@@ -12,7 +12,7 @@ import { C } from '../styles';
 import type { ToastNotif } from '../components/NotificationToast';
 import type { NearbyCategory } from '../nearbyCategories';
 import { useRideStore } from '../../store';
-import { API, MAPS_KEY, RIDES, DEFAULT_HOURLY_PACKAGES, WELCOME_SEEN_KEY, isNimble} from '../constants';
+import { API, MAPS_KEY, RIDES, DEFAULT_HOURLY_PACKAGES, WELCOME_SEEN_KEY, isNimble, GOOGLE_WEB_CLIENT_ID } from '../constants';
 import { nimbleDistance } from '../routeDistance';
 import { Screen, Tab, Coords, HourlyStep, ExtendStep, WalletTxnTab } from '../types';
 import { shortRideId } from '../rideId';
@@ -245,6 +245,11 @@ interface AppContextType {
   // Functions — auth
   sendOtp: () => Promise<void>;
   verifyOtp: (override?: string) => Promise<void>;
+  /* Google se aane ka rasta - do kadam, kyoki Google phone number nahi deta
+     aur is app me phone hi pehchan hai. */
+  signInWithGoogle: () => Promise<void>;
+  submitGooglePhone: () => Promise<void>;
+  googleEmail: string;
   completeOnboarding: () => Promise<void>;
   handleOtpChange: (text: string, index: number) => void;
   handleOtpKeyPress: (key: string, index: number) => void;
@@ -1778,6 +1783,87 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     finally { setLoading(false); }
   };
 
+  /* ══ GOOGLE SE SIGN-IN ══
+     Doosra darwaza, kyoki abhi koi SMS provider nahi hai - OTP bheja hi
+     nahi jaata aur naya koi andar aa hi nahi sakta.
+
+     Google ek email saabit karta hai, phone number NAHI - aur is app me
+     phone hi pehchan hai, driver usi par call karta hai. Isliye do kadam
+     hain: pehle Google, phir number. Server wahi number leta hai jo kisi ke
+     paas na ho; liya hua number saaf mana kar deta hai. Wo mana yahan bhi
+     saaf dikhaya jaata hai, kyoki uska matlab hai "us number se OTP se aao",
+     na ki "kuch gadbad ho gayi".
+
+     completeLogin wahi hai jo OTP wala rasta bulata hai - session, naam,
+     onboarding aur bhasha ke niyam ek hi jagah rehte hain. */
+  const [googleTicket, setGoogleTicket] = useState('');
+  const [googleEmail, setGoogleEmail]   = useState('');
+
+  const signInWithGoogle = async () => {
+    setLoading(true); setResult('');
+    try {
+      const GS: any = require('@react-native-google-signin/google-signin');
+      const { GoogleSignin } = GS;
+      GoogleSignin.configure({
+        // Android ko WEB client id chahiye, apni nahi - yahi wo cheez hai
+        // jiske galat hone par idToken null aata hai aur koi error nahi.
+        webClientId: GOOGLE_WEB_CLIENT_ID,
+        offlineAccess: false,
+      });
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const info: any = await GoogleSignin.signIn();
+      // Library ke do roop hain (v13 se pehle seedha, uske baad data ke andar)
+      const idToken = info?.data?.idToken || info?.idToken || null;
+      if (!idToken) { setResult('❌ Google sign-in did not complete'); return; }
+
+      const data = await apiPost('/api/auth/google', { idToken });
+      if (data._error) { setResult('❌ ' + (data.message || 'Could not connect to server')); return; }
+
+      if (data.token) {
+        // Purana user - number pehle se hai, seedhe andar
+        await completeLogin(data, data.user?.phone || '');
+        return;
+      }
+      if (data.needPhone) {
+        setGoogleTicket(data.ticket || '');
+        setGoogleEmail(data.email || '');
+        if (data.name && !userName) setUserName(data.name);
+        setScreen('google-phone');
+        setResult('');
+        return;
+      }
+      setResult('❌ ' + (data.error || 'Google sign-in failed'));
+    } catch (e: any) {
+      const code = e?.code || '';
+      // Aadmi ka khud band kar dena nakami nahi hai - uspar laal likhna
+      // aisa lagta hai jaise app tut gaya ho.
+      if (code === 'SIGN_IN_CANCELLED' || code === '-5' || /cancel/i.test(String(e?.message || ''))) setResult('');
+      else if (code === 'PLAY_SERVICES_NOT_AVAILABLE') setResult('❌ Google Play Services is not available on this phone');
+      else setResult('❌ ' + (e?.message || 'Google sign-in failed'));
+    } finally { setLoading(false); }
+  };
+
+  /* Doosra kadam: number. Ticket dus minute chalta hai, isliye der ho jaane
+     par phir se Google se shuru karna padta hai - aur wahi kaha jaata hai. */
+  const submitGooglePhone = async () => {
+    const p10 = String(phone || '').replace(/\D/g, '');
+    if (p10.length !== 10) { setResult('❌ Enter a valid 10-digit phone number'); return; }
+    setLoading(true);
+    try {
+      const data = await apiPost('/api/auth/google/phone', {
+        ticket: googleTicket, phone: p10, name: userName || '',
+      });
+      if (data._error) { setResult('❌ ' + (data.message || 'Could not connect to server')); return; }
+      if (data.token) { await completeLogin(data, p10); return; }
+      if (data.phone_taken) {
+        setResult('❌ ' + (data.error || 'That number already has an account.'));
+        return;
+      }
+      setResult('❌ ' + (data.error || 'Could not finish sign-in'));
+    } catch { setResult('❌ Could not connect to server'); }
+    finally { setLoading(false); }
+  };
+
   const completeOnboarding = async () => {
     if (!userName.trim()) { setResult('❌ Name is required'); return; }
     setLoading(true);
@@ -3215,6 +3301,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     result, setResult, loading, setLoading, storeStatus,
     socketRef, phoneRef, pickupDebounceRef, dropDebounceRef, hPickupDebounceRef, hDropDebounceRef, buddyPUDebRef, buddyDRDebRef,
     sendOtp, verifyOtp, completeOnboarding, handleOtpChange, handleOtpKeyPress,
+    signInWithGoogle, submitGooglePhone, googleEmail,
     connectSocket, joinRideSocket, joinHourlySocket, adoptActiveRide,
     bookRide, surgeFareNow, switchVehicle, searchPlaces, searchNearbyCategory, geocodePlace, swapLocations,
     fetchEtaByCoords, loadFareEstimates, applyPromo, useMyLocation, calcDriverEta,

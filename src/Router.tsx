@@ -5,7 +5,7 @@ import { OfflineBanner } from './components/OfflineBanner';
 import { UpdateBanner } from './components/UpdateBanner';
 import { NotificationToast } from './components/NotificationToast';
 import { SplashScreen } from './screens/SplashScreen';
-import { OnboardingScreen, LoginScreen, OtpScreen } from './screens/AuthScreens';
+import { OnboardingScreen, LoginScreen, OtpScreen, GooglePhoneScreen } from './screens/AuthScreens';
 import { HomeScreen } from './screens/HomeScreen';
 import { BookingScreen } from './screens/BookingScreen';
 import { MatchingScreen } from './screens/MatchingScreen';
@@ -42,6 +42,7 @@ function ActiveScreen() {
   if (screen === 'onboarding')       return <OnboardingScreen />;
   if (screen === 'login')            return <LoginScreen />;
   if (screen === 'otp')              return <OtpScreen />;
+  if (screen === 'google-phone')     return <GooglePhoneScreen />;
   if (screen === 'home')             return <HomeScreen />;
   if (screen === 'booking')          return <BookingScreen />;
   if (screen === 'matching')         return <MatchingScreen />;

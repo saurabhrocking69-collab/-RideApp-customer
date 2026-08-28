@@ -1,5 +1,5 @@
 export type Screen =
-  | 'splash' | 'login' | 'otp' | 'onboarding' | 'language-select' | 'home'
+  | 'splash' | 'login' | 'otp' | 'google-phone' | 'onboarding' | 'language-select' | 'home'
   | 'booking' | 'matching' | 'inride' | 'payment' | 'postride'
   | 'chat' | 'partner' | 'saved' | 'policy' | 'hourly'
   | 'wallet' | 'hourly-info' | 'promo' | 'support' | 'safety'

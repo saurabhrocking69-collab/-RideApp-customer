@@ -1,5 +1,16 @@
 export const API = 'https://api.sppero.com';
 
+/* Google sign-in ka WEB client id - Android ka nahi.
+
+   Ye wahi cheez hai jise galat rakhne par sign-in "chal jaata hai" par
+   idToken null aata hai aur koi error nahi milta. Android client id Google
+   Cloud me banana zaroori hai (SHA-1 ke saath), par library ko WEB wala
+   chahiye - wahi server ke GOOGLE_CLIENT_IDS me bhi hona chahiye, warna
+   server aud ki jaanch par saaf mana kar dega.
+
+   Khaali chhodne par app me Google ka button dikhta hi nahi. */
+export const GOOGLE_WEB_CLIENT_ID = '';
+
 // Lives here, not in WelcomeScreen: AppContext needs it during boot, and
 // WelcomeScreen needs useApp() from AppContext — importing the key from the
 // screen would make that a cycle with the context at the root of it.

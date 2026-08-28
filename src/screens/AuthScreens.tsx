@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { Bouncy } from '../components/ui';
 import { C, T, SP, R } from '../styles';
+import { GOOGLE_WEB_CLIENT_ID } from '../constants';
 
 export function OnboardingScreen() {
   const {
@@ -133,6 +134,7 @@ export function OnboardingScreen() {
               </Text>
             </View>
           </Bouncy>
+
         </ScrollView>
       </Animated.View>
     </Animated.View>
@@ -140,7 +142,8 @@ export function OnboardingScreen() {
 }
 
 export function LoginScreen() {
-  const { loginHeroAnim, loginCardAnim, phone, setPhone, result, loading, sendOtp, rideType, setRideType } = useApp();
+  const { loginHeroAnim, loginCardAnim, phone, setPhone, result, loading, sendOtp, rideType, setRideType,
+          signInWithGoogle } = useApp();
 
   const pinY     = useRef(new Animated.Value(0)).current;
   const p1Op     = useRef(new Animated.Value(0.7)).current;
@@ -560,6 +563,35 @@ export function LoginScreen() {
               </Text>
             </View>
           </Bouncy>
+          {/* Google, OTP ke NEECHE - upar nahi.
+
+              Number se aana abhi bhi mukhya rasta hai: wahi number driver
+              call karta hai, aur wahi saabit hota hai. Google us aadmi ke
+              liye hai jiske paas OTP nahi pahunch raha - aaj sab ke paas
+              nahi pahunch raha, kyoki koi SMS provider hai hi nahi.
+
+              Client id na hone par button dikhta hi nahi: ek button jo
+              dabane par kuch na kare, na hone se bura hai. */}
+          {!!GOOGLE_WEB_CLIENT_ID && (
+            <>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+                <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(0,0,0,0.10)' }} />
+                <Text style={{ marginHorizontal: 12, fontSize: 12, color: '#8A8A8A', fontWeight: '600' }}>or</Text>
+                <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(0,0,0,0.10)' }} />
+              </View>
+              <Bouncy
+                onPress={signInWithGoogle}
+                disabled={loading}
+                style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 14, opacity: loading ? 0.6 : 1 }}>
+                <View style={{ backgroundColor: '#fff', height: 54, borderRadius: 14, borderWidth: 1.5,
+                               borderColor: 'rgba(0,0,0,0.12)', flexDirection: 'row',
+                               alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                  <Text style={{ fontSize: 18, fontWeight: '800', color: '#4285F4' }}>G</Text>
+                  <Text style={{ color: '#1F1F1F', fontSize: 15.5, fontWeight: '700' }}>Continue with Google</Text>
+                </View>
+              </Bouncy>
+            </>
+          )}
 
           <Text style={{ fontSize: 10.5, color: '#8A94B0', textAlign: 'center', lineHeight: 18 }}>
             By continuing you agree to our{' '}
@@ -754,5 +786,74 @@ export function OtpScreen() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+  );
+}
+
+
+/* Google se aane ke baad: number.
+
+   Google ne email saabit kiya, phone nahi - aur driver phone par hi call
+   karta hai. Ye wahi ek cheez hai jo Google de nahi sakta, isliye maangi
+   jaati hai.
+
+   Server sirf wo number leta hai jo kisi ke paas na ho. Liya hua number
+   mana kiya jaata hai, aur wo sandesh yahan poora dikhaya jaata hai - uska
+   matlab "us number se OTP se aao" hai, "kuch tut gaya" nahi. */
+export function GooglePhoneScreen() {
+  const { phone, setPhone, result, loading, submitGooglePhone, googleEmail, setScreen } = useApp();
+  const ok = String(phone || '').replace(/\D/g, '').length === 10;
+
+  return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <ScrollView contentContainerStyle={{ padding: 22, paddingTop: 64 }} keyboardShouldPersistTaps="handled">
+        <TouchableOpacity onPress={() => setScreen('login')} style={{ marginBottom: 18 }}>
+          <Text style={{ fontSize: 15, color: C.pink, fontWeight: '700' }}>‹ Back</Text>
+        </TouchableOpacity>
+
+        <Text style={{ fontSize: 26, fontWeight: '800', color: C.text, marginBottom: 8 }}>
+          One last thing
+        </Text>
+        <Text style={{ fontSize: 14.5, color: '#6A6A6A', lineHeight: 21, marginBottom: 6 }}>
+          Your driver calls this number when they reach you, so we need it before your first ride.
+        </Text>
+        {!!googleEmail && (
+          <Text style={{ fontSize: 13, color: '#8A8A8A', marginBottom: 20 }}>
+            Signed in as {googleEmail}
+          </Text>
+        )}
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 14,
+                       borderWidth: 1.5, borderColor: ok ? C.pink : 'rgba(0,0,0,0.12)', paddingHorizontal: 14,
+                       height: 56, marginTop: 12, marginBottom: 14 }}>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: C.text, marginRight: 8 }}>+91</Text>
+          <TextInput
+            value={phone}
+            onChangeText={(t) => setPhone(t.replace(/\D/g, '').slice(0, 10))}
+            keyboardType="number-pad"
+            maxLength={10}
+            placeholder="10-digit mobile number"
+            placeholderTextColor="#B0B0B0"
+            style={{ flex: 1, fontSize: 16.5, color: C.text, fontWeight: '600' }}
+          />
+        </View>
+
+        {!!result && (
+          <Text style={{ fontSize: 13.5, color: result.startsWith('❌') ? '#D33' : '#2A8', marginBottom: 14, lineHeight: 20 }}>
+            {result.replace(/^❌ /, '')}
+          </Text>
+        )}
+
+        <TouchableOpacity
+          onPress={submitGooglePhone}
+          disabled={!ok || loading}
+          style={{ borderRadius: 14, overflow: 'hidden', opacity: ok && !loading ? 1 : 0.5 }}>
+          <View style={{ backgroundColor: C.pink, height: 54, alignItems: 'center', justifyContent: 'center', borderRadius: 14 }}>
+            <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>
+              {loading ? 'Just a moment...' : 'Finish sign-in →'}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
   );
 }
