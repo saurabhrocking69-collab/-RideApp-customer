@@ -9,7 +9,7 @@ export const API = 'https://api.sppero.com';
    server aud ki jaanch par saaf mana kar dega.
 
    Khaali chhodne par app me Google ka button dikhta hi nahi. */
-export const GOOGLE_WEB_CLIENT_ID = '';
+export const GOOGLE_WEB_CLIENT_ID = '249189384237-ur91s85qt9tq8b3hq414hak14j2hcs8g.apps.googleusercontent.com';
 
 // Lives here, not in WelcomeScreen: AppContext needs it during boot, and
 // WelcomeScreen needs useApp() from AppContext — importing the key from the
