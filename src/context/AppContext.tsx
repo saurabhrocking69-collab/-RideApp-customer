@@ -6,7 +6,7 @@ import * as Location from 'expo-location';
 import * as Clipboard from 'expo-clipboard';
 import * as Notifications from 'expo-notifications';
 import { io, Socket } from 'socket.io-client';
-import { apiGet, apiPost, apiAuthPost, apiAuthGet, authGet, authPost, externalGet, authFetch } from '../../api';
+import { apiGet, apiPost, apiAuthPost, apiAuthGet, authGet, authPost, externalGet, authFetch, setAuthToken } from '../../api';
 import { saveNotification } from '../components/NotificationCenter';
 import { C } from '../styles';
 import type { ToastNotif } from '../components/NotificationToast';
@@ -699,6 +699,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // JWT expiry check — expired = force re-login; < 7 days left = silent background refresh
       if (savedPhone) {
         const savedToken = await AsyncStorage.getItem('userToken').catch(() => null);
+        // api.ts ko token yahin se milta hai - uska apna storage padhna asli
+        // phone par khaali laut raha tha, aur usi se Trips/rating tut rahe the.
+        setAuthToken(savedToken);
         if (savedToken) {
           const exp = decodeJwtExp(savedToken);
           const nowSec = Math.floor(Date.now() / 1000);
@@ -706,11 +709,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             await AsyncStorage.removeItem('userPhone');
             await AsyncStorage.removeItem('userName');
             await AsyncStorage.removeItem('userToken');
+            setAuthToken('');
             savedPhone = null;
           } else if (exp !== null && exp - nowSec < 7 * 86400) {
             fetch(`${API}/api/auth/refresh`, { method: 'POST', headers: { Authorization: `Bearer ${savedToken}` } })
               .then(r => r.json())
-              .then(d => { if (d.token) AsyncStorage.setItem('userToken', d.token).catch(() => {}); })
+              .then(d => { if (d.token) { setAuthToken(d.token); AsyncStorage.setItem('userToken', d.token).catch(() => {}); } })
               .catch(() => {});
           }
         }
@@ -1806,6 +1810,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
        nahi. Wahi sach hai. */
     if (loginPhone) setPhone(loginPhone);
     await AsyncStorage.setItem('userPhone', loginPhone);
+    setAuthToken(data.token);
     await AsyncStorage.setItem('userToken', data.token);
     const serverName = data.user?.name || '';
     const onboardingDone = await AsyncStorage.getItem('onboardingCompleted');

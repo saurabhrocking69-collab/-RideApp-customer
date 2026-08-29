@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Storage as AsyncStorage } from '../storage';
 import { Ionicons } from '@expo/vector-icons';
-import { apiPost, apiGet, authPost, authGet } from '../../api';
+import { apiPost, apiGet, authPost, authGet, setAuthToken } from '../../api';
 import { useRideStore } from '../../store';
 import { useApp } from '../context/AppContext';
 import { Bouncy, GlassPanel, PulseView, SlideUp, CountUp, EmptyAnim, GlowPulse, ShineCard, FadeIn, SkeletonBox } from '../components/ui';
@@ -2863,6 +2863,7 @@ function ProfileTab() {
           {/* ── Log out ──────────────────────────────────────────────────── */}
           <Bouncy style={s.logoutBtn} onPress={async () => {
             await AsyncStorage.removeItem('userPhone'); await AsyncStorage.removeItem('userName'); await AsyncStorage.removeItem('userToken');
+            setAuthToken('');   // yaad rakha hua token bhi jaye, warna logout ke baad bhi chalta rahega
             setScreen('login'); setTab('home'); setPhone(''); setOtp(''); setOtpDigits(['','','','','','']);
             setUserName(''); setGender(''); setWalletBalance(0);
           }}>

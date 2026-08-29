@@ -122,7 +122,26 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
    sending no credentials at all. These read the token themselves, so securing
    a call site is a one-word change and there is no reason to reach for the
    unauthenticated pair by accident. */
+/* Token yaad rakha jaata hai, har call par storage se poochha nahi jaata.
+
+   NAAPA GAYA, asli phone par: yahi AsyncStorage padhne wali line KHAALI laut
+   rahi thi, jabki AppContext me theek yahi key padhne wali doosri madad
+   (authRideGet) sahi token de rahi thi - wallet usi se chalta tha aur DB se
+   milta bhi tha. Yaani token storage me maujood tha, par is file ka padhna
+   kaam nahi kar raha tha. Nateeja: authGet/authPost se jaane wali HAR call
+   bina token jaati thi - Trips khaali, rating "nahi ja payi", ride ki haalat
+   ka reconcile chup-chaap fail.
+
+   Us module-level jhagde ko sulajhane ke bajay uspar nirbharta hi hata di
+   gayi: token ab AppContext ek baar yahan rakh deta hai (login, session
+   wapas laate waqt, refresh, logout). Storage sirf fallback hai.
+
+   Ye behtar bhi hai - pehle har ek API call par ek async storage read hota
+   tha; ab sirf ek baar. */
+let _authToken = '';
+export const setAuthToken = (t: string | null | undefined): void => { _authToken = t || ''; };
 const authToken = async (): Promise<string> => {
+  if (_authToken) return _authToken;
   try { return (await AsyncStorage.getItem('userToken')) || ''; } catch { return ''; }
 };
 export const authGet  = async (path: string): Promise<any> => {
