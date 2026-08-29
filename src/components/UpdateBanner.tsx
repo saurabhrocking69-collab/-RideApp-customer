@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Text, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, AppState, Animated, Text, TouchableOpacity } from 'react-native';
 import * as Updates from 'expo-updates';
 import { C } from '../styles';
 
@@ -25,7 +25,34 @@ import { C } from '../styles';
  * crash. `hold` lets a caller suppress the offer entirely during a stretch
  * where a restart would lose something.
  */
+/* Launch ke alawa bhi poochho.
+
+   `checkAutomatically: ON_LOAD` sirf launch par poochhta hai. Driver ka app
+   ghanton khula rehta hai aur Android us process ko maarta nahi - to launch ke
+   baad wo dobara poochhta hi nahi, aur ek poori shift bina jaanch ke nikal
+   jaati hai. Naapa gaya: teen update publish ho chuke the, Expo unhe de bhi
+   raha tha, aur app purane par hi khada tha.
+
+   Sirf poochhna aur utaarna. Lagana aadmi ke tap par hi rehta hai. */
+function useUpdateWatch() {
+  useEffect(() => {
+    if (!Updates.isEnabled) return;   // dev aur Expo Go me kuch nahi karna
+    let dead = false;
+    const look = async () => {
+      try {
+        const r = await Updates.checkForUpdateAsync();
+        if (!dead && r.isAvailable) await Updates.fetchUpdateAsync();
+      } catch (_e) { /* net nahi hai ya server chup hai - agli baar */ }
+    };
+    const sub = AppState.addEventListener('change', s => { if (s === 'active') look(); });
+    const iv = setInterval(look, 15 * 60 * 1000);
+    look();
+    return () => { dead = true; sub.remove(); clearInterval(iv); };
+  }, []);
+}
+
 export function UpdateBanner({ hold = false }: { hold?: boolean }) {
+  useUpdateWatch();
   const { isUpdatePending } = Updates.useUpdates();
   const [busy, setBusy] = useState(false);
   const slide = useRef(new Animated.Value(-60)).current;
