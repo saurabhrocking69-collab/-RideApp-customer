@@ -1734,6 +1734,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
      quietly stops registering for push, or skips the language screen, months
      later. */
   const completeLogin = async (data: any, loginPhone: string) => {
+    /* App ka apna number wahi ho jo khaate ka hai.
+
+       Ye AsyncStorage me to likha jaata tha, par React state me nahi - aur
+       screen state hi dikhati hai. Naapa gaya: Google se ek khaate me jaane
+       ki koshish ki, number 6387186812 daala, server ne mana kiya ("kisi aur
+       ka hai"), phir doosre Google khaate se seedhe andar chale gaye - aur
+       profile me WAHI thukraya hua 6387186812 dikhta raha, jabki khaata
+       9794330655 wala tha.
+
+       Sirf dikhne ki baat nahi thi: phone se pehchanne wale har endpoint ko
+       ab galat number jaata, aur pehra chaalu hone ke baad wo 403 "You can
+       only act on your own account" banta - yaani app apne hi khaate se
+       bahar khada rehta.
+
+       loginPhone server ke jawab se aata hai (data.user.phone), typed hue se
+       nahi. Wahi sach hai. */
+    if (loginPhone) setPhone(loginPhone);
     await AsyncStorage.setItem('userPhone', loginPhone);
     await AsyncStorage.setItem('userToken', data.token);
     const serverName = data.user?.name || '';
@@ -2461,16 +2478,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     authAlertAtRef.current = now;
     Alert.alert('Session expired', 'Please sign in again to continue.');
   };
+  /* "Session expired" sirf tab jab sach me koi session tha.
+
+     Token na hone par bhi ye popup chal jaata tha. Naapa gaya: login ke theen
+     beech, jab purana session ja chuka tha aur naya abhi bana nahi tha, peeche
+     chalti koi call bina token gayi - aur server par pehra chaalu hone ke baad
+     wo 401 laut-ne lagi. Grahak ko login ke theek baad "Session expired" ka
+     popup dikha, jabki login abhi-abhi safal hua tha.
+
+     Bina token wali call ka 401 "aap logged out ho" hai, "aapka session khatam
+     ho gaya" nahi. Pehli baat par kuch kehna hi nahi chahiye - aadmi login
+     screen par hai hi. */
   const authRidePost = async (path: string, body: any) => {
     const token = await AsyncStorage.getItem('userToken').catch(() => null);
     const res = await apiAuthPost(path, body, token || '');
-    if (res?._authExpired) notifyAuthExpired();
+    if (res?._authExpired && token) notifyAuthExpired();
     return res;
   };
   const authRideGet = async (path: string) => {
     const token = await AsyncStorage.getItem('userToken').catch(() => null);
     const res = await apiAuthGet(path, token || '');
-    if (res?._authExpired) notifyAuthExpired();
+    if (res?._authExpired && token) notifyAuthExpired();
     return res;
   };
 
