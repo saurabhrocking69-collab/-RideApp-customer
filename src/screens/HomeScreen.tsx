@@ -2148,6 +2148,9 @@ function HistoryTab() {
   const { bottom: bottomInset } = useSafeAreaInsets();
   const {
     historyRides,
+    historyErr,
+    loadHistory,
+    phone,
     favouriteBuddy,
     addFavouriteBuddy,
     rideIcon, setScreen, setTab,
@@ -2308,12 +2311,29 @@ _GST is included in the fare._
             : (
               // Real illustration instead of a bare emoji — this is the first
               // thing a brand-new rider sees on the Trips tab.
+              /* Do alag halaat, do alag baat.
+
+                 Pehle dono par "No trips yet" likha aata tha - jisne kabhi
+                 ride nahi ki uspar bhi, aur jiski call fail ho gayi uspar
+                 bhi. Doosre aadmi ke liye wo jhooth hai: uski rides server
+                 par maujood hain. Aur jab wo shikayat karta hai to bataane
+                 ko kuch hota hi nahi. */
               <View style={{ alignItems: 'center', paddingVertical: 34 }}>
                 <FigNoTrips size={200} />
-                <Text style={{ fontSize: 16, fontWeight: '900', color: C.text, marginTop: 10 }}>No trips yet</Text>
-                <Text style={{ fontSize: 12.5, color: C.textMuted, marginTop: 5, textAlign: 'center', paddingHorizontal: 40, lineHeight: 18 }}>
-                  Book your first ride and it will show up here.
+                <Text style={{ fontSize: 16, fontWeight: '900', color: C.text, marginTop: 10 }}>
+                  {historyErr ? 'Trips nahi aa payi' : 'No trips yet'}
                 </Text>
+                <Text style={{ fontSize: 12.5, color: C.textMuted, marginTop: 5, textAlign: 'center', paddingHorizontal: 40, lineHeight: 18 }}>
+                  {historyErr || 'Book your first ride and it will show up here.'}
+                </Text>
+                {!!historyErr && (
+                  <TouchableOpacity
+                    onPress={() => { setHistLoading(true); loadHistory(phone).finally(() => setHistLoading(false)); }}
+                    style={{ marginTop: 14, paddingHorizontal: 22, paddingVertical: 10, borderRadius: 20,
+                             borderWidth: 1.5, borderColor: C.pink }}>
+                    <Text style={{ color: C.pink, fontWeight: '800', fontSize: 13.5 }}>Dobara try karo</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             )
         }

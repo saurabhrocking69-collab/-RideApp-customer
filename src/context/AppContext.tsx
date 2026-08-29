@@ -195,6 +195,7 @@ interface AppContextType {
   loadRewardsDash: (ph: string) => Promise<void>;
   // History
   historyRides: any[]; setHistoryRides: (r: any[]) => void;
+  historyErr: string;
   // Offers + Referral
   activeOffers: any[]; setActiveOffers: (o: any[]) => void;
   offerDismissed: Set<number>; setOfferDismissed: React.Dispatch<React.SetStateAction<Set<number>>>;
@@ -612,6 +613,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // ── History / offers / referral ─────────────────────────────────────────
   const [historyRides, setHistoryRides] = useState<any[]>([]);
+  // Kyon nahi aayi - khaali soochi aur nakaam call ek jaisi nahi dikhni chahiye.
+  const [historyErr, setHistoryErr] = useState('');
   const [activeOffers, setActiveOffers] = useState<any[]>([]);
   const [offerDismissed, setOfferDismissed] = useState<Set<number>>(new Set());
   const [savedPlaces, setSavedPlaces] = useState<any[]>([]);
@@ -3102,6 +3105,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
          sirf phone dekhta hai - yaani koi bhi kisi ka maang sakta hai.
          App pehle bhejna shuru karti hai, server baad me maangega. */
       const d = await authGet(`/api/rides/history?phone=${ph}`);
+      /* Nakami chhupao mat.
+
+         Ye poori call apne catch me chup thi, aur khaali soochi wahi dikhti
+         hai jo "abhi koi ride nahi ki" - yaani screen dono halaat me ek jaisi
+         thi. Jab server par 4 rides maujood thi aur screen "No trips yet" keh
+         rahi thi, tab ye farq hi nahi bata paya ki call gayi bhi thi ya nahi.
+
+         Ab wajah rakhi jaati hai aur screen use dikhati hai. Rakam nahi,
+         mahaz ye ki kya hua - taaki agli baar andaaza na lagana pade. */
+      if (d && (d._error || d.error)) {
+        setHistoryErr(
+          (d._status === 401 || d._status === 403)
+            ? `Session ka mel nahi baith raha (${d._status})`
+            : (d.message || d.error || 'Nahi aa payi'));
+        return;
+      }
+      setHistoryErr('');
       const rides = d.rides || [];
       setHistoryRides(rides);
       // Seed dropHistory from completed rides if no local history saved yet
@@ -3373,7 +3393,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     walletBalance, setWalletBalance, walletTxns, setWalletTxns, walletStats, setWalletStats,
     walletTxnTab, setWalletTxnTab, walletAddInput, setWalletAddInput,
     loyaltyPoints, setLoyaltyPoints, loyaltyCashback, setLoyaltyCashback,
-    historyRides, setHistoryRides, activeOffers, setActiveOffers,
+    historyRides, setHistoryRides, historyErr, activeOffers, setActiveOffers,
     offerDismissed, setOfferDismissed, savedPlaces, setSavedPlaces, customerRating, setCustomerRating,
     favouriteBuddy, setFavouriteBuddy, showBuddyBook, setShowBuddyBook,
     buddyBookPU, setBuddyBookPU, buddyBookDR, setBuddyBookDR,
