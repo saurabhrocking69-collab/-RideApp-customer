@@ -3115,10 +3115,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
          Ab wajah rakhi jaati hai aur screen use dikhati hai. Rakam nahi,
          mahaz ye ki kya hua - taaki agli baar andaaza na lagana pade. */
       if (d && (d._error || d.error)) {
+        /* Server ke apne shabd rakhe jaate hain, sirf status nahi. Pehli baar
+           yahan sirf "(401)" likha tha, aur usse ye pata hi nahi chalta ki
+           token bheja hi nahi gaya tha ya bheja hua token server ne thukra
+           diya - do alag dikkatein, do alag ilaaj. */
         setHistoryErr(
-          (d._status === 401 || d._status === 403)
-            ? `Session ka mel nahi baith raha (${d._status})`
-            : (d.message || d.error || 'Nahi aa payi'));
+          d._noToken
+            ? 'App ke paas login token hai hi nahi — ek baar log out karke wapas aayein'
+            : (d._status === 401 || d._status === 403)
+              ? `${d.error || d.message || 'Session ka mel nahi baith raha'} (${d._status})`
+              : (d.message || d.error || 'Nahi aa payi'));
         return;
       }
       setHistoryErr('');

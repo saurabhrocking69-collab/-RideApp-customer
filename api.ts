@@ -125,7 +125,22 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const authToken = async (): Promise<string> => {
   try { return (await AsyncStorage.getItem('userToken')) || ''; } catch { return ''; }
 };
-export const authGet  = async (path: string): Promise<any> => apiAuthGet(path, await authToken());
+export const authGet  = async (path: string): Promise<any> => {
+  /* Token mila ya nahi - ye alag se batana zaroori hai.
+
+     Server dono halaat par 401 deta hai: header hi na ho, aur token galat ho.
+     App ke liye ye do bilkul alag baatein hain - pehli ka matlab hai storage
+     me token hai hi nahi (kuch aur tuta hai), doosri ka matlab hai token to
+     hai par server use maanta nahi. Ek hi "401" dono par likh dena wahi
+     andhera hai jisme Trips wali dikkat ghanton chhupi rahi.
+
+     `_noToken` sirf app ke andar ke liye hai; screen apne shabd khud chunti
+     hai. */
+  const t = await authToken();
+  const r = await apiAuthGet(path, t);
+  if (!t && r && typeof r === 'object') r._noToken = true;
+  return r;
+};
 
 /* fetch ka hu-ba-hu roop, token ke saath.
 
