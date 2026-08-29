@@ -6,7 +6,7 @@ import * as Location from 'expo-location';
 import * as Clipboard from 'expo-clipboard';
 import * as Notifications from 'expo-notifications';
 import { io, Socket } from 'socket.io-client';
-import { apiGet, apiPost, apiAuthPost, apiAuthGet, authGet, authPost, externalGet } from '../../api';
+import { apiGet, apiPost, apiAuthPost, apiAuthGet, authGet, authPost, externalGet, authFetch } from '../../api';
 import { saveNotification } from '../components/NotificationCenter';
 import { C } from '../styles';
 import type { ToastNotif } from '../components/NotificationToast';
@@ -361,7 +361,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Driver accepted — fetch fresh ride data to populate driver info in context
       const rideId = activeRideIdRef.current;
       if (rideId) {
-        fetch(`${API}/api/rides/status/${rideId}`)
+        authFetch(`${API}/api/rides/status/${rideId}`)
           .then(r => r.json())
           .then(d => {
             if (d.ride?.driver_name || d.ride?.driver_phone) {
@@ -720,7 +720,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const activeRideId = await AsyncStorage.getItem('activeStdRideId').catch(() => null);
           if (activeRideId) {
             try {
-              const r    = await fetch(`${API}/api/rides/status/${activeRideId}`);
+              const r    = await authGet(`/api/rides/status/${activeRideId}`);
               const d    = await r.json();
               const ride = d.ride;
               const st   = ride?.status;
@@ -896,7 +896,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // pre-trip fare estimate instead of the real metered fare (the socket
         // rideUpdate handler already does this merge; this path didn't).
         if (rideId) {
-          fetch(`${API}/api/rides/status/${rideId}`).then(r => r.json()).then(d => {
+          authFetch(`${API}/api/rides/status/${rideId}`).then(r => r.json()).then(d => {
             const ride = d?.ride;
             if (ride) {
               setRideData((p: any) => p ? { ...p, net_fare: ride.net_fare, discount: ride.discount ?? p?.discount ?? 0 } : p);
@@ -1409,7 +1409,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           useRideStore.setState({ rideStatus: st, startOtp: data.start_otp || '' });
           const rideId = activeRideIdRef.current;
           if (rideId) {
-            fetch(`${API}/api/rides/status/${rideId}`)
+            authFetch(`${API}/api/rides/status/${rideId}`)
               .then(r => r.json())
               .then(d => {
                 if (d.ride?.driver_name || d.ride?.driver_phone) {
@@ -1596,7 +1596,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // push notification (tap or foreground-received) or an app-resume check.
   const adoptActiveRide = async (rideId: string | number) => {
     try {
-      const r    = await fetch(`${API}/api/rides/status/${rideId}`);
+      const r    = await authGet(`/api/rides/status/${rideId}`);
       const d    = await r.json();
       const ride = d.ride;
       const st   = ride?.status;
@@ -1661,7 +1661,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const reconcilePaymentConfirmed = async (rideId: string | number): Promise<boolean> => {
     try {
-      const r = await fetch(`${API}/api/rides/status/${rideId}`);
+      const r = await authGet(`/api/rides/status/${rideId}`);
       const d = await r.json();
       const ride = d.ride;
       if (!ride || ride.status !== 'completed' || ride.payment_status !== 'completed') return false;
@@ -1681,7 +1681,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // the driver left waiting on a decision the sender never even saw asked.
   const reconcileReturnStatus = async (rideId: string | number) => {
     try {
-      const r = await fetch(`${API}/api/rides/status/${rideId}`);
+      const r = await authGet(`/api/rides/status/${rideId}`);
       const d = await r.json();
       const ride = d.ride;
       if (!ride) return;

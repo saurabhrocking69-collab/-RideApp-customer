@@ -97,6 +97,22 @@ const authToken = async (): Promise<string> => {
   try { return (await AsyncStorage.getItem('userToken')) || ''; } catch { return ''; }
 };
 export const authGet  = async (path: string): Promise<any> => apiAuthGet(path, await authToken());
+
+/* fetch ka hu-ba-hu roop, token ke saath.
+
+   Kuch purani jagah `.then(r => r.json())` ki shakal me likhi hain. Unhe
+   authGet me badalne ka matlab hota har ek ko dobara likhna - aur wo usi
+   jagah zyada khatra hai jahan ride ki haalat har kuch second me poochhi
+   jaati hai. Signature wahi rakhne par har call site ek shabd ka badlaav
+   hai aur neeche ka sab waise hi chalta hai. (Driver app me yahi tareeka
+   pehle se hai.) */
+export const authFetch = async (url: string, opts: any = {}) => {
+  const token = await authToken();
+  return fetch(url, {
+    ...opts,
+    headers: { ...(opts.headers || {}), Authorization: `Bearer ${token}` },
+  });
+};
 export const authPost = async (path: string, body: any): Promise<any> => apiAuthPost(path, body, await authToken());
 
 export const apiAuthGet = async (path: string, token: string, retries = 2): Promise<any> => {
