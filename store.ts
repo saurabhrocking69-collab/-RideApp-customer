@@ -6,7 +6,7 @@
 //  - Stale data auto-clear
 // ═══════════════════════════════════════════════
 import { create } from 'zustand';
-import { apiGet } from './api';
+import { apiGet, authGet } from './api';
 
 type RideState = {
   // Ride data
@@ -83,13 +83,13 @@ export const useRideStore = create<RideState>((set, get) => ({
         if (!rideId) { polling = false; return; }
 
         // Ride status
-        const data = await apiGet(`/api/rides/status/${rideId}`);
+        const data = await authGet(`/api/rides/status/${rideId}`);
         if (data._error || !data.ride) { polling = false; return; }
         const st = data.ride.status;
 
         // Driver location (sirf matched/arrived/started mein)
         if (['matched', 'arrived', 'started'].includes(st)) {
-          const ld = await apiGet(`/api/rides/driver-location/${rideId}`);
+          const ld = await authGet(`/api/rides/driver-location/${rideId}`);
           if (!ld._error && ld.location) set({ driverLoc: ld.location });
         }
 

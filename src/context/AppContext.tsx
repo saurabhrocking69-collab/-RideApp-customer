@@ -2996,7 +2996,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const loadGreenSummary = async (ph: string) => {
     if (!ph) return;
     try {
-      const r = await fetch(`${API}/api/rides/green-summary?phone=${ph}`);
+      const r = await authFetch(`${API}/api/rides/green-summary?phone=${ph}`);
       const d = await r.json();
       if (!d?.error) setGreenSummary(d);
     } catch (_e) {}
