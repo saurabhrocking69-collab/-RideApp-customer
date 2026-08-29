@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import * as Updates from 'expo-updates';
 import { ScrollView, FlatList, View, Text, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, Animated, Easing, Share, Dimensions, Linking, AccessibilityInfo } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -2848,6 +2849,23 @@ function ProfileTab() {
             <Text style={{ color: C.red, fontWeight: '800', fontSize: 14 }}>Log Out</Text>
           </Bouncy>
 
+          {/* Kaun sa build chal raha hai.
+
+              Sawal har OTA ke baad aata hai: "update pahuncha bhi ya nahi?"
+              Ab tak uska koi jawab app me tha hi nahi - strip dikhi ya nahi
+              dikhi, dono se pata nahi chalta, kyoki update apply ho jaane par
+              strip dikhni band ho jaati hai. Yaani jo cheez sabse zyada
+              bharosa deti (strip ka na dikhna) wahi sabse zyada shak paida
+              karti thi.
+
+              Isliye ye ek line. Chhoti hai, sabse neeche hai, kisi ke raaste
+              me nahi - par poochne par jawab de deti hai. `updateId` ke pehle
+              aath akshar kaafi hain do updates ko alag batane ke liye. */}
+          <Text style={{ textAlign: 'center', color: C.textMuted, fontSize: 11,
+                         marginTop: 14, marginBottom: 4, opacity: 0.75 }}>
+            {buildLine()}
+          </Text>
+
           <CallNumberSheet
             visible={showCallNumber}
             onClose={() => setShowCallNumber(false)}
@@ -3075,6 +3093,30 @@ function RatingModal() {
       </View>
     </Modal>
   );
+}
+
+/* Kaun sa build chal raha hai - sirf expo-updates se.
+
+   expo-constants seedhi dependency nahi hai, aur use jodne par fingerprint
+   hil jaata - yaani ye line to jud jaati par OTA se pahunchti hi nahi, kyoki
+   naya fingerprint purane build tak jaata hi nahi. Poora matlab hi ulta ho
+   jaata.
+
+   Waise bhi tareekh version number se zyada kaam ki hai: "kal shaam ka" se
+   turant pata chal jaata hai ki aaj wala update aaya ya nahi.
+
+   Dev me aur Expo Go me updateId hota hi nahi - wahan app apne build wale
+   bundle par chalta hai, aur wahi kaha jaata hai. */
+function buildLine(): string {
+  let id = '', when = '';
+  try {
+    id = String((Updates as any).updateId || '').slice(0, 8);
+    const d = (Updates as any).createdAt;
+    if (d) when = new Date(d).toLocaleString('en-IN',
+      { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+  } catch (_e) {}
+  if (!id) return 'Sppero · build ka apna version';
+  return 'Sppero · update ' + id + (when ? ' · ' + when : '');
 }
 
 export function HomeScreen() {
