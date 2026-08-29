@@ -5,6 +5,20 @@
 
 export const API = 'https://api.sppero.com';
 
+/* "Network error" tab tak sach hai jab tak sach me network fail ho.
+
+   Naapa gaya: prod par /api/auth/google 404 de raha tha, aur 404 ka jawab
+   HTML ka "Cannot POST" panna hai. res.json() uspar phat jaata hai, wo phatna
+   isi catch me girta hai, aur aadmi ko "Network error - dobara try karo"
+   dikhta hai. Uska internet bilkul theek tha; raasta hi nahi tha. Wo dobara
+   try karta raha aur har baar wahi.
+
+   Ab dono alag hain. Jawab aaya hi nahi = network. Jawab aaya par samajh na
+   aaya = server ki taraf ki gadbad, jo dobara try karne se theek nahi hoti -
+   isliye aisa kehna bhi nahi chahiye. */
+const NET_MSG = 'Network error — apna internet dekh kar dobara try karo';
+const SRV_MSG = 'Sppero abhi jawab nahi de pa raha — thodi der me try karo';
+
 // ─── Fetch with timeout (10 sec default) ───
 const fetchWithTimeout = async (url: string, options: any = {}, timeout = 10000): Promise<Response> => {
   const controller = new AbortController();
@@ -39,13 +53,18 @@ export const apiGet = async (path: string, retries = 2): Promise<any> => {
   for (let i = 0; i <= retries; i++) {
     try {
       const res = await fetchWithTimeout(`${API}${path}`, {}, 10000);
-      return withMeta(await res.json(), res);
+      // `parsed`, `body` nahi: apiPost/apiDelete ka apna `body` parameter hai
+      // aur use dhak dene par JSON.stringify(body) upar hi tut jaata hai.
+      let parsed: any;
+      try { parsed = await res.json(); }
+      catch (_p) { return { _error: true, _badReply: true, _status: res.status, message: SRV_MSG }; }
+      return withMeta(parsed, res);
     } catch (err) {
-      if (i === retries) return { _error: true, message: 'Network error' };
+      if (i === retries) return { _error: true, message: NET_MSG };
       await new Promise(r => setTimeout(r, 800)); // 800ms gap, phir retry
     }
   }
-  return { _error: true, message: 'Network error' };
+  return { _error: true, message: NET_MSG };
 };
 
 export const apiPost = async (path: string, body: any, retries = 1): Promise<any> => {
@@ -56,13 +75,18 @@ export const apiPost = async (path: string, body: any, retries = 1): Promise<any
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       }, 10000);
-      return withMeta(await res.json(), res);
+      // `parsed`, `body` nahi: apiPost/apiDelete ka apna `body` parameter hai
+      // aur use dhak dene par JSON.stringify(body) upar hi tut jaata hai.
+      let parsed: any;
+      try { parsed = await res.json(); }
+      catch (_p) { return { _error: true, _badReply: true, _status: res.status, message: SRV_MSG }; }
+      return withMeta(parsed, res);
     } catch (err) {
-      if (i === retries) return { _error: true, message: 'Network error — dobara try karo' };
+      if (i === retries) return { _error: true, message: NET_MSG };
       await new Promise(r => setTimeout(r, 800));
     }
   }
-  return { _error: true, message: 'Network error — dobara try karo' };
+  return { _error: true, message: NET_MSG };
 };
 
 export const apiDelete = async (path: string, body: any, retries = 1): Promise<any> => {
@@ -73,13 +97,18 @@ export const apiDelete = async (path: string, body: any, retries = 1): Promise<a
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       }, 10000);
-      return withMeta(await res.json(), res);
+      // `parsed`, `body` nahi: apiPost/apiDelete ka apna `body` parameter hai
+      // aur use dhak dene par JSON.stringify(body) upar hi tut jaata hai.
+      let parsed: any;
+      try { parsed = await res.json(); }
+      catch (_p) { return { _error: true, _badReply: true, _status: res.status, message: SRV_MSG }; }
+      return withMeta(parsed, res);
     } catch (err) {
-      if (i === retries) return { _error: true, message: 'Network error — dobara try karo' };
+      if (i === retries) return { _error: true, message: NET_MSG };
       await new Promise(r => setTimeout(r, 800));
     }
   }
-  return { _error: true, message: 'Network error — dobara try karo' };
+  return { _error: true, message: NET_MSG };
 };
 
 // ─── Auth-aware helpers (include Bearer token from AsyncStorage) ───
@@ -121,13 +150,18 @@ export const apiAuthGet = async (path: string, token: string, retries = 2): Prom
       const res = await fetchWithTimeout(`${API}${path}`, {
         headers: { Authorization: `Bearer ${token}` },
       }, 12000);
-      return withMeta(await res.json(), res);
+      // `parsed`, `body` nahi: apiPost/apiDelete ka apna `body` parameter hai
+      // aur use dhak dene par JSON.stringify(body) upar hi tut jaata hai.
+      let parsed: any;
+      try { parsed = await res.json(); }
+      catch (_p) { return { _error: true, _badReply: true, _status: res.status, message: SRV_MSG }; }
+      return withMeta(parsed, res);
     } catch (err) {
-      if (i === retries) return { _error: true, message: 'Network error' };
+      if (i === retries) return { _error: true, message: NET_MSG };
       await new Promise(r => setTimeout(r, 1000));
     }
   }
-  return { _error: true, message: 'Network error' };
+  return { _error: true, message: NET_MSG };
 };
 
 export const apiAuthPost = async (path: string, body: any, token: string, retries = 2): Promise<any> => {
@@ -138,13 +172,18 @@ export const apiAuthPost = async (path: string, body: any, token: string, retrie
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(body),
       }, 12000);
-      return withMeta(await res.json(), res);
+      // `parsed`, `body` nahi: apiPost/apiDelete ka apna `body` parameter hai
+      // aur use dhak dene par JSON.stringify(body) upar hi tut jaata hai.
+      let parsed: any;
+      try { parsed = await res.json(); }
+      catch (_p) { return { _error: true, _badReply: true, _status: res.status, message: SRV_MSG }; }
+      return withMeta(parsed, res);
     } catch (err) {
-      if (i === retries) return { _error: true, message: 'Network error — dobara try karo' };
+      if (i === retries) return { _error: true, message: NET_MSG };
       await new Promise(r => setTimeout(r, 1000));
     }
   }
-  return { _error: true, message: 'Network error — dobara try karo' };
+  return { _error: true, message: NET_MSG };
 };
 
 // ─── External API (Google Maps etc) with timeout ───
