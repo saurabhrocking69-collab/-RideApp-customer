@@ -240,9 +240,9 @@ function GuideBody({ onCta, ctaLabel }: { onCta: () => void; ctaLabel: string })
           <SectionLabel kicker="PICK A SIZE" title="What can you send?" />
 
           {([
-            ['👜', 'Small', 'Fits in a bag · up to 2 kg', 'Bike & Green Bike', 'Lightest & quickest', C.pink],
-            ['📦', 'Medium', 'A box · up to 10 kg', 'Auto, E-Rickshaw, E-Auto or Car', 'Needs a proper boot', C.purple],
-            ['🗄️', 'Large', "Won't fit on a bike · up to 25 kg", 'Car only', 'Bulky or heavy items', C.yellow],
+            ['👜', 'Small', 'Fits in a bag · up to 5 kg', 'Bike & Green Bike', 'Lightest & quickest', C.pink],
+            ['📦', 'Medium', 'A box · up to 20 kg', 'Auto, E-Rickshaw, E-Auto or Car', 'Needs a proper boot', C.purple],
+            ['🗄️', 'Large', "Won't fit on a bike · up to 40 kg", 'Auto or Car', 'Bulky or heavy items', C.yellow],
           ] as const).map(([icon, name, limit, vehicles, note, tint], i) => (
             <SlideUp key={i} delay={90 + i * 100}>
               <View style={{

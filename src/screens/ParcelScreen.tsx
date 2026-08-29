@@ -25,9 +25,9 @@ const VEHICLE_LABEL: Record<string, string> = {
 
 type PackageSize = 'small' | 'medium' | 'large';
 const SIZE_INFO: { key: PackageSize; label: string; desc: string; icon: string }[] = [
-  { key: 'small',  label: 'Small',  desc: 'Fits in a bag · up to 2 kg',        icon: '👜' },
-  { key: 'medium', label: 'Medium', desc: 'A box · up to 10 kg',               icon: '📦' },
-  { key: 'large',  label: 'Large',  desc: "Won't fit on a bike · up to 25 kg", icon: '🗄️' },
+  { key: 'small',  label: 'Small',  desc: 'Fits in a bag · up to 5 kg',        icon: '👜' },
+  { key: 'medium', label: 'Medium', desc: 'A box · up to 20 kg',               icon: '📦' },
+  { key: 'large',  label: 'Large',  desc: "Won't fit on a bike · up to 40 kg", icon: '🗄️' },
 ];
 // One line per size explaining which delivery vehicles show and why — the
 // vehicle list below is filtered server-side by package_size (never trust
@@ -35,7 +35,7 @@ const SIZE_INFO: { key: PackageSize; label: string; desc: string; icon: string }
 const SIZE_VEHICLE_HINT: Record<PackageSize, string> = {
   small:  '🏍️ Bike & Green Bike only — fastest and cheapest for something bag-sized.',
   medium: '🛺 Auto, E-Rickshaw, E-Auto or Car — needs a proper boot for a box.',
-  large:  '🚗 Car only — too big and heavy for a bike or 3-wheeler.',
+  large:  '🛺 Auto or Car — too big for a bike. An auto is usually cheaper.',
 };
 
 type EstOption = { vehicle_type: string; fare: number; base_fare: number; dist_fare: number; per_km_rate: number; surcharge: number };
@@ -182,8 +182,8 @@ export function ParcelScreen() {
 
   // Two-wheeler road distance for the same pair, when it can be had.
   //
-  // A parcel's vehicle list is mixed: small is bike-only, large is car-only,
-  // and medium spans auto/e-riksha/e-auto AND car. So one distance cannot
+  // A parcel's vehicle list is mixed: small is bike-only, while medium and
+  // large both span 3-wheelers AND cars. So one distance cannot
   // price the whole list — a bike takes lanes the car graph excludes (2.82 km
   // against the car's 4.22 km on a real Lucknow pair), while a car genuinely
   // has to drive the long way round. Both are fetched and each option is
