@@ -20,6 +20,27 @@ import { shortRideId } from '../rideId';
 let RazorpayCheckout: any = null;
 try { const _m = require('react-native-razorpay'); RazorpayCheckout = _m?.default || _m || null; } catch (_e) {}
 
+/* Token me likha number - kyoki wahi sach hai.
+
+   Server har phone wale endpoint par token ka number dekh kar milaan karta
+   hai. App apna number alag se AsyncStorage me rakhta hai, aur wo do alag ho
+   sakte hain: aisa hua bhi. Ek khaate me jaane ki koshish me ek number type
+   hua, server ne mana kiya, phir doosre Google khaate se andar gaye - aur
+   storage me naam naye khaate ka aur number purani koshish ka jam kar reh
+   gaya. Uske baad har poochh galat number ke saath jaati thi.
+
+   Ek baar aisi haalat ban jaye to wo apne aap theek nahi hoti - aadmi logout
+   kare tab hi. Isliye token se nikal kar milaan kiya jaata hai. */
+function decodeJwtPhone(token: string): string | null {
+  try {
+    const payload = token.split('.')[1];
+    const padded = payload + '==='.slice((payload.length + 3) % 4);
+    const json = JSON.parse(atob(padded.replace(/-/g, '+').replace(/_/g, '/')));
+    const p = String(json.phone || '').replace(/\D/g, '');
+    return p.length >= 10 ? p.slice(-10) : null;
+  } catch { return null; }
+}
+
 function decodeJwtExp(token: string): number | null {
   try {
     const payload = token.split('.')[1];
@@ -689,6 +710,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               .then(d => { if (d.token) AsyncStorage.setItem('userToken', d.token).catch(() => {}); })
               .catch(() => {});
           }
+        }
+      }
+
+      /* Token aur storage me rakha number alag ho to TOKEN sahi hai.
+
+         Server phone wale endpoint par token ke number se milaan karta hai, to
+         galat number ke saath har poochh 403 laut-ti hai - aur "No trips yet"
+         jaisa dikhti hai, jabki rides server par maujood hain. Naapa gaya thaa:
+         wahi khaata token se 4 rides deta tha aur galat number se 403.
+
+         Yahan chup-chaap theek kiya jaata hai, aadmi ko logout karwaye bina. */
+      if (savedPhone) {
+        const tk = await AsyncStorage.getItem('userToken').catch(() => null);
+        const tkPhone = tk ? decodeJwtPhone(tk) : null;
+        if (tkPhone && tkPhone !== String(savedPhone).replace(/\D/g, '').slice(-10)) {
+          savedPhone = tkPhone;
+          await AsyncStorage.setItem('userPhone', tkPhone).catch(() => {});
         }
       }
 
