@@ -722,7 +722,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (activeRideId) {
             try {
               const r    = await authGet(`/api/rides/status/${activeRideId}`);
-              const d    = await r.json();
+              const d    = r;
               const ride = d.ride;
               const st   = ride?.status;
 
@@ -1598,7 +1598,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const adoptActiveRide = async (rideId: string | number) => {
     try {
       const r    = await authGet(`/api/rides/status/${rideId}`);
-      const d    = await r.json();
+      const d    = r;
       const ride = d.ride;
       const st   = ride?.status;
       if (!ride || !['requested', 'searching', 'matched', 'arrived', 'started'].includes(st)) return false;
@@ -1648,11 +1648,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // In-app-only notification — no OS push for this event by design, just a
   // toast + notification-center entry using the app's own existing system,
   // for whenever we discover the driver has confirmed payment.
-  const notifyPaymentReceivedInApp = (fare?: number) => {
+  const notifyPaymentReceivedInApp = (fare?: number | string) => {
+    /* "Your Rs NaN payment has been confirmed" - asli screenshot se.
+
+       `fare` do jagah se aata hai: server ke jawab se (jahan wo "68.00" jaisi
+       string hoti hai) aur app ki apni ride se (jahan wo kabhi "₹71" jaisi
+       saji hui string ban chuki hoti hai). Math.round("₹71") NaN deta hai, aur
+       ternary `fare ?` uspar khush tha - kyoki NaN se pehle wali string khaali
+       nahi thi.
+
+       Ab ank nikal kar padha jaata hai, aur ank na mile to rakam wali line
+       likhi hi nahi jaati. Grahak ko "₹NaN" dikhane se accha hai use rakam na
+       dikhaana. */
+    const n = Math.round(parseFloat(String(fare ?? '').replace(/[^0-9.]/g, '')));
+    const amountOk = Number.isFinite(n) && n > 0;
     const toast: ToastNotif = {
       id:   `payment-confirmed-${Date.now()}`,
       title: '✅ Payment Received',
-      body:  fare ? `Your ₹${Math.round(fare)} payment has been confirmed by the driver.` : 'Your payment has been confirmed by the driver.',
+      body:  amountOk ? `Your ₹${n} payment has been confirmed by the driver.` : 'Your payment has been confirmed by the driver.',
       type:  'payment_confirmed',
       ts:    Date.now(),
     };
@@ -1663,7 +1676,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const reconcilePaymentConfirmed = async (rideId: string | number): Promise<boolean> => {
     try {
       const r = await authGet(`/api/rides/status/${rideId}`);
-      const d = await r.json();
+      const d = r;
       const ride = d.ride;
       if (!ride || ride.status !== 'completed' || ride.payment_status !== 'completed') return false;
       setRideData({ ...ride, ride_id: ride.ride_id ?? ride.id });
@@ -1683,7 +1696,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const reconcileReturnStatus = async (rideId: string | number) => {
     try {
       const r = await authGet(`/api/rides/status/${rideId}`);
-      const d = await r.json();
+      const d = r;
       const ride = d.ride;
       if (!ride) return;
       setRideData((p: any) => p ? {

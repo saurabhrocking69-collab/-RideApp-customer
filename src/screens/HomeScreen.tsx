@@ -2887,6 +2887,20 @@ function ProfileTab() {
 }
 
 // ── Post-ride rating modal — appears on home after 3s auto-redirect ──────────
+/* Rating ke saath jaane wali baatein.
+
+   Do soochi, kyoki ek hi soochi dono taraf dikhana bemani hai: 5 sitare wale
+   ko "Rash driving" nahi dikhani, aur 2 sitare wale ko "Clean vehicle" nahi.
+
+   Shabd wahi jo aadmi apne dost se kahega. Har chip ek hi baat kehti hai,
+   taaki aage ye ginaa ja sake ki kis driver ki kaunsi baat log baar-baar
+   chunte hain - "Polite" har baar theek waise hi likha jayega, "polite guy :)"
+   nahi. Likhe hue comment ke saath ye kabhi mumkin nahi tha. */
+const RATE_GOOD = ['On time', 'Safe driving', 'Polite', 'Clean vehicle',
+                   'Knew the route', 'Helped with luggage'];
+const RATE_BAD  = ['Came late', 'Rash driving', 'Rude behaviour',
+                   'Vehicle not clean', 'Took a long route', 'Asked for extra fare'];
+
 function RatingModal() {
   const { bottom: bottomInset } = useSafeAreaInsets();
   // Local to the modal: resets with each ride, so the save prompt reappears
@@ -2913,9 +2927,12 @@ function RatingModal() {
   const ride = useRideStore();
 
   const localStarAnims = useRef([0,1,2,3,4].map(() => new Animated.Value(0))).current;
+  const [tags, setTags] = useState<string[]>([]);
+  const [rateErr, setRateErr] = useState('');
+  const [rateBusy, setRateBusy] = useState(false);
   useEffect(() => {
     if (showRatingModal) {
-      setRating(0);
+      setRating(0); setTags([]); setRateErr('');
       Animated.stagger(120, localStarAnims.map(a =>
         Animated.spring(a, { toValue: 1, friction: 5, tension: 190, useNativeDriver: true })
       )).start();
@@ -2927,16 +2944,30 @@ function RatingModal() {
   const fareNum = Math.round(parseFloat(String(rideData?.fare ?? 0).replace(/[^0-9.]/g, '')) || 0);
 
   const dismiss = async (submitRating = false) => {
-    if (submitRating && rating > 0 && rideData?.ride_id) {
-      // Retried rather than fired and forgotten, but a lost rating is not worth
-      // interrupting anyone over — the modal closes either way.
-      for (let i = 0, sent = false; i < 3 && !sent; i++) {
+    /* `ride_id ?? id`: kuch raaste ride ko `id` ke naam se rakhte hain, aur
+       purani shart sirf `ride_id` dekhti thi - us haal me poora block
+       chup-chaap chhoot jaata tha aur modal band ho jaata. Aadmi ko lagta ki
+       rating chali gayi, server par kuch nahi pahunchta. */
+    const rid = rideData?.ride_id ?? rideData?.id;
+    if (submitRating && rating > 0 && rid) {
+      setRateBusy(true); setRateErr('');
+      let sent = false;
+      for (let i = 0; i < 3 && !sent; i++) {
         try {
           // Token ke saath: rating kisi ki APNI ride par hoti hai.
-          const d = await authPost('/api/rides/rate', { ride_id: rideData.ride_id, rating, review });
+          const d = await authPost('/api/rides/rate', { ride_id: rid, rating, review: tags.join(', ') });
           sent = !d?._error && !d?.error;
         } catch (_e) { /* wait and try again */ }
         if (!sent) await new Promise(res => setTimeout(res, 1000 * (i + 1)));
+      }
+      setRateBusy(false);
+      /* Nakaam hone par modal band NAHI hota. Pehle hota tha - "lost rating is
+         not worth interrupting anyone over" likha tha - par uska asli nateeja
+         ye tha ki aadmi ko lagta rating chali gayi, jabki gayi hi nahi. Ek
+         line dikha kar button dobara dabane dena isse behtar hai. */
+      if (!sent) {
+        setRateErr('Rating nahi ja payi — dobara try karo');
+        return;
       }
     }
     setShowRatingModal(false);
@@ -2996,17 +3027,60 @@ function RatingModal() {
             <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 14, gap: 4 }}>
               {[1,2,3,4,5].map(star => (
                 <Animated.View key={star} style={{ opacity: localStarAnims[star-1], transform: [{ scale: localStarAnims[star-1].interpolate({ inputRange: [0, 0.6, 0.85, 1], outputRange: [0, 1.35, 0.88, 1] }) }] }}>
-                  <TouchableOpacity onPress={() => { setRating(star); animateStar(star - 1); }} style={{ padding: 4 }}>
+                  <TouchableOpacity onPress={() => {
+                    // Soochi badal rahi hai, to pehle chuni hui baat bemani ho
+                    // jaati hai - 5 sitare ke saath "Rash driving" nahi ja sakti.
+                    if ((star >= 4) !== (rating >= 4)) setTags([]);
+                    setRating(star); setRateErr(''); animateStar(star - 1);
+                  }} style={{ padding: 4 }}>
                     <Animated.Text style={{ fontSize: 40, color: star <= rating ? C.yellow : C.glassBorder, transform: [{ scale: starAnims[star - 1] }], textShadowColor: star <= rating ? C.yellow : 'transparent', textShadowRadius: 10, textShadowOffset: { width: 0, height: 0 } }}>★</Animated.Text>
                   </TouchableOpacity>
                 </Animated.View>
               ))}
             </View>
 
-            <TextInput
-              style={[s.input, { height: 68, textAlignVertical: 'top', backgroundColor: C.glassMid, color: C.text, borderColor: C.glassBorder, marginBottom: 14 }]}
-              placeholder="Comment (optional)..." placeholderTextColor={C.textDim}
-              multiline value={review} onChangeText={setReview} />
+            {/* Chunna, likhna nahi.
+
+                Yahan "Comment (optional)" ka khaali dabba tha. Mobile par,
+                ride ke turant baad, koi khada ho kar type nahi karta - wo dabba
+                lagbhag hamesha khaali jaata tha aur driver ko sirf ek ank
+                milta tha, koi wajah nahi.
+
+                Chips ka doosra faayda: jawab ginne layak ho jaata hai. "Polite"
+                har baar theek waise hi likha jayega, "polite guy :)" nahi - to
+                aage chal kar ye bataya ja sakta hai ki kis driver ki kaunsi
+                baat log baar-baar likhte hain.
+
+                Soochi rating ke hisaab se badalti hai. Koi 2 sitare de kar
+                "Clean vehicle" nahi chunega, aur 5 sitare wale ko "Rash
+                driving" dikhana bemani hai. */}
+            {rating > 0 && (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 14 }}>
+                {(rating >= 4 ? RATE_GOOD : RATE_BAD).map(t => {
+                  const on = tags.includes(t);
+                  return (
+                    <TouchableOpacity key={t}
+                      onPress={() => setTags(on ? tags.filter(x => x !== t) : [...tags, t])}
+                      style={{
+                        paddingHorizontal: 13, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5,
+                        backgroundColor: on ? (rating >= 4 ? C.greenGlass : C.yellowGlass) : C.glassMid,
+                        borderColor: on ? (rating >= 4 ? C.greenBorder : C.yellowBorder) : C.glassBorder,
+                      }}>
+                      <Text style={{ fontSize: 12.5, fontWeight: '800',
+                                     color: on ? (rating >= 4 ? C.green : C.yellow) : C.textDim }}>
+                        {t}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+
+            {!!rateErr && (
+              <Text style={{ fontSize: 12.5, color: C.red, fontWeight: '700', textAlign: 'center', marginBottom: 10 }}>
+                {rateErr}
+              </Text>
+            )}
 
             {/* Sppero Buddy */}
             {rideData?.driver?.phone && (() => {
@@ -3085,8 +3159,11 @@ function RatingModal() {
             })()}
 
             {/* Submit */}
-            <Bouncy style={[s.btn, { marginBottom: 4 }]} onPress={() => dismiss(true)}>
-              <Text style={s.btnTxt}>{rating > 0 ? `Submit ${rating}★ Rating` : 'Skip Rating'}</Text>
+            {/* Bhejte waqt button ko pata hona chahiye ki wo bhej raha hai.
+                Pehle wo turant band ho jaata tha - safal ho ya na ho. */}
+            <Bouncy style={[s.btn, { marginBottom: 4, opacity: rateBusy ? 0.6 : 1 }]}
+                    onPress={() => { if (!rateBusy) dismiss(true); }}>
+              <Text style={s.btnTxt}>{rateBusy ? 'Bhej rahe hain…' : (rating > 0 ? `Submit ${rating}★ Rating` : 'Skip Rating')}</Text>
             </Bouncy>
           </ScrollView>
         </View>
