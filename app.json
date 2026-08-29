@@ -42,7 +42,9 @@
         "ACCESS_COARSE_LOCATION",
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
-        "POST_NOTIFICATIONS"
+        "POST_NOTIFICATIONS",
+        "READ_PHONE_NUMBERS",
+        "READ_PHONE_STATE"
       ],
       "config": {
         "googleMaps": {
