@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { Bouncy, DotBG, ScreenIn, ResultBanner } from '../components/ui';
 import { s, C, T, R, SP, SHADOW } from '../styles';
-import { apiPost } from '../../api';
+import { apiPost, authPost } from '../../api';
 
 const { width: W } = Dimensions.get('window');
 const SB_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 0;
@@ -70,7 +70,7 @@ export function PaymentScreen() {
   const confirmUpiQrPaid = async () => {
     if (upiConfirming) return;
     setUpiConfirming(true); setPayErr('');
-    const r = await apiPost('/api/rides/payment-complete', { ride_id: rideData.ride_id, payment_method: 'upi_qr', phone: phone || '9999999999' });
+    const r = await authPost('/api/rides/payment-complete', { ride_id: rideData.ride_id, payment_method: 'upi_qr', phone: phone || '9999999999' });
     setUpiConfirming(false);
     if (!settled(r)) {
       // Stay on the QR screen. They have already sent money, so the one thing
@@ -85,7 +85,7 @@ export function PaymentScreen() {
   const payWithCash = async () => {
     if (cashConfirming) return;
     setCashConfirming(true); setPayErr('');
-    const r = await apiPost('/api/rides/payment-complete', { ride_id: rideData.ride_id, payment_method: 'cash', phone: phone || '9999999999' });
+    const r = await authPost('/api/rides/payment-complete', { ride_id: rideData.ride_id, payment_method: 'cash', phone: phone || '9999999999' });
     setCashConfirming(false);
     if (!settled(r)) {
       setPayErr('Could not record your cash payment — this ride still shows as unpaid. Check your connection and tap Cash again. Do not hand the driver cash twice.');

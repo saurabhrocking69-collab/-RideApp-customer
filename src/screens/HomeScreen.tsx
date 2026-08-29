@@ -2174,7 +2174,7 @@ function HistoryTab() {
     setDetailLoading(true);
     setShowDetail(true);
     try {
-      const d = await apiGet(`/api/rides/status/${h.id}`);
+      const d = await authGet(`/api/rides/status/${h.id}`);
       setDetailData(d.ride);
     } catch (_e) {
       setDetailData(null);
@@ -2914,12 +2914,9 @@ function RatingModal() {
       // interrupting anyone over — the modal closes either way.
       for (let i = 0, sent = false; i < 3 && !sent; i++) {
         try {
-          const r = await fetch(`${API}/api/rides/rate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ride_id: rideData.ride_id, rating, review }),
-          });
-          sent = r.ok;
+          // Token ke saath: rating kisi ki APNI ride par hoti hai.
+          const d = await authPost('/api/rides/rate', { ride_id: rideData.ride_id, rating, review });
+          sent = !d?._error && !d?.error;
         } catch (_e) { /* wait and try again */ }
         if (!sent) await new Promise(res => setTimeout(res, 1000 * (i + 1)));
       }

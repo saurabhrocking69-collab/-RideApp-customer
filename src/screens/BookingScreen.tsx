@@ -11,7 +11,7 @@ import { LiveMap, RouteOption } from '../components/LiveMap';
 import { PickupMapPicker } from '../components/PickupMapPicker';
 import { s, C, T, R, SP, SHADOW } from '../styles';
 import { RIDES, MAPS_KEY } from '../constants';
-import { apiGet, apiPost, externalGet } from '../../api';
+import { apiGet, apiPost, externalGet, authGet } from '../../api';
 import { useNearbyDrivers } from '../offline';
 import { NEARBY_CATEGORIES } from '../nearbyCategories';
 
@@ -280,7 +280,7 @@ export function BookingScreen() {
     let cancelled = false;
     setEtaLoaded(false);
     const fetchEta = () => {
-      apiGet(`/api/rides/driver-eta?pickup_lat=${pickupCoords.lat}&pickup_lng=${pickupCoords.lng}`)
+      authGet(`/api/rides/driver-eta?pickup_lat=${pickupCoords.lat}&pickup_lng=${pickupCoords.lng}`)
         .then(d => { if (!cancelled) { setDriverEta(d.eta || {}); setEtaLoaded(true); } })
         .catch(() => { if (!cancelled) setEtaLoaded(true); });
     };

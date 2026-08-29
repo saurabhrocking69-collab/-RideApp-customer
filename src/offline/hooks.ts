@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCachedFetch } from './useCachedFetch';
 import { Cache, KEY, TTL } from './cache';
 import { API } from '../constants';
-import { apiAuthGet } from '../../api';
+import { apiAuthGet, authGet } from '../../api';
 
 // ── Nearby Drivers ────────────────────────────────────────────────────────────
 export function useNearbyDrivers(lat?: number | null, lng?: number | null) {
@@ -48,8 +48,8 @@ export function useFareEstimate(phone: string, pickup: string, drop: string, pic
 export function useRideHistory(phone?: string) {
   const fetcher = useCallback(async () => {
     if (!phone) return null;
-    const r = await fetch(`${API}/api/rides/history?phone=${phone}&limit=20`);
-    const d = await r.json();
+    // Wahi wajah jo AppContext me - apna itihaas, token ke saath.
+    const d = await authGet(`/api/rides/history?phone=${phone}&limit=20`);
     return Array.isArray(d.rides) ? d.rides : null;
   }, [phone]);
 

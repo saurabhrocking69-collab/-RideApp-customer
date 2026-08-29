@@ -1008,7 +1008,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!rideId || !['matching', 'inride'].includes(screen)) { setCancelInfo(null); return; }
     const poll = async () => {
       try {
-        const d = await apiGet(`/api/rides/cancel-info/${rideId}`);
+        const d = await authGet(`/api/rides/cancel-info/${rideId}`);
         if (d.fee !== undefined) setCancelInfo(d);
       } catch (_e) {}
     };
@@ -1388,7 +1388,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (st === 'arrived') {
           const arrivedRideId = activeRideIdRef.current;
           if (arrivedRideId) {
-            apiGet(`/api/rides/cancel-info/${arrivedRideId}`)
+            authGet(`/api/rides/cancel-info/${arrivedRideId}`)
               .then((d: any) => { if (d.fee !== undefined) setCancelInfo(d); })
               .catch(() => {});
           }
@@ -2784,7 +2784,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!rideData?.ride_id || surging) return;
     setSurging(true);
     try {
-      const res = await apiPost('/api/rides/surge-fare', { ride_id: rideData.ride_id, customer_phone: phone || '9999999999', surge_amount: amount });
+      const res = await authPost('/api/rides/surge-fare', { ride_id: rideData.ride_id, customer_phone: phone || '9999999999', surge_amount: amount });
       if (res.success) { setSurgeFare(res.new_fare); setSurgeCount(res.surge_count); setBookTime(Date.now()); setRideData((prev: any) => ({ ...prev, fare: res.new_fare })); }
       else setResult('❌ ' + (res.error || 'Surge failed'));
     } catch (_e) { setResult('❌ Network error'); }
@@ -2842,7 +2842,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       RazorpayCheckout.open({ description: 'Sppero Trip', currency: 'INR', key: order.key_id, amount: order.amount, order_id: order.order_id, name: 'Sppero', prefill: { contact: phone, name: userName || 'User' }, theme: { color: C.pink } })
         .then(async (data: any) => {
           apiPost('/api/payment/verify', { ride_id: rideData.ride_id, razorpay_payment_id: data.razorpay_payment_id, razorpay_order_id: data.razorpay_order_id, razorpay_signature: data.razorpay_signature, amount: fareNum, method: 'online' }).catch(() => {});
-          apiPost('/api/rides/payment-complete', { ride_id: rideData.ride_id, payment_method: 'online', phone: phone || '9999999999' }).catch(() => {});
+          authPost('/api/rides/payment-complete', { ride_id: rideData.ride_id, payment_method: 'online', phone: phone || '9999999999' }).catch(() => {});
           setPaymentDone(true); setScreen('postride'); createScratchCard();
           AsyncStorage.removeItem('activeStdRideId').catch(() => {});
           payingRef.current = false;
@@ -2875,7 +2875,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         (async () => {
           for (let attempt = 0; attempt < 5; attempt++) {
             try {
-              const pcData = await apiPost('/api/rides/payment-complete', { ride_id: rideId, payment_method: 'wallet', phone: ph });
+              const pcData = await authPost('/api/rides/payment-complete', { ride_id: rideId, payment_method: 'wallet', phone: ph });
               if (pcData.cashbacks?.length) setCashbackEarned(pcData.cashbacks);
               return;
             } catch (_e) {
@@ -3004,8 +3004,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const loadHistory = async (ph: string) => {
     try {
-      const r = await fetch(`${API}/api/rides/history?phone=${ph}`);
-      const d = await r.json();
+      /* Token ke saath, kyoki ye kisi ka apna itihaas hai. Abhi server
+         sirf phone dekhta hai - yaani koi bhi kisi ka maang sakta hai.
+         App pehle bhejna shuru karti hai, server baad me maangega. */
+      const d = await authGet(`/api/rides/history?phone=${ph}`);
       const rides = d.rides || [];
       setHistoryRides(rides);
       // Seed dropHistory from completed rides if no local history saved yet

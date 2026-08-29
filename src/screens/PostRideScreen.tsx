@@ -6,7 +6,7 @@ import { useApp } from '../context/AppContext';
 import { Bouncy, Confetti, CountUp, DotBG, FadeIn, ScreenIn, TripSteps } from '../components/ui';
 import { IlluRideComplete } from '../components/Illustrations';
 import { s, C, T, SP, R, SHADOW } from '../styles';
-import { apiGet, apiPost, authPost } from '../../api';
+import { apiGet, apiPost, authPost, authGet } from '../../api';
 import { shortRideId } from '../rideId';
 
 export function PostRideScreen() {
@@ -89,7 +89,7 @@ export function PostRideScreen() {
   // Auto-load ride details for trip stats card
   useEffect(() => {
     if (!rideData?.ride_id) return;
-    apiGet(`/api/rides/status/${rideData.ride_id}`)
+    authGet(`/api/rides/status/${rideData.ride_id}`)
       .then(d => { if (d?.ride) setBillData(d.ride); })
       .catch(() => {});
   }, [rideData?.ride_id]);
@@ -115,7 +115,7 @@ export function PostRideScreen() {
   const openBill = async () => {
     setBillLoading(true);
     try {
-      const d = await apiGet(`/api/rides/status/${rideData?.ride_id}`);
+      const d = await authGet(`/api/rides/status/${rideData?.ride_id}`);
       setBillData(d.ride);
     } catch (_e) {}
     setBillLoading(false);

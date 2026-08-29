@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { DotBG, SkeletonBox } from '../components/ui';
 import { C, R, SHADOW, SP } from '../styles';
-import { apiGet } from '../../api';
+import { apiGet, authGet } from '../../api';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Analytics {
@@ -106,7 +106,7 @@ export function InsightsScreen() {
 
   const load = async () => {
     setLoading(true); setError(false);
-    const r = await apiGet(`/api/rides/customer-analytics?phone=${encodeURIComponent(phone)}`);
+    const r = await authGet(`/api/rides/customer-analytics?phone=${encodeURIComponent(phone)}`);
     if (r && !r._error && typeof r.total_rides === 'number') {
       setData(r);
       Animated.timing(fadeAnim, { toValue: 1, duration: 480, useNativeDriver: true }).start();
