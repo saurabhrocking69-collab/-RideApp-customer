@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { C } from '../styles';
 import { Cache, KEY, TTL } from '../offline';
 import { API } from '../constants';
+import { authFetch } from '../../api';
 
 export interface InAppNotif {
   id: string;
@@ -124,7 +125,13 @@ export function NotificationCenter({ visible, onClose, phone }: CenterProps) {
 
     // Also fetch backend in-app notifications and merge
     if (phone) {
-      fetch(`${API}/api/notifications?target=${phone}&role=customer`)
+      /* Token ke saath. Sandesh kisi ke apne hote hain - naam, rakam, ride ki
+         baatein - aur ye raasta abhi sirf query me likha number dekh kar
+         jawab de deta hai. App ka token bhejna abhi bilkul harmless hai
+         (server maangta nahi), par uske hote hi server query ka number
+         nazarandaz karke token wala number use karta hai - to badla hua number
+         daal kar kisi aur ke sandesh nahi padhe ja sakte. */
+      authFetch(`${API}/api/notifications?target=${phone}&role=customer`)
         .then(r => r.json())
         .then(d => {
           if (!Array.isArray(d.notifications)) return;
