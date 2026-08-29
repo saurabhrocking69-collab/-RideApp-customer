@@ -249,6 +249,7 @@ interface AppContextType {
      aur is app me phone hi pehchan hai. */
   signInWithGoogle: () => Promise<void>;
   submitGooglePhone: () => Promise<void>;
+  phoneTaken: boolean;
   googleEmail: string;
   completeOnboarding: () => Promise<void>;
   handleOtpChange: (text: string, index: number) => void;
@@ -1798,6 +1799,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
      onboarding aur bhasha ke niyam ek hi jagah rehte hain. */
   const [googleTicket, setGoogleTicket] = useState('');
   const [googleEmail, setGoogleEmail]   = useState('');
+  /* Number kisi aur ka nikla. Ye nakami nahi hai, nirdesh hai - par uske saath
+     aage ka raasta bhi chahiye, warna aadmi wahi number dobara bhejta rehta
+     hai. Screen ispar "doosre Google khaate se aao" ka button dikhati hai. */
+  const [phoneTaken, setPhoneTaken] = useState(false);
 
   const signInWithGoogle = async () => {
     setLoading(true); setResult('');
@@ -1811,6 +1816,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         offlineAccess: false,
       });
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      /* Khaate ki soochi har baar.
+
+         signIn() akela GoogleSignin ka yaad rakha hua khaata chupchaap laut
+         deta hai - na soochi, na error. Jo aadmi doosre email se aana chahta
+         hai wo pehle wale par hi atak jaata hai aur bar-bar wahi mana sunta
+         hai. signOut() sirf is app ka yaad rakha hua khaata bhulata hai, phone
+         ka Google login nahi chhedta. */
+      try { await GoogleSignin.signOut(); } catch (_e) {}
+      setPhoneTaken(false);
       const info: any = await GoogleSignin.signIn();
       // Library ke do roop hain (v13 se pehle seedha, uske baad data ke andar)
       const idToken = info?.data?.idToken || info?.idToken || null;
@@ -1856,6 +1870,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (data._error) { setResult('❌ ' + (data.message || 'Could not connect to server')); return; }
       if (data.token) { await completeLogin(data, p10); return; }
       if (data.phone_taken) {
+        setPhoneTaken(true);
         setResult('❌ ' + (data.error || 'That number already has an account.'));
         return;
       }
@@ -3303,7 +3318,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     result, setResult, loading, setLoading, storeStatus,
     socketRef, phoneRef, pickupDebounceRef, dropDebounceRef, hPickupDebounceRef, hDropDebounceRef, buddyPUDebRef, buddyDRDebRef,
     sendOtp, verifyOtp, completeOnboarding, handleOtpChange, handleOtpKeyPress,
-    signInWithGoogle, submitGooglePhone, googleEmail,
+    signInWithGoogle, submitGooglePhone, phoneTaken, googleEmail,
     connectSocket, joinRideSocket, joinHourlySocket, adoptActiveRide,
     bookRide, surgeFareNow, switchVehicle, searchPlaces, searchNearbyCategory, geocodePlace, swapLocations,
     fetchEtaByCoords, loadFareEstimates, applyPromo, useMyLocation, calcDriverEta,

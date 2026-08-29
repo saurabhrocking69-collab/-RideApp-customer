@@ -549,7 +549,8 @@ export function OtpScreen() {
    mana kiya jaata hai, aur wo sandesh yahan poora dikhaya jaata hai - uska
    matlab "us number se OTP se aao" hai, "kuch tut gaya" nahi. */
 export function GooglePhoneScreen() {
-  const { phone, setPhone, result, loading, submitGooglePhone, googleEmail, setScreen } = useApp();
+  const { phone, setPhone, result, loading, submitGooglePhone, googleEmail, setScreen,
+          phoneTaken, signInWithGoogle } = useApp();
   const ok = String(phone || '').replace(/\D/g, '').length === 10;
 
   return (
@@ -590,6 +591,19 @@ export function GooglePhoneScreen() {
           <Text style={{ fontSize: 13.5, color: result.startsWith('❌') ? '#D33' : '#2A8', marginBottom: 14, lineHeight: 20 }}>
             {result.replace(/^❌ /, '')}
           </Text>
+        )}
+
+        {/* Number pehle se kisi ka hai. Uper laal me wajah likhi hai; yahan
+            nikalne ka raasta - warna is panne se Google par wapas jaane ka
+            koi tarika nahi bachta, aur wahi number dobara bhejte rehna hi
+            ek matra kaam bacha rehta hai. */}
+        {!!phoneTaken && (
+          <TouchableOpacity onPress={signInWithGoogle} disabled={loading}
+                            style={{ paddingVertical: 12, marginBottom: 6 }}>
+            <Text style={{ color: '#4285F4', fontSize: 14.5, fontWeight: '800', textAlign: 'center' }}>
+              Use a different Google account
+            </Text>
+          </TouchableOpacity>
         )}
 
         <TouchableOpacity
