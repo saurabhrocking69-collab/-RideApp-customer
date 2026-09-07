@@ -1755,8 +1755,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // ── Auth ─────────────────────────────────────────────────────────────────
   const handleOtpChange = (text: string, index: number) => {
+    const digits = text.replace(/[^0-9]/g, '');
     const newDigits = [...otpDigits];
-    newDigits[index] = text.replace(/[^0-9]/g, '').slice(-1);
+
+    /* Poora code ek saath bhi aa sakta hai.
+
+       Pehle yahan sirf `.slice(-1)` tha - yaani har haal me AAKHRI ank rakha
+       jaata tha. Ek ank type karne par wo theek hai, par jab keyboard SMS
+       padh kar poora "628157" bhar deta hai (ya koi clipboard se chipkata
+       hai), to pehle khaane me sirf "7" bachta tha aur baaki paanch khaali.
+       Yaani autofill lagane se pehle YE theek karna zaroori tha - warna wo
+       sirf ek naya tarika hota galat code bharne ka. */
+    if (digits.length > 1) {
+      for (let k = 0; k < digits.length && index + k < 6; k++) newDigits[index + k] = digits[k];
+      setOtpDigits(newDigits); setOtp(newDigits.join(''));
+      const last = Math.min(index + digits.length, 6) - 1;
+      otpRefs.current[last]?.focus();
+      if (newDigits.filter(d => d !== '').length === 6) setTimeout(() => verifyOtp(newDigits.join('')), 300);
+      return;
+    }
+
+    newDigits[index] = digits.slice(-1);
     setOtpDigits(newDigits); setOtp(newDigits.join(''));
     if (text && index < 5) otpRefs.current[index + 1]?.focus();
     if (newDigits.filter(d => d !== '').length === 6) setTimeout(() => verifyOtp(newDigits.join('')), 300);

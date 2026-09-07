@@ -470,7 +470,23 @@ export function OtpScreen() {
                     shadowRadius: 10, shadowOffset: { width: 0, height: 3 },
                     elevation: digit ? 3 : 1,
                   }}
-                  keyboardType="number-pad" maxLength={1} value={digit}
+                  keyboardType="number-pad"
+                  /* Pehla khaana poora code le sakta hai.
+
+                     maxLength 1 rakhne par Android ka autofill jo 6 ank bhejta
+                     hai wo pehle hi kat kar 1 ank ka reh jaata - onChangeText
+                     tak poora code pahunchta hi nahi. Isliye pehle khaane ki
+                     hadd 6 hai; handleOtpChange use chhah khaano me baant deta
+                     hai. Baaki khaane waise hi ek-ank ke rehte hain. */
+                  maxLength={i === 0 ? 6 : 1} value={digit}
+                  /* Keyboard ke uper "628157" ka sujhaav - bina kisi permission
+                     ke, aur kisi bhi SMS ke roop par chalta hai. Ek tap me
+                     bhar jaata hai. Bilkul apne aap bharne (SMS Retriever) ke
+                     liye app me ek native module aur SMS ke ant me app-hash
+                     wala apna DLT template chahiye - wo alag kaam hai. */
+                  autoComplete={i === 0 ? 'sms-otp' : 'off'}
+                  textContentType={i === 0 ? 'oneTimeCode' : 'none'}
+                  importantForAutofill={i === 0 ? 'yes' : 'no'}
                   onChangeText={(t) => handleOtpChange(t, i)}
                   onKeyPress={({ nativeEvent }) => handleOtpKeyPress(nativeEvent.key, i)}
                   selectTextOnFocus
