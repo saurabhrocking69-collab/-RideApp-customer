@@ -238,8 +238,13 @@ const ART_SIZE: Record<string, { w: number; h: number }> = {
    farq yahan se aata hai: electric par hara bijli ka nishaan, luxury par
    sunehra kinara. Alag tasveerein banwane se ye sasta bhi hai aur badalna bhi
    aasan. */
-function VehiclePhoto({ art, size, electric, luxury }: {
-  art: string; size: { w: number; h: number }; electric?: boolean; luxury?: boolean;
+function VehiclePhoto({ art, size, electric, luxury, onReady }: {
+  art: string; size: { w: number; h: number };
+  electric?: boolean; luxury?: boolean;
+  /* Tasveer ban jaane par khabar. Marker ka bitmap ginti ke mauko par hi
+     khincha jaata hai; agar wo tasveer aane se PEHLE khich gaya to marker
+     khali reh jaata. Isliye tasveer aate hi ek baar aur khichwaya jaata hai. */
+  onReady?: () => void;
 }) {
   return (
     <View style={{ width: size.w, height: size.h }}>
@@ -247,6 +252,7 @@ function VehiclePhoto({ art, size, electric, luxury }: {
         source={VEHICLE_ART[art]}
         style={{ width: size.w, height: size.h }}
         resizeMode="contain"
+        onLoad={onReady}
       />
       {electric ? (
         <View style={{
@@ -301,6 +307,30 @@ export function vehicleVisual(vehicleType: string) {
 
    Isliye har ek ko uske APNE naap se baanta jaata hai, taaki wo box bhar de.
    eriksha abhi SVG par hai, jiska baseline 70 tha - wahi rehta hai. */
+/* eriksha abhi bhi apne SVG par hai, jo 34x46 ka hai. Uske props me `size`
+   nahi hai (wo rang leta hai, naap nahi), isliye uska naap yahan likha hai. */
+const ERIKSHA_SIZE = { w: 34, h: 46 };
+
+/* Gaadi ka asli naap - dabba naapne ke liye. */
+export function vehicleArtSize(vehicleType: string): { w: number; h: number } {
+  const v = VEHICLE_VISUALS[vehicleType] || VEHICLE_VISUALS.car;
+  return (v.props && v.props.size) || ERIKSHA_SIZE;
+}
+
+/* Ghoomne ke baad bhi na kate, itna bada chakor dabba.
+
+   Marker apne bachche ke dabbe jitna hi bitmap banata hai - jo bahar nikla wo
+   KAT jaata hai. Ghoomti hui cheez ka sabse bada naap uska VIKARN hota hai
+   (car: 34x72 -> 80), to utna chakor dabba lene par kisi bhi heading par kuchh
+   bahar nikal hi nahi sakta.
+
+   Pehle sabke liye ek hi 44x70 tha. Car 90 degree par 72 chaudi ho jaati thi
+   aur 44 me se 28px kat jaata tha - wahi "kabhi-kabhi kat jaati hai" wala. */
+export function vehicleArtBox(vehicleType: string): number {
+  const { w, h } = vehicleArtSize(vehicleType);
+  return Math.ceil(Math.sqrt(w * w + h * h));
+}
+
 export function vehicleArtMax(vehicleType: string): number {
   const v = VEHICLE_VISUALS[vehicleType] || VEHICLE_VISUALS.car;
   const sz = v.props && v.props.size;
@@ -309,13 +339,24 @@ export function vehicleArtMax(vehicleType: string): number {
 
 // ── Assigned driver marker — real top-down vehicle, rotated to heading,
 // no circle frame. Ground shadow gives it depth like it's sitting on the map. ──
-function DriverMarker({ vehicleType, heading }: { vehicleType: string; heading: number }) {
+function DriverMarker({ vehicleType, heading, turnMs = 1400, onReady }: {
+  vehicleType: string; heading: number; turnMs?: number; onReady?: () => void;
+}) {
   const { Shape, props } = vehicleVisual(vehicleType);
+  const size = vehicleArtSize(vehicleType);
+  const box  = vehicleArtBox(vehicleType);
+
   // Smooth the rotation itself (not just position) — a hard snap to the new
   // heading every GPS tick reads as jumpy; tween it so the vehicle visibly
   // "turns" like it would on a real road.
   const rotate = useRef(new Animated.Value(heading)).current;
   const prevHeading = useRef(heading);
+  /* Mudne me utna hi samay jitna chalne me - dono ek saath khatam hon.
+     Pehle mudna 500ms ka tha aur chalna 1400ms ka: gaadi mudkar seedhi ho
+     jaati thi aur uske baad bhi khiskti rehti thi - do alag harkatein
+     dikhti thi, ek nahi. */
+  const turnRef = useRef(turnMs);
+  turnRef.current = turnMs;
   useEffect(() => {
     // Take the shorter turning direction across the 0/360 wrap instead of
     // always spinning forward (e.g. 350°→10° should turn +20°, not -340°).
@@ -323,13 +364,27 @@ function DriverMarker({ vehicleType, heading }: { vehicleType: string; heading: 
     delta = ((delta + 180) % 360 + 360) % 360 - 180;
     const target = prevHeading.current + delta;
     prevHeading.current = target;
-    Animated.timing(rotate, { toValue: target, duration: 500, useNativeDriver: true }).start();
+    Animated.timing(rotate, { toValue: target, duration: turnRef.current, useNativeDriver: true }).start();
   }, [heading]);
+
+  /* Zameen ki chhaya - gaadi ke BEECH ke neeche, kinare par nahi.
+
+     Pehle wo dabbe ki tali se chipki thi. Wo tab tak theek tha jab gaadi
+     hamesha seedhi khadi rehti; ab gaadi apne beech ke chaaro taraf ghoomti
+     hai, to tali wali chhaya 90 degree par gaadi se alag hokar kahin neeche
+     tairti dikhti. Beech ke neeche rakhi chhaya har kon par sahi baithti
+     hai - uper se dekhne par saaya waise bhi gaadi ke neeche hi hota hai. */
+  const shW = Math.round(size.w * 1.12);
+  const shH = Math.max(8, Math.round(shW * 0.42));
   return (
-    <View style={styles.driverOuter}>
-      <View style={styles.driverShadow} />
+    <View style={{ width: box, height: box, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{
+        position: 'absolute', width: shW, height: shH, borderRadius: shW,
+        left: (box - shW) / 2, top: (box - shH) / 2 + 3,
+        backgroundColor: 'rgba(0,0,0,0.22)',
+      }} />
       <Animated.View style={{ transform: [{ rotate: rotate.interpolate({ inputRange: [-360, 360], outputRange: ['-360deg', '360deg'] }) }] }}>
-        <Shape {...props} />
+        <Shape {...props} onReady={onReady} />
       </Animated.View>
     </View>
   );
@@ -337,11 +392,23 @@ function DriverMarker({ vehicleType, heading }: { vehicleType: string; heading: 
 
 // ── Nearby ghost driver — same top-down shape, smaller + faded, no rotation
 // tracking (ambient "drivers are around here" markers, not en route to you). ──
+const NEARBY_SCALE = 0.52;
 function NearbyDriverMarker({ vehicleType }: { vehicleType: string }) {
   const { Shape, props } = vehicleVisual(vehicleType);
+  /* Dabba gaadi ke apne naap se, ek hi 24x38 se nahi.
+
+     Ye ghoomti nahi, isliye vikarn ki zaroorat nahi - par chhoti karne se
+     LAYOUT chhota nahi hota, sirf dikhne wala naap chhota hota hai. Purane
+     24x38 me chhoti ki hui car 37.4 ki thi: sirf 0.6px bachta tha. Naap thoda
+     bhi badla aur ye bhi katne lagti. */
+  const { w, h } = vehicleArtSize(vehicleType);
   return (
-    <View style={styles.nearbyOuter}>
-      <View style={{ transform: [{ scale: 0.52 }], opacity: 0.82 }}>
+    <View style={{
+      width:  Math.ceil(w * NEARBY_SCALE) + 4,
+      height: Math.ceil(h * NEARBY_SCALE) + 4,
+      alignItems: 'center', justifyContent: 'center',
+    }}>
+      <View style={{ transform: [{ scale: NEARBY_SCALE }], opacity: 0.82 }}>
         <Shape {...props} />
       </View>
     </View>
@@ -715,6 +782,20 @@ export const LiveMap = memo(function LiveMap({
     };
   }, [routeCoords.length, mode]);
 
+  /* Chalne ka samay - GPS ki apni chaal ke hisaab se, tay 1400ms se nahi.
+
+     Khabar har 3-4 second me aati hai, par gaadi 1.4 second me pahunch kar
+     ruk jaati thi aur agli khabar tak khadi rehti - chal, ruk, chal, ruk.
+     Do khabaron ka asli antar naap kar wahi samay diya jaata hai, to gaadi
+     bina ruke chalti rehti hai.
+
+     Hadd dono taraf hai: 700ms se kam par chaal jhatka lagti hai, aur 4s se
+     zyada tab hota hai jab app peechhe padi thi - us lambe antar ko jyon ka
+     tyon maan lene par gaadi minton tak rengti. */
+  const lastMoveAt = useRef(0);
+  const glideRef = useRef(1400);
+  const [glideMs, setGlideMs] = useState(1400);
+
   // Smooth driver position + compute bearing
   useEffect(() => {
     if (driverLat == null || driverLng == null) return;
@@ -725,12 +806,35 @@ export const LiveMap = memo(function LiveMap({
       }
     }
     prevPos.current = { lat: driverLat, lng: driverLng };
+    const now = Date.now();
+    if (lastMoveAt.current) {
+      const ms = Math.min(4000, Math.max(700, now - lastMoveAt.current));
+      glideRef.current = ms;
+      setGlideMs(ms);
+    }
+    lastMoveAt.current = now;
     driverRegion.timing({
       latitude: driverLat, longitude: driverLng,
       latitudeDelta: 0.01, longitudeDelta: 0.01,
-      duration: 1400, useNativeDriver: false,
+      duration: glideRef.current, useNativeDriver: false,
     } as any).start();
   }, [driverLat, driverLng]);
+
+  /* Marker ka bitmap kab dobara khiche.
+
+     Ye hamesha `true` tha - yaani Android har frame par marker ki tasveer
+     dobara banata rehta tha, tab bhi jab gaadi khadi ho. Wahi kharcha is file
+     me pickup/drop marker ke liye pehle hi hata chuke hain.
+
+     Bachcha sirf MUDNE par badalta hai, to sirf utni der khichwao. Uske baad
+     bitmap wahi mudi hui tasveer pakde rehta hai. Khadi gaadi par - yaani jab
+     user sabse zyada is screen ko dekhta hai - ab kuchh nahi khichta. */
+  const [driverTracking, setDriverTracking] = useState(true);
+  useEffect(() => {
+    setDriverTracking(true);
+    const id = setTimeout(() => setDriverTracking(false), glideMs + 400);
+    return () => clearTimeout(id);
+  }, [heading, vehicleType, glideMs]);
 
   // Camera follow driver in matching mode — fit driver + pickup so user sees driver approaching
   useEffect(() => {
@@ -1289,9 +1393,17 @@ export const LiveMap = memo(function LiveMap({
           <Marker.Animated
             coordinate={driverRegion as any}
             anchor={{ x: 0.5, y: 0.5 }}
-            tracksViewChanges={true}
+            tracksViewChanges={driverTracking}
           >
-            <DriverMarker vehicleType={vehicleType} heading={heading} />
+            <DriverMarker
+              vehicleType={vehicleType}
+              heading={heading}
+              turnMs={glideMs}
+              onReady={() => {
+                setDriverTracking(true);
+                setTimeout(() => setDriverTracking(false), 600);
+              }}
+            />
           </Marker.Animated>
         )}
       </MapView>
@@ -1423,14 +1535,11 @@ const MAP_STYLE = [
 const styles = StyleSheet.create({
   // Driver marker — real top-down vehicle shape, no circle frame, just a
   // grounding shadow so it reads as sitting on the map surface.
-  driverOuter: { alignItems: 'center', justifyContent: 'center', width: 44, height: 70 },
-  driverShadow: {
-    position: 'absolute', bottom: 2, width: 30, height: 11, borderRadius: 15,
-    backgroundColor: 'rgba(0,0,0,0.28)',
-  },
+  /* driverOuter / driverShadow / nearbyOuter yahan se hata diye gaye.
+     Ek hi tay naap sab gaadiyon par chipka tha (44x70), aur ghoomti hui car
+     us dabbe se bahar nikal kar KAT jaati thi. Ab har gaadi apna dabba khud
+     naapti hai - dekho vehicleArtBox(). */
 
-  // Nearby driver — same shapes, smaller + faded (ambient, not en route)
-  nearbyOuter: { alignItems: 'center', justifyContent: 'center', width: 24, height: 38 },
 
   // Pickup — green ring + white center dot
   pickupGlow: {
