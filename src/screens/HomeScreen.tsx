@@ -2672,6 +2672,7 @@ function ProfileTab() {
     setPromoScreenCode, setPromoScreenMsg,
     loadWalletDetail, loadLoyalty, loadSaved,
     openRazorpayTopup,
+    googleLinked, googleLinkedEmail, loadGoogleLink, linkGoogle,
   } = useApp();
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [showCallNumber, setShowCallNumber] = useState(false);
@@ -2683,6 +2684,10 @@ function ProfileTab() {
       .then(r => { if (r && !r._error) setCallPhone(r.call_phone || null); })
       .catch(() => {});
   }, [phone, showCallNumber]);
+
+  /* Google juda hai ya nahi - profile khulte hi poochh lo, warna pankti hamesha
+     "jodein" hi kehti rahegi chahe pehle se juda ho. */
+  useEffect(() => { if (phone) loadGoogleLink(); }, [phone]);
 
   const [tierData, setTierData] = useState<any>(null);
   useEffect(() => {
@@ -2831,6 +2836,27 @@ function ProfileTab() {
             { label: 'Rider Tier',    sub: 'Your loyalty rank & perks',       icon: 'trophy-outline',     color: '#F59E0B', bg: C.yellowGlass, border: C.yellowBorder, onPress: () => setScreen('tier') },
             { label: 'Saved Places',  sub: 'Save Home, Office & more',        icon: 'bookmark-outline',   color: C.purple, bg: C.purpleGlass, border: C.purpleBorder, onPress: () => { loadSaved(); setScreen('saved'); } },
             { label: 'Call number',   sub: callPhone ? `Drivers call ${callPhone}` : 'Drivers call your account number', icon: 'call-outline', color: C.green, bg: C.greenGlass, border: C.greenBorder, onPress: () => setShowCallNumber(true) },
+            /* Google jodna - taaki SMS na aane par bhi andar aa sakein.
+
+               Ye khaate ki sabse kaam ki setting hai jo aaj tak thi hi nahi.
+               Jud jaane ke baad Google se aane par na number poochha jaata hai
+               na SMS jaata hai - aur wahi wo haalat hai jiske liye Google
+               banaya gaya tha. Jud chuka ho to wahi email likha dikhta hai,
+               taaki aadmi ko pata rahe kaun sa Google juda hai. */
+            { label: googleLinked ? 'Google juda hai' : 'Google jodein',
+              sub: googleLinked
+                ? (googleLinkedEmail || 'SMS na aaye tab bhi login ho jayega')
+                : 'SMS na aaye tab bhi login ho jayega',
+              icon: 'logo-google',
+              color: googleLinked ? C.green : '#4285F4',
+              bg: googleLinked ? C.greenGlass : 'rgba(66,133,244,0.10)',
+              border: googleLinked ? C.greenBorder : 'rgba(66,133,244,0.30)',
+              onPress: async () => {
+                if (googleLinked) { Alert.alert('Google juda hai', googleLinkedEmail || 'Aap Google se login kar sakte hain.'); return; }
+                const err = await linkGoogle();
+                if (err) Alert.alert('Nahi jud paya', err);
+                else Alert.alert('Ho gaya', 'Ab aap Google se seedha login kar sakte hain — SMS ki zaroorat nahi.');
+              } },
           ])}
 
           {/* ── Fare Info ────────────────────────────────────────────────── */}

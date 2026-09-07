@@ -272,6 +272,10 @@ interface AppContextType {
   signInWithGoogle: () => Promise<void>;
   submitGooglePhone: () => Promise<void>;
   phoneTaken: boolean;
+  googleLinked: boolean | null;
+  googleLinkedEmail: string | null;
+  loadGoogleLink: () => Promise<void>;
+  linkGoogle: () => Promise<string>;
   googleEmail: string;
   completeOnboarding: () => Promise<void>;
   handleOtpChange: (text: string, index: number) => void;
@@ -1921,6 +1925,55 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
      hai. Screen ispar "doosre Google khaate se aao" ka button dikhati hai. */
   const [phoneTaken, setPhoneTaken] = useState(false);
 
+  /* Apne khaate se Google jodna - Google ko SMS ka sach me vikalp banane wali
+     ek hi cheez.
+
+     Google se aane par teen haal hote hain, aur sirf pehla bina SMS ke chalta
+     hai: google_sub pehle se juda ho to seedha andar. Doosra (naya Google,
+     khali number) bhi bina SMS chalta hai. Teesra - number kisi ka pehle se
+     ho - wahan bina sabut andar dena us aadmi ka khaata kisi aur ko de dena
+     hai, aur wo hone nahi diya ja sakta.
+
+     Us teesri haalat ka hal "Google par bhi OTP" nahi hai - usse Google ka
+     maqsad hi khatm ho jaata. Hal ye hai: aadmi JAB ANDAR HO tab Google jod
+     le. Uske baad wo hamesha pehli haalat me rehta hai.
+
+     Yahan token pehle se hai aur Google email sabit kar deta hai - dono taraf
+     sabut hai, isliye koi OTP nahi. */
+  const [googleLinked, setGoogleLinked] = useState<boolean | null>(null);
+  const [googleLinkedEmail, setGoogleLinkedEmail] = useState<string | null>(null);
+
+  const loadGoogleLink = async () => {
+    try {
+      const d = await authGet('/api/auth/google-link');
+      if (d && !d._error) { setGoogleLinked(!!d.linked); setGoogleLinkedEmail(d.email || null); }
+    } catch (_e) {}
+  };
+
+  const linkGoogle = async (): Promise<string> => {
+    try {
+      const GS: any = require('@react-native-google-signin/google-signin');
+      const { GoogleSignin } = GS;
+      GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID, offlineAccess: false });
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      // Har baar khaate ki soochi - wahi wajah jo login par hai.
+      try { await GoogleSignin.signOut(); } catch (_e) {}
+      const info: any = await GoogleSignin.signIn();
+      const idToken = info?.data?.idToken || info?.idToken || null;
+      if (!idToken) return 'Google sign-in poora nahi hua';
+
+      const d = await authPost('/api/auth/link-google', { idToken });
+      if (d?._error) return d.message || 'Server tak nahi pahunch paye';
+      if (!d?.success) return d?.error || 'Jud nahi paya';
+      setGoogleLinked(true); setGoogleLinkedEmail(d.email || null);
+      return '';
+    } catch (e: any) {
+      const code = e?.code || '';
+      if (code === 'SIGN_IN_CANCELLED' || /cancel/i.test(String(e?.message || ''))) return '';
+      return e?.message || 'Google se nahi jud paya';
+    }
+  };
+
   const signInWithGoogle = async () => {
     setLoading(true); setResult('');
     try {
@@ -3469,7 +3522,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     result, setResult, loading, setLoading, storeStatus,
     socketRef, phoneRef, pickupDebounceRef, dropDebounceRef, hPickupDebounceRef, hDropDebounceRef, buddyPUDebRef, buddyDRDebRef,
     sendOtp, verifyOtp, completeOnboarding, handleOtpChange, handleOtpKeyPress,
-    signInWithGoogle, submitGooglePhone, phoneTaken, googleEmail,
+    signInWithGoogle, submitGooglePhone, phoneTaken, googleLinked, googleLinkedEmail, loadGoogleLink, linkGoogle, googleEmail,
     connectSocket, joinRideSocket, joinHourlySocket, adoptActiveRide,
     bookRide, surgeFareNow, switchVehicle, searchPlaces, searchNearbyCategory, geocodePlace, swapLocations,
     fetchEtaByCoords, loadFareEstimates, applyPromo, useMyLocation, calcDriverEta,
