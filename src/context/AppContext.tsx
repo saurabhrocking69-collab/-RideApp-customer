@@ -4,6 +4,7 @@ import { Animated } from 'react-native';
 import { Storage as AsyncStorage } from '../storage';
 import * as Location from 'expo-location';
 import * as Clipboard from 'expo-clipboard';
+import { startSmsOtp } from '../../modules/sppero-otp';
 import * as Notifications from 'expo-notifications';
 import { io, Socket } from 'socket.io-client';
 import { apiGet, apiPost, apiAuthPost, apiAuthGet, authGet, authPost, externalGet, authFetch, setAuthToken } from '../../api';
@@ -1106,6 +1107,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
      Once on entry, and never the same code twice, keeps the convenience and
      drops both. The Paste button below is still there for the case where the
      SMS lands after the screen opened. */
+  /* SMS aate hi code apne aap bhar jaye.
+
+     Ye clipboard se ALAG cheez hai, aur wahi is screen ki asli shikayat thi:
+     SMS ka code clipboard me kabhi jaata hi nahi (use koi copy nahi karta),
+     isliye "Paste from clipboard" hamesha khaali haath lautta tha - jo dekhne
+     me app ka kharab hona lagta tha, jabki jawab sach tha.
+
+     Ab Google ka SMS User Consent chalta hai: SMS aate hi system apna dabba
+     dikhata hai ("Sppero ko ye code padhne dein?"), ek tap, aur code seedhe
+     yahan aa jaata hai. Koi SMS permission nahi lagti.
+
+     Bina kisi tap ke bharna (SMS Retriever) isse bhi achha hota, par uske liye
+     SMS ke ant me app ka 11-akshar hash chahiye, jo DLT template me likha
+     jaata hai - aur abhi 2Factor ka default template chal raha hai jise hum
+     badal nahi sakte. Us din ke liye raasta khula rakha hai: dekho
+     modules/sppero-otp.
+
+     Purane builds me native hissa hai hi nahi - wahan ye chup-chaap kuchh
+     nahi karta aur screen aaj jaisi hi chalti hai. */
+  const smsCodeRef = useRef<string>('');
+  useEffect(() => {
+    if (screen !== 'otp') return;
+    return startSmsOtp((code) => {
+      // Ek hi code do baar na chale: verify-otp teen galat koshishon par
+      // khaata aadhe ghante ke liye band kar deta hai.
+      if (!/^\d{6}$/.test(code) || smsCodeRef.current === code) return;
+      smsCodeRef.current = code;
+      setOtpDigits(code.split('')); setOtp(code);
+      setTimeout(() => verifyOtp(code), 250);
+    });
+  }, [screen]);
+
   const triedClipRef = useRef<string>('');
   useEffect(() => {
     if (screen !== 'otp') return;

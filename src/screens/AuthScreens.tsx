@@ -414,7 +414,12 @@ export function OtpScreen() {
         setOtpDigits(text.split('')); setOtp(text);
         setTimeout(() => verifyOtp(text), 250);
       } else {
-        setResult('No 6-digit code found in your clipboard');
+        /* Pehle yahan sirf "No 6-digit code found in your clipboard" tha.
+           Baat sach thi par bekaar: SMS ka code clipboard me jaata hi nahi
+           jab tak koi use khud copy na kare, to ye button lagbhag hamesha
+           yahi kehta tha - aur padhne wale ko lagta tha ki app kharab hai.
+           Ab wo batata hai ki code asal me kahan milega. */
+        setResult('Nothing copied yet — when the SMS arrives, tap the code shown just above your keyboard');
       }
     } catch (_e) {}
   };
