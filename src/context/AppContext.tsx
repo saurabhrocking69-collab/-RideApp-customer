@@ -1839,7 +1839,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const serverName = data.user?.name || '';
     const onboardingDone = await AsyncStorage.getItem('onboardingCompleted');
     const nameIsDefault = !serverName || serverName === 'User' || serverName === 'Rider';
-    const isNew = !onboardingDone && nameIsDefault;
+    /* Naya khaata hai to naam ka kadam chhodo mat - chahe naam pehle se ho.
+
+       Google apna naam bhej deta hai, aur wo naam yahan "pehle se bhara hua"
+       gina jaata tha - to poora kadam chhoot jaata tha aur aadmi se kabhi
+       poochha hi nahi jaata. Dikkat ye hai ki Google ka naam aksar aadmi ka
+       naam hota hi nahi: isi phone par ek Google khaata "Discover India" naam
+       se hai. Us naam se ride book hui to driver ko lene aana hai "Discover
+       India" ke paas - aur ye wahi naam hai jo ek ajnabi sadak par dhoondhta
+       hai.
+
+       Isliye ab naya khaata banne par kadam dikhta hai, par khaana pehle se
+       BHARA hua aata hai (userName me Google ka naam pehle se rakha ja chuka
+       hai). Jiska naam theek hai wo bas aage badh jaata hai - ek tap. Jiska
+       theek nahi, wo badal leta hai. Pehle uske paas mauka hi nahi tha.
+
+       `isNew` sirf /google/phone bhejta hai (verify-otp nahi), to OTP wale
+       raaste par kuch nahi badla. */
+    const isNew = data.isNew === true || (!onboardingDone && nameIsDefault);
     const langSet = await AsyncStorage.getItem('userLanguage');
     if (isNew) {
       if (!langSet) {

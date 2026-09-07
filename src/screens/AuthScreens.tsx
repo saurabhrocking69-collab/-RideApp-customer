@@ -16,7 +16,15 @@ export function OnboardingScreen() {
     result, setResult,
     loading,
     completeOnboarding,
+    googleEmail,
   } = useApp();
+  /* Naam Google se aaya hai, ye batana zaroori hai.
+
+     Bina bataye ek bhara hua khaana dekh kar aadmi maan leta hai ki wo tay ho
+     chuka hai aur aage badh jaata hai. Ek chhoti si line use ye batati hai ki
+     naam kahan se aaya aur wo use badal sakta hai - kyoki yahi naam driver ko
+     sadak par dikhega. */
+  const fromGoogle = !!googleEmail && !!userName;
 
   return (
     <Animated.View style={{ flex: 1, backgroundColor: C.night, opacity: onboardFade }}>
@@ -81,6 +89,15 @@ export function OnboardingScreen() {
             />
             {userName.trim() ? <Ionicons name="checkmark-circle" size={20} color={C.pink} /> : null}
           </View>
+
+          {/* Bhara hua khaana bina bataye chhod dena aadmi ko ye maanne deta hai
+              ki naam tay ho chuka hai. Ye line batati hai ki wo aaya kahan se
+              aur badla ja sakta hai - aur kyu ye maayne rakhta hai. */}
+          {fromGoogle ? (
+            <Text style={{ fontSize: 11.5, color: C.textMuted, marginTop: -20, marginBottom: 22, lineHeight: 17 }}>
+              Google se liya hai — badal sakte hain. Yahi naam aapka driver dhoondhega.
+            </Text>
+          ) : null}
 
           <Text style={{ fontSize: 10, fontWeight: '800', color: C.textMuted, marginBottom: 12, letterSpacing: 1.4 }}>GENDER (OPTIONAL)</Text>
           <View style={{ flexDirection: 'row', gap: 10, marginBottom: 28 }}>
