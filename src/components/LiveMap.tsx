@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, memo } from 'react';
-import { Animated, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Animated, View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import MapView, { Marker, Polyline, Circle, AnimatedRegion, PROVIDER_GOOGLE } from 'react-native-maps';
 import Svg, { Path, Rect, Ellipse, Circle as SvgCircle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
@@ -92,6 +92,15 @@ function computeBearing(lat1: number, lng1: number, lat2: number, lng2: number):
   return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
 }
 
+/* CarShape / AutoShape / ScooterShape yahan se hata diye gaye.
+
+   Wo haath se bane SVG the jinki jagah ab asli tasveerein hain (VEHICLE_ART).
+   Unhe "kaam aa sakte hain" soch kar chhod dena ek jaal banata: koi unme rang
+   badalta aur map par kuch na hota, kyoki unhe ab koi bulata hi nahi. Git me
+   wo maujood hain - jis commit ne tasveerein lagai, usse pehle.
+
+   ERikshaShape abhi bhi zinda hai aur istemal me hai: e-rickshaw ki uper se
+   li gayi tasveer nahi mili. */
 // ── Minimum camera span ──────────────────────────────────────────────────────
 // fitToCoordinates has no minimum-zoom option, so when the points it is given
 // sit close together — the pickup pin and the rider standing a street away
@@ -101,7 +110,49 @@ function computeBearing(lat1: number, lng1: number, lat2: number, lng2: number):
 // surroundings. Longer trips already exceed the floor, so their framing is
 // untouched.
 const MIN_FIT_SPAN = 0.018;   // degrees ≈ 2 km
+function ERikshaShape({ bodyLight, bodyDark, roof }: { bodyLight: string; bodyDark: string; roof: string }) {
+  // E-rickshaws ("toto") are visibly boxier than a put-put auto-rickshaw —
+  // flat roof instead of a curved canopy, wider flat-sided cabin, a bench
+  // visible at the back. Its own shape, not an AutoShape recolor.
+  const gid = 'er' + bodyDark.replace('#', '');
+  return (
+    <Svg width={34} height={46} viewBox="0 0 34 46">
+      <Defs>
+        <LinearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={bodyLight} />
+          <Stop offset="1" stopColor={bodyDark} />
+        </LinearGradient>
+      </Defs>
+      {/* Rear wheels — wide stance */}
+      <Ellipse cx="4"  cy="36" rx="3.6" ry="5.4" fill="#111827" />
+      <Ellipse cx="30" cy="36" rx="3.6" ry="5.4" fill="#111827" />
+      {/* Boxy cabin — flat sides, minimal taper (vs. auto's curved/tapered
+          shape) */}
+      <Path d="M5,40 L29,40 L28,12 Q28,8 24,8 L10,8 Q6,8 6,12 Z" fill={`url(#${gid})`} stroke="#1F2937" strokeWidth="1.2" />
+      {/* Flat roof — the key visual cue that reads "e-rickshaw" not "auto" */}
+      <Rect x="7" y="9" width="20" height="4" rx="1.5" fill={roof} opacity={0.95} />
+      {/* Windscreen */}
+      <Path d="M9,14 L25,14 L24,20 L10,20 Z" fill="#BFE3FF" opacity={0.85} />
+      {/* Brand pink livery stripe across the cabin */}
+      <Rect x="6.5" y="24" width="21" height="2.2" rx="1" fill={C.pink} opacity={0.88} />
+      {/* Passenger bench hint (wide open back, e-rickshaws seat 3+ side by side) */}
+      <Rect x="8" y="30" width="18" height="4" rx="2" fill="rgba(0,0,0,0.12)" />
+      {/* Slight side-angle shading down the cabin's right edge */}
+      <Rect x="26" y="20" width="2.1" height="18" fill="rgba(0,0,0,0.14)" />
+      {/* Front wheel */}
+      <Ellipse cx="17" cy="7" rx="3" ry="4" fill="#111827" />
+      {/* Headlight */}
+      <Ellipse cx="17" cy="4" rx="1.8" ry="1.4" fill="#FEF9C3" stroke="#F5D90A" strokeWidth="0.5" />
+      {/* Electric badge — sits in the gap between the brand stripe and the
+          passenger bench so it doesn't collide with either. */}
+      <Path d="M18,27 L15,31.5 L17.1,31.5 L16.4,35.5 L19.6,30 L17.5,30 Z" fill="#FDE047" stroke="#CA8A04" strokeWidth="0.4" />
+    </Svg>
+  );
+}
 
+/* Ye do neeche ke kaam ke liye zaroori hain aur galti se kat gaye the -
+   purane SVG hatate waqt meri kataai zyada chal gayi thi. Git se hu-ba-hu
+   wapas laaye gaye, badle bina. */
 function withMinSpan(pts: { latitude: number; longitude: number }[]) {
   if (!pts.length) return pts;
   let minLat =  90, maxLat =  -90, minLng =  180, maxLng = -180;
@@ -152,216 +203,108 @@ function interpolateRoute(
   return coords[coords.length - 1];
 }
 
-// ── Top-down vehicle silhouettes — drawn nose-up (0° = north), rotated to
-// heading at render time. No badge/circle frame — just the vehicle + a soft
-// grounding shadow, like a real overhead view. Detailed enough to actually
-// read as "car" / "bike" / "auto" at a glance (glossy gradient body, lights,
-// mirrors) — a flat silhouette alone was too abstract to recognize. ─────────
-function CarShape({ bodyLight, bodyDark, roof }: { bodyLight: string; bodyDark: string; roof: string }) {
-  const gid = 'car' + bodyDark.replace('#', '');
+/* Asli gaadi ki tasveerein - car, auto, bike.
+
+   Pehle ye haath se bane SVG the. Tasveerein isliye ki wo asli lagti hain aur
+   ek hi nazar me pehchani jaati hain; SVG achha tha par khinchi hui aakriti
+   hi rehta tha.
+
+   Teeno pehle se ghumai hui hain taaki NAAK UPER ho - marker 0 degree ko
+   uttar maanta hai aur usi hisaab se ghumata hai. Auto ki asli tasveer me
+   naak NEECHE thi (chhat uper, headlight neeche); wo dekh kar pakda gaya, aur
+   na pakadta to har auto ulta chalta.
+
+   Naap bhi asli anupaat me kaate gaye hain - car chaudi, auto manjhli, bike
+   patli - kyoki wo map par ek saath dikhte hain. */
+const VEHICLE_ART: Record<string, any> = {
+  car:  require('../../assets/vehicles/car.png'),
+  auto: require('../../assets/vehicles/auto.png'),
+  bike: require('../../assets/vehicles/bike.png'),
+};
+
+/* Screen par kitne bade - tasveer ke apne anupaat me.
+   Ye wahi anupaat hai jo file me hai; yahan dohraya isliye gaya hai ki Image
+   ko naap chahiye hi (bina uske wo 0x0 par render hoti hai). */
+const ART_SIZE: Record<string, { w: number; h: number }> = {
+  car:  { w: 34, h: 72 },
+  auto: { w: 30, h: 49 },
+  bike: { w: 22, h: 40 },
+};
+
+/* Ek hi tasveer, do kaam - isliye ek chhota nishaan.
+
+   SVG me ek hi aakar rang badal kar do-do gaadiyan chalata tha (bike/green_bike,
+   auto/electric_auto, car/luxury). Tasveer ka rang badla nahi ja sakta, to wo
+   farq yahan se aata hai: electric par hara bijli ka nishaan, luxury par
+   sunehra kinara. Alag tasveerein banwane se ye sasta bhi hai aur badalna bhi
+   aasan. */
+function VehiclePhoto({ art, size, electric, luxury }: {
+  art: string; size: { w: number; h: number }; electric?: boolean; luxury?: boolean;
+}) {
   return (
-    <Svg width={38} height={66} viewBox="0 0 38 66">
-      <Defs>
-        <LinearGradient id={gid} x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor={bodyLight} />
-          <Stop offset="1" stopColor={bodyDark} />
-        </LinearGradient>
-      </Defs>
-      {/* Wheel-arch shadows — drawn first so the body covers their inner
-          half and only a dark sliver peeks past each corner, hinting at
-          tires under the bodywork instead of a perfectly smooth silhouette. */}
-      <Ellipse cx="4"  cy="18" rx="2.6" ry="4.2" fill="#111827" opacity={0.35} />
-      <Ellipse cx="34" cy="18" rx="2.6" ry="4.2" fill="#111827" opacity={0.35} />
-      <Ellipse cx="4"  cy="48" rx="2.6" ry="4.2" fill="#111827" opacity={0.35} />
-      <Ellipse cx="34" cy="48" rx="2.6" ry="4.2" fill="#111827" opacity={0.35} />
-      {/* Body — rounded, tapered hood */}
-      <Path d="M19,2 C9,2 4,7 4,15 L4,51 C4,59 9,64 19,64 C29,64 34,59 34,51 L34,15 C34,7 29,2 19,2 Z" fill={`url(#${gid})`} stroke="#fff" strokeWidth="1.5" />
-      {/* Hood gloss highlight */}
-      <Path d="M19,4 C11,4 7,7.5 6,14 L32,14 C31,7.5 27,4 19,4 Z" fill="rgba(255,255,255,0.28)" />
-      {/* Front windshield — trapezoid, wide at hood */}
-      <Path d="M8,16 L30,16 L26,26 L12,26 Z" fill="#BFE3FF" opacity={0.92} />
-      <Path d="M8,16 L30,16 L26,26 L12,26 Z" fill="none" stroke="#8FC7F2" strokeWidth="0.6" opacity={0.5} />
-      {/* Wiper hint */}
-      <Path d="M13,24.5 L25,24.5" stroke="#6B93B8" strokeWidth="0.6" opacity={0.5} />
-      {/* Roof — thin brand pink trim along the edge, a subtle "ours" touch
-          instead of a plain border (cars don't get a full livery stripe
-          like the 3-wheelers — that would look pasted-on, not premium). */}
-      <Rect x="8" y="27" width="22" height="18" rx="5" fill={roof} opacity={0.96} />
-      <Rect x="8" y="27" width="22" height="18" rx="5" fill="none" stroke={C.pink} strokeWidth="0.9" opacity={0.55} />
-      <Rect x="16" y="30" width="6" height="12" rx="3" fill="rgba(255,255,255,0.10)" />
-      {/* Door-line creases */}
-      <Path d="M6,30 L6,42"   stroke="rgba(0,0,0,0.18)" strokeWidth="0.8" />
-      <Path d="M32,30 L32,42" stroke="rgba(0,0,0,0.18)" strokeWidth="0.8" />
-      {/* Rear windshield */}
-      <Path d="M12,46 L26,46 L30,55 L8,55 Z" fill="#BFE3FF" opacity={0.75} />
-      {/* Headlights */}
-      <Ellipse cx="9"  cy="7" rx="2.2" ry="2.8" fill="#FEF9C3" stroke="#F5D90A" strokeWidth="0.5" />
-      <Ellipse cx="29" cy="7" rx="2.2" ry="2.8" fill="#FEF9C3" stroke="#F5D90A" strokeWidth="0.5" />
-      {/* Taillights */}
-      <Ellipse cx="9"  cy="61" rx="2" ry="2.4" fill="#FCA5A5" stroke="#EF4444" strokeWidth="0.5" />
-      <Ellipse cx="29" cy="61" rx="2" ry="2.4" fill="#FCA5A5" stroke="#EF4444" strokeWidth="0.5" />
-      {/* Side mirrors */}
-      <Path d="M1,21 L5,20 L5,26 L1,25 Z" fill={roof} />
-      <Path d="M37,21 L33,20 L33,26 L37,25 Z" fill={roof} />
-      {/* Slight side-angle shading — shadow sliver down the roof/rear right
-          edge, matching the depth treatment on the other vehicle icons. */}
-      <Path d="M33,28 C34.3,36 34.3,43 33,50 L31,49.3 C32.2,43 32.2,36 31,28.6 Z" fill="rgba(0,0,0,0.14)" />
-    </Svg>
-  );
-}
-function AutoShape({ bodyLight, bodyDark, roof, electric }: { bodyLight: string; bodyDark: string; roof: string; electric?: boolean }) {
-  const gid = 'at' + bodyDark.replace('#', '');
-  return (
-    <Svg width={36} height={50} viewBox="0 0 36 50">
-      <Defs>
-        <LinearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={bodyLight} />
-          <Stop offset="1" stopColor={bodyDark} />
-        </LinearGradient>
-      </Defs>
-      {/* Rear wheels — with rim highlight like the two-wheelers, instead of
-          a flat solid disc */}
-      <Ellipse cx="5"  cy="40" rx="3.8" ry="5.6" fill="#111827" />
-      <Ellipse cx="5"  cy="40" rx="1.7" ry="2.6" fill="#4B5563" />
-      <Ellipse cx="31" cy="40" rx="3.8" ry="5.6" fill="#111827" />
-      <Ellipse cx="31" cy="40" rx="1.7" ry="2.6" fill="#4B5563" />
-      {/* Mudguard arcs over the rear wheels */}
-      <Path d="M2,36 Q5,33 8,36"  stroke="#1F2937" strokeWidth="1.4" fill="none" strokeLinecap="round" opacity={0.7} />
-      <Path d="M28,36 Q31,33 34,36" stroke="#1F2937" strokeWidth="1.4" fill="none" strokeLinecap="round" opacity={0.7} />
-      {/* Cabin — wide rear tapering to a single front wheel, the classic
-          3-wheeler silhouette that's unmistakable even simplified. */}
-      <Path d="M6,44 L30,44 L26,13 Q18,4 10,13 Z" fill={`url(#${gid})`} stroke="#1F2937" strokeWidth="1.2" />
-      <Path d="M10,14 Q18,6 26,14" stroke="rgba(255,255,255,0.4)" strokeWidth="1.6" fill="none" strokeLinecap="round" />
-      {/* Roof canopy */}
-      <Path d="M9.5,15 Q18,7 26.5,15 L25,24 L11,24 Z" fill={roof} opacity={0.96} />
-      <Path d="M12,14.2 Q18,9.5 24,14.2" stroke="rgba(255,255,255,0.3)" strokeWidth="1" fill="none" />
-      {/* Side pillars */}
-      <Rect x="8.5"  y="15" width="1.8" height="9.5" fill="#111827" opacity={0.55} />
-      <Rect x="25.7" y="15" width="1.8" height="9.5" fill="#111827" opacity={0.55} />
-      {/* Front wheel — with rim highlight */}
-      <Ellipse cx="18" cy="7.5" rx="3.4" ry="4.8" fill="#111827" />
-      <Ellipse cx="18" cy="7.5" rx="1.5" ry="2.2" fill="#4B5563" />
-      {/* Headlight */}
-      <Ellipse cx="18" cy="4" rx="2" ry="1.6" fill="#FEF9C3" stroke="#F5D90A" strokeWidth="0.5" />
-      {/* Slight side-angle shading down the cabin's right edge — applies to
-          both petrol and electric, unlike the badge/stripe below. */}
-      <Rect x="24.5" y="16" width="2" height="15" fill="rgba(0,0,0,0.15)" />
-      {/* Exhaust pipe — petrol-only detail, doubles as a quiet visual cue
-          telling it apart from the electric version even without the badge.
-          Sits under the rear of the cabin, clear of both rear wheels. */}
-      {!electric && (
-        <Rect x="21.5" y="43" width="2.4" height="5" rx="1.2" fill="#374151" opacity={0.85} />
-      )}
-      {/* Electric badge — auto-rickshaws look the same whether petrol or
-          electric in real life, so a lightning bolt is the honest way to
-          tell an e-auto apart on the map instead of inventing a fake shape. */}
-      {electric && (
-        <>
-          <Path d="M19.5,29 L16,35.5 L18.4,35.5 L17.5,41 L21.5,33.7 L19,33.7 Z" fill="#FDE047" stroke="#CA8A04" strokeWidth="0.4" />
-          {/* Brand pink livery stripe across the cabin */}
-          <Rect x="7.5" y="26" width="21" height="2.1" rx="1" fill={C.pink} opacity={0.88} />
-        </>
-      )}
-    </Svg>
-  );
-}
-function ScooterShape({ bodyLight, bodyDark, frame, electric }: { bodyLight: string; bodyDark: string; frame: string; electric?: boolean }) {
-  // Scooter-style silhouette (Activa/Jupiter/Ather-style) — no exposed fuel
-  // tank or engine block, just a rounded cowl + flat step-through floor.
-  // Used for both regular "Bike" (petrol) and "Green Bike" (electric) — the
-  // lightning bolt badge is the only thing that tells them apart.
-  const gid = 'sc' + bodyDark.replace('#', '');
-  return (
-    <Svg width={28} height={58} viewBox="0 0 28 58">
-      <Defs>
-        <LinearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={bodyLight} />
-          <Stop offset="1" stopColor={bodyDark} />
-        </LinearGradient>
-      </Defs>
-      {/* Front wheel */}
-      <Ellipse cx="14" cy="8" rx="4.2" ry="6.2" fill="#111827" />
-      <Ellipse cx="14" cy="8" rx="1.9" ry="3"   fill="#4B5563" />
-      {/* Handlebar + mirrors */}
-      <Rect x="1" y="10.5" width="26" height="2.8" rx="1.4" fill="#1F2937" />
-      <SvgCircle cx="2.4"  cy="9" r="1.9" fill="#1F2937" />
-      <SvgCircle cx="25.6" cy="9" r="1.9" fill="#1F2937" />
-      {/* Sleek rounded front cowl (LED headlight look, not a fork+headlamp) */}
-      <Ellipse cx="14" cy="18" rx="5" ry="5.4" fill={`url(#${gid})`} stroke="#fff" strokeWidth="1" />
-      <Ellipse cx="14" cy="16.6" rx="2.2" ry="1.8" fill="#E0F2FE" />
-      {/* Flat step-through floor panel — the signature "no engine bulge"
-          scooter cue, replacing the petrol bike's teardrop tank. */}
-      <Rect x="10.5" y="24" width="7" height="14" rx="3" fill={`url(#${gid})`} opacity={0.92} />
-      {/* Lightning bolt — electric badge, only for the electric variant */}
-      {electric && (
-        <Path d="M14.5,26.5 L11.5,32 L13.6,32 L12.8,36.5 L16.3,30.2 L14.1,30.2 Z" fill="#FDE047" stroke="#CA8A04" strokeWidth="0.4" />
-      )}
-      {/* Seat */}
-      <Rect x="9.5" y="39" width="9" height="10" rx="3.4" fill={frame} />
-      {/* Rear fender */}
-      <Path d="M8,45 Q14,42 20,45" stroke={frame} strokeWidth="1.8" fill="none" strokeLinecap="round" />
-      {/* Rear wheel */}
-      <Ellipse cx="14" cy="50" rx="4.6" ry="6.8" fill="#111827" />
-      <Ellipse cx="14" cy="50" rx="2.1" ry="3.2" fill="#4B5563" />
-    </Svg>
-  );
-}
-function ERikshaShape({ bodyLight, bodyDark, roof }: { bodyLight: string; bodyDark: string; roof: string }) {
-  // E-rickshaws ("toto") are visibly boxier than a put-put auto-rickshaw —
-  // flat roof instead of a curved canopy, wider flat-sided cabin, a bench
-  // visible at the back. Its own shape, not an AutoShape recolor.
-  const gid = 'er' + bodyDark.replace('#', '');
-  return (
-    <Svg width={34} height={46} viewBox="0 0 34 46">
-      <Defs>
-        <LinearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={bodyLight} />
-          <Stop offset="1" stopColor={bodyDark} />
-        </LinearGradient>
-      </Defs>
-      {/* Rear wheels — wide stance */}
-      <Ellipse cx="4"  cy="36" rx="3.6" ry="5.4" fill="#111827" />
-      <Ellipse cx="30" cy="36" rx="3.6" ry="5.4" fill="#111827" />
-      {/* Boxy cabin — flat sides, minimal taper (vs. auto's curved/tapered
-          shape) */}
-      <Path d="M5,40 L29,40 L28,12 Q28,8 24,8 L10,8 Q6,8 6,12 Z" fill={`url(#${gid})`} stroke="#1F2937" strokeWidth="1.2" />
-      {/* Flat roof — the key visual cue that reads "e-rickshaw" not "auto" */}
-      <Rect x="7" y="9" width="20" height="4" rx="1.5" fill={roof} opacity={0.95} />
-      {/* Windscreen */}
-      <Path d="M9,14 L25,14 L24,20 L10,20 Z" fill="#BFE3FF" opacity={0.85} />
-      {/* Brand pink livery stripe across the cabin */}
-      <Rect x="6.5" y="24" width="21" height="2.2" rx="1" fill={C.pink} opacity={0.88} />
-      {/* Passenger bench hint (wide open back, e-rickshaws seat 3+ side by side) */}
-      <Rect x="8" y="30" width="18" height="4" rx="2" fill="rgba(0,0,0,0.12)" />
-      {/* Slight side-angle shading down the cabin's right edge */}
-      <Rect x="26" y="20" width="2.1" height="18" fill="rgba(0,0,0,0.14)" />
-      {/* Front wheel */}
-      <Ellipse cx="17" cy="7" rx="3" ry="4" fill="#111827" />
-      {/* Headlight */}
-      <Ellipse cx="17" cy="4" rx="1.8" ry="1.4" fill="#FEF9C3" stroke="#F5D90A" strokeWidth="0.5" />
-      {/* Electric badge — sits in the gap between the brand stripe and the
-          passenger bench so it doesn't collide with either. */}
-      <Path d="M18,27 L15,31.5 L17.1,31.5 L16.4,35.5 L19.6,30 L17.5,30 Z" fill="#FDE047" stroke="#CA8A04" strokeWidth="0.4" />
-    </Svg>
+    <View style={{ width: size.w, height: size.h }}>
+      <Image
+        source={VEHICLE_ART[art]}
+        style={{ width: size.w, height: size.h }}
+        resizeMode="contain"
+      />
+      {electric ? (
+        <View style={{
+          position: 'absolute', right: -3, top: -3,
+          width: 13, height: 13, borderRadius: 7,
+          backgroundColor: '#16A34A', borderWidth: 1.2, borderColor: '#DCFCE7',
+          alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Text style={{ fontSize: 8, color: '#fff', fontWeight: '900', lineHeight: 10 }}>⚡</Text>
+        </View>
+      ) : null}
+      {luxury ? (
+        <View style={{
+          position: 'absolute', left: -2, right: -2, top: -2, bottom: -2,
+          borderRadius: 8, borderWidth: 1.4, borderColor: 'rgba(245,197,24,0.85)',
+        }} />
+      ) : null}
+    </View>
   );
 }
 
 // Per-vehicle-type color + shape pairing — real-world liveries where they
 // exist (yellow/black auto, green e-auto) so the type reads at a glance.
-const VEHICLE_VISUALS: Record<string, { Shape: typeof CarShape | typeof AutoShape | typeof ScooterShape | typeof ERikshaShape; props: any }> = {
-  bike:          { Shape: ScooterShape, props: { bodyLight: '#F87171', bodyDark: '#DC2626', frame: '#1F2937', electric: false } },
-  green_bike:    { Shape: ScooterShape, props: { bodyLight: '#4ADE80', bodyDark: '#15803D', frame: '#14532D', electric: true } },
-  auto:          { Shape: AutoShape,    props: { bodyLight: '#FDE68A', bodyDark: '#D97706', roof: '#1F2937' } },
-  electric_auto: { Shape: AutoShape,    props: { bodyLight: '#86EFAC', bodyDark: '#16A34A', roof: '#14532D', electric: true } },
+const VEHICLE_VISUALS: Record<string, { Shape: any; props: any }> = {
+  bike:          { Shape: VehiclePhoto, props: { art: 'bike', size: ART_SIZE.bike } },
+  green_bike:    { Shape: VehiclePhoto, props: { art: 'bike', size: ART_SIZE.bike, electric: true } },
+  auto:          { Shape: VehiclePhoto, props: { art: 'auto', size: ART_SIZE.auto } },
+  electric_auto: { Shape: VehiclePhoto, props: { art: 'auto', size: ART_SIZE.auto, electric: true } },
+  car:           { Shape: VehiclePhoto, props: { art: 'car',  size: ART_SIZE.car } },
+  car_7:         { Shape: VehiclePhoto, props: { art: 'car',  size: ART_SIZE.car } },
+  luxury:        { Shape: VehiclePhoto, props: { art: 'car',  size: ART_SIZE.car, luxury: true } },
+  /* eriksha apne SVG par hi hai. Uski uper se li gayi tasveer nahi hai, aur jo
+     mili wo peechhe se tirchi thi - ghumane par wo leta hua dabba lagti aur ye
+     bata hi nahi paati ki gaadi kis taraf ja rahi hai, jo marker ka poora kaam
+     hai. Jis din uper se li hui mil jaye, sirf ye ek line badlegi. */
   eriksha:       { Shape: ERikshaShape, props: { bodyLight: '#67E8F9', bodyDark: '#0891B2', roof: '#164E63' } },
-  car:           { Shape: CarShape,     props: { bodyLight: '#8DA2D0', bodyDark: '#2C3E6B', roof: '#1E293B' } },
-  luxury:        { Shape: CarShape,     props: { bodyLight: '#6B7280', bodyDark: '#111827', roof: '#000000' } },
 };
 // Exported so other screens (matching, driver cards, "switch vehicle"
 // pickers) can render the same real vehicle models instead of emoji —
 // one source of truth for what each vehicle type looks like.
 export function vehicleVisual(vehicleType: string) {
   return VEHICLE_VISUALS[vehicleType] || VEHICLE_VISUALS.car;
+}
+
+/* Is gaadi ka sabse bada naap - use box me bithane ke liye.
+
+   Map par sab ASLI anupaat me dikhte hain (car chaudi, bike patli) kyoki wahan
+   wo ek saath hote hain aur aapas me tulte hain. Par jahan ek hi gaadi akele
+   dikhti hai - matching screen ka hero, ya vikalp wali chhoti chip - wahan
+   asli anupaat ulta padta hai: sabko ek hi 70 se baant do to bike box ke 57%
+   par reh jaati, aur 20px ki chip me sirf 11px ki.
+
+   Isliye har ek ko uske APNE naap se baanta jaata hai, taaki wo box bhar de.
+   eriksha abhi SVG par hai, jiska baseline 70 tha - wahi rehta hai. */
+export function vehicleArtMax(vehicleType: string): number {
+  const v = VEHICLE_VISUALS[vehicleType] || VEHICLE_VISUALS.car;
+  const sz = v.props && v.props.size;
+  return sz ? Math.max(sz.w, sz.h) : 70;
 }
 
 // ── Assigned driver marker — real top-down vehicle, rotated to heading,

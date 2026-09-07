@@ -6,7 +6,7 @@ import { Storage as AsyncStorage } from '../storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { Bouncy, GlassPanel, PulseView, SlideUp } from '../components/ui';
-import { LiveMap, vehicleVisual } from '../components/LiveMap';
+import { LiveMap, vehicleVisual, vehicleArtMax } from '../components/LiveMap';
 import { s, C, T, SP, R, SHADOW } from '../styles';
 import { apiPost, apiAuthPost } from '../../api';
 
@@ -99,9 +99,17 @@ const VEHICLE_LABELS: Record<string, string> = {
 // shape lands safely inside `size` without per-shape scale tuning. ─────────
 function VehicleGlyph({ vehicleType, size = 40, rotateDeg = 0 }: { vehicleType: string; size?: number; rotateDeg?: number }) {
   const { Shape, props } = vehicleVisual(vehicleType);
+  /* Har gaadi ko uske APNE naap se baanta jaata hai, sabko ek hi 70 se nahi.
+
+     Pehle 70 ek anumaan tha jo tab theek tha jab sab SVG the aur lagbhag ek
+     naap ke the. Ab tasveerein alag-alag naap ki hain (car 72, auto 49, bike
+     40) - ek hi 70 se baantne par bike is box ke 57% par reh jaati, aur neeche
+     wali 20px ki chip me to sirf 11px ki. Yahan gaadi AKELE dikhti hai, kisi
+     se tulti nahi, to use box bharna chahiye. (Map par ulta niyam hai - wahan
+     asli anupaat hi sahi hai, aur wahi rakha gaya hai.) */
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      <View style={{ transform: [{ rotate: `${rotateDeg}deg` }, { scale: size / 70 }] }}>
+      <View style={{ transform: [{ rotate: `${rotateDeg}deg` }, { scale: size / vehicleArtMax(vehicleType) }] }}>
         <Shape {...props} />
       </View>
     </View>
