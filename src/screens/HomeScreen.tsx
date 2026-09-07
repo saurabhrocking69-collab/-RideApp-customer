@@ -2969,6 +2969,7 @@ function RatingModal() {
     setScreen,
     phone, loadHistory, loadWallet,
     savePlaceAt,
+      googleLinked, linkGoogle,
   } = useApp();
   const { useRideStore } = require('../../store');
   const ride = useRideStore();
@@ -3021,6 +3022,39 @@ function RatingModal() {
     setRideData(null);
     setRating(0); setReview('');
     resetBookingState();
+    /* Ride ke baad ek baar - aur sirf ek baar - Google jodne ko poochho.
+
+       Google ka poora faayda tabhi milta hai jab wo PEHLE se juda ho: us din
+       jab SMS na aaye, jodne ka mauka nahi bachta - login hi nahi ho paata.
+       Isliye poochne ka sahi waqt wo hai jab sab theek chal raha ho.
+
+       Ye pal isliye chuna ki abhi ride poori hui hai: aadmi app par bharosa
+       kar chuka hai aur uske haath khali hain. Login ke turant baad poochna
+       ek aur rukawat hoti, aur usi waqt use kuch aur chahiye hota hai.
+
+       Ek baar, hamesha ke liye - chahe wo "abhi nahi" kahe. Baar-baar poochna
+       wo cheez hai jo log app hatane ki wajah banate hain; jise chahiye wo
+       Profile me jab chahe jod sakta hai. */
+    setTimeout(async () => {
+      try {
+        if (googleLinked !== false) return;                  // juda hai, ya abhi pata nahi
+        const asked = await AsyncStorage.getItem('googleLinkAsked').catch(() => null);
+        if (asked) return;
+        await AsyncStorage.setItem('googleLinkAsked', '1').catch(() => {});
+        Alert.alert(
+          'Agli baar aur aasaan',
+          'Apna Google jod lein — phir SMS na aaye tab bhi aap login kar payenge.',
+          [
+            { text: 'Abhi nahi', style: 'cancel' },
+            { text: 'Google jodein', onPress: async () => {
+                const err = await linkGoogle();
+                if (err) Alert.alert('Nahi jud paya', err);
+                else Alert.alert('Ho gaya', 'Ab Google se seedha login ho jayega.');
+              } },
+          ],
+        );
+      } catch (_e) {}
+    }, 1200);
     setUnreadChat(0);
     setDriverLoc(null); setDriverEta(''); setDriverDist('');
     setCashbackEarned([]);
