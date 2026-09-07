@@ -1796,7 +1796,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!phone || phone.length < 10) { setResult('❌ Sahi phone number likho'); return; }
     setLoading(true);
     try {
-      const data = await apiPost('/api/auth/send-otp', { phone });
+      /* `app` server ko batata hai ki maang kaun raha hai. Dono apps ke
+         SMS-Retriever hash alag hain (rider XCAG/VOG/GQ, driver LQuev5EzywW),
+         to unke DLT template bhi alag honge - aur server ko chunna padta hai.
+         Aaj koi template set nahi hai, to isse kuch badalta nahi; ye us din ke
+         liye hai jab template approve ho kar aayein. */
+      const data = await apiPost('/api/auth/send-otp', { phone, app: 'rider' });
       if (data._error || data.error) { setResult('❌ ' + (data.message || data.error || 'Server error')); return; }
       setOtpSent(data.otp || ''); setScreen('otp'); setResult('');
     } catch { setResult('❌ Could not connect to server'); }
