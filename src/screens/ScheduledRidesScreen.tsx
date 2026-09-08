@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { C } from '../styles';
+import { authGet } from '../../api';
 
 const AMBER    = '#F59E0B';
 const AMBER_BG = '#FFFBEB';
@@ -136,7 +137,7 @@ export function ScheduledRidesScreen() {
     setLoading(true); setError('');
     try {
       const { apiGet } = await import('../../api');
-      const data = await apiGet(`/api/scheduled/my-rides?phone=${phone}`);
+      const data = await authGet(`/api/scheduled/my-rides?phone=${phone}`);
       setRides(data.scheduled_rides || []);
     } catch (_e) {
       setError('Could not load scheduled rides');

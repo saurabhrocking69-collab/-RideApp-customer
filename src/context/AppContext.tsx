@@ -1010,7 +1010,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // fully backgrounded (no notification tap happened, so activeStdRideId
         // was never adopted) — reconcile against the scheduled-rides list.
         if (!rideDataRef.current?.ride_id) {
-          fetch(`${API}/api/scheduled/my-rides?phone=${phone}`)
+          authFetch(`${API}/api/scheduled/my-rides?phone=${phone}`)
             .then(r => r.json())
             .then(sd => {
               const active = (sd.scheduled_rides || []).find((sr: any) =>
@@ -2086,7 +2086,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
        through either way. */
     for (let i = 0; i < 3; i++) {
       try {
-        const r = await fetch(`${API}/api/auth/update-name`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, name: finalName, gender }) });
+        const r = await authFetch(`${API}/api/auth/update-name`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, name: finalName, gender }) });
         if (r.ok) break;
       } catch (_e) { /* fall through to the wait and try again */ }
       await new Promise(res => setTimeout(res, 1200 * (i + 1)));
@@ -2144,7 +2144,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
          Registering the same token twice is harmless, so it is simply retried
          until it lands. */
       for (let i = 0; i < 4; i++) {
-        const r = await apiPost('/api/auth/save-fcm-token', { phone: userPhone, token, role: 'customer' });
+        const r = await authPost('/api/auth/save-fcm-token', { phone: userPhone, token, role: 'customer' });
         if (r && !r._error && !r.error && (r._status == null || r._status < 400)) return;
         await new Promise(res => setTimeout(res, 1500 * (i + 1)));
       }
@@ -3294,12 +3294,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try { const r = await authFetch(`${API}/api/places/saved?phone=${phone}`); const d = await r.json(); setSavedPlaces(d.places || []); } catch (_e) {}
   };
   const loadFavouriteBuddy = async (ph: string) => {
-    try { const r = await fetch(`${API}/api/favourites?phone=${ph}`); const d = await r.json(); setFavouriteBuddy(d.buddy || null); } catch (_e) {}
+    try { const r = await authFetch(`${API}/api/favourites?phone=${ph}`); const d = await r.json(); setFavouriteBuddy(d.buddy || null); } catch (_e) {}
   };
   const addFavouriteBuddy = async (driverPhone: string) => {
     if (!phone || !driverPhone) return { error: 'Missing' };
     try {
-      const r = await fetch(`${API}/api/favourites`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customer_phone: phone, driver_phone: driverPhone }) });
+      const r = await authFetch(`${API}/api/favourites`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customer_phone: phone, driver_phone: driverPhone }) });
       const d = await r.json();
       if (d.success) setFavouriteBuddy(d.buddy);
       return d;
@@ -3311,7 +3311,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const removeFavouriteBuddy = async () => {
     if (!phone) return;
     try {
-      const r = await fetch(`${API}/api/favourites`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customer_phone: phone }) });
+      const r = await authFetch(`${API}/api/favourites`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ customer_phone: phone }) });
       if (!r.ok) { setResult('❌ Could not remove — please try again'); return; }
       setFavouriteBuddy(null);
     } catch (_e) { setResult('❌ Could not remove — check your connection'); }

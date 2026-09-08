@@ -6,7 +6,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
-import { apiGet } from '../../api';
+import { apiGet, authGet } from '../../api';
 import { C } from '../styles';
 import { shortRideId } from '../rideId';
 
@@ -162,7 +162,7 @@ export function ScheduledRideDetailScreen() {
     let cancelled = false;
     const poll = async () => {
       try {
-        const d = await apiGet(`/api/scheduled/my-rides?phone=${phone}`);
+        const d = await authGet(`/api/scheduled/my-rides?phone=${phone}`);
         const fresh = (d.scheduled_rides || []).find((r: any) => String(r.id) === String(ride.id));
         if (fresh && !cancelled) setSelectedScheduledRide((prev: any) => prev ? { ...prev, ...fresh } : fresh);
       } catch { /* keep last known state */ }

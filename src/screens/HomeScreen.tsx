@@ -262,7 +262,7 @@ function BuddyBookModal() {
     if (!buddyBookDR.trim()) { setBuddyBookMsg('⚠️ Enter drop location'); return; }
     setBuddyBookLoading(true); setBuddyBookMsg('');
     try {
-      const res = await apiPost('/api/favourites/book', {
+      const res = await authPost('/api/favourites/book', {
         customer_phone: phone, pickup: buddyBookPU, drop_location: buddyBookDR,
         pickup_lat: buddyBookPUCoords?.lat, pickup_lng: buddyBookPUCoords?.lng,
         drop_lat: buddyBookDRCoords?.lat, drop_lng: buddyBookDRCoords?.lng,
