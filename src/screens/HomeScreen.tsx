@@ -1013,28 +1013,47 @@ const ART_HOME: Record<string, { src: any; w: number; h: number }> = {
    hota ki poora Home har chakkar par dobara banta, aur ye panna bada hai.
    `offset` se bike aadhe chakkar peechhe chalti hai - dono ek saath palat-te
    to wo jhatka lagta. */
-const ART_BOX_H = 92;
+const ART_BOX_H = 104;
 function AltArt({ a, b, offset = 0 }: { a: React.ReactNode; b: React.ReactNode; offset?: number }) {
-  const [flip, setFlip] = useState(false);
-  const fade = useRef(new Animated.Value(0)).current;
+  const arts = [a, b];
+  const [idx, setIdx] = useState(0);
+  const [w, setW] = useState(150);
+  const t = useRef(new Animated.Value(0)).current;
+  const wRef = useRef(150); wRef.current = w;
 
   useEffect(() => {
     let iv: ReturnType<typeof setInterval> | null = null;
-    const t = setTimeout(() => {
-      setFlip(f => !f);
-      iv = setInterval(() => setFlip(f => !f), 4600);
-    }, 4600 + offset);
-    return () => { clearTimeout(t); if (iv) clearInterval(iv); };
+    const step = () => {
+      Animated.timing(t, { toValue: 1, duration: 620, easing: Easing.inOut(Easing.cubic), useNativeDriver: true })
+        .start(({ finished }) => {
+          if (!finished) return;
+          /* Dono ek hi saans me: ghadi sifar par, aur jo dikh raha tha wo agla
+             ban gaya. Isse jo abhi baayen nikla wo turant daayen ja kar apni
+             bari ka intezaar karta hai - aur koi jhalak nahi dikhti. */
+          t.setValue(0);
+          setIdx(v => 1 - v);
+        });
+    };
+    const first = setTimeout(() => { step(); iv = setInterval(step, 4600); }, 4600 + offset);
+    return () => { clearTimeout(first); if (iv) clearInterval(iv); };
   }, [offset]);
 
-  useEffect(() => {
-    Animated.timing(fade, { toValue: flip ? 1 : 0, duration: 620, useNativeDriver: true }).start();
-  }, [flip]);
+  const slide = (from: number, to: number) =>
+    t.interpolate({ inputRange: [0, 1], outputRange: [from, to] });
 
   return (
-    <View style={{ height: ART_BOX_H, alignItems: 'center', justifyContent: 'flex-end' }}>
-      <Animated.View style={{ position: 'absolute', bottom: 0, opacity: fade.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) }}>{a}</Animated.View>
-      <Animated.View style={{ position: 'absolute', bottom: 0, opacity: fade }}>{b}</Animated.View>
+    <View
+      onLayout={(e) => { const nw = Math.round(e.nativeEvent.layout.width); if (nw > 0 && nw !== wRef.current) setW(nw); }}
+      style={{ height: ART_BOX_H, overflow: 'hidden', justifyContent: 'flex-end' }}
+    >
+      {/* Jo abhi dikh raha hai - baayen nikalta hua */}
+      <Animated.View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, alignItems: 'center', transform: [{ translateX: slide(0, -w) }] }}>
+        {arts[idx]}
+      </Animated.View>
+      {/* Jo aa raha hai - daayen se andar */}
+      <Animated.View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, alignItems: 'center', transform: [{ translateX: slide(w, 0) }] }}>
+        {arts[1 - idx]}
+      </Animated.View>
     </View>
   );
 }
@@ -1639,8 +1658,8 @@ function HomeTab() {
                   <ArtShot>
                     <AltArt
                       offset={2300}
-                      a={<BikeScene width={130} height={80} />}
-                      b={<PhotoArt art="bikeSide" h={84} />}
+                      a={<BikeScene width={148} height={94} />}
+                      b={<PhotoArt art="bikeSide" h={100} />}
                     />
                   </ArtShot>
                   <View style={CARD_SHELF}>
