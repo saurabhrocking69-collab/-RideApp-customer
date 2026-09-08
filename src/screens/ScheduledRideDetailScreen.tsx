@@ -6,7 +6,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
-import { apiGet, authGet } from '../../api';
+import { apiGet, authGet, authDelete } from '../../api';
 import { C } from '../styles';
 import { shortRideId } from '../rideId';
 
@@ -199,7 +199,7 @@ export function ScheduledRideDetailScreen() {
     setCancelling(true);
     try {
       const { apiDelete } = await import('../../api');
-      const resp = await apiDelete(`/api/scheduled/${ride.id}`, { phone, reason });
+      const resp = await authDelete(`/api/scheduled/${ride.id}`, { phone, reason });
       if (resp?._error || resp?.error) {
         Alert.alert('Could not cancel', resp?.error || resp?.message || 'Please try again.');
         return;

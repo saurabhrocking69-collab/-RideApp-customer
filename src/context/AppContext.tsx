@@ -1291,7 +1291,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const iv = setInterval(async () => {
       if (busy) return; busy = true;
       try {
-        const d = await apiGet(`/api/chat/${rideData.ride_id}`);
+        const d = await authGet(`/api/chat/${rideData.ride_id}`);
         if (!d._error) {
           const msgs = d.messages || [];
           if (msgs.length > lastChatCount.current) {
@@ -1313,7 +1313,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Chat screen: load history once on open; socket 'chatMessage' handles new messages in real-time
   useEffect(() => {
     if (screen !== 'chat' || !rideData?.ride_id) return;
-    fetch(`${API}/api/chat/${rideData.ride_id}`)
+    authFetch(`${API}/api/chat/${rideData.ride_id}`)
       .then(r => r.json())
       .then(d => { setChatMsgs(d.messages || []); lastChatCount.current = (d.messages || []).length; setUnreadChat(0); })
       .catch(() => {});
@@ -1325,7 +1325,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Hourly chat: load history once on open + reset unread; socket 'hourlyChatMessage' handles new messages
   useEffect(() => {
     if (screen !== 'hourly' || !hChatOpen || !hourlyBooking?.id) return;
-    apiGet(`/api/chat/h_${hourlyBooking.id}`)
+    authGet(`/api/chat/h_${hourlyBooking.id}`)
       .then((d: any) => { if (!d._error && Array.isArray(d.messages)) { setHChatMsgs(d.messages); setHChatUnread(0); } })
       .catch(() => {});
   }, [screen, hChatOpen, hourlyBooking?.id]);
@@ -3170,7 +3170,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }) => {
     setLoading(true);
     try {
-      const data = await apiPost('/api/scheduled', {
+      const data = await authPost('/api/scheduled', {
         passenger_phone: phone,
         pickup:         payload.pickup,
         drop_location:  payload.drop,
@@ -3453,12 +3453,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!text) setChatInput('');
     setChatError('');
     try {
-      const sent = await fetch(`${API}/api/chat/send`, {
+      const sent = await authFetch(`${API}/api/chat/send`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ride_id: rideData.ride_id, sender: 'customer', message: msg }),
       });
       if (!sent.ok) throw new Error('send failed');
-      const r = await fetch(`${API}/api/chat/${rideData.ride_id}`);
+      const r = await authFetch(`${API}/api/chat/${rideData.ride_id}`);
       const d = await r.json();
       setChatMsgs(d.messages || []);
     } catch (_e) {
@@ -3471,7 +3471,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const body: any = { caller_role: 'customer' };
       if (rideId) body.ride_id = rideId;
       if (bookingId) body.booking_id = bookingId;
-      const r = await fetch(`${API}/api/call/initiate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const r = await authFetch(`${API}/api/call/initiate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await r.json();
       if (!data.success) { Alert.alert('Call', data.error || 'Call could not be placed'); return; }
       if (data.method === 'direct' && data.call_number) Linking.openURL(`tel:${data.call_number}`);

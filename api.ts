@@ -177,6 +177,27 @@ export const authFetch = async (url: string, opts: any = {}) => {
   });
 };
 export const authPost = async (path: string, body: any): Promise<any> => apiAuthPost(path, body, await authToken());
+/* DELETE ka authed roop - scheduled ride radd karne ke liye.
+
+   apiDelete token leta hi nahi, isliye use aage nahi badhaya ja sakta tha.
+   Ye wahi kaam karta hai par Authorization ke saath, aur jawab bilkul usi
+   roop me lautata hai (withMeta samet) - taaki bulane wali jagah par kuchh
+   na badle. */
+export const authDelete = async (path: string, body: any): Promise<any> => {
+  try {
+    const res = await authFetch(`${API}${path}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    let parsed: any;
+    try { parsed = await res.json(); }
+    catch (_p) { return { _error: true, _badReply: true, _status: res.status, message: SRV_MSG }; }
+    return withMeta(parsed, res);
+  } catch (_e) {
+    return { _error: true, message: NET_MSG };
+  }
+};
 
 export const apiAuthGet = async (path: string, token: string, retries = 2): Promise<any> => {
   for (let i = 0; i <= retries; i++) {
