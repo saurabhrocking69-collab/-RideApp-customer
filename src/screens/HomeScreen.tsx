@@ -990,6 +990,12 @@ const CARD_PRICE = { color: C.textMuted, fontSize: 10, marginTop: 2 };
    hawa me tairti lagti hai. */
 const ART_HOME: Record<string, { src: any; w: number; h: number }> = {
   car:  { src: require('../../assets/vehicles/car.png'),  w: 34, h: 72 },
+  /* Ye do NAQSHE waali se alag hain aur alag hi rehni chahiye:
+       naqshe par -> uper se, naak uper (wahan DISHA batani hoti hai)
+       card par   -> tirchi, jaisa aankh dekhti hai (wahan PEHCHAN banani hai)
+     Isliye alag naam se rakhi gayi hain, purani ko badal kar nahi. */
+  autoSide: { src: require('../../assets/vehicles/auto_side.png'), w: 300, h: 422 },
+  bikeSide: { src: require('../../assets/vehicles/bike_side.png'), w: 300, h: 410 },
   auto: { src: require('../../assets/vehicles/auto.png'), w: 30, h: 49 },
   bike: { src: require('../../assets/vehicles/bike.png'), w: 22, h: 40 },
 };
@@ -997,6 +1003,42 @@ const ART_HOME: Record<string, { src: any; w: number; h: number }> = {
 /* SVG ko wahi jagah aur wahi chhaya jo tasveer ko milti hai, taaki chaaron
    card ek jaise baithein. Chhaya thodi chaudi hai kyoki bagal se dekhi gayi
    gaadi zameen par zyada lambaai ghairti hai. */
+/* Do roop, bari-bari se.
+
+   Dono ek saath maujood rehte hain aur sirf dhundhlahat badalti hai - ek ko
+   hata kar doosra lagane par dabbe ki unchai badalti aur card har baar halka
+   koodta.
+
+   Ghadi har card ki APNI hai, upar se ek saanjhi nahi: saanjhi ghadi ka matlab
+   hota ki poora Home har chakkar par dobara banta, aur ye panna bada hai.
+   `offset` se bike aadhe chakkar peechhe chalti hai - dono ek saath palat-te
+   to wo jhatka lagta. */
+const ART_BOX_H = 92;
+function AltArt({ a, b, offset = 0 }: { a: React.ReactNode; b: React.ReactNode; offset?: number }) {
+  const [flip, setFlip] = useState(false);
+  const fade = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    let iv: ReturnType<typeof setInterval> | null = null;
+    const t = setTimeout(() => {
+      setFlip(f => !f);
+      iv = setInterval(() => setFlip(f => !f), 4600);
+    }, 4600 + offset);
+    return () => { clearTimeout(t); if (iv) clearInterval(iv); };
+  }, [offset]);
+
+  useEffect(() => {
+    Animated.timing(fade, { toValue: flip ? 1 : 0, duration: 620, useNativeDriver: true }).start();
+  }, [flip]);
+
+  return (
+    <View style={{ height: ART_BOX_H, alignItems: 'center', justifyContent: 'flex-end' }}>
+      <Animated.View style={{ position: 'absolute', bottom: 0, opacity: fade.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) }}>{a}</Animated.View>
+      <Animated.View style={{ position: 'absolute', bottom: 0, opacity: fade }}>{b}</Animated.View>
+    </View>
+  );
+}
+
 function ArtShot({ children }: { children: React.ReactNode }) {
   return (
     <View style={{ alignItems: 'center', paddingTop: 8 }}>
@@ -1004,6 +1046,13 @@ function ArtShot({ children }: { children: React.ReactNode }) {
       <View style={{ width: 82, height: 7, borderRadius: 7, backgroundColor: 'rgba(26,13,46,0.10)', marginTop: -6 }} />
     </View>
   );
+}
+
+/* Sirf tasveer - chhaya ArtShot deti hai, taaki bari-bari palat-ne par
+   chhaya thehri rahe aur gaadi ke saath jhilmilaye nahi. */
+function PhotoArt({ art, h }: { art: string; h: number }) {
+  const a = ART_HOME[art];
+  return <Image source={a.src} style={{ width: Math.round(a.w * (h / a.h)), height: h }} contentFit="contain" />;
 }
 
 function VehicleShot({ art, h, badge }: { art: string; h: number; badge?: string }) {
@@ -1558,10 +1607,14 @@ function HomeTab() {
                 <View style={[RIDE_CARD, { borderColor: 'rgba(217,119,6,0.22)' }]}>
                   <View style={[CARD_WASH, { backgroundColor: 'rgba(251,191,36,0.13)' }]} />
                   <View style={[CARD_GLOW, { backgroundColor: 'rgba(217,119,6,0.10)' }]} />
-                  {/* Bagal se, uper se nahi. Uper se auto ek kaala dhabba
-                      lagta tha - car uper se pehchani jaati hai kyoki uska
-                      uper wala aakar jaana-pehchana hai, auto ka nahi. */}
-                  <ArtShot><AutoSide width={128} height={82} /></ArtShot>
+                  {/* Banayi hui aur asli - bari-bari se. Purani hatayi nahi
+                      gayi; dono dikhti hain. */}
+                  <ArtShot>
+                    <AltArt
+                      a={<AutoSide width={126} height={80} />}
+                      b={<PhotoArt art="autoSide" h={84} />}
+                    />
+                  </ArtShot>
                   <View style={CARD_SHELF}>
                     <Text style={CARD_NAME}>Auto</Text>
                     <Text style={CARD_PRICE}>₹30+ · ~3 min ETA</Text>
@@ -1580,10 +1633,16 @@ function HomeTab() {
                   <View style={{ position: 'absolute', top: 9, right: 9, backgroundColor: C.pink, borderRadius: 7, paddingHorizontal: 7, paddingVertical: 3 }}>
                     <Text style={{ color: '#fff', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.5 }}>FASTEST</Text>
                   </View>
-                  {/* BikeScene pehle se hai: bagal se, aur pahiye chalte
-                      hain. Chalna yahan sajawat nahi - ye FASTEST wala card
-                      hai, aur harkat wahi baat dohraati hai. */}
-                  <ArtShot><BikeScene width={132} height={80} /></ArtShot>
+                  {/* Wahi niyam jo auto par - warna ek card badalta rehta
+                      aur uske bagal wala thehra rehta, jo adhoora lagta.
+                      offset se ye aadhe chakkar peechhe chalti hai. */}
+                  <ArtShot>
+                    <AltArt
+                      offset={2300}
+                      a={<BikeScene width={130} height={80} />}
+                      b={<PhotoArt art="bikeSide" h={84} />}
+                    />
+                  </ArtShot>
                   <View style={CARD_SHELF}>
                     <Text style={CARD_NAME}>Bike</Text>
                     <Text style={CARD_PRICE}>₹20+ · Beat traffic</Text>
