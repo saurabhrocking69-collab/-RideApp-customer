@@ -8,6 +8,7 @@ import { useApp } from '../context/AppContext';
 import { DotBG, FadeIn, ScreenIn } from '../components/ui';
 import { s, C } from '../styles';
 import { API } from '../constants';
+import { authFetch } from '../../api';
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -93,7 +94,7 @@ export function NewTicketScreen() {
     if (!canSubmit) return;
     setLoading(true);
     try {
-      const r = await fetch(`${API}/api/support/tickets`, {
+      const r = await authFetch(`${API}/api/support/tickets`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, role: 'customer', category, description: description.trim(), ride_id: rideId || undefined }),
@@ -299,7 +300,7 @@ export function TicketListScreen() {
   const loadTickets = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const r = await fetch(`${API}/api/support/tickets?phone=${encodeURIComponent(phone)}&role=customer`);
+      const r = await authFetch(`${API}/api/support/tickets?phone=${encodeURIComponent(phone)}&role=customer`);
       const d = await r.json();
       setTickets(d.tickets || []);
     } catch { /* silent */ }
@@ -311,7 +312,7 @@ export function TicketListScreen() {
     if (!t) return;
     if (!silent) setDetailLoading(true);
     try {
-      const r = await fetch(`${API}/api/support/tickets/${t.id}?phone=${encodeURIComponent(phone)}`);
+      const r = await authFetch(`${API}/api/support/tickets/${t.id}?phone=${encodeURIComponent(phone)}`);
       const d = await r.json();
       setTicketDetail(d);
     } catch { /* silent */ }
@@ -337,7 +338,7 @@ export function TicketListScreen() {
     setDetailLoading(true);
     setTicketDetail(null);
     try {
-      const r = await fetch(`${API}/api/support/tickets/${t.id}?phone=${encodeURIComponent(phone)}`);
+      const r = await authFetch(`${API}/api/support/tickets/${t.id}?phone=${encodeURIComponent(phone)}`);
       const d = await r.json();
       setTicketDetail(d);
     } catch { /* silent */ }
@@ -348,7 +349,7 @@ export function TicketListScreen() {
     if (!reply.trim() || !activeTicket || replying) return;
     setReplying(true);
     try {
-      await fetch(`${API}/api/support/tickets/${activeTicket.id}/reply`, {
+      await authFetch(`${API}/api/support/tickets/${activeTicket.id}/reply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, message: reply.trim() }),

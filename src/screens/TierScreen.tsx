@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
 import { DotBG } from '../components/ui';
 import { C, R, SHADOW, SP } from '../styles';
-import { apiGet } from '../../api';
+import { apiGet, authGet } from '../../api';
 
 // ─── Tier definitions ────────────────────────────────────────────────────────
 const TIERS = [
@@ -102,7 +102,7 @@ export function TierScreen() {
 
   const load = async () => {
     setLoading(true); setError(false);
-    const r = await apiGet(`/api/customer/tier?phone=${encodeURIComponent(phone)}`);
+    const r = await authGet(`/api/customer/tier?phone=${encodeURIComponent(phone)}`);
     if (r && !r._error && r.tier) {
       setData(r);
       Animated.parallel([

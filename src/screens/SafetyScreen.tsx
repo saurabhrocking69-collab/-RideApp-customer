@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Storage as AsyncStorage } from '../storage';
 import { useApp } from '../context/AppContext';
 import { DotBG, ScreenIn, FadeIn, Bouncy } from '../components/ui';
-import { apiGet, apiPost } from '../../api';
+import { apiGet, apiPost, authGet, authPost } from '../../api';
 import { s, C, T, R, SP, SHADOW } from '../styles';
 
 const CONTACTS_CACHE_KEY = 'sppero_emergency_contacts';
@@ -136,7 +136,7 @@ export function SafetyScreen() {
       const raw = await AsyncStorage.getItem(CONTACTS_CACHE_KEY);
       if (raw) { try { setContacts(JSON.parse(raw)); } catch {} }
       if (phone) {
-        const d = await apiGet(`/api/emergency-contacts?phone=${phone}`);
+        const d = await authGet(`/api/emergency-contacts?phone=${phone}`);
         if (d?.contacts) {
           const list: Contact[] = d.contacts.map((c: any) => ({ id: c.id, name: c.name, phone: c.contact_phone }));
           setContacts(list);
@@ -152,7 +152,7 @@ export function SafetyScreen() {
     if (cleaned.length < 10) { Alert.alert('', 'Enter a valid mobile number'); return; }
     if (contacts.length >= 3) { Alert.alert('', 'Maximum 3 contacts allowed'); return; }
     setSavingContact(true);
-    const d = await apiPost('/api/emergency-contacts/save', { phone, name: newName.trim(), contact_phone: cleaned });
+    const d = await authPost('/api/emergency-contacts/save', { phone, name: newName.trim(), contact_phone: cleaned });
     setSavingContact(false);
     if (d?._error || d?.error) { Alert.alert('Could not save', d.error || 'Please try again'); return; }
     const list = [...contacts, { id: d.contact?.id, name: newName.trim(), phone: cleaned }];
@@ -166,7 +166,7 @@ export function SafetyScreen() {
     const list = contacts.filter((_, idx) => idx !== i);
     setContacts(list);
     AsyncStorage.setItem(CONTACTS_CACHE_KEY, JSON.stringify(list)).catch(() => {});
-    if (target?.id) apiPost('/api/emergency-contacts/delete', { id: target.id }).catch(() => {});
+    if (target?.id) authPost('/api/emergency-contacts/delete', { id: target.id }).catch(() => {});
   };
 
   const handleSOS = async () => {

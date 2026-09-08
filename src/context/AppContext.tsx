@@ -1277,7 +1277,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Customer rating + promos on profile/promo screen
   useEffect(() => {
     if (screen === 'home' && tab === 'profile' && phone) {
-      fetch(`${API}/api/customer/rating?phone=${phone}`).then(r => r.json()).then(d => setCustomerRating(d)).catch(() => {});
+      authFetch(`${API}/api/customer/rating?phone=${phone}`).then(r => r.json()).then(d => setCustomerRating(d)).catch(() => {});
     }
     if (screen === 'promo' && availablePromos.length === 0) {
       fetch(`${API}/api/promo/list`).then(r => r.json()).then(d => setAvailablePromos(d.promos || [])).catch(() => {});
@@ -3114,7 +3114,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const createScratchCard = async () => {
     try {
-      const data = await apiPost('/api/scratch-card/create', { phone: phone || '9999999999', ride_id: rideData?.ride_id });
+      const data = await authPost('/api/scratch-card/create', { phone: phone || '9999999999', ride_id: rideData?.ride_id });
       if (data.success) { setScratchCard(data); setScratched(false); }
     } catch (_e) {}
   };
@@ -3127,7 +3127,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const scratchNow = async () => {
     if (!scratchCard || scratched) return;
     scratchAnim.stopAnimation();
-    const r = await apiPost('/api/scratch-card/scratch', { card_id: scratchCard.card_id, phone: phone || '9999999999' });
+    const r = await authPost('/api/scratch-card/scratch', { card_id: scratchCard.card_id, phone: phone || '9999999999' });
     if (!r || r._error || r.error) {
       setResult('❌ Could not claim that reward — pull down to refresh and tap again');
       return;                         // card stays unscratched, so it can be retried
@@ -3279,10 +3279,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (_e) {}
   };
   const loadLoyalty = async (ph: string) => {
-    try { const r = await fetch(`${API}/api/loyalty/my-points?phone=${ph}`); const d = await r.json(); setLoyaltyPoints(d.points || 0); setLoyaltyCashback(d.cashback_available || 0); } catch (_e) {}
+    try { const r = await authFetch(`${API}/api/loyalty/my-points?phone=${ph}`); const d = await r.json(); setLoyaltyPoints(d.points || 0); setLoyaltyCashback(d.cashback_available || 0); } catch (_e) {}
   };
   const loadRewardsDash = async (ph: string) => {
-    try { const r = await fetch(`${API}/api/rewards/dashboard?phone=${ph}`); const d = await r.json(); setRewardsDash(d); } catch (_e) {}
+    try { const r = await authFetch(`${API}/api/rewards/dashboard?phone=${ph}`); const d = await r.json(); setRewardsDash(d); } catch (_e) {}
   };
   const loadOffers = async () => {
     try { const r = await fetch(`${API}/api/offers/active?role=customer&phone=${phone || ''}`); const d = await r.json(); setActiveOffers(d.offers || []); } catch (_e) {}
@@ -3291,7 +3291,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try { const r = await fetch(`${API}/api/hourly/packages`); const d = await r.json(); if (d.fares) setHourlyPackages(d.fares); } catch (_e) {}
   };
   const loadSaved = async () => {
-    try { const r = await fetch(`${API}/api/places/saved?phone=${phone}`); const d = await r.json(); setSavedPlaces(d.places || []); } catch (_e) {}
+    try { const r = await authFetch(`${API}/api/places/saved?phone=${phone}`); const d = await r.json(); setSavedPlaces(d.places || []); } catch (_e) {}
   };
   const loadFavouriteBuddy = async (ph: string) => {
     try { const r = await fetch(`${API}/api/favourites?phone=${ph}`); const d = await r.json(); setFavouriteBuddy(d.buddy || null); } catch (_e) {}
@@ -3400,7 +3400,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
   const savePlace = async (label: string) => {
     if (!pickup) { setResult('❌ Set a location first'); return; }
-    try { await fetch(`${API}/api/places/save`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, label, address: pickup, lat: pickupCoords?.lat, lng: pickupCoords?.lng }) }); loadSaved(); setResult(`✅ ${label} saved!`); } catch (_e) {}
+    try { await authFetch(`${API}/api/places/save`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, label, address: pickup, lat: pickupCoords?.lat, lng: pickupCoords?.lng }) }); loadSaved(); setResult(`✅ ${label} saved!`); } catch (_e) {}
   };
   // Save an arbitrary coordinate, rather than the current pickup. Used after a
   // ride to capture where the trip ACTUALLY ended: that point is proven
@@ -3415,7 +3415,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
        the rider "Home saved". They found out weeks later, looking for a Home
        chip that was never there, at the moment they were in a hurry to use it. */
     try {
-      const r = await fetch(`${API}/api/places/save`, {
+      const r = await authFetch(`${API}/api/places/save`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, label, address, lat, lng }),
       });
@@ -3428,7 +3428,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
   const deletePlace = async (id: number) => {
     try {
-      const r = await fetch(`${API}/api/places/delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+      const r = await authFetch(`${API}/api/places/delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
       if (!r.ok) { setResult('❌ Could not remove that place — please try again'); return; }
       loadSaved();
     } catch (_e) { setResult('❌ Could not remove that place — check your connection'); }

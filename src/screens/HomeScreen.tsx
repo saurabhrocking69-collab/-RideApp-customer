@@ -1178,7 +1178,7 @@ function HomeTab() {
   const [homeTierData, setHomeTierData] = useState<any>(null);
   useEffect(() => {
     if (!phone) return;
-    apiGet(`/api/customer/tier?phone=${encodeURIComponent(phone)}`)
+    authGet(`/api/customer/tier?phone=${encodeURIComponent(phone)}`)
       .then(r => { if (r && !r._error && r.tier) setHomeTierData(r); })
       .catch(() => {});
   }, [phone]);
@@ -2797,7 +2797,7 @@ function ProfileTab() {
   const [tierData, setTierData] = useState<any>(null);
   useEffect(() => {
     if (!phone) return;
-    apiGet(`/api/customer/tier?phone=${encodeURIComponent(phone)}`)
+    authGet(`/api/customer/tier?phone=${encodeURIComponent(phone)}`)
       .then(r => { if (r && !r._error && r.tier) setTierData(r); })
       .catch(() => {});
   }, [phone]);
