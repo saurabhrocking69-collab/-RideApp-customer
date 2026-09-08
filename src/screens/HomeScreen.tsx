@@ -19,7 +19,7 @@ import { NotifBell, NotificationCenter, getUnreadCount } from '../components/Not
 import { PARCEL_INTRO_SEEN_KEY } from './ParcelIntroScreen';
 import { FigNoTrips } from '../components/Figures';
 import { HOURLY_INFO_SEEN_KEY } from './HourlyInfoScreen';
-import { FeatureIllustrationBanner, IlluFamily3, BikeScene } from '../components/Illustrations';
+import { FeatureIllustrationBanner } from '../components/Illustrations';
 import { NEARBY_CATEGORIES } from '../nearbyCategories';
 
 
@@ -944,36 +944,87 @@ function PulseDot() {
 }
 
 /* Animated speed lines for bike card — native driver */
-function SpeedLines() {
-  const off = useRef(new Animated.Value(0)).current;
-  const op  = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
-    let alive = true;
-    const run = () => {
-      if (!alive) return;
-      off.setValue(0); op.setValue(1);
-      Animated.parallel([
-        Animated.timing(off, { toValue: -38, duration: 460, easing: Easing.linear, useNativeDriver: true }),
-        Animated.sequence([
-          Animated.delay(160),
-          Animated.timing(op, { toValue: 0, duration: 300, useNativeDriver: true }),
-        ]),
-      ]).start(({ finished }) => { if (finished && alive) run(); });
-    };
-    run();
-    return () => { alive = false; };
-  }, []);
+/* ── Book-your-ride card ke saanjhe tukde ──────────────────────────────────
+   Pehle chaaron card #1A0D2E par the - wahi rang jo is app me TEXT ka hai.
+   Ujale panne par chaar kaale dabbe ek saath baithe the, panne se kat kar
+   alag dikhte the, aur unke bhaari-pan ke aage baaki sab dab jaata tha.
+
+   Ab safed card, aur har gaadi ka apna halka rang - utna hi jitne se wo
+   pehchani jaye. Gulaabi wahin hai jahan tha; rang udaye NAHI gaye - wo ek
+   baar BookingScreen par aajma kar dekha ja chuka hai aur app "offline"
+   lagne lagi thi. */
+
+const RIDE_CARD = {
+  borderRadius: 22,
+  backgroundColor: C.bgCard,
+  overflow: 'hidden' as const,
+  minHeight: CARD_H,
+  justifyContent: 'space-between' as const,
+  borderWidth: 1,
+  ...SHADOW.sm,
+};
+
+// Gaadi ke peechhe ka halka rang - card ke upri hisse tak, taaki neeche ke
+// shabd saaf safed par baithein aur padhne me kuchh na aaye.
+const CARD_WASH = { position: 'absolute' as const, top: 0, left: 0, right: 0, height: '56%' as const };
+const CARD_GLOW = { position: 'absolute' as const, top: -26, right: -26, width: 92, height: 92, borderRadius: 46 };
+
+const CARD_SHELF = {
+  paddingHorizontal: 13, paddingTop: 10, paddingBottom: 13,
+  backgroundColor: C.bgCard,
+  borderTopWidth: 1, borderTopColor: 'rgba(26,13,46,0.06)',
+};
+const CARD_NAME  = { color: C.text, fontSize: 17, fontWeight: '900' as const, letterSpacing: -0.4 };
+const CARD_PRICE = { color: C.textMuted, fontSize: 10, marginTop: 2 };
+
+/* Gaadi ki asli tasveer - wahi jo naqshe par chalti hai.
+
+   Ye sirf dikhne ki baat nahi: card par wahi gaadi dikhti hai jo thodi der
+   baad naqshe par aati hui dikhegi. Ek hi cheez, do jagah, ek jaisi.
+
+   Naap UNCHAI se tay hota hai aur chaudai anupaat se nikalti hai - teeno
+   tasveerein alag-alag anupaat ki hain (car sabse patli aur lambi), aur ek hi
+   chaudai par baandh dene se car dab jaati aur auto phail jaata.
+
+   Neeche ki halki chhaya gaadi ko panne par TIKA deti hai - uske bina wo
+   hawa me tairti lagti hai. */
+const ART_HOME: Record<string, { src: any; w: number; h: number }> = {
+  car:  { src: require('../../assets/vehicles/car.png'),  w: 34, h: 72 },
+  auto: { src: require('../../assets/vehicles/auto.png'), w: 30, h: 49 },
+  bike: { src: require('../../assets/vehicles/bike.png'), w: 22, h: 40 },
+};
+
+function VehicleShot({ art, h, badge }: { art: string; h: number; badge?: string }) {
+  const a = ART_HOME[art];
+  const w = Math.round(a.w * (h / a.h));
   return (
-    <Animated.View pointerEvents="none" style={{
-      position: 'absolute', left: 8, top: 44,
-      transform: [{ translateX: off }], opacity: op,
-    }}>
-      <View style={{ width: 30, height: 2,   borderRadius: 1, backgroundColor: 'rgba(255,255,255,0.42)', marginBottom: 7 }} />
-      <View style={{ width: 22, height: 1.5, borderRadius: 1, backgroundColor: 'rgba(255,255,255,0.28)', marginBottom: 7 }} />
-      <View style={{ width: 26, height: 2,   borderRadius: 1, backgroundColor: 'rgba(255,255,255,0.36)' }} />
-    </Animated.View>
+    <View style={{ alignItems: 'center', paddingTop: 14 }}>
+      <Image source={a.src} style={{ width: w, height: h }} contentFit="contain" />
+      <View style={{ width: Math.round(w * 0.82), height: 7, borderRadius: 7, backgroundColor: 'rgba(26,13,46,0.10)', marginTop: -3 }} />
+      {badge ? (
+        <View style={{ marginTop: 7, backgroundColor: 'rgba(26,13,46,0.06)', borderRadius: 7, paddingHorizontal: 7, paddingVertical: 3 }}>
+          <Text style={{ color: C.textMuted, fontSize: 8.5, fontWeight: '800', letterSpacing: 0.6 }}>{badge}</Text>
+        </View>
+      ) : null}
+    </View>
   );
 }
+
+// Card ki ek saadi pankti, aur ek jo abhi-abhi ki ginti dikhati hai. Ginti
+// hari hai kyoki wo akeli aisi baat hai jo har pal badalti rehti hai.
+const CardNote = ({ text }: { text: string }) => (
+  <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+    <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: C.textDim }} />
+    <Text style={{ color: C.textMuted, fontSize: 9, fontWeight: '700' }}>{text}</Text>
+  </View>
+);
+const CardLive = ({ text }: { text: string }) => (
+  <View style={{ marginTop: 3, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+    <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: C.green }} />
+    <Text style={{ color: C.green, fontSize: 9, fontWeight: '800' }}>{text}</Text>
+  </View>
+);
+
 
 // ── Full-screen skeleton for the vehicle grid + service strip ──────────────
 function HomeSkeletonLoader() {
@@ -1492,62 +1543,34 @@ function HomeTab() {
 
               {/* Auto card */}
               <Bouncy onPress={() => { setRideType('auto'); setScreen('booking'); }} style={{ flex: 1 }}>
-                <View style={{ borderRadius: 22, backgroundColor: '#1A0D2E', overflow: 'hidden', minHeight: CARD_H, justifyContent: 'space-between', ...SHADOW.md }}>
-                  <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', backgroundColor: 'rgba(255,255,255,0.09)', borderTopLeftRadius: 22, borderTopRightRadius: 22 }} />
-                  <View style={{ position: 'absolute', top: -22, right: -22, width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.07)' }} />
-                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', paddingTop: 9, paddingHorizontal: 9 }}>
-                    <View style={{ flex: 1 }} />
-                    <Text style={{ fontSize: 46, lineHeight: 52 }}>🛺</Text>
-                  </View>
-                  <View style={{ alignItems: 'center' }}>
-                    <IlluFamily3 width={100} height={54} />
-                  </View>
-                  {/* Frosted-glass info shelf — translucent white over the
-                      vehicle color instead of text sitting flat on it */}
-                  <View style={{ paddingHorizontal: 13, paddingTop: 9, paddingBottom: 13, backgroundColor: 'rgba(255,255,255,0.13)', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.24)' }}>
-                    <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900', letterSpacing: -0.4 }}>Auto</Text>
-                    <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, marginTop: 2 }}>₹30+ · ~3 min ETA</Text>
-                    <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.42)' }} />
-                      <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 9, fontWeight: '700' }}>Drivers available</Text>
-                    </View>
-                    {liveAutoCount > 0 && (
-                      <View style={{ marginTop: 3, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#22C55E' }} />
-                        <Text style={{ color: '#6EE7B7', fontSize: 9, fontWeight: '800' }}>{liveAutoCount} nearby now</Text>
-                      </View>
-                    )}
+                <View style={[RIDE_CARD, { borderColor: 'rgba(217,119,6,0.22)' }]}>
+                  <View style={[CARD_WASH, { backgroundColor: 'rgba(251,191,36,0.13)' }]} />
+                  <View style={[CARD_GLOW, { backgroundColor: 'rgba(217,119,6,0.10)' }]} />
+                  <VehicleShot art="auto" h={76} />
+                  <View style={CARD_SHELF}>
+                    <Text style={CARD_NAME}>Auto</Text>
+                    <Text style={CARD_PRICE}>₹30+ · ~3 min ETA</Text>
+                    <CardNote text="Drivers available" />
+                    {liveAutoCount > 0 && <CardLive text={`${liveAutoCount} nearby now`} />}
                   </View>
                 </View>
               </Bouncy>
 
-              {/* Bike card — animated */}
+              {/* Bike card */}
               <Bouncy onPress={() => { setRideType('bike'); setScreen('booking'); }} style={{ flex: 1 }}>
-                <View style={{ borderRadius: 22, backgroundColor: '#1A0D2E', overflow: 'hidden', minHeight: CARD_H, justifyContent: 'space-between', ...SHADOW.md }}>
-                  <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', backgroundColor: 'rgba(255,255,255,0.09)', borderTopLeftRadius: 22, borderTopRightRadius: 22 }} />
-                  <View style={{ position: 'absolute', top: -22, right: -22, width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.07)' }} />
-                  <View style={{ alignItems: 'flex-end', padding: 9 }}>
-                    <View style={{ backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 7, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(255,255,255,0.32)' }}>
-                      <Text style={{ color: 'rgba(255,255,255,0.88)', fontSize: 9, fontWeight: '800' }}>FASTEST</Text>
-                    </View>
+                <View style={[RIDE_CARD, { borderColor: C.pinkBorder }]}>
+                  <View style={[CARD_WASH, { backgroundColor: 'rgba(255,45,120,0.09)' }]} />
+                  <View style={[CARD_GLOW, { backgroundColor: 'rgba(255,45,120,0.10)' }]} />
+                  {/* FASTEST sabse upar - ye is card ki apni baat hai */}
+                  <View style={{ position: 'absolute', top: 9, right: 9, backgroundColor: C.pink, borderRadius: 7, paddingHorizontal: 7, paddingVertical: 3 }}>
+                    <Text style={{ color: '#fff', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.5 }}>FASTEST</Text>
                   </View>
-                  <SpeedLines />
-                  <View style={{ alignItems: 'center', marginTop: 2, marginBottom: 2 }}>
-                    <BikeScene width={Math.min(160, Math.floor((SCREEN_W - 26) / 2) - 4)} height={88} />
-                  </View>
-                  <View style={{ paddingHorizontal: 13, paddingTop: 9, paddingBottom: 13, backgroundColor: 'rgba(255,255,255,0.13)', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.24)' }}>
-                    <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900', letterSpacing: -0.4 }}>Bike</Text>
-                    <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, marginTop: 2 }}>₹20+ · Beat traffic</Text>
-                    <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.42)' }} />
-                      <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 9, fontWeight: '700' }}>Fastest option</Text>
-                    </View>
-                    {liveBikeCount > 0 && (
-                      <View style={{ marginTop: 3, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#22C55E' }} />
-                        <Text style={{ color: '#6EE7B7', fontSize: 9, fontWeight: '800' }}>{liveBikeCount} nearby now</Text>
-                      </View>
-                    )}
+                  <VehicleShot art="bike" h={76} />
+                  <View style={CARD_SHELF}>
+                    <Text style={CARD_NAME}>Bike</Text>
+                    <Text style={CARD_PRICE}>₹20+ · Beat traffic</Text>
+                    <CardNote text="Fastest option" />
+                    {liveBikeCount > 0 && <CardLive text={`${liveBikeCount} nearby now`} />}
                   </View>
                 </View>
               </Bouncy>
@@ -1558,61 +1581,47 @@ function HomeTab() {
 
               {/* Car card */}
               <Bouncy onPress={() => { setRideType('car'); setScreen('booking'); }} style={{ flex: 1 }}>
-                <View style={{ borderRadius: 22, backgroundColor: '#1A0D2E', overflow: 'hidden', minHeight: CARD_H, justifyContent: 'space-between', ...SHADOW.md }}>
-                  <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', backgroundColor: 'rgba(255,255,255,0.09)', borderTopLeftRadius: 22, borderTopRightRadius: 22 }} />
-                  <View style={{ position: 'absolute', top: -22, right: -22, width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.07)' }} />
-                  <View style={{ position: 'absolute', bottom: -14, left: -14, width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(147,197,253,0.12)' }} />
-                  <View style={{ alignItems: 'center', paddingTop: 14, paddingBottom: 6 }}>
-                    <Text style={{ fontSize: 54, lineHeight: 62 }}>🚗</Text>
-                    <View style={{ marginTop: 6, backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: 7, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(255,255,255,0.26)' }}>
-                      <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 9, fontWeight: '800', letterSpacing: 0.8 }}>4-SEATER · AC</Text>
-                    </View>
-                  </View>
-                  <View style={{ padding: 13, paddingTop: 9, backgroundColor: 'rgba(255,255,255,0.13)', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.24)' }}>
-                    <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900', letterSpacing: -0.4 }}>Car</Text>
-                    <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, marginTop: 2 }}>₹80+ · AC comfort</Text>
-                    <View style={{ marginTop: 9, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.42)' }} />
-                      <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 9, fontWeight: '700' }}>4.8★ avg driver</Text>
-                    </View>
-                    {liveCarCount > 0 && (
-                      <View style={{ marginTop: 3, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#22C55E' }} />
-                        <Text style={{ color: '#BFDBFE', fontSize: 9, fontWeight: '800' }}>{liveCarCount} nearby now</Text>
-                      </View>
-                    )}
+                <View style={[RIDE_CARD, { borderColor: 'rgba(59,130,246,0.22)' }]}>
+                  <View style={[CARD_WASH, { backgroundColor: 'rgba(147,197,253,0.16)' }]} />
+                  <View style={[CARD_GLOW, { backgroundColor: 'rgba(59,130,246,0.10)' }]} />
+                  <VehicleShot art="car" h={84} badge="4-SEATER · AC" />
+                  <View style={CARD_SHELF}>
+                    <Text style={CARD_NAME}>Car</Text>
+                    <Text style={CARD_PRICE}>₹80+ · AC comfort</Text>
+                    <CardNote text="4.8★ avg driver" />
+                    {liveCarCount > 0 && <CardLive text={`${liveCarCount} nearby now`} />}
                   </View>
                 </View>
               </Bouncy>
 
-              {/* By Hour card */}
+              {/* By Hour card — iski koi gaadi nahi hai, samay hi iska vishay
+                  hai, isliye yahan tasveer ki jagah wahi teen baatein hain jo
+                  batati hain ki ye kis kaam ke liye hai. */}
               <Bouncy style={{ flex: 1 }} onPress={() => {
                 setHourlyStep('book'); setHPickup(''); setHDrop(''); setHPickupCoords(null); setHDropCoords(null);
                 setHPickupSugg([]); setHDropSugg([]); setHRoundTrip(false); setHStayHours(1);
                 setHourlyBooking(null); setScreen('hourly');
               }}>
-                <View style={{ borderRadius: 22, backgroundColor: '#1A0D2E', overflow: 'hidden', minHeight: CARD_H, justifyContent: 'space-between', ...SHADOW.md }}>
-                  <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', backgroundColor: 'rgba(255,255,255,0.09)', borderTopLeftRadius: 22, borderTopRightRadius: 22 }} />
-                  <View style={{ position: 'absolute', top: -22, right: -22, width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.07)' }} />
-                  <View style={{ position: 'absolute', bottom: -14, left: -14, width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(251,191,36,0.16)' }} />
-                  <View style={{ paddingTop: 10, paddingHorizontal: 13 }}>
-                    <Text style={{ fontSize: 36, lineHeight: 42 }}>⏱️</Text>
+                <View style={[RIDE_CARD, { borderColor: C.purpleBorder }]}>
+                  <View style={[CARD_WASH, { backgroundColor: 'rgba(124,58,237,0.08)' }]} />
+                  <View style={[CARD_GLOW, { backgroundColor: 'rgba(124,58,237,0.10)' }]} />
+                  <View style={{ paddingTop: 12, paddingHorizontal: 13 }}>
+                    <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(124,58,237,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ fontSize: 20 }}>⏱️</Text>
+                    </View>
                     <View style={{ marginTop: 9, gap: 6 }}>
                       {(['No fixed destination', 'Shopping / hospital', 'Driver stays with you'] as const).map((line, i) => (
                         <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.42)' }} />
-                          <Text style={{ color: 'rgba(255,255,255,0.78)', fontSize: 9.5, fontWeight: '600' }}>{line}</Text>
+                          <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: C.purple, opacity: 0.55 }} />
+                          <Text style={{ color: C.textMuted, fontSize: 9.5, fontWeight: '600' }}>{line}</Text>
                         </View>
                       ))}
                     </View>
                   </View>
-                  <View style={{ padding: 13, paddingTop: 9, backgroundColor: 'rgba(255,255,255,0.13)', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.24)' }}>
-                    <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900', letterSpacing: -0.4 }}>By Hour</Text>
-                    <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, marginTop: 2 }}>₹120+ · 2h–Full Day</Text>
-                    <View style={{ marginTop: 9, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.42)' }} />
-                      <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 9, fontWeight: '700' }}>Unlimited km plans</Text>
-                    </View>
+                  <View style={CARD_SHELF}>
+                    <Text style={CARD_NAME}>By Hour</Text>
+                    <Text style={CARD_PRICE}>₹120+ · 2h–Full Day</Text>
+                    <CardNote text="Unlimited km plans" />
                     <View style={{ height: 13 }} />
                   </View>
                 </View>
