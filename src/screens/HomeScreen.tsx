@@ -1014,6 +1014,14 @@ const ART_HOME: Record<string, { src: any; w: number; h: number }> = {
    `offset` se bike aadhe chakkar peechhe chalti hai - dono ek saath palat-te
    to wo jhatka lagta. */
 const ART_BOX_H = 104;
+
+/* Chhaya har roop ke SAATH chalti hai, dabbe me thehri nahi rehti. Pehle ye
+   ek jagah thi, sabke liye - khisakne se pehle theek tha (gaadi hilti hi nahi
+   thi), par ab gaadi bagal se nikal jaati aur chhaya wahin padi reh jaati:
+   bina gaadi ke tairta hua saaya. */
+const ArtShadow = () => (
+  <View style={{ width: 78, height: 7, borderRadius: 7, backgroundColor: 'rgba(26,13,46,0.10)', marginTop: -6 }} />
+);
 function AltArt({ a, b, offset = 0 }: { a: React.ReactNode; b: React.ReactNode; offset?: number }) {
   const arts = [a, b];
   const [idx, setIdx] = useState(0);
@@ -1044,25 +1052,21 @@ function AltArt({ a, b, offset = 0 }: { a: React.ReactNode; b: React.ReactNode; 
   return (
     <View
       onLayout={(e) => { const nw = Math.round(e.nativeEvent.layout.width); if (nw > 0 && nw !== wRef.current) setW(nw); }}
-      style={{ height: ART_BOX_H, overflow: 'hidden', justifyContent: 'flex-end' }}
+      /* alignSelf stretch ZAROORI hai, sajawat nahi: bahar alignItems
+         center hai, to bachcha apni saamagri jitna chauda hota hai - aur
+         yahan dono tasveerein position absolute hain, jo chaudai me ginti hi
+         nahi. Iske bina dabba SHUNYA chaudai ka ban jaata hai aur overflow
+         hidden bacha-khucha bhi kaat deta hai: card khali dikhta hai. */
+      style={{ alignSelf: 'stretch', height: ART_BOX_H, overflow: 'hidden', justifyContent: 'flex-end', paddingTop: 8 }}
     >
       {/* Jo abhi dikh raha hai - baayen nikalta hua */}
       <Animated.View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, alignItems: 'center', transform: [{ translateX: slide(0, -w) }] }}>
-        {arts[idx]}
+        {arts[idx]}<ArtShadow />
       </Animated.View>
       {/* Jo aa raha hai - daayen se andar */}
       <Animated.View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, alignItems: 'center', transform: [{ translateX: slide(w, 0) }] }}>
-        {arts[1 - idx]}
+        {arts[1 - idx]}<ArtShadow />
       </Animated.View>
-    </View>
-  );
-}
-
-function ArtShot({ children }: { children: React.ReactNode }) {
-  return (
-    <View style={{ alignItems: 'center', paddingTop: 8 }}>
-      {children}
-      <View style={{ width: 82, height: 7, borderRadius: 7, backgroundColor: 'rgba(26,13,46,0.10)', marginTop: -6 }} />
     </View>
   );
 }
@@ -1628,12 +1632,10 @@ function HomeTab() {
                   <View style={[CARD_GLOW, { backgroundColor: 'rgba(217,119,6,0.10)' }]} />
                   {/* Banayi hui aur asli - bari-bari se. Purani hatayi nahi
                       gayi; dono dikhti hain. */}
-                  <ArtShot>
-                    <AltArt
-                      a={<AutoSide width={126} height={80} />}
-                      b={<PhotoArt art="autoSide" h={84} />}
-                    />
-                  </ArtShot>
+                  <AltArt
+                    a={<AutoSide width={126} height={80} />}
+                    b={<PhotoArt art="autoSide" h={84} />}
+                  />
                   <View style={CARD_SHELF}>
                     <Text style={CARD_NAME}>Auto</Text>
                     <Text style={CARD_PRICE}>₹30+ · ~3 min ETA</Text>
@@ -1655,13 +1657,11 @@ function HomeTab() {
                   {/* Wahi niyam jo auto par - warna ek card badalta rehta
                       aur uske bagal wala thehra rehta, jo adhoora lagta.
                       offset se ye aadhe chakkar peechhe chalti hai. */}
-                  <ArtShot>
-                    <AltArt
-                      offset={2300}
-                      a={<BikeScene width={148} height={94} />}
-                      b={<PhotoArt art="bikeSide" h={100} />}
-                    />
-                  </ArtShot>
+                  <AltArt
+                    offset={2300}
+                    a={<BikeScene width={148} height={94} />}
+                    b={<PhotoArt art="bikeSide" h={100} />}
+                  />
                   <View style={CARD_SHELF}>
                     <Text style={CARD_NAME}>Bike</Text>
                     <Text style={CARD_PRICE}>₹20+ · Beat traffic</Text>
