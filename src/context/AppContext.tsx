@@ -3,7 +3,6 @@ import { AppState, Alert, Linking, Platform, Share } from 'react-native';
 import { Animated } from 'react-native';
 import { Storage as AsyncStorage } from '../storage';
 import * as Location from 'expo-location';
-import * as Clipboard from 'expo-clipboard';
 import { startSmsOtp } from '../../modules/sppero-otp';
 import * as Notifications from 'expo-notifications';
 import { io, Socket } from 'socket.io-client';
@@ -1139,23 +1138,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, [screen]);
 
-  const triedClipRef = useRef<string>('');
-  useEffect(() => {
-    if (screen !== 'otp') return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const text = await Clipboard.getStringAsync();
-        if (cancelled) return;
-        if (text && /^\d{6}$/.test(text) && triedClipRef.current !== text) {
-          triedClipRef.current = text;
-          setOtpDigits(text.split('')); setOtp(text);
-          setTimeout(() => { if (!cancelled) verifyOtp(text); }, 300);
-        }
-      } catch (_e) {}
-    })();
-    return () => { cancelled = true; };
-  }, [screen]);
+  /* Screen khulte hi clipboard se bharna HATA diya gaya.
+
+     Ye aadmi ke maange bina chalta tha, aur uska nuksaan sirf ek galat code
+     bharne se bada hai: app ye jaan hi nahi sakti ki clipboard me pada code
+     aaj ka hai ya kal ka. Ek baar wahi hua - asli OTP kuchh aur tha, clipboard
+     me purana pada tha, aur wo chupchaap bhej diya gaya. Ek koshish jal gayi,
+     aur teen galat par khaata aadhe ghante ke liye band ho jaata hai.
+
+     Yaani ye "suvidha" kabhi-kabhi aadmi ko uske apne khaate se bahar kar
+     sakti thi - wo bhi bina uske kuchh kiye. Neeche ka Paste ka bataan ab bhi
+     hai; wo bharta hai par bhejta nahi, aur wo aadmi khud dabata hai. */
 
   // Login screen entrance animation
   useEffect(() => {

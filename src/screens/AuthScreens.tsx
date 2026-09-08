@@ -411,8 +411,20 @@ export function OtpScreen() {
     try {
       const text = await Clipboard.getStringAsync();
       if (text && /^\d{6}$/.test(text)) {
+        /* Bhara jaata hai, BHEJA nahi jaata - aur ye farq maayne rakhta hai.
+
+           App ye jaan hi nahi sakti ki clipboard me pada 6-ank ka code aaj ka
+           hai ya kal ka. Android ki OTP soochna me "copy" ka bataan hota hai,
+           to purana code wahan pada reh jaata hai. Ek baar aisa hi hua: asli
+           OTP 650838 tha, clipboard me 130621 pada tha, aur button ne use
+           chupchaap bhej diya - ek koshish jal gayi ("2 attempts remaining").
+           Teen galat par khaata aadhe ghante ke liye band ho jaata hai.
+
+           Ab ank saamne dikhte hain aur bhejna aadmi ke haath me hai - wo SMS
+           se milakar dekh sakta hai. Suvidha wahi rehti hai, nuksaan chala
+           jaata hai. */
         setOtpDigits(text.split('')); setOtp(text);
-        setTimeout(() => verifyOtp(text), 250);
+        setResult('Pasted — check it matches the SMS, then tap Verify');
       } else {
         /* Pehle yahan sirf "No 6-digit code found in your clipboard" tha.
            Baat sach thi par bekaar: SMS ka code clipboard me jaata hi nahi
