@@ -506,6 +506,68 @@ export function IlluFamily3({ width = 88, height = 56 }: { width?: number; heigh
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   AutoSide — bagal se auto-rickshaw, home card ke liye
+   Peela-hara sharir · kaali chhat · aage 1 pahiya, peechhe 2
+═══════════════════════════════════════════════════════════════ */
+export function AutoSide({ width = 132, height = 84 }: { width?: number; height?: number }) {
+  return (
+    <Svg width={width} height={height} viewBox="0 0 132 84">
+      <Defs>
+        <LinearGradient id="au_body" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0"    stopColor="#FDE68A" />
+          <Stop offset="0.5"  stopColor="#FBBF24" />
+          <Stop offset="1"    stopColor="#D97706" />
+        </LinearGradient>
+      </Defs>
+
+      {/* Chhat - patli aur peechhe ki taraf jhukti hui. Asli auto par ye ek
+          tani hui chaadar hai, dabba nahi. */}
+      <Path d="M40,26 Q44,12 62,11 L96,11 Q110,13 113,27 L113,31 L40,31 Z" fill="#1F2937" />
+      <Rect x="39" y="29" width="75" height="3" rx="1.5" fill="#0B0B0F" />
+
+      {/* Peechhe ka peela panel - chhat se zameen tak, auto ka sabse pehchana
+          hissa */}
+      <Path d="M96,31 Q112,33 113,50 L113,64 Q113,68 109,68 L92,68 L92,31 Z"
+            fill="url(#au_body)" stroke="#B45309" strokeWidth="1.1" />
+
+      {/* Bagal KHULI hai - andar ka halka rang dikhta hai, thos kaala nahi */}
+      <Path d="M46,31 L92,31 L92,56 L46,56 Z" fill="#FEF3C7" opacity={0.55} />
+      {/* Sawari ki bench */}
+      <Rect x="60" y="47" width="32" height="9" rx="2.5" fill="#92400E" opacity={0.45} />
+      {/* Beech ka khamba */}
+      <Rect x="70" y="31" width="2.6" height="25" fill="#78350F" opacity={0.5} />
+
+      {/* Neeche ka peela sharir - aage patla, peechhe uncha */}
+      <Path d="M24,52 Q24,44 32,42 L46,40 L46,56 L92,56 L92,68 L28,68 Q24,68 24,64 Z"
+            fill="url(#au_body)" stroke="#B45309" strokeWidth="1.1" />
+
+      {/* Aage ka gol muh aur sheesha - auto ki naak gol hoti hai */}
+      <Path d="M25,50 Q26,41 34,39 L44,37 L44,52 L25,52 Z" fill="#BFE3FF" opacity={0.92} />
+      <Path d="M24,52 Q24,45 30,43" stroke="#B45309" strokeWidth="1.4" fill="none" />
+
+      {/* Handle - ek chhoti si lakeer, par isi se pata chalta hai ki ye
+          chalayi jaati hai, khinchi nahi jaati */}
+      <Path d="M34,38 L42,34" stroke="#3F3F46" strokeWidth="2" strokeLinecap="round" />
+
+      {/* Driver - sirf ishara */}
+      <Circle cx="52" cy="38" r="5" fill={SKIN_M} />
+      <Path d="M46,50 Q46,43 52,43 Q58,43 58,50 Z" fill={PLUM} />
+
+      {/* Gulaabi patti - wahi pehchan jo naqshe wali gaadi par hai */}
+      <Rect x="27" y="57.5" width="84" height="3.6" rx="1.8" fill={PINK} opacity={0.92} />
+
+      {/* Pahiye: AAGE EK chhota, PEECHHE do (ek dikhta, ek jhalak). Yahi
+          auto ko car se alag karta hai. */}
+      <Circle cx="86" cy="69" r="8.5" fill="#101014" opacity={0.8} />
+      <Circle cx="34" cy="68" r="8.5" fill="#18181B" />
+      <Circle cx="34" cy="68" r="3.4" fill="#8A8A93" />
+      <Circle cx="100" cy="68" r="10" fill="#18181B" />
+      <Circle cx="100" cy="68" r="4" fill="#8A8A93" />
+    </Svg>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
    BikeScene  — animated SVG motorcycle
    Spinning wheels · body bounce · speed lines · rider
    Used in HomeScreen bike card

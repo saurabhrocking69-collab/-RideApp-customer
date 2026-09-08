@@ -19,7 +19,7 @@ import { NotifBell, NotificationCenter, getUnreadCount } from '../components/Not
 import { PARCEL_INTRO_SEEN_KEY } from './ParcelIntroScreen';
 import { FigNoTrips } from '../components/Figures';
 import { HOURLY_INFO_SEEN_KEY } from './HourlyInfoScreen';
-import { FeatureIllustrationBanner } from '../components/Illustrations';
+import { FeatureIllustrationBanner, AutoSide, BikeScene } from '../components/Illustrations';
 import { NEARBY_CATEGORIES } from '../nearbyCategories';
 
 
@@ -994,6 +994,18 @@ const ART_HOME: Record<string, { src: any; w: number; h: number }> = {
   bike: { src: require('../../assets/vehicles/bike.png'), w: 22, h: 40 },
 };
 
+/* SVG ko wahi jagah aur wahi chhaya jo tasveer ko milti hai, taaki chaaron
+   card ek jaise baithein. Chhaya thodi chaudi hai kyoki bagal se dekhi gayi
+   gaadi zameen par zyada lambaai ghairti hai. */
+function ArtShot({ children }: { children: React.ReactNode }) {
+  return (
+    <View style={{ alignItems: 'center', paddingTop: 8 }}>
+      {children}
+      <View style={{ width: 82, height: 7, borderRadius: 7, backgroundColor: 'rgba(26,13,46,0.10)', marginTop: -6 }} />
+    </View>
+  );
+}
+
 function VehicleShot({ art, h, badge }: { art: string; h: number; badge?: string }) {
   const a = ART_HOME[art];
   const w = Math.round(a.w * (h / a.h));
@@ -1546,7 +1558,10 @@ function HomeTab() {
                 <View style={[RIDE_CARD, { borderColor: 'rgba(217,119,6,0.22)' }]}>
                   <View style={[CARD_WASH, { backgroundColor: 'rgba(251,191,36,0.13)' }]} />
                   <View style={[CARD_GLOW, { backgroundColor: 'rgba(217,119,6,0.10)' }]} />
-                  <VehicleShot art="auto" h={76} />
+                  {/* Bagal se, uper se nahi. Uper se auto ek kaala dhabba
+                      lagta tha - car uper se pehchani jaati hai kyoki uska
+                      uper wala aakar jaana-pehchana hai, auto ka nahi. */}
+                  <ArtShot><AutoSide width={128} height={82} /></ArtShot>
                   <View style={CARD_SHELF}>
                     <Text style={CARD_NAME}>Auto</Text>
                     <Text style={CARD_PRICE}>₹30+ · ~3 min ETA</Text>
@@ -1565,7 +1580,10 @@ function HomeTab() {
                   <View style={{ position: 'absolute', top: 9, right: 9, backgroundColor: C.pink, borderRadius: 7, paddingHorizontal: 7, paddingVertical: 3 }}>
                     <Text style={{ color: '#fff', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.5 }}>FASTEST</Text>
                   </View>
-                  <VehicleShot art="bike" h={76} />
+                  {/* BikeScene pehle se hai: bagal se, aur pahiye chalte
+                      hain. Chalna yahan sajawat nahi - ye FASTEST wala card
+                      hai, aur harkat wahi baat dohraati hai. */}
+                  <ArtShot><BikeScene width={132} height={80} /></ArtShot>
                   <View style={CARD_SHELF}>
                     <Text style={CARD_NAME}>Bike</Text>
                     <Text style={CARD_PRICE}>₹20+ · Beat traffic</Text>
