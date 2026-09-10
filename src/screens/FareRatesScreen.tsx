@@ -29,18 +29,30 @@ function FareCard({ ride, fare }: { ride: typeof RIDES[0]; fare: any }) {
           <Text style={{ fontSize: 16, fontWeight: '800', color: C.text }}>{ride.label}</Text>
           <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 1 }}>{ride.desc}</Text>
         </View>
+        {/* Bada number wahi jo SACH ME lagta hai.
+
+            Yahan pehle `base_fare` tha - aur shehri ride me wo liya hi nahi
+            jaata (services/pricing.js dekhein: jod me `min_fare` ka farsh hai,
+            base_fare kabhi nahi). To grahak ko sabse bada number wo dikhta tha
+            jo uske bill me kabhi aata hi nahi. */}
         <View style={{ alignItems: 'flex-end' }}>
-          <Text style={{ fontSize: 20, fontWeight: '900', color: C.pink }}>₹{fare.base_fare}</Text>
-          <Text style={{ fontSize: 10, color: C.textDim }}>base fare</Text>
+          <Text style={{ fontSize: 20, fontWeight: '900', color: C.pink }}>₹{fare.min_fare}</Text>
+          <Text style={{ fontSize: 10, color: C.textDim }}>se shuru</Text>
         </View>
       </View>
 
       {/* Rate Grid */}
       <View style={{ padding: 14, paddingTop: 12 }}>
         <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
-          <InfoChip label="Min Fare" value={`₹${fare.min_fare}`} color={C.purple} />
+          {/* "Min Fare" wali chip hata di - wahi baat ab upar bade akshar me hai,
+              aur ek hi baat do jagah likhne se koi teesri baat nahi banti.
+              Uski jagah raat ka multiplier, jo grahak ke liye asli khabar hai
+              aur kahin dikhta hi nahi tha. */}
           <InfoChip label="Platform Fee" value={`₹${fare.platform_fee}`} color={C.saffron} />
           <InfoChip label="Wait Charge" value={`₹${fare.time_rate}/min`} color={C.green} />
+          {Number(fare.night_multiplier) > 1 && (
+            <InfoChip label="Night" value={`${fare.night_multiplier}×`} color={C.purple} />
+          )}
         </View>
 
         {/* Per KM rates */}
